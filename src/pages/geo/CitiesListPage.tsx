@@ -1,0 +1,203 @@
+import { Filter, Plus, Search } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import { PaginationBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
+import { AppForm, Button, FormField, PageHeader, cardClassName, fieldClassName, listShellClassName } from '../../components/ui/Form'
+import { SearchSelect } from '../../components/ui/SearchSelect'
+import { useConfirmDelete } from '../../hooks/useConfirmDelete'
+import { useListParams } from '../../hooks/useListParams'
+import { api } from '../../lib/api'
+import { useGeoName } from '../../lib/geo'
+import type { City, Country, Paginated, Province } from '../../types/app'
+import { GeoHas, GeoStatus } from './GeoShared'
+
+export function CitiesListPage() {
+  const { t } = useTranslation()
+  const name = useGeoName()
+  const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { confirmDelete } = useConfirmDelete()
+  const countryId = searchParams.get('countryId') ?? ''
+  const provinceId = searchParams.get('provinceId') ?? ''
+
+  const countries = useQuery({
+    queryKey: ['countries', 'lookup'],
+    queryFn: async () => {
+      const { data } = await api.get<Country[]>('/countries')
+      return data
+    },
+  })
+
+  const provinces = useQuery({
+    queryKey: ['provinces', 'lookup', countryId],
+    enabled: Boolean(countryId),
+    queryFn: async () => {
+      const { data } = await api.get<Province[]>('/provinces', {
+        params: { countryId },
+      })
+      return data
+    },
+  })
+
+  const query = useQuery({
+    queryKey: ['cities', 'list', q, countryId, provinceId, page],
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<City>>('/cities', {
+        params: {
+          page,
+          ...(q ? { q } : {}),
+          ...(countryId ? { countryId } : {}),
+          ...(provinceId ? { provinceId } : {}),
+        },
+      })
+      return data
+    },
+  })
+
+  function onSearch(event: FormEvent) {
+    event.preventDefault()
+    setParams({ q: term.trim() || undefined }, { resetPage: true })
+  }
+
+  const rows = query.data?.items ?? []
+  const emptyMessage = q || countryId || provinceId ? t('cities.noResults') : t('cities.empty')
+
+  return (
+    <div className={listShellClassName}>
+      <PageHeader
+        title={t('menus.cities')}
+        subtitle={t('cities.subtitle')}
+        action={
+          <Link
+            to={
+              countryId || provinceId
+                ? `/base-info/cities/new?${new URLSearchParams({
+                    ...(countryId ? { countryId } : {}),
+                    ...(provinceId ? { provinceId } : {}),
+                  }).toString()}`
+                : '/base-info/cities/new'
+            }
+          >
+            <Button>
+              <Plus className="size-4" />
+              {t('cities.create')}
+            </Button>
+          </Link>
+        }
+      />
+      <AppForm onSubmit={onSearch} className={`mb-4 grid gap-4 p-4 sm:grid-cols-3 ${cardClassName}`}>
+        <FormField icon={Filter} label={t('geo.country')} htmlFor="city-country">
+          <SearchSelect
+            id="city-country"
+            value={countryId}
+            placeholder={t('geo.allCountries')}
+            onChange={(next) =>
+              setParams(
+                { countryId: next || undefined, provinceId: undefined },
+                { resetPage: true },
+              )
+            }
+            options={[
+              { value: '', label: t('geo.allCountries') },
+              ...(countries.data ?? []).map((country) => ({
+                value: country.id,
+                label: name(country),
+              })),
+            ]}
+          />
+        </FormField>
+        <FormField icon={Filter} label={t('geo.province')} htmlFor="city-province">
+          <SearchSelect
+            id="city-province"
+            value={provinceId}
+            disabled={!countryId}
+            placeholder={t('geo.allProvinces')}
+            onChange={(next) =>
+              setParams({ provinceId: next || undefined }, { resetPage: true })
+            }
+            options={[
+              { value: '', label: t('geo.allProvinces') },
+              ...(provinces.data ?? []).map((province) => ({
+                value: province.id,
+                label: name(province),
+              })),
+            ]}
+          />
+        </FormField>
+        <FormField icon={Search} label={t('cities.search')} htmlFor="city-search">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              id="city-search"
+              className={fieldClassName}
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              placeholder={t('cities.searchPlaceholder')}
+            />
+            <Button type="submit" className="sm:min-w-28">
+              <Search className="size-4" />
+              {t('common.search')}
+            </Button>
+          </div>
+        </FormField>
+      </AppForm>
+      <TableCard loading={query.isLoading} empty={emptyMessage} hasRows={rows.length > 0}>
+        <table className="w-full text-sm">
+          <thead className="bg-cream-50 text-ink-700">
+            <tr>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.nameFa')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.province')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.country')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.code')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.hasRailway')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.hasAirport')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.isActive')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((city) => (
+              <tr key={city.id} className="border-t border-line">
+                <td className="px-4 py-3">{name(city)}</td>
+                <td className="px-4 py-3">{name(city.province)}</td>
+                <td className="px-4 py-3">{name(city.province.country)}</td>
+                <td className="px-4 py-3">{city.code}</td>
+                <td className="px-4 py-3">
+                  <GeoHas value={city.hasRailway} />
+                </td>
+                <td className="px-4 py-3">
+                  <GeoHas value={city.hasAirport} />
+                </td>
+                <td className="px-4 py-3">
+                  <GeoStatus active={city.isActive} />
+                </td>
+                <td className="px-4 py-3">
+                  <EntityRowActions
+                    viewTo={`/base-info/cities/${city.id}`}
+                    editTo={`/base-info/cities/${city.id}/edit`}
+                    onDelete={() =>
+                      confirmDelete({
+                        message: t('cities.confirmDelete'),
+                        successMessage: t('cities.deleted'),
+                        path: `/cities/${city.id}`,
+                        queryKey: ['cities'],
+                      })
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+      {query.data ? (
+        <PaginationBar
+          page={query.data.page}
+          pageSize={query.data.pageSize}
+          total={query.data.total}
+          onPageChange={setPage}
+        />
+      ) : null}
+    </div>
+  )
+}
