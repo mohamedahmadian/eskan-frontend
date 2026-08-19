@@ -6,7 +6,7 @@ import { DetailActions, PageHeader, cardClassName, userFormShellClassName } from
 import { DateText } from '../../components/ui/DateText'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { languages, type AppLanguage } from '../../i18n'
-import { api } from '../../lib/api'
+import { api, getImageUrl } from '../../lib/api'
 import { formatRoles } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import type { ManagedUser } from '../../types/app'
@@ -18,7 +18,7 @@ function ImagePreview({ id, alt }: { id?: string | null; alt: string }) {
   if (!id) {
     return <span>—</span>
   }
-  return <img src={`/api/images/${id}`} alt={alt} className="h-28 w-28 rounded-2xl object-cover" />
+  return <img src={getImageUrl(id)} alt={alt} className="h-28 w-28 rounded-2xl object-cover" />
 }
 
 export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {

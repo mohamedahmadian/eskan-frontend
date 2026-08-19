@@ -1,8 +1,16 @@
 import axios from 'axios'
 
+const envApiUrl = import.meta.env.VITE_API_URL?.trim()
+
+export const apiBaseUrl = envApiUrl ? envApiUrl.replace(/\/+$/, '') : '/api'
+
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl,
 })
+
+export function getImageUrl(id: string): string {
+  return `${apiBaseUrl}/images/${id}`
+}
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (!axios.isAxiosError(error)) {

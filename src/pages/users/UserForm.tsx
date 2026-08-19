@@ -35,7 +35,7 @@ import {
   fieldClassName,
 } from '../../components/ui/Form'
 import { languages, type AppLanguage } from '../../i18n'
-import { api, getApiErrorMessage } from '../../lib/api'
+import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
 import {
   religions,
@@ -525,7 +525,7 @@ export function UserForm({
             id="photo"
             accept="image/*"
             capture="user"
-            previewUrl={photoId ? `/api/images/${photoId}` : undefined}
+            previewUrl={photoId ? getImageUrl(photoId) : undefined}
             uploading={uploading === 'photo'}
             onFile={(file) => void uploadImage(file, 'photo')}
             onClear={() => setPhotoId('')}
@@ -536,7 +536,7 @@ export function UserForm({
             id="nationalCardPhoto"
             accept="image/*"
             capture="environment"
-            previewUrl={nationalCardPhotoId ? `/api/images/${nationalCardPhotoId}` : undefined}
+            previewUrl={nationalCardPhotoId ? getImageUrl(nationalCardPhotoId) : undefined}
             uploading={uploading === 'nationalCard'}
             onFile={(file) => void uploadImage(file, 'nationalCard')}
             onClear={() => setNationalCardPhotoId('')}
@@ -547,7 +547,7 @@ export function UserForm({
             id="passportPhoto"
             accept="image/*"
             capture="environment"
-            previewUrl={passportPhotoId ? `/api/images/${passportPhotoId}` : undefined}
+            previewUrl={passportPhotoId ? getImageUrl(passportPhotoId) : undefined}
             uploading={uploading === 'passport'}
             onFile={(file) => void uploadImage(file, 'passport')}
             onClear={() => setPassportPhotoId('')}
