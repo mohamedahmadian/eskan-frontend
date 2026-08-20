@@ -1,4 +1,4 @@
-import { Compass, Flag, Hash, Languages, MapPinned, MapPin, Navigation, Plane, ToggleRight, TrainFront, Type } from 'lucide-react'
+import { Compass, Flag, Hash, Landmark, Languages, MapPinned, MapPin, Navigation, Plane, ToggleRight, TrainFront, Type } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -16,6 +16,7 @@ export type CityPayload = {
   neshanAddress: string | null
   latitude: number | null
   longitude: number | null
+  isProvinceCapital: boolean
   hasRailway: boolean
   hasAirport: boolean
   isActive: boolean
@@ -47,6 +48,7 @@ export function CityForm({
   const [neshanAddress, setNeshanAddress] = useState(initial?.neshanAddress ?? '')
   const [latitude, setLatitude] = useState(initial?.latitude != null ? String(initial.latitude) : '')
   const [longitude, setLongitude] = useState(initial?.longitude != null ? String(initial.longitude) : '')
+  const [isProvinceCapital, setIsProvinceCapital] = useState(initial?.isProvinceCapital ?? false)
   const [hasRailway, setHasRailway] = useState(initial?.hasRailway ?? false)
   const [hasAirport, setHasAirport] = useState(initial?.hasAirport ?? false)
   const [isActive, setIsActive] = useState(initial?.isActive ?? true)
@@ -65,6 +67,7 @@ export function CityForm({
         neshanAddress: emptyToNull(neshanAddress),
         latitude: toOptionalNumber(latitude),
         longitude: toOptionalNumber(longitude),
+        isProvinceCapital,
         hasRailway,
         hasAirport,
         isActive,
@@ -190,6 +193,15 @@ export function CityForm({
           className={fieldClassName}
           value={sortOrder}
           onChange={(e) => setSortOrder(e.target.value)}
+        />
+      </FormField>
+      <FormField icon={Landmark} label={t('geo.isProvinceCapital')} htmlFor="isProvinceCapital">
+        <ToggleField
+          id="isProvinceCapital"
+          checked={isProvinceCapital}
+          onChange={setIsProvinceCapital}
+          onLabel={t('common.yes')}
+          offLabel={t('common.no')}
         />
       </FormField>
       <FormField icon={TrainFront} label={t('geo.hasRailway')} htmlFor="hasRailway">

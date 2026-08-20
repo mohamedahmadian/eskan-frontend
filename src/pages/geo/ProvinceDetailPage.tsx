@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { Button, DetailActions, PageHeader, cardClassName, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, Button, DetailActions, PageHeader, cardClassName, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { formatNumber } from '../../lib/datetime'
 import { api } from '../../lib/api'
@@ -31,7 +31,7 @@ export function ProvinceDetailPage() {
 
   const province = query.data
   if (!province) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   const canManageBenefactors = hasMenuAccess('/base-info/benefactors', user?.modules ?? [])

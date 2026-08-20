@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PageHeader, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
 import type { City, Province } from '../../types/app'
 import { FoodSupplierForm } from './FoodSupplierForm'
@@ -35,7 +35,7 @@ export function FoodSupplierCreatePage() {
   })
 
   if (!provinces.data) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   return (

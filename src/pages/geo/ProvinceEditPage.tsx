@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PageHeader, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
 import type { Country, Province } from '../../types/app'
 import { ProvinceForm } from './ProvinceForm'
@@ -28,7 +28,7 @@ export function ProvinceEditPage() {
   })
 
   if (!query.data || !countries.data) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   return (

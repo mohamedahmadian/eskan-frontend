@@ -5,6 +5,7 @@ export type RoleUserScope = {
   lockedRoleCodes: string[]
   i18nPrefix: 'users' | 'pilgrims' | 'accommodationManagers' | 'caravanManagers' | 'headquartersRepresentatives'
   listTitleKey: string
+  hideRoles?: boolean
   showRoleFilter?: boolean
   showAccommodations?: boolean
   showHeadquartersAreas?: boolean
@@ -27,6 +28,7 @@ export const userScopes: Record<string, RoleUserScope> = {
     lockedRoleCodes: ['PILGRIM'],
     i18nPrefix: 'pilgrims',
     listTitleKey: 'menus.pilgrimsList',
+    hideRoles: true,
   },
   accommodationManager: {
     queryKey: 'accommodation-managers',

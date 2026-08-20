@@ -1,6 +1,7 @@
 import {
   AlignLeft,
   ArrowUpDown,
+  BadgeCheck,
   Bath,
   Building2,
   Car,
@@ -24,33 +25,39 @@ import {
   BookOpen,
   Compass,
 } from 'lucide-react'
-import { type FormEvent, type ReactNode, useMemo, useState } from 'react'
+import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppForm, FormActions, FormField, ToggleField, cardClassName, fieldClassName } from '../../components/ui/Form'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
+import { currentPersianYear } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import {
   accommodationStatuses,
   accommodationTypes,
   genderTypes,
+  managementTypes,
   type Accommodation,
   type AccommodationStatus,
   type AccommodationType,
   type Country,
   type GenderType,
   type ManagedUser,
+  type ManagementType,
   type Province,
   type City,
 } from '../../types/app'
+import { AccommodationManagersCard } from './AccommodationManagersCard'
+import { AccommodationTabNav, type AccommodationTab } from './AccommodationTabs'
 
 export type AccommodationPayload = {
   name: string
   type: AccommodationType
   status: AccommodationStatus
   genderType: GenderType
+  managementType: ManagementType
   maleCapacity: number
   femaleCapacity: number
   assignedMaleCapacity: number
@@ -100,23 +107,6 @@ function toOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function FormSection({
-  id,
-  title,
-  children,
-}: {
-  id: string
-  title: string
-  children: ReactNode
-}) {
-  return (
-    <section id={id} className={`space-y-4 p-6 ${cardClassName}`}>
-      <h2 className="text-base font-semibold text-ink-900">{title}</h2>
-      {children}
-    </section>
-  )
-}
-
 export function AccommodationForm({
   initial,
   countries,
@@ -143,11 +133,13 @@ export function AccommodationForm({
   const { t } = useTranslation()
   const name = useGeoName()
   const [saving, setSaving] = useState(false)
+  const [tab, setTab] = useState<AccommodationTab>('general')
   const [values, setValues] = useState({
     name: initial?.name ?? '',
     type: initial?.type ?? accommodationTypes.HOUSE,
     status: initial?.status ?? accommodationStatuses.ACTIVE,
     genderType: initial?.genderType ?? genderTypes.MIXED,
+    managementType: initial?.managementType ?? managementTypes.SELF_SUFFICIENT,
     maleCapacity: String(initial?.maleCapacity ?? 0),
     femaleCapacity: String(initial?.femaleCapacity ?? 0),
     assignedMaleCapacity: String(initial?.assignedMaleCapacity ?? 0),
@@ -177,23 +169,34 @@ export function AccommodationForm({
     parkingCapacity: initial?.parkingCapacity != null ? String(initial.parkingCapacity) : '',
     bathroomCount: initial?.bathroomCount != null ? String(initial.bathroomCount) : '',
     toiletCount: initial?.toiletCount != null ? String(initial.toiletCount) : '',
-    managerUserIds: initial?.managers.map((item) => item.userId) ?? [],
-    primaryManagerUserId: initial?.managers.find((item) => item.isPrimary)?.userId ?? '',
-    isPrimary:
-      initial?.managers.some((item) => item.isPrimary && item.userId === currentUserId) ?? true,
+    managerUserIds: (initial?.managers ?? [])
+      .filter((item) => item.year === currentPersianYear())
+      .map((item) => item.userId),
+    primaryManagerUserId:
+      (initial?.managers ?? []).find(
+        (item) => item.year === currentPersianYear() && item.isPrimary,
+      )?.userId ?? '',
+    isPrimary: initial?.managers
+      ? initial.managers.some(
+          (item) =>
+            item.year === currentPersianYear() &&
+            item.isPrimary &&
+            item.userId === currentUserId,
+        )
+      : true,
   })
 
-  const sections = useMemo(
-    () => [
-      { id: 'general', label: t('accommodations.sectionGeneral') },
-      { id: 'location', label: t('accommodations.sectionLocation') },
-      { id: 'capacity', label: t('accommodations.sectionCapacity') },
-      { id: 'amenities', label: t('accommodations.sectionAmenities') },
-      { id: 'social', label: t('accommodations.sectionSocial') },
-      ...(isAdmin ? [{ id: 'managers', label: t('accommodations.sectionManagers') }] : []),
-    ],
-    [isAdmin, t],
+  const tabs = useMemo(
+    () =>
+      (
+        ['general', 'location', 'capacity', 'amenities', 'social'] as AccommodationTab[]
+      ).concat(isAdmin ? ['managers'] : []),
+    [isAdmin],
   )
+
+  function panelClass(id: AccommodationTab) {
+    return `space-y-4 p-6 ${cardClassName} ${tab === id ? '' : 'hidden'}`
+  }
 
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({ ...current, [key]: value }))
@@ -220,6 +223,7 @@ export function AccommodationForm({
         type: values.type,
         status: values.status,
         genderType: values.genderType,
+        managementType: values.managementType,
         maleCapacity: toNumber(values.maleCapacity),
         femaleCapacity: toNumber(values.femaleCapacity),
         assignedMaleCapacity: toNumber(values.assignedMaleCapacity),
@@ -247,12 +251,14 @@ export function AccommodationForm({
         parkingCapacity: toOptionalNumber(values.parkingCapacity),
         bathroomCount: toOptionalNumber(values.bathroomCount),
         toiletCount: toOptionalNumber(values.toiletCount),
-        ...(isAdmin
+        ...(isAdmin && !initial?.id
           ? {
               managerUserIds: values.managerUserIds,
               primaryManagerUserId: emptyToNull(values.primaryManagerUserId),
             }
-          : { isPrimary: values.isPrimary }),
+          : !isAdmin
+            ? { isPrimary: values.isPrimary }
+            : {}),
       })
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
@@ -261,21 +267,26 @@ export function AccommodationForm({
     }
   }
 
-  return (
-    <AppForm onSubmit={submit} className="space-y-4">
-      <nav className={`flex flex-wrap gap-2 p-3 ${cardClassName}`}>
-        {sections.map((section) => (
-          <a
-            key={section.id}
-            href={`#${section.id}`}
-            className="rounded-full bg-cream-50 px-3 py-1.5 text-xs text-ink-700 hover:bg-teal-50 hover:text-teal-800"
-          >
-            {section.label}
-          </a>
-        ))}
-      </nav>
+  const editManagers = Boolean(isAdmin && initial?.id)
 
-      <FormSection id="general" title={t('accommodations.sectionGeneral')}>
+  return (
+    <div className="space-y-4">
+      <AccommodationTabNav tab={tab} tabs={tabs} onChange={setTab} />
+
+      {tab === 'managers' && editManagers && initial ? (
+        <AccommodationManagersCard accommodation={initial} users={users} />
+      ) : (
+        <AppForm
+          onSubmit={submit}
+          onInvalid={(event) => {
+            const panel = (event.target as HTMLElement | null)?.closest('[data-tab]')
+            const next = panel?.getAttribute('data-tab') as AccommodationTab | null
+            if (next) setTab(next)
+          }}
+          className="space-y-4"
+        >
+
+      <div data-tab="general" className={panelClass('general')}>
         <FormField icon={Building2} label={t('accommodations.name')} htmlFor="name">
           <input
             id="name"
@@ -321,6 +332,17 @@ export function AccommodationForm({
             }))}
           />
         </FormField>
+        <FormField icon={BadgeCheck} label={t('accommodations.managementType')} htmlFor="managementType">
+          <SearchSelect
+            id="managementType"
+            value={values.managementType}
+            onChange={(next) => set('managementType', next as ManagementType)}
+            options={Object.values(managementTypes).map((type) => ({
+              value: type,
+              label: t(`managementTypes.${type}`),
+            }))}
+          />
+        </FormField>
         <FormField icon={Phone} label={t('accommodations.phone')} htmlFor="phone">
           <input
             id="phone"
@@ -348,9 +370,9 @@ export function AccommodationForm({
             />
           </FormField>
         ) : null}
-      </FormSection>
+      </div>
 
-      <FormSection id="location" title={t('accommodations.sectionLocation')}>
+      <div data-tab="location" className={panelClass('location')}>
         <FormField icon={Flag} label={t('geo.country')} htmlFor="countryId">
           <SearchSelect
             id="countryId"
@@ -448,9 +470,9 @@ export function AccommodationForm({
             />
           </FormField>
         </div>
-      </FormSection>
+      </div>
 
-      <FormSection id="capacity" title={t('accommodations.sectionCapacity')}>
+      <div data-tab="capacity" className={panelClass('capacity')}>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField icon={Users} label={t('accommodations.maleCapacity')} htmlFor="maleCapacity">
             <input
@@ -527,9 +549,9 @@ export function AccommodationForm({
             />
           </FormField>
         </div>
-      </FormSection>
+      </div>
 
-      <FormSection id="amenities" title={t('accommodations.sectionAmenities')}>
+      <div data-tab="amenities" className={panelClass('amenities')}>
         <div className="grid gap-3 sm:grid-cols-2">
           <AmenityCheck
             icon={Shirt}
@@ -612,9 +634,9 @@ export function AccommodationForm({
             />
           </FormField>
         </div>
-      </FormSection>
+      </div>
 
-      <FormSection id="social" title={t('accommodations.sectionSocial')}>
+      <div data-tab="social" className={panelClass('social')}>
         <FormField icon={Share2} label={t('accommodations.eitaa')} htmlFor="eitaa">
           <input
             id="eitaa"
@@ -639,10 +661,10 @@ export function AccommodationForm({
             onChange={(e) => set('otherSocial', e.target.value)}
           />
         </FormField>
-      </FormSection>
+      </div>
 
-      {isAdmin ? (
-        <FormSection id="managers" title={t('accommodations.sectionManagers')}>
+      {isAdmin && !initial?.id ? (
+        <div data-tab="managers" className={panelClass('managers')}>
           <div className="space-y-2">
             {users.length ? (
               users.map((user) => (
@@ -683,7 +705,7 @@ export function AccommodationForm({
               ]}
             />
           </FormField>
-        </FormSection>
+        </div>
       ) : null}
 
       <div className={`p-6 ${cardClassName}`}>
@@ -694,7 +716,9 @@ export function AccommodationForm({
           onCancel={() => history.back()}
         />
       </div>
-    </AppForm>
+        </AppForm>
+      )}
+    </div>
   )
 }
 

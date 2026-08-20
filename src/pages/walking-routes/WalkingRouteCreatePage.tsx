@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PageHeader, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
 import type { City, Country } from '../../types/app'
 import { WalkingRouteForm } from './WalkingRouteForm'
@@ -32,7 +32,7 @@ export function WalkingRouteCreatePage() {
   })
 
   if (!countries.data || !iranCities.data) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   return (

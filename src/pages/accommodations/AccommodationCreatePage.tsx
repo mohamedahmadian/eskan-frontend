@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PageHeader, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
 import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
 import { isAdmin } from '../../lib/roles'
@@ -57,11 +57,11 @@ export function AccommodationCreatePage() {
   })
 
   if (!countries.data) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   return (
-    <div className={formShellClassName}>
+    <div className={userFormShellClassName}>
       <PageHeader title={t('accommodations.create')} subtitle={t('accommodations.createSubtitle')} />
       <AccommodationForm
         countries={countries.data}

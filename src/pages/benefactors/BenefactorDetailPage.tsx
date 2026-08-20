@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
@@ -25,7 +25,7 @@ export function BenefactorDetailPage() {
 
   const item = query.data
   if (!item) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   return (

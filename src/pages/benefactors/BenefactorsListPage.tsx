@@ -1,10 +1,9 @@
-import { Filter, Plus, Search } from 'lucide-react'
+import { Filter, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { PaginationBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
-import { AppForm, Button, FormField, PageHeader, cardClassName, fieldClassName, listShellClassName } from '../../components/ui/Form'
+import { PaginationBar, SearchBar, TableCard, EntityRowActions, FilterPair } from '../../components/ui/ListControls'
+import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
@@ -54,8 +53,7 @@ export function BenefactorsListPage() {
     },
   })
 
-  function onSearch(event: FormEvent) {
-    event.preventDefault()
+  function onSearch() {
     setParams({ q: term.trim() || undefined }, { resetPage: true })
   }
 
@@ -83,61 +81,57 @@ export function BenefactorsListPage() {
           </Link>
         }
       />
-      <AppForm onSubmit={onSearch} className={`mb-4 grid gap-4 p-4 sm:grid-cols-3 ${cardClassName}`}>
-        <FormField icon={Filter} label={t('geo.province')} htmlFor="benefactor-province">
-          <SearchSelect
-            id="benefactor-province"
-            value={provinceId}
-            placeholder={t('geo.allProvinces')}
-            onChange={(next) =>
-              setParams(
-                { provinceId: next || undefined, cityId: undefined },
-                { resetPage: true },
-              )
-            }
-            options={[
-              { value: '', label: t('geo.allProvinces') },
-              ...(provinces.data ?? []).map((province) => ({
-                value: province.id,
-                label: name(province),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={Filter} label={t('geo.city')} htmlFor="benefactor-city">
-          <SearchSelect
-            id="benefactor-city"
-            value={cityId}
-            disabled={!provinceId}
-            placeholder={t('geo.allCities')}
-            onChange={(next) =>
-              setParams({ cityId: next || undefined }, { resetPage: true })
-            }
-            options={[
-              { value: '', label: t('geo.allCities') },
-              ...(cities.data ?? []).map((city) => ({
-                value: city.id,
-                label: name(city),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={Search} label={t('benefactors.search')} htmlFor="benefactor-search">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              id="benefactor-search"
-              className={fieldClassName}
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              placeholder={t('benefactors.searchPlaceholder')}
-            />
-            <Button type="submit" className="sm:min-w-28">
-              <Search className="size-4" />
-              {t('common.search')}
-            </Button>
-          </div>
-        </FormField>
-      </AppForm>
+      <SearchBar
+        inputId="benefactor-search"
+        term={term}
+        onTermChange={setTerm}
+        onSubmit={onSearch}
+        label={t('benefactors.search')}
+        placeholder={t('benefactors.searchPlaceholder')}
+        filtersActive={Boolean(provinceId || cityId)}
+        extra={
+          <FilterPair>
+            <FormField icon={Filter} label={t('geo.province')} htmlFor="benefactor-province">
+              <SearchSelect
+                id="benefactor-province"
+                value={provinceId}
+                placeholder={t('geo.allProvinces')}
+                onChange={(next) =>
+                  setParams(
+                    { provinceId: next || undefined, cityId: undefined },
+                    { resetPage: true },
+                  )
+                }
+                options={[
+                  { value: '', label: t('geo.allProvinces') },
+                  ...(provinces.data ?? []).map((province) => ({
+                    value: province.id,
+                    label: name(province),
+                  })),
+                ]}
+              />
+            </FormField>
+            <FormField icon={Filter} label={t('geo.city')} htmlFor="benefactor-city">
+              <SearchSelect
+                id="benefactor-city"
+                value={cityId}
+                disabled={!provinceId}
+                placeholder={t('geo.allCities')}
+                onChange={(next) =>
+                  setParams({ cityId: next || undefined }, { resetPage: true })
+                }
+                options={[
+                  { value: '', label: t('geo.allCities') },
+                  ...(cities.data ?? []).map((city) => ({
+                    value: city.id,
+                    label: name(city),
+                  })),
+                ]}
+              />
+            </FormField>
+          </FilterPair>
+        }
+      />
       <TableCard loading={query.isLoading} empty={emptyMessage} hasRows={rows.length > 0}>
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">

@@ -107,3 +107,54 @@ th {
   --rmdp-today-teal: var(--color-teal-200);
   --rmdp-hover-teal: var(--color-teal-400);
 }
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-page-fade-in {
+  animation: page-fade-in 0.32s ease-out both;
+}
+
+.animate-loading-spin {
+  animation: loading-spin 0.9s linear infinite;
+}
+
+.animate-loading-pulse {
+  animation: loading-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-fade-in,
+  .animate-loading-spin,
+  .animate-loading-pulse {
+    animation: none;
+  }
+}

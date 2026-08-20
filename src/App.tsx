@@ -45,6 +45,7 @@ import { PilgrimDetailPage } from './pages/pilgrims/PilgrimDetailPage'
 import { PilgrimEditPage } from './pages/pilgrims/PilgrimEditPage'
 import { PilgrimsListPage } from './pages/pilgrims/PilgrimsListPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SmsReportPage } from './pages/sms/SmsReportPage'
 import { SmsSendPage } from './pages/sms/SmsSendPage'
 import { SmsSettingsPage } from './pages/sms/SmsSettingsPage'
 import { UserCreatePage } from './pages/users/UserCreatePage'
@@ -54,6 +55,7 @@ import { UsersListPage } from './pages/users/UsersListPage'
 import { AccommodationCreatePage } from './pages/accommodations/AccommodationCreatePage'
 import { AccommodationDetailPage } from './pages/accommodations/AccommodationDetailPage'
 import { AccommodationEditPage } from './pages/accommodations/AccommodationEditPage'
+import { AccommodationReportPage } from './pages/accommodations/AccommodationReportPage'
 import { AccommodationsListPage } from './pages/accommodations/AccommodationsListPage'
 import { AccommodationManagerCreatePage } from './pages/accommodation-managers/AccommodationManagerCreatePage'
 import { AccommodationManagerDetailPage } from './pages/accommodation-managers/AccommodationManagerDetailPage'
@@ -161,6 +163,9 @@ export default function App() {
                 <Route element={<RequireMenuAccess path="/sms/send" />}>
                   <Route path="/sms/send" element={<SmsSendPage />} />
                 </Route>
+                <Route element={<RequireMenuAccess path="/sms/report" />}>
+                  <Route path="/sms/report" element={<SmsReportPage />} />
+                </Route>
                 <Route element={<RequireMenuAccess path="/users" />}>
                   <Route path="/users" element={<UsersListPage />} />
                   <Route path="/users/new" element={<UserCreatePage />} />
@@ -190,6 +195,9 @@ export default function App() {
                   <Route path="/accommodations/new" element={<AccommodationCreatePage />} />
                   <Route path="/accommodations/:id" element={<AccommodationDetailPage />} />
                   <Route path="/accommodations/:id/edit" element={<AccommodationEditPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/accommodation-report" />}>
+                  <Route path="/accommodation-report" element={<AccommodationReportPage />} />
                 </Route>
               </Route>
             </Route>

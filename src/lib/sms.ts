@@ -10,6 +10,7 @@ export type SmsMessage = {
   body: string
   status: 'SENT' | 'FAILED'
   providerResponse: string | null
+  recipientName?: string | null
   createdAt: string
 }
 

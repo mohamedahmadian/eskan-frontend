@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
-import { DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import type { Caravan } from '../../types/app'
@@ -23,7 +23,7 @@ export function CaravanDetailPage() {
 
   const caravan = query.data
   if (!caravan) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   return (

@@ -18,7 +18,7 @@ import {
   UserRoundPlus,
 } from 'lucide-react'
 import axios from 'axios'
-import { type FormEvent, useMemo, useRef, useState } from 'react'
+import { type FormEvent, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -51,8 +51,13 @@ import {
   type UserStatus,
 } from '../../types/app'
 
-const tabs = ['account', 'personal', 'location', 'documents', 'contact'] as const
-type UserTab = (typeof tabs)[number]
+const tabs = ['personal', 'account', 'location', 'documents', 'social', 'other'] as const
+
+export type UserFormExtraTab = {
+  id: string
+  labelKey: string
+  content: ReactNode
+}
 
 function emptyToNull(value: string) {
   const trimmed = value.trim()
@@ -68,8 +73,8 @@ export type UserPayload = {
   roleIds: string[]
   status: UserStatus
   gender: UserGender | null
-  nationalId: string | null
-  phone: string | null
+  nationalId: string
+  phone: string
   email: string | null
   address: string | null
   notes: string | null
@@ -93,13 +98,17 @@ export function UserForm({
   initial,
   roles,
   lockedRoleCodes = [],
+  hideRoles = false,
   requirePassword,
+  extraTabs,
   onSubmit,
 }: {
   initial?: Partial<ManagedUser> & { roleIds?: string[] }
   roles: RoleOption[]
   lockedRoleCodes?: string[]
+  hideRoles?: boolean
   requirePassword: boolean
+  extraTabs?: UserFormExtraTab[]
   onSubmit: (payload: UserPayload) => Promise<void>
 }) {
   const { t } = useTranslation()
@@ -109,12 +118,11 @@ export function UserForm({
     [lockedRoleCodes, roles],
   )
   const usernameTouched = useRef(Boolean(initial?.username))
-  const [tab, setTab] = useState<UserTab>('account')
+  const [tab, setTab] = useState<string>('personal')
   const [username, setUsername] = useState(initial?.username ?? '')
   const [firstName, setFirstName] = useState(initial?.firstName ?? '')
   const [lastName, setLastName] = useState(initial?.lastName ?? '')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [locale, setLocale] = useState(initial?.locale ?? 'fa')
   const [status, setStatus] = useState<UserStatus>(initial?.status ?? userStatuses.ACTIVE)
   const [gender, setGender] = useState(initial?.gender ?? '')
@@ -199,6 +207,21 @@ export function UserForm({
   async function submit(event: FormEvent) {
     event.preventDefault()
     const nextRoleIds = [...new Set([...roleIds, ...lockedIds])]
+    if (!firstName.trim() || !lastName.trim()) {
+      setTab('personal')
+      toast.error(t('users.nameRequired'))
+      return
+    }
+    if (!nationalId.trim()) {
+      setTab('personal')
+      toast.error(t('users.nationalIdRequired'))
+      return
+    }
+    if (!phone.trim()) {
+      setTab('personal')
+      toast.error(t('users.phoneRequired'))
+      return
+    }
     if (!nextRoleIds.length) {
       setTab('account')
       toast.error(t('users.rolesRequired'))
@@ -209,20 +232,10 @@ export function UserForm({
       toast.error(t('users.usernameMin'))
       return
     }
-    if (!firstName.trim() || !lastName.trim()) {
-      setTab('personal')
-      toast.error(t('users.nameRequired'))
-      return
-    }
     if (requirePassword || password) {
       if (password.length < 8) {
         setTab('account')
         toast.error(t('users.passwordMin'))
-        return
-      }
-      if (password !== confirmPassword) {
-        setTab('account')
-        toast.error(t('auth.passwordMismatch'))
         return
       }
     }
@@ -237,8 +250,8 @@ export function UserForm({
         roleIds: nextRoleIds,
         status,
         gender: gender ? (gender as UserGender) : null,
-        nationalId: emptyToNull(nationalId),
-        phone: emptyToNull(phone),
+        nationalId: nationalId.trim(),
+        phone: phone.trim(),
         email: emptyToNull(email),
         address: emptyToNull(address),
         notes: emptyToNull(notes),
@@ -260,7 +273,17 @@ export function UserForm({
       })
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 409) {
-        toast.error(getApiErrorMessage(error, t('users.usernameTaken')))
+        const message = getApiErrorMessage(error, t('users.usernameTaken'))
+        if (message.includes('کد ملی')) {
+          setTab('personal')
+          toast.error(t('users.nationalIdTaken'))
+        } else if (message.includes('تلفن') || message.includes('شماره')) {
+          setTab('personal')
+          toast.error(t('users.phoneTaken'))
+        } else {
+          setTab('account')
+          toast.error(message)
+        }
       } else {
         toast.error(getApiErrorMessage(error, t('common.error')))
       }
@@ -269,106 +292,35 @@ export function UserForm({
     }
   }
 
+  const extraTab = extraTabs?.find((item) => item.id === tab)
+  const allTabs = [...tabs, ...(extraTabs?.map((item) => item.id) ?? [])]
+
   return (
-    <AppForm onSubmit={submit} className="space-y-4">
+    <div className="space-y-4">
       <nav className={`flex flex-wrap gap-2 p-3 ${cardClassName}`}>
-        {tabs.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => setTab(item)}
-            className={`rounded-2xl px-3 py-2 text-sm font-medium transition ${
-              tab === item
-                ? 'bg-teal-500 text-white shadow-sm'
-                : 'bg-cream-50 text-ink-700 hover:bg-cream-100'
-            }`}
-          >
-            {t(`users.tabs.${item}`)}
-          </button>
-        ))}
+        {allTabs.map((item) => {
+          const extra = extraTabs?.find((tabItem) => tabItem.id === item)
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setTab(item)}
+              className={`rounded-2xl px-3 py-2 text-sm font-medium transition ${
+                tab === item
+                  ? 'bg-teal-500 text-white shadow-sm'
+                  : 'bg-cream-50 text-ink-700 hover:bg-cream-100'
+              }`}
+            >
+              {extra ? t(extra.labelKey) : t(`users.tabs.${item}`)}
+            </button>
+          )
+        })}
       </nav>
 
-      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'account' ? '' : 'hidden'}`}>
-        <FormField icon={UserRoundPlus} label={t('users.username')} htmlFor="username">
-          <input
-            id="username"
-            className={fieldClassName}
-            value={username}
-            onChange={(e) => {
-              usernameTouched.current = true
-              setUsername(e.target.value)
-            }}
-            autoComplete="off"
-            minLength={3}
-          />
-        </FormField>
-        <FormField icon={Shield} label={t('users.roles')}>
-          <div className="space-y-2">
-            {roles.map((role) => {
-              const locked = lockedIds.includes(role.id)
-              const checked = roleIds.includes(role.id) || locked
-              return (
-                <CheckboxField
-                  key={role.id}
-                  checked={checked}
-                  disabled={locked}
-                  onChange={(on) => {
-                    if (on !== checked) toggleRole(role.id)
-                  }}
-                  label={t(role.nameKey)}
-                />
-              )
-            })}
-          </div>
-        </FormField>
-        <FormField icon={ToggleRight} label={t('users.status')} htmlFor="status">
-          <ToggleField
-            id="status"
-            checked={status === userStatuses.ACTIVE}
-            onChange={(active) => setStatus(active ? userStatuses.ACTIVE : userStatuses.INACTIVE)}
-            onLabel={t('userStatuses.ACTIVE')}
-            offLabel={t('userStatuses.INACTIVE')}
-          />
-        </FormField>
-        <FormField icon={Languages} label={t('users.locale')} htmlFor="locale">
-          <SearchSelect
-            id="locale"
-            value={locale}
-            onChange={setLocale}
-            options={(Object.keys(languages) as AppLanguage[]).map((code) => ({
-              value: code,
-              label: languages[code].enabled
-                ? t(`languages.${code}`)
-                : `${t(`languages.${code}`)} (${t('settings.comingSoon')})`,
-              disabled: !languages[code].enabled,
-            }))}
-          />
-        </FormField>
-        <FormField icon={KeyRound} label={t('users.password')} htmlFor="password">
-          <input
-            id="password"
-            type="password"
-            className={fieldClassName}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            minLength={requirePassword ? 8 : undefined}
-          />
-          {!requirePassword ? (
-            <p className="text-xs text-ink-500">{t('users.passwordOptional')}</p>
-          ) : null}
-        </FormField>
-        <FormField icon={KeyRound} label={t('auth.confirmPassword')} htmlFor="confirmPassword">
-          <input
-            id="confirmPassword"
-            type="password"
-            className={fieldClassName}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            autoComplete="new-password"
-          />
-        </FormField>
-      </div>
+      {extraTab ? (
+        extraTab.content
+      ) : (
+        <AppForm onSubmit={submit} className="space-y-4">
 
       <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'personal' ? '' : 'hidden'}`}>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -409,13 +361,7 @@ export function UserForm({
             id="nationalId"
             className={fieldClassName}
             value={nationalId}
-            onChange={(e) => {
-              const value = e.target.value
-              setNationalId(value)
-              if (!usernameTouched.current) {
-                setUsername(value)
-              }
-            }}
+            onChange={(e) => setNationalId(e.target.value)}
           />
         </FormField>
         <FormField icon={Phone} label={t('users.phone')} htmlFor="phone">
@@ -423,7 +369,13 @@ export function UserForm({
             id="phone"
             className={fieldClassName}
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value
+              setPhone(value)
+              if (!usernameTouched.current) {
+                setUsername(value)
+              }
+            }}
           />
         </FormField>
         <FormField icon={Share2} label={t('users.religion')} htmlFor="religion">
@@ -451,6 +403,71 @@ export function UserForm({
             />
           </FormField>
         ) : null}
+      </div>
+
+      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'account' ? '' : 'hidden'}`}>
+        <FormField icon={UserRoundPlus} label={t('users.username')} htmlFor="username">
+          <input
+            id="username"
+            className={fieldClassName}
+            value={username}
+            onChange={(e) => {
+              usernameTouched.current = true
+              setUsername(e.target.value)
+            }}
+            autoComplete="off"
+            minLength={3}
+          />
+        </FormField>
+        {hideRoles ? null : (
+          <FormField icon={Shield} label={t('users.roles')}>
+            <div className="space-y-2">
+              {roles.map((role) => {
+                const locked = lockedIds.includes(role.id)
+                const checked = roleIds.includes(role.id) || locked
+                return (
+                  <CheckboxField
+                    key={role.id}
+                    checked={checked}
+                    disabled={locked}
+                    onChange={(on) => {
+                      if (on !== checked) toggleRole(role.id)
+                    }}
+                    label={t(role.nameKey)}
+                  />
+                )
+              })}
+            </div>
+          </FormField>
+        )}
+        <FormField icon={Languages} label={t('users.locale')} htmlFor="locale">
+          <SearchSelect
+            id="locale"
+            value={locale}
+            onChange={setLocale}
+            options={(Object.keys(languages) as AppLanguage[]).map((code) => ({
+              value: code,
+              label: languages[code].enabled
+                ? t(`languages.${code}`)
+                : `${t(`languages.${code}`)} (${t('settings.comingSoon')})`,
+              disabled: !languages[code].enabled,
+            }))}
+          />
+        </FormField>
+        <FormField icon={KeyRound} label={t('users.password')} htmlFor="password">
+          <input
+            id="password"
+            type="password"
+            className={fieldClassName}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            minLength={requirePassword ? 8 : undefined}
+          />
+          {!requirePassword ? (
+            <p className="text-xs text-ink-500">{t('users.passwordOptional')}</p>
+          ) : null}
+        </FormField>
       </div>
 
       <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'location' ? '' : 'hidden'}`}>
@@ -555,16 +572,7 @@ export function UserForm({
         </FormField>
       </div>
 
-      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'contact' ? '' : 'hidden'}`}>
-        <FormField icon={Mail} label={t('users.email')} htmlFor="email">
-          <input
-            id="email"
-            type="email"
-            className={fieldClassName}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </FormField>
+      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'social' ? '' : 'hidden'}`}>
         <FormField icon={MessageCircle} label={t('users.telegram')} htmlFor="telegram">
           <input
             id="telegram"
@@ -603,6 +611,18 @@ export function UserForm({
             className={fieldClassName}
             value={otherSocial}
             onChange={(e) => setOtherSocial(e.target.value)}
+          />
+        </FormField>
+      </div>
+
+      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'other' ? '' : 'hidden'}`}>
+        <FormField icon={Mail} label={t('users.email')} htmlFor="email">
+          <input
+            id="email"
+            type="email"
+            className={fieldClassName}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </FormField>
         <FormField icon={Car} label={t('users.vehiclePlates')}>
@@ -647,6 +667,15 @@ export function UserForm({
             onChange={(e) => setNotes(e.target.value)}
           />
         </FormField>
+        <FormField icon={ToggleRight} label={t('users.status')} htmlFor="status">
+          <ToggleField
+            id="status"
+            checked={status === userStatuses.ACTIVE}
+            onChange={(active) => setStatus(active ? userStatuses.ACTIVE : userStatuses.INACTIVE)}
+            onLabel={t('userStatuses.ACTIVE')}
+            offLabel={t('userStatuses.INACTIVE')}
+          />
+        </FormField>
       </div>
 
       <div className={`p-6 ${cardClassName}`}>
@@ -657,6 +686,8 @@ export function UserForm({
           onCancel={() => history.back()}
         />
       </div>
-    </AppForm>
+        </AppForm>
+      )}
+    </div>
   )
 }

@@ -1,17 +1,13 @@
-import { Filter, Plus, Search } from 'lucide-react'
+import { Filter, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { PaginationBar, SearchBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
+import { PaginationBar, SearchBar, TableCard, EntityRowActions, FilterPair } from '../../components/ui/ListControls'
 import {
-  AppForm,
   Button,
   FormField,
   PageHeader,
-  cardClassName,
-  fieldClassName,
   listShellClassName,
 } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
@@ -77,15 +73,11 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
 
   const rows = query.data?.items ?? []
   const filtered = Boolean(q || roleCode || provinceId || cityId)
+  const hasExtraFilters = Boolean(scope.showHeadquartersAreas || scope.showRoleFilter)
 
   function joinNames(items?: { nameFa: string; nameEn: string }[]) {
     if (!items?.length) return '—'
     return items.map((item) => geoName(item)).join('، ')
-  }
-
-  function onGeoSearch(event: FormEvent) {
-    event.preventDefault()
-    applySearch()
   }
 
   return (
@@ -102,89 +94,80 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
           </Link>
         }
       />
-      {scope.showHeadquartersAreas ? (
-        <AppForm onSubmit={onGeoSearch} className={`mb-4 grid gap-4 p-4 sm:grid-cols-3 ${cardClassName}`}>
-          <FormField icon={Filter} label={t('geo.province')} htmlFor="hq-list-province">
-            <SearchSelect
-              id="hq-list-province"
-              value={provinceId}
-              placeholder={t('geo.allProvinces')}
-              onChange={(next) =>
-                setParams(
-                  { provinceId: next || undefined, cityId: undefined },
-                  { resetPage: true },
-                )
-              }
-              options={[
-                { value: '', label: t('geo.allProvinces') },
-                ...(provinces.data ?? []).map((province) => ({
-                  value: province.id,
-                  label: geoName(province),
-                })),
-              ]}
-            />
-          </FormField>
-          <FormField icon={Filter} label={t('geo.city')} htmlFor="hq-list-city">
-            <SearchSelect
-              id="hq-list-city"
-              value={cityId}
-              disabled={!provinceId}
-              placeholder={t('geo.allCities')}
-              onChange={(next) => setParams({ cityId: next || undefined }, { resetPage: true })}
-              options={[
-                { value: '', label: t('geo.allCities') },
-                ...(cities.data ?? []).map((city) => ({
-                  value: city.id,
-                  label: geoName(city),
-                })),
-              ]}
-            />
-          </FormField>
-          <FormField icon={Search} label={t('common.search')} htmlFor="hq-list-search">
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                id="hq-list-search"
-                className={fieldClassName}
-                value={term}
-                onChange={(e) => setTerm(e.target.value)}
-                placeholder={t(`${keys}.searchPlaceholder`)}
-              />
-              <Button type="submit" className="sm:min-w-28">
-                <Search className="size-4" />
-                {t('common.search')}
-              </Button>
-            </div>
-          </FormField>
-        </AppForm>
-      ) : (
-        <SearchBar
-          term={term}
-          onTermChange={setTerm}
-          onSubmit={() => applySearch()}
-          label={t('common.search')}
-          placeholder={t(`${keys}.searchPlaceholder`)}
-          extra={
-            scope.showRoleFilter ? (
-              <div className="mt-3">
-                <SearchSelect
-                  value={roleCode}
-                  placeholder={t('users.allRoles')}
-                  onChange={(next) =>
-                    setParams({ roleCode: next || undefined }, { resetPage: true })
-                  }
-                  options={[
-                    { value: '', label: t('users.allRoles') },
-                    ...(roles.data ?? []).map((role) => ({
-                      value: role.code,
-                      label: t(role.nameKey),
-                    })),
-                  ]}
-                />
-              </div>
-            ) : null
-          }
-        />
-      )}
+      <SearchBar
+        inputId={`${scope.queryKey}-search`}
+        term={term}
+        onTermChange={setTerm}
+        onSubmit={() => applySearch()}
+        label={t('common.search')}
+        placeholder={t(`${keys}.searchPlaceholder`)}
+        filtersActive={Boolean(roleCode || provinceId || cityId)}
+        extra={
+          hasExtraFilters ? (
+            <>
+              {scope.showHeadquartersAreas ? (
+                <FilterPair>
+                  <FormField icon={Filter} label={t('geo.province')} htmlFor="hq-list-province">
+                    <SearchSelect
+                      id="hq-list-province"
+                      value={provinceId}
+                      placeholder={t('geo.allProvinces')}
+                      onChange={(next) =>
+                        setParams(
+                          { provinceId: next || undefined, cityId: undefined },
+                          { resetPage: true },
+                        )
+                      }
+                      options={[
+                        { value: '', label: t('geo.allProvinces') },
+                        ...(provinces.data ?? []).map((province) => ({
+                          value: province.id,
+                          label: geoName(province),
+                        })),
+                      ]}
+                    />
+                  </FormField>
+                  <FormField icon={Filter} label={t('geo.city')} htmlFor="hq-list-city">
+                    <SearchSelect
+                      id="hq-list-city"
+                      value={cityId}
+                      disabled={!provinceId}
+                      placeholder={t('geo.allCities')}
+                      onChange={(next) => setParams({ cityId: next || undefined }, { resetPage: true })}
+                      options={[
+                        { value: '', label: t('geo.allCities') },
+                        ...(cities.data ?? []).map((city) => ({
+                          value: city.id,
+                          label: geoName(city),
+                        })),
+                      ]}
+                    />
+                  </FormField>
+                </FilterPair>
+              ) : null}
+              {scope.showRoleFilter ? (
+                <FormField icon={Filter} label={t('users.filterRoles')} htmlFor="user-role-filter">
+                  <SearchSelect
+                    id="user-role-filter"
+                    value={roleCode}
+                    placeholder={t('users.allRoles')}
+                    onChange={(next) =>
+                      setParams({ roleCode: next || undefined }, { resetPage: true })
+                    }
+                    options={[
+                      { value: '', label: t('users.allRoles') },
+                      ...(roles.data ?? []).map((role) => ({
+                        value: role.code,
+                        label: t(role.nameKey),
+                      })),
+                    ]}
+                  />
+                </FormField>
+              ) : null}
+            </>
+          ) : undefined
+        }
+      />
       <TableCard
         loading={query.isLoading}
         empty={filtered ? t(`${keys}.noResults`) : t(`${keys}.empty`)}

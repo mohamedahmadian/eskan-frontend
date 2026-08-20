@@ -252,3 +252,5 @@ export function DetailActions({
     </div>
   )
 }
+
+export { LoadingState } from './LoadingState'

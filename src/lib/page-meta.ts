@@ -161,6 +161,9 @@ export function getPageMeta(pathname: string) {
   if (pathname.startsWith('/sms/send')) {
     return { titleKey: 'menus.smsSend', subtitleKey: 'sms.sendSubtitle' }
   }
+  if (pathname.startsWith('/sms/report')) {
+    return { titleKey: 'menus.smsReport', subtitleKey: 'sms.reportSubtitle' }
+  }
   if (pathname.startsWith('/users/new')) {
     return { titleKey: 'users.create', subtitleKey: 'users.createSubtitle' }
   }
@@ -219,6 +222,12 @@ export function getPageMeta(pathname: string) {
     return {
       titleKey: 'menus.accommodationManagers',
       subtitleKey: 'accommodationManagers.subtitle',
+    }
+  }
+  if (pathname.startsWith('/accommodation-report')) {
+    return {
+      titleKey: 'menus.accommodationReport',
+      subtitleKey: 'accommodations.reportSubtitle',
     }
   }
   if (pathname.startsWith('/accommodations/new')) {

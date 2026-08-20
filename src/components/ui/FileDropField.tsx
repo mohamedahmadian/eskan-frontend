@@ -1,4 +1,4 @@
-import { Camera, FolderOpen, ImagePlus, Trash2, Upload } from 'lucide-react'
+import { Camera, FolderOpen, ImagePlus, Trash2 } from 'lucide-react'
 import {
   useEffect,
   useId,
@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from './Form'
+import { LoadingSpinner } from './LoadingState'
 
 const defaultMaxBytes = 8 * 1024 * 1024
 
@@ -184,10 +185,10 @@ export function FileDropField({
       </div>
 
       {uploading ? (
-        <p className="mt-3 flex items-center justify-center gap-2 text-xs text-teal-700">
-          <Upload className="size-3.5 animate-pulse" aria-hidden />
-          {t('common.uploading')}
-        </p>
+        <div className="mt-3 flex flex-col items-center gap-2">
+          <LoadingSpinner size="sm" />
+          <p className="text-xs text-teal-700">{t('common.uploading')}</p>
+        </div>
       ) : null}
     </div>
   )

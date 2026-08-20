@@ -2,9 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PageHeader, userFormShellClassName } from '../../components/ui/Form'
+import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
 import type { ManagedUser, RoleOption } from '../../types/app'
+import { AccommodationAssignmentsCard } from '../accommodation-managers/AccommodationAssignmentsCard'
 import { UserForm } from './UserForm'
 import type { RoleUserScope } from './user-scopes'
 
@@ -30,7 +31,7 @@ export function RoleUserEditPage({ scope }: { scope: RoleUserScope }) {
   })
 
   if (!userQuery.data || !roles.data) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   return (
@@ -40,7 +41,25 @@ export function RoleUserEditPage({ scope }: { scope: RoleUserScope }) {
         initial={userQuery.data}
         roles={roles.data}
         lockedRoleCodes={scope.lockedRoleCodes}
+        hideRoles={scope.hideRoles}
         requirePassword={false}
+        extraTabs={
+          scope.showAccommodations
+            ? [
+                {
+                  id: 'assignAccommodations',
+                  labelKey: 'users.tabs.assignAccommodations',
+                  content: (
+                    <AccommodationAssignmentsCard
+                      user={userQuery.data}
+                      queryKey={scope.queryKey}
+                      apiBase={scope.apiBase}
+                    />
+                  ),
+                },
+              ]
+            : undefined
+        }
         onSubmit={async (payload) => {
           await api.patch(`${scope.apiBase}/${id}`, payload)
           toast.success(t(`${keys}.updated`))

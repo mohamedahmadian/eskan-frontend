@@ -19,6 +19,19 @@ export function GeoHas({ value }: { value: boolean }) {
   )
 }
 
+export function GeoYesNo({ value }: { value: boolean }) {
+  const { t } = useTranslation()
+  return (
+    <span
+      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+        value ? 'bg-teal-50 text-teal-700' : 'bg-cream-100 text-ink-500'
+      }`}
+    >
+      {value ? t('common.yes') : t('common.no')}
+    </span>
+  )
+}
+
 export function GeoStatus({ active }: { active: boolean }) {
   const { t } = useTranslation()
   return (

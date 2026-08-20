@@ -1,63 +1,100 @@
-import { FileText, Phone, Send } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { FileText, Phone } from 'lucide-react'
+import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { DateText } from '../../components/ui/DateText'
-import { PaginationBar, SearchBar, TableCard } from '../../components/ui/ListControls'
-import { AppForm, Button, FormField, PageHeader, cardClassName, fieldClassName, listShellClassName } from '../../components/ui/Form'
-import { useListParams } from '../../hooks/useListParams'
+import {
+  SmsRecipientPicker,
+  type SmsRecipient,
+} from '../../components/sms/SmsRecipientPicker'
+import {
+  AppForm,
+  FormActions,
+  FormField,
+  PageHeader,
+  cardClassName,
+  fieldClassName,
+  listShellClassName,
+} from '../../components/ui/Form'
 import { useSendSms } from '../../hooks/useSendSms'
-import { api, getApiErrorMessage } from '../../lib/api'
-import type { SmsMessage } from '../../lib/sms'
-import type { Paginated } from '../../types/app'
+import { getApiErrorMessage } from '../../lib/api'
+import { formatNumber } from '../../lib/datetime'
 
 export function SmsSendPage() {
-  const { t } = useTranslation()
-  const [phone, setPhone] = useState('')
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const [selected, setSelected] = useState<Record<string, SmsRecipient>>({})
+  const [manualPhone, setManualPhone] = useState('')
   const [body, setBody] = useState('')
+  const [sending, setSending] = useState(false)
   const sms = useSendSms()
-  const { q, page, term, setTerm, applySearch, setPage } = useListParams()
 
-  const history = useQuery({
-    queryKey: ['sms', 'messages', q, page],
-    queryFn: async () => {
-      const { data } = await api.get<Paginated<SmsMessage>>('/sms/messages', {
-        params: { q: q || undefined, page },
-      })
-      return data
-    },
-  })
+  const phones = useMemo(() => {
+    const fromUsers = Object.values(selected).map((item) => item.phone.trim())
+    const extra = manualPhone.trim()
+    return [...new Set([...fromUsers, ...(extra ? [extra] : [])].filter(Boolean))]
+  }, [manualPhone, selected])
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
+    if (!phones.length) {
+      toast.error(t('sms.noRecipient'))
+      return
+    }
+    setSending(true)
     try {
-      await sms.mutateAsync({ phone, body })
-      toast.success(t('sms.sent'))
+      let sent = 0
+      let lastError: unknown
+      for (const phone of phones) {
+        try {
+          await sms.mutateAsync({ phone, body })
+          sent += 1
+        } catch (error) {
+          lastError = error
+        }
+      }
+      const failed = phones.length - sent
+      if (sent === 0) {
+        toast.error(getApiErrorMessage(lastError, t('sms.sendFailed')))
+        return
+      }
+      if (failed > 0) {
+        toast.success(
+          t('sms.sentPartial', {
+            sent: formatNumber(sent, locale),
+            total: formatNumber(phones.length, locale),
+          }),
+        )
+      } else if (phones.length > 1) {
+        toast.success(t('sms.sentCount', { count: formatNumber(sent, locale) }))
+      } else {
+        toast.success(t('sms.sent'))
+      }
       setBody('')
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, t('sms.sendFailed')))
+    } finally {
+      setSending(false)
     }
   }
-
-  const rows = history.data?.items ?? []
 
   return (
     <div className={`${listShellClassName} space-y-8`}>
       <PageHeader title={t('sms.sendTitle')} subtitle={t('sms.sendSubtitle')} />
-      <AppForm
-        onSubmit={onSubmit}
-        className={`mx-auto w-full max-w-xl space-y-4 p-6 ${cardClassName}`}
-      >
-        <FormField icon={Phone} label={t('sms.phone')} htmlFor="sms-phone">
+      <SmsRecipientPicker selected={selected} onChange={setSelected} />
+
+      <AppForm onSubmit={onSubmit} className={`space-y-4 p-6 ${cardClassName}`}>
+        {phones.length > 1 ? (
+          <p className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-800">
+            {t('sms.recipientCount', { count: formatNumber(phones.length, locale) })}
+          </p>
+        ) : null}
+        <FormField icon={Phone} label={t('sms.manualPhone')} htmlFor="sms-phone">
           <input
             id="sms-phone"
             className={fieldClassName}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            value={manualPhone}
+            onChange={(e) => setManualPhone(e.target.value)}
             inputMode="tel"
             dir="ltr"
-            required
+            placeholder={t('sms.manualPhoneHint')}
           />
         </FormField>
         <FormField icon={FileText} label={t('sms.body')} htmlFor="sms-body">
@@ -70,68 +107,8 @@ export function SmsSendPage() {
             required
           />
         </FormField>
-        <Button type="submit" disabled={sms.isPending}>
-          <Send className="size-4" />
-          {t('sms.send')}
-        </Button>
+        <FormActions submitLabel={t('sms.send')} submitting={sending} />
       </AppForm>
-
-      <section>
-        <h2 className="mb-4 text-lg font-semibold text-ink-900">{t('sms.history')}</h2>
-        <SearchBar
-          term={term}
-          onTermChange={setTerm}
-          onSubmit={() => applySearch()}
-          label={t('common.search')}
-          placeholder={t('sms.searchPlaceholder')}
-        />
-        <TableCard
-          loading={history.isLoading}
-          empty={q ? t('sms.noResults') : t('sms.empty')}
-          hasRows={rows.length > 0}
-        >
-          <table className="w-full text-sm">
-            <thead className="bg-cream-50 text-ink-700">
-              <tr>
-                <th className="px-4 py-3 text-start font-medium">{t('sms.phone')}</th>
-                <th className="px-4 py-3 text-start font-medium">{t('sms.body')}</th>
-                <th className="px-4 py-3 text-start font-medium">{t('sms.status')}</th>
-                <th className="px-4 py-3 text-start font-medium">{t('sms.sentAt')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((item) => (
-                <tr key={item.id} className="border-t border-line align-top">
-                  <td className="px-4 py-3 whitespace-nowrap" dir="ltr">
-                    {item.phone}
-                  </td>
-                  <td className="max-w-md px-4 py-3 break-words">{item.body}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={
-                        item.status === 'SENT' ? 'text-teal-700' : 'text-red-700'
-                      }
-                    >
-                      {t(`sms.status${item.status === 'SENT' ? 'Sent' : 'Failed'}`)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <DateText value={item.createdAt} withTime />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </TableCard>
-        {history.data ? (
-          <PaginationBar
-            page={history.data.page}
-            pageSize={history.data.pageSize}
-            total={history.data.total}
-            onPageChange={setPage}
-          />
-        ) : null}
-      </section>
     </div>
   )
 }

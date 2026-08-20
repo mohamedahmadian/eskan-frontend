@@ -69,6 +69,10 @@ export function formatNumber(value: number, locale: string) {
   return localizeDigits(String(value), locale)
 }
 
+export function currentPersianYear() {
+  return new DateObject({ calendar: persian }).year
+}
+
 export function fromIsoDateOnly(value?: string) {
   if (!value) return undefined
   return toGregorianDateObject(value, true)

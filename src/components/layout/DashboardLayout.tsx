@@ -1,10 +1,11 @@
 import { Menu, Search, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { getNavIcon } from '../../lib/icons'
 import { getPageMeta } from '../../lib/page-meta'
+import { PageTransition } from '../ui/PageTransition'
 import { UserMenu } from './UserMenu'
 
 export function DashboardLayout() {
@@ -13,7 +14,12 @@ export function DashboardLayout() {
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const mainRef = useRef<HTMLElement>(null)
   const meta = getPageMeta(location.pathname)
+
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0)
+  }, [location.pathname, location.search])
 
   const modules = useMemo(() => {
     const needle = query.trim()
@@ -30,8 +36,8 @@ export function DashboardLayout() {
   }, [query, t, user?.modules])
 
   return (
-    <div className="min-h-svh bg-cream-50">
-      <div className="lg:flex">
+    <div className="h-svh overflow-hidden bg-cream-50">
+      <div className="flex h-full">
         {open ? (
           <button
             type="button"
@@ -41,7 +47,7 @@ export function DashboardLayout() {
           />
         ) : null}
         <aside
-          className={`fixed inset-y-0 start-0 z-40 flex w-[280px] flex-col border-e border-line bg-white transition lg:static lg:translate-x-0 ${
+          className={`fixed inset-y-0 start-0 z-40 flex h-svh w-[280px] flex-col border-e border-line bg-white transition lg:static lg:h-full lg:translate-x-0 ${
             open
               ? 'translate-x-0'
               : 'ltr:-translate-x-full rtl:translate-x-full lg:ltr:translate-x-0 lg:rtl:translate-x-0'
@@ -118,8 +124,8 @@ export function DashboardLayout() {
           </nav>
         </aside>
 
-        <div className="flex min-h-svh flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex items-center gap-3 bg-cream-50/90 px-4 py-4 backdrop-blur sm:px-8">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="z-20 flex shrink-0 items-center gap-3 bg-cream-50/90 px-4 py-4 backdrop-blur sm:px-8">
             <button
               type="button"
               className="rounded-xl p-2 text-ink-700 lg:hidden"
@@ -138,8 +144,13 @@ export function DashboardLayout() {
             </div>
             <UserMenu />
           </header>
-          <main className="flex-1 px-4 pb-8 sm:px-8">
-            <Outlet />
+          <main
+            ref={mainRef}
+            className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-8"
+          >
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
           </main>
         </div>
       </div>

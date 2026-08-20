@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Button, DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, Button, DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { formatNumber } from '../../lib/datetime'
 import { api } from '../../lib/api'
@@ -25,7 +25,7 @@ export function CountryDetailPage() {
 
   const country = query.data
   if (!country) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   return (

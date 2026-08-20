@@ -1,9 +1,30 @@
-import { ChevronLeft, ChevronRight, Eye, Pencil, Search, Trash2 } from 'lucide-react'
-import { type FormEvent, type ReactNode } from 'react'
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, Pencil, Search, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { type FormEvent, type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { formatNumber } from '../../lib/datetime'
 import { AppForm, Button, FormField, cardClassName, fieldClassName } from './Form'
+import { LoadingState } from './LoadingState'
+
+const filtersOpenById = new Map<string, boolean>()
+
+export function FilterPair({
+  children,
+  columns = 2,
+}: {
+  children: ReactNode
+  columns?: 2 | 3
+}) {
+  return (
+    <div
+      className={`grid gap-4 sm:col-span-2 ${
+        columns === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
 
 export function SearchBar({
   term,
@@ -12,6 +33,9 @@ export function SearchBar({
   label,
   placeholder,
   extra,
+  filtersActive = false,
+  extraClassName = 'sm:grid-cols-2',
+  inputId = 'list-search',
 }: {
   term: string
   onTermChange: (value: string) => void
@@ -19,32 +43,70 @@ export function SearchBar({
   label: string
   placeholder: string
   extra?: ReactNode
+  filtersActive?: boolean
+  extraClassName?: string
+  inputId?: string
 }) {
   const { t } = useTranslation()
+  const [filtersOpen, setFiltersOpen] = useState(() => filtersOpenById.get(inputId) ?? false)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     onSubmit()
   }
 
+  function toggleFilters() {
+    setFiltersOpen((open) => {
+      const next = !open
+      filtersOpenById.set(inputId, next)
+      return next
+    })
+  }
+
   return (
     <AppForm onSubmit={handleSubmit} className={`mb-4 p-4 ${cardClassName}`}>
-      <FormField icon={Search} label={label} htmlFor="list-search">
-        <div className="flex flex-col gap-3 sm:flex-row">
+      <FormField icon={Search} label={label} htmlFor={inputId}>
+        <div className="flex w-full flex-col gap-3 sm:flex-row">
           <input
-            id="list-search"
-            className={fieldClassName}
+            id={inputId}
+            className={`${fieldClassName} min-w-0 flex-1`}
             value={term}
             onChange={(e) => onTermChange(e.target.value)}
             placeholder={placeholder}
           />
-          <Button type="submit" className="sm:min-w-28">
+          <Button type="submit" className="shrink-0 sm:min-w-28">
             <Search className="size-4" aria-hidden />
             {t('common.search')}
           </Button>
         </div>
       </FormField>
-      {extra}
+      {extra ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            aria-expanded={filtersOpen}
+            onClick={toggleFilters}
+            className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium text-ink-700 transition hover:bg-cream-50"
+          >
+            <SlidersHorizontal className="size-4 text-teal-600" aria-hidden />
+            {t('common.filters')}
+            {filtersActive ? (
+              <span className="size-2 rounded-full bg-teal-500" aria-hidden />
+            ) : null}
+            <ChevronDown
+              className={`size-4 text-ink-400 transition ${filtersOpen ? 'rotate-180' : ''}`}
+              aria-hidden
+            />
+          </button>
+          <div
+            className={`mt-3 grid gap-4 border-t border-line pt-4 ${extraClassName} ${
+              filtersOpen ? '' : 'hidden'
+            }`}
+          >
+            {extra}
+          </div>
+        </div>
+      ) : null}
     </AppForm>
   )
 }
@@ -96,57 +158,66 @@ export function PaginationBar({
   pageSize,
   total,
   onPageChange,
+  startExtra,
 }: {
   page: number
   pageSize: number
   total: number
   onPageChange: (page: number) => void
+  startExtra?: ReactNode
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
-  if (total === 0) {
+  if (total === 0 && !startExtra) {
     return null
   }
 
-  const from = (page - 1) * pageSize + 1
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, total)
 
   return (
     <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-ink-500">
-        {t('common.showingRange', {
-          from: formatNumber(from, locale),
-          to: formatNumber(to, locale),
-          total: formatNumber(total, locale),
-        })}
-      </p>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-        >
-          <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
-          {t('common.prevPage')}
-        </Button>
-        <span className="min-w-16 text-center text-sm text-ink-700">
-          {t('common.pageOf', {
-            page: formatNumber(page, locale),
-            pages: formatNumber(pageCount, locale),
-          })}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={page >= pageCount}
-          onClick={() => onPageChange(page + 1)}
-        >
-          {t('common.nextPage')}
-          <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
-        </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        {startExtra}
+        {total > 0 ? (
+          <p className="text-sm text-ink-500">
+            {t('common.showingRange', {
+              from: formatNumber(from, locale),
+              to: formatNumber(to, locale),
+              total: formatNumber(total, locale),
+            })}
+          </p>
+        ) : null}
       </div>
+      {total > 0 ? (
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={page <= 1}
+            onClick={() => onPageChange(page - 1)}
+          >
+            <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
+            {t('common.prevPage')}
+          </Button>
+          <span className="min-w-16 text-center text-sm text-ink-700">
+            {t('common.pageOf', {
+              page: formatNumber(page, locale),
+              pages: formatNumber(pageCount, locale),
+            })}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={page >= pageCount}
+            onClick={() => onPageChange(page + 1)}
+          >
+            {t('common.nextPage')}
+            <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -162,15 +233,14 @@ export function TableCard({
   hasRows: boolean
   children: ReactNode
 }) {
-  const { t } = useTranslation()
   return (
     <div className="overflow-hidden rounded-[22px] border border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]">
       {hasRows ? (
         children
+      ) : loading ? (
+        <LoadingState variant="inline" />
       ) : (
-        <p className="px-4 py-10 text-center text-ink-500">
-          {loading ? t('common.loading') : empty}
-        </p>
+        <p className="px-4 py-10 text-center text-ink-500">{empty}</p>
       )}
     </div>
   )

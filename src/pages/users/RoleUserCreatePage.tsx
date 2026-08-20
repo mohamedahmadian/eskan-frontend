@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PageHeader, userFormShellClassName } from '../../components/ui/Form'
+import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
 import type { RoleOption } from '../../types/app'
 import { UserForm } from './UserForm'
@@ -21,7 +21,7 @@ export function RoleUserCreatePage({ scope }: { scope: RoleUserScope }) {
   })
 
   if (!roles.data) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   const lockedIds = roles.data
@@ -35,6 +35,7 @@ export function RoleUserCreatePage({ scope }: { scope: RoleUserScope }) {
         initial={lockedIds.length ? { locale: 'fa', roleIds: lockedIds } : undefined}
         roles={roles.data}
         lockedRoleCodes={scope.lockedRoleCodes}
+        hideRoles={scope.hideRoles}
         requirePassword
         onSubmit={async (payload) => {
           await api.post(scope.apiBase, payload)

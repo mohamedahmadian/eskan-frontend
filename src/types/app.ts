@@ -50,6 +50,14 @@ export const genderTypes = {
 
 export type GenderType = (typeof genderTypes)[keyof typeof genderTypes]
 
+export const managementTypes = {
+  SELF_SUFFICIENT: 'SELF_SUFFICIENT',
+  SEMI_SELF_SUFFICIENT: 'SEMI_SELF_SUFFICIENT',
+  NON_SELF_SUFFICIENT: 'NON_SELF_SUFFICIENT',
+} as const
+
+export type ManagementType = (typeof managementTypes)[keyof typeof managementTypes]
+
 export type NavMenu = {
   code: string
   nameKey: string
@@ -99,6 +107,7 @@ export type Paginated<T> = {
 export type ManagedAccommodationLink = {
   id: string
   isPrimary: boolean
+  year: number
   createdAt: string
   accommodation: {
     id: string
@@ -202,6 +211,7 @@ export type City = GeoName & {
   neshanAddress: string | null
   latitude: number | null
   longitude: number | null
+  isProvinceCapital: boolean
   hasRailway: boolean
   hasAirport: boolean
   isActive: boolean
@@ -226,6 +236,7 @@ export type AccommodationManagerLink = {
   id: string
   userId: string
   isPrimary: boolean
+  year: number
   createdAt: string
   user: { id: string; username: string; fullName: string }
 }
@@ -236,6 +247,7 @@ export type Accommodation = {
   type: AccommodationType
   status: AccommodationStatus
   genderType: GenderType
+  managementType: ManagementType
   maleCapacity: number
   femaleCapacity: number
   assignedMaleCapacity: number
@@ -269,6 +281,17 @@ export type Accommodation = {
   managers: AccommodationManagerLink[]
   createdAt: string
   updatedAt: string
+}
+
+export type AccommodationReport = {
+  total: number
+  byGenderType: { genderType: GenderType; count: number }[]
+  byManagementType: { managementType: ManagementType; count: number }[]
+  byCombination: {
+    genderType: GenderType
+    managementType: ManagementType
+    count: number
+  }[]
 }
 
 export type WalkingRouteStage = {

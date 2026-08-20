@@ -1,16 +1,12 @@
-import { Filter, Plus, Search } from 'lucide-react'
+import { Filter, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { PaginationBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
+import { PaginationBar, SearchBar, TableCard, EntityRowActions, FilterPair } from '../../components/ui/ListControls'
 import {
-  AppForm,
   Button,
   FormField,
   PageHeader,
-  cardClassName,
-  fieldClassName,
   listShellClassName,
 } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
@@ -79,8 +75,7 @@ export function WalkingRoutesListPage() {
     },
   })
 
-  function onSearch(event: FormEvent) {
-    event.preventDefault()
+  function onSearch() {
     setParams({ q: term.trim() || undefined }, { resetPage: true })
   }
 
@@ -102,78 +97,76 @@ export function WalkingRoutesListPage() {
           </Link>
         }
       />
-      <AppForm onSubmit={onSearch} className={`mb-4 grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4 ${cardClassName}`}>
-        <FormField icon={Filter} label={t('walkingRoutes.originCountry')} htmlFor="route-origin">
-          <SearchSelect
-            id="route-origin"
-            value={originCountryId}
-            placeholder={t('walkingRoutes.allOriginCountries')}
-            onChange={(next) =>
-              setParams({ originCountryId: next || undefined }, { resetPage: true })
-            }
-            options={[
-              { value: '', label: t('walkingRoutes.allOriginCountries') },
-              ...(countries.data ?? []).map((country) => ({
-                value: country.id,
-                label: name(country),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={Filter} label={t('geo.province')} htmlFor="route-province">
-          <SearchSelect
-            id="route-province"
-            value={provinceId}
-            placeholder={t('geo.allProvinces')}
-            onChange={(next) =>
-              setParams(
-                { provinceId: next || undefined, cityId: undefined },
-                { resetPage: true },
-              )
-            }
-            options={[
-              { value: '', label: t('geo.allProvinces') },
-              ...(provinces.data ?? []).map((province) => ({
-                value: province.id,
-                label: name(province),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={Filter} label={t('geo.city')} htmlFor="route-city">
-          <SearchSelect
-            id="route-city"
-            value={cityId}
-            disabled={!provinceId}
-            placeholder={t('geo.allCities')}
-            onChange={(next) =>
-              setParams({ cityId: next || undefined }, { resetPage: true })
-            }
-            options={[
-              { value: '', label: t('geo.allCities') },
-              ...(cities.data ?? []).map((city) => ({
-                value: city.id,
-                label: name(city),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={Search} label={t('walkingRoutes.search')} htmlFor="route-search">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              id="route-search"
-              className={fieldClassName}
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              placeholder={t('walkingRoutes.searchPlaceholder')}
-            />
-            <Button type="submit" className="sm:min-w-28">
-              <Search className="size-4" />
-              {t('common.search')}
-            </Button>
-          </div>
-        </FormField>
-      </AppForm>
+      <SearchBar
+        inputId="route-search"
+        term={term}
+        onTermChange={setTerm}
+        onSubmit={onSearch}
+        label={t('walkingRoutes.search')}
+        placeholder={t('walkingRoutes.searchPlaceholder')}
+        filtersActive={Boolean(originCountryId || provinceId || cityId)}
+        extra={
+          <>
+            <FilterPair>
+              <FormField icon={Filter} label={t('geo.province')} htmlFor="route-province">
+                <SearchSelect
+                  id="route-province"
+                  value={provinceId}
+                  placeholder={t('geo.allProvinces')}
+                  onChange={(next) =>
+                    setParams(
+                      { provinceId: next || undefined, cityId: undefined },
+                      { resetPage: true },
+                    )
+                  }
+                  options={[
+                    { value: '', label: t('geo.allProvinces') },
+                    ...(provinces.data ?? []).map((province) => ({
+                      value: province.id,
+                      label: name(province),
+                    })),
+                  ]}
+                />
+              </FormField>
+              <FormField icon={Filter} label={t('geo.city')} htmlFor="route-city">
+                <SearchSelect
+                  id="route-city"
+                  value={cityId}
+                  disabled={!provinceId}
+                  placeholder={t('geo.allCities')}
+                  onChange={(next) =>
+                    setParams({ cityId: next || undefined }, { resetPage: true })
+                  }
+                  options={[
+                    { value: '', label: t('geo.allCities') },
+                    ...(cities.data ?? []).map((city) => ({
+                      value: city.id,
+                      label: name(city),
+                    })),
+                  ]}
+                />
+              </FormField>
+            </FilterPair>
+            <FormField icon={Filter} label={t('walkingRoutes.originCountry')} htmlFor="route-origin">
+              <SearchSelect
+                id="route-origin"
+                value={originCountryId}
+                placeholder={t('walkingRoutes.allOriginCountries')}
+                onChange={(next) =>
+                  setParams({ originCountryId: next || undefined }, { resetPage: true })
+                }
+                options={[
+                  { value: '', label: t('walkingRoutes.allOriginCountries') },
+                  ...(countries.data ?? []).map((country) => ({
+                    value: country.id,
+                    label: name(country),
+                  })),
+                ]}
+              />
+            </FormField>
+          </>
+        }
+      />
       <TableCard loading={query.isLoading} empty={emptyMessage} hasRows={rows.length > 0}>
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">

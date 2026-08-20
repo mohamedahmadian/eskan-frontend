@@ -3,13 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { Button, DetailActions, PageHeader, cardClassName, formShellClassName } from '../../components/ui/Form'
+import { LoadingState, Button, DetailActions, PageHeader, cardClassName, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import type { City } from '../../types/app'
-import { DetailRow, GeoHas, GeoLocationRows, GeoStatus, RepresentativeValue } from './GeoShared'
+import { DetailRow, GeoHas, GeoLocationRows, GeoStatus, GeoYesNo, RepresentativeValue } from './GeoShared'
 
 export function CityDetailPage() {
   const { t } = useTranslation()
@@ -29,7 +29,7 @@ export function CityDetailPage() {
 
   const city = query.data
   if (!city) {
-    return <p className="text-ink-500">{t('common.loading')}</p>
+    return <LoadingState />
   }
 
   const canManageFoodSuppliers = hasMenuAccess('/base-info/food-suppliers', user?.modules ?? [])
@@ -60,6 +60,10 @@ export function CityDetailPage() {
               neshanAddress={city.neshanAddress}
               latitude={city.latitude}
               longitude={city.longitude}
+            />
+            <DetailRow
+              label={t('geo.isProvinceCapital')}
+              value={<GeoYesNo value={city.isProvinceCapital} />}
             />
             <DetailRow label={t('geo.hasRailway')} value={<GeoHas value={city.hasRailway} />} />
             <DetailRow label={t('geo.hasAirport')} value={<GeoHas value={city.hasAirport} />} />

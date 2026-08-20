@@ -1,10 +1,9 @@
-import { Filter, Plus, Search } from 'lucide-react'
+import { Filter, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { PaginationBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
-import { AppForm, Button, FormField, PageHeader, cardClassName, fieldClassName, listShellClassName } from '../../components/ui/Form'
+import { PaginationBar, SearchBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
+import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
@@ -44,8 +43,7 @@ export function ProvincesListPage() {
     },
   })
 
-  function onSearch(event: FormEvent) {
-    event.preventDefault()
+  function onSearch() {
     setParams({ q: term.trim() || undefined }, { resetPage: true })
   }
 
@@ -72,40 +70,34 @@ export function ProvincesListPage() {
           </Link>
         }
       />
-      <AppForm onSubmit={onSearch} className={`mb-4 grid gap-4 p-4 sm:grid-cols-2 ${cardClassName}`}>
-        <FormField icon={Filter} label={t('geo.country')} htmlFor="province-country">
-          <SearchSelect
-            id="province-country"
-            value={countryId}
-            placeholder={t('geo.allCountries')}
-            onChange={(next) =>
-              setParams({ countryId: next || undefined }, { resetPage: true })
-            }
-            options={[
-              { value: '', label: t('geo.allCountries') },
-              ...(countries.data ?? []).map((country) => ({
-                value: country.id,
-                label: name(country),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={Search} label={t('provinces.search')} htmlFor="province-search">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              id="province-search"
-              className={fieldClassName}
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              placeholder={t('provinces.searchPlaceholder')}
+      <SearchBar
+        inputId="province-search"
+        term={term}
+        onTermChange={setTerm}
+        onSubmit={onSearch}
+        label={t('provinces.search')}
+        placeholder={t('provinces.searchPlaceholder')}
+        filtersActive={Boolean(countryId)}
+        extra={
+          <FormField icon={Filter} label={t('geo.country')} htmlFor="province-country">
+            <SearchSelect
+              id="province-country"
+              value={countryId}
+              placeholder={t('geo.allCountries')}
+              onChange={(next) =>
+                setParams({ countryId: next || undefined }, { resetPage: true })
+              }
+              options={[
+                { value: '', label: t('geo.allCountries') },
+                ...(countries.data ?? []).map((country) => ({
+                  value: country.id,
+                  label: name(country),
+                })),
+              ]}
             />
-            <Button type="submit" className="sm:min-w-28">
-              <Search className="size-4" />
-              {t('common.search')}
-            </Button>
-          </div>
-        </FormField>
-      </AppForm>
+          </FormField>
+        }
+      />
       <TableCard loading={query.isLoading} empty={emptyMessage} hasRows={rows.length > 0}>
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
