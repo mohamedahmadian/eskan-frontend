@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronLeft, ChevronRight, Eye, Pencil, Search, SlidersHorizontal, Trash2 } from 'lucide-react'
-import { type FormEvent, type ReactNode, useState } from 'react'
+import { type FormEvent, type MouseEvent, type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { formatNumber } from '../../lib/datetime'
@@ -113,29 +113,34 @@ export function SearchBar({
 
 export function EntityRowActions({
   viewTo,
+  extra,
   editTo,
   onDelete,
   canDelete = true,
 }: {
   viewTo: string
-  editTo: string
+  extra?: ReactNode
+  editTo?: string
   onDelete?: () => void
   canDelete?: boolean
 }) {
   const { t } = useTranslation()
   return (
     <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
-      <Link to={viewTo}>
+      <Link to={viewTo} data-row-view>
         <Button type="button" variant="ghost">
           <Eye className="size-4" aria-hidden />
           {t('common.view')}
         </Button>
       </Link>
-      <Link to={editTo} aria-label={t('common.edit')} title={t('common.edit')}>
-        <Button type="button" variant="ghost" icon>
-          <Pencil className="size-4" aria-hidden />
-        </Button>
-      </Link>
+      {extra}
+      {editTo ? (
+        <Link to={editTo} aria-label={t('common.edit')} title={t('common.edit')}>
+          <Button type="button" variant="ghost" icon>
+            <Pencil className="size-4" aria-hidden />
+          </Button>
+        </Link>
+      ) : null}
       {canDelete && onDelete ? (
         <Button
           type="button"
@@ -226,15 +231,41 @@ export function TableCard({
   loading,
   empty,
   hasRows,
+  rowClick = true,
   children,
 }: {
   loading?: boolean
   empty: string
   hasRows: boolean
+  rowClick?: boolean
   children: ReactNode
 }) {
+  function handleClick(event: MouseEvent<HTMLDivElement>) {
+    if (!rowClick) return
+    const target = event.target as HTMLElement
+    if (target.closest('a, button, input, textarea, select, label, [role="button"]')) {
+      return
+    }
+    const selection = window.getSelection()
+    if (selection && !selection.isCollapsed && selection.toString().trim()) {
+      return
+    }
+    const row = target.closest('tbody tr')
+    if (!(row instanceof HTMLElement) || !event.currentTarget.contains(row)) {
+      return
+    }
+    row.querySelector<HTMLElement>('[data-row-view]')?.click()
+  }
+
   return (
-    <div className="overflow-hidden rounded-[22px] border border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]">
+    <div
+      className={`overflow-hidden rounded-[22px] border border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)] ${
+        rowClick
+          ? '[&_tbody_tr:has([data-row-view])]:cursor-pointer [&_tbody_tr:has([data-row-view])]:hover:bg-cream-50'
+          : ''
+      }`}
+      onClick={handleClick}
+    >
       {hasRows ? (
         children
       ) : loading ? (

@@ -25,7 +25,7 @@ export function SmsSendButton({
       onClick={() => {
         void sms
           .mutateAsync({ phone, body })
-          .then(() => toast.success(t('sms.sent')))
+          .then(() => toast.success(t('sms.queued')))
           .catch((error) => toast.error(getApiErrorMessage(error, t('sms.sendFailed'))))
       }}
     >

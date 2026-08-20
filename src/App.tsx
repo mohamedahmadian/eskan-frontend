@@ -73,8 +73,45 @@ import { WalkingRouteCreatePage } from './pages/walking-routes/WalkingRouteCreat
 import { WalkingRouteDetailPage } from './pages/walking-routes/WalkingRouteDetailPage'
 import { WalkingRouteEditPage } from './pages/walking-routes/WalkingRouteEditPage'
 import { WalkingRoutesListPage } from './pages/walking-routes/WalkingRoutesListPage'
+import { SupplierCreatePage } from './pages/suppliers/SupplierCreatePage'
+import { SupplierDetailPage } from './pages/suppliers/SupplierDetailPage'
+import { SupplierEditPage } from './pages/suppliers/SupplierEditPage'
+import { SuppliersListPage } from './pages/suppliers/SuppliersListPage'
+import { SupplierItemCreatePage } from './pages/supplier-items/SupplierItemCreatePage'
+import { SupplierItemDetailPage } from './pages/supplier-items/SupplierItemDetailPage'
+import { SupplierItemEditPage } from './pages/supplier-items/SupplierItemEditPage'
+import { SupplierItemsListPage } from './pages/supplier-items/SupplierItemsListPage'
+import { AccommodationLoanCreatePage } from './pages/accommodation-loans/AccommodationLoanCreatePage'
+import { AccommodationLoanDetailPage } from './pages/accommodation-loans/AccommodationLoanDetailPage'
+import { AccommodationLoanEditPage } from './pages/accommodation-loans/AccommodationLoanEditPage'
+import { AccommodationLoansListPage } from './pages/accommodation-loans/AccommodationLoansListPage'
+import { LoanReportPage } from './pages/accommodation-loans/LoanReportPage'
+import { ItemQuotaCreatePage } from './pages/item-quotas/ItemQuotaCreatePage'
+import { ItemQuotaDetailPage } from './pages/item-quotas/ItemQuotaDetailPage'
+import { ItemQuotaEditPage } from './pages/item-quotas/ItemQuotaEditPage'
+import { ItemQuotasListPage } from './pages/item-quotas/ItemQuotasListPage'
+import { IssueVoucherPage } from './pages/item-quota-vouchers/IssueVoucherPage'
+import { ItemQuotaVoucherCreatePage } from './pages/item-quota-vouchers/ItemQuotaVoucherCreatePage'
+import { ItemQuotaVoucherDetailPage } from './pages/item-quota-vouchers/ItemQuotaVoucherDetailPage'
+import { ItemQuotaVoucherEditPage } from './pages/item-quota-vouchers/ItemQuotaVoucherEditPage'
+import { ItemQuotaVouchersAdminListPage } from './pages/item-quota-vouchers/ItemQuotaVouchersAdminListPage'
+import { ItemQuotaVouchersListPage } from './pages/item-quota-vouchers/ItemQuotaVouchersListPage'
+import { ItemQuotaVoucherReportPage } from './pages/item-quota-vouchers/ItemQuotaVoucherReportPage'
+import { MyVoucherDetailPage } from './pages/item-quota-vouchers/MyVoucherDetailPage'
+import { MyVouchersListPage } from './pages/item-quota-vouchers/MyVouchersListPage'
+import { MyLoanDetailPage } from './pages/accommodation-loans/MyLoanDetailPage'
+import { MyLoansListPage } from './pages/accommodation-loans/MyLoansListPage'
+import { IceVoucherCreatePage, MyIceVoucherCreatePage } from './pages/ice-vouchers/MyIceVoucherCreatePage'
+import { IceVoucherDetailPage } from './pages/ice-vouchers/IceVoucherDetailPage'
+import { IceVoucherReportPage } from './pages/ice-vouchers/IceVoucherReportPage'
+import { IceVouchersListPage } from './pages/ice-vouchers/IceVouchersListPage'
+import { LogisticsSettingsPage } from './pages/ice-vouchers/LogisticsSettingsPage'
+import { MyIceVoucherDetailPage } from './pages/ice-vouchers/MyIceVoucherDetailPage'
+import { MyIceVouchersListPage } from './pages/ice-vouchers/MyIceVouchersListPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 import { RequireMenuAccess } from './routes/RequireMenuAccess'
+import { PublicIceVoucherPage } from './pages/public-vouchers/PublicIceVoucherPage'
+import { PublicItemVoucherPage } from './pages/public-vouchers/PublicItemVoucherPage'
 
 const queryClient = new QueryClient()
 
@@ -82,7 +119,13 @@ function AppToaster() {
   const { i18n } = useTranslation()
   const lang = (i18n.language.split('-')[0] as AppLanguage) || 'fa'
   return (
-    <Toaster richColors position="top-center" dir={languages[lang]?.dir ?? 'rtl'} />
+    <Toaster
+      richColors
+      position="top-left"
+      className="app-toaster"
+      swipeDirections={['left', 'right']}
+      dir={languages[lang]?.dir ?? 'rtl'}
+    />
   )
 }
 
@@ -94,6 +137,8 @@ export default function App() {
           <AppToaster />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/v/item/:code" element={<PublicItemVoucherPage />} />
+            <Route path="/v/ice/:code" element={<PublicIceVoucherPage />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<OverviewPage />} />
@@ -198,6 +243,82 @@ export default function App() {
                 </Route>
                 <Route element={<RequireMenuAccess path="/accommodation-report" />}>
                   <Route path="/accommodation-report" element={<AccommodationReportPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/suppliers" />}>
+                  <Route path="/logistics/suppliers" element={<SuppliersListPage />} />
+                  <Route path="/logistics/suppliers/new" element={<SupplierCreatePage />} />
+                  <Route path="/logistics/suppliers/:supplierId/items" element={<SupplierItemsListPage />} />
+                  <Route path="/logistics/suppliers/:supplierId/items/new" element={<SupplierItemCreatePage />} />
+                  <Route path="/logistics/suppliers/:supplierId/items/:id" element={<SupplierItemDetailPage />} />
+                  <Route path="/logistics/suppliers/:supplierId/items/:id/edit" element={<SupplierItemEditPage />} />
+                  <Route path="/logistics/suppliers/:id" element={<SupplierDetailPage />} />
+                  <Route path="/logistics/suppliers/:id/edit" element={<SupplierEditPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/loans" />}>
+                  <Route path="/logistics/loans" element={<AccommodationLoansListPage />} />
+                  <Route path="/logistics/loans/new" element={<AccommodationLoanCreatePage />} />
+                  <Route path="/logistics/loans/:id" element={<AccommodationLoanDetailPage />} />
+                  <Route path="/logistics/loans/:id/edit" element={<AccommodationLoanEditPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/loan-report" />}>
+                  <Route path="/logistics/loan-report" element={<LoanReportPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/item-quotas" />}>
+                  <Route path="/logistics/item-quotas" element={<ItemQuotasListPage />} />
+                  <Route path="/logistics/item-quotas/new" element={<ItemQuotaCreatePage />} />
+                  <Route path="/logistics/item-quotas/:quotaId/vouchers" element={<ItemQuotaVouchersListPage />} />
+                  <Route path="/logistics/item-quotas/:quotaId/vouchers/new" element={<ItemQuotaVoucherCreatePage />} />
+                  <Route path="/logistics/item-quotas/:quotaId/vouchers/:id" element={<ItemQuotaVoucherDetailPage />} />
+                  <Route path="/logistics/item-quotas/:quotaId/vouchers/:id/edit" element={<ItemQuotaVoucherEditPage />} />
+                  <Route path="/logistics/item-quotas/:id" element={<ItemQuotaDetailPage />} />
+                  <Route path="/logistics/item-quotas/:id/edit" element={<ItemQuotaEditPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/issue-voucher" />}>
+                  <Route path="/logistics/issue-voucher" element={<IssueVoucherPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/vouchers" />}>
+                  <Route path="/logistics/vouchers" element={<ItemQuotaVouchersAdminListPage />} />
+                  <Route
+                    path="/logistics/vouchers/new"
+                    element={
+                      <IssueVoucherPage
+                        titleKey="itemQuotaVouchers.create"
+                        successPath={(id) => `/logistics/vouchers/${id}`}
+                      />
+                    }
+                  />
+                  <Route path="/logistics/vouchers/:id" element={<ItemQuotaVoucherDetailPage />} />
+                  <Route path="/logistics/vouchers/:id/edit" element={<ItemQuotaVoucherEditPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/voucher-report" />}>
+                  <Route path="/logistics/voucher-report" element={<ItemQuotaVoucherReportPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/my-vouchers" />}>
+                  <Route path="/logistics/my-vouchers" element={<MyVouchersListPage />} />
+                  <Route path="/logistics/my-vouchers/:id" element={<MyVoucherDetailPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/my-loans" />}>
+                  <Route path="/logistics/my-loans" element={<MyLoansListPage />} />
+                  <Route path="/logistics/my-loans/:id" element={<MyLoanDetailPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/settings" />}>
+                  <Route path="/logistics/settings" element={<LogisticsSettingsPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/ice-vouchers" />}>
+                  <Route path="/logistics/ice-vouchers" element={<IceVouchersListPage />} />
+                  <Route
+                    path="/logistics/ice-vouchers/new"
+                    element={<IceVoucherCreatePage basePath="/logistics/ice-vouchers" />}
+                  />
+                  <Route path="/logistics/ice-vouchers/:id" element={<IceVoucherDetailPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/my-ice-vouchers" />}>
+                  <Route path="/logistics/my-ice-vouchers" element={<MyIceVouchersListPage />} />
+                  <Route path="/logistics/my-ice-vouchers/new" element={<MyIceVoucherCreatePage />} />
+                  <Route path="/logistics/my-ice-vouchers/:id" element={<MyIceVoucherDetailPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/ice-voucher-report" />}>
+                  <Route path="/logistics/ice-voucher-report" element={<IceVoucherReportPage />} />
                 </Route>
               </Route>
             </Route>

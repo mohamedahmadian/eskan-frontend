@@ -242,5 +242,122 @@ export function getPageMeta(pathname: string) {
   if (pathname.startsWith('/accommodations')) {
     return { titleKey: 'menus.accommodations', subtitleKey: 'accommodations.subtitle' }
   }
+  if (pathname.startsWith('/logistics/suppliers/new')) {
+    return { titleKey: 'suppliers.create', subtitleKey: 'suppliers.createSubtitle' }
+  }
+  if (/\/logistics\/suppliers\/[^/]+\/items\/new$/.test(pathname)) {
+    return { titleKey: 'supplierItems.create', subtitleKey: 'supplierItems.createSubtitle' }
+  }
+  if (/\/logistics\/suppliers\/[^/]+\/items\/[^/]+\/edit$/.test(pathname)) {
+    return { titleKey: 'supplierItems.edit', subtitleKey: 'supplierItems.editSubtitle' }
+  }
+  if (/\/logistics\/suppliers\/[^/]+\/items\/[^/]+$/.test(pathname)) {
+    return { titleKey: 'supplierItems.details', subtitleKey: 'supplierItems.detailsSubtitle' }
+  }
+  if (/\/logistics\/suppliers\/[^/]+\/items$/.test(pathname)) {
+    return { titleKey: 'supplierItems.title', subtitleKey: 'supplierItems.subtitle' }
+  }
+  if (pathname.includes('/edit') && pathname.startsWith('/logistics/suppliers/')) {
+    return { titleKey: 'suppliers.edit', subtitleKey: 'suppliers.editSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/suppliers/') && pathname !== '/logistics/suppliers') {
+    return { titleKey: 'suppliers.details', subtitleKey: 'suppliers.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/suppliers')) {
+    return { titleKey: 'menus.suppliers', subtitleKey: 'suppliers.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/loans/new')) {
+    return { titleKey: 'accommodationLoans.create', subtitleKey: 'accommodationLoans.createSubtitle' }
+  }
+  if (pathname.includes('/edit') && pathname.startsWith('/logistics/loans/')) {
+    return { titleKey: 'accommodationLoans.edit', subtitleKey: 'accommodationLoans.editSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/loans/') && pathname !== '/logistics/loans') {
+    return { titleKey: 'accommodationLoans.details', subtitleKey: 'accommodationLoans.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/loans')) {
+    return { titleKey: 'menus.loanManagement', subtitleKey: 'accommodationLoans.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/loan-report')) {
+    return { titleKey: 'menus.loanReport', subtitleKey: 'loanReports.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/item-quotas/new')) {
+    return { titleKey: 'itemQuotas.create', subtitleKey: 'itemQuotas.createSubtitle' }
+  }
+  if (/\/logistics\/item-quotas\/[^/]+\/vouchers\/new$/.test(pathname)) {
+    return { titleKey: 'itemQuotaVouchers.create', subtitleKey: 'itemQuotaVouchers.createSubtitle' }
+  }
+  if (/\/logistics\/item-quotas\/[^/]+\/vouchers\/[^/]+\/edit$/.test(pathname)) {
+    return { titleKey: 'itemQuotaVouchers.edit', subtitleKey: 'itemQuotaVouchers.editSubtitle' }
+  }
+  if (/\/logistics\/item-quotas\/[^/]+\/vouchers\/[^/]+$/.test(pathname)) {
+    return { titleKey: 'itemQuotaVouchers.details', subtitleKey: 'itemQuotaVouchers.detailsSubtitle' }
+  }
+  if (/\/logistics\/item-quotas\/[^/]+\/vouchers$/.test(pathname)) {
+    return { titleKey: 'itemQuotaVouchers.title', subtitleKey: 'itemQuotaVouchers.subtitle' }
+  }
+  if (pathname.includes('/edit') && pathname.startsWith('/logistics/item-quotas/')) {
+    return { titleKey: 'itemQuotas.edit', subtitleKey: 'itemQuotas.editSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/item-quotas/') && pathname !== '/logistics/item-quotas') {
+    return { titleKey: 'itemQuotas.details', subtitleKey: 'itemQuotas.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/item-quotas')) {
+    return { titleKey: 'menus.itemQuotas', subtitleKey: 'itemQuotas.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/issue-voucher')) {
+    return { titleKey: 'menus.issueVoucher', subtitleKey: 'itemQuotaVouchers.standaloneSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/voucher-report')) {
+    return { titleKey: 'menus.voucherReport', subtitleKey: 'voucherReports.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/vouchers/new')) {
+    return { titleKey: 'itemQuotaVouchers.create', subtitleKey: 'itemQuotaVouchers.standaloneSubtitle' }
+  }
+  if (pathname.includes('/edit') && pathname.startsWith('/logistics/vouchers/')) {
+    return { titleKey: 'itemQuotaVouchers.edit', subtitleKey: 'itemQuotaVouchers.editSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/vouchers/') && pathname !== '/logistics/vouchers') {
+    return { titleKey: 'itemQuotaVouchers.details', subtitleKey: 'itemQuotaVouchers.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/vouchers')) {
+    return { titleKey: 'menus.voucherManagement', subtitleKey: 'itemQuotaVouchers.adminSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/my-vouchers/') && pathname !== '/logistics/my-vouchers') {
+    return { titleKey: 'itemQuotaVouchers.details', subtitleKey: 'myVouchers.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/my-vouchers')) {
+    return { titleKey: 'menus.myVouchers', subtitleKey: 'myVouchers.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/my-loans/') && pathname !== '/logistics/my-loans') {
+    return { titleKey: 'accommodationLoans.details', subtitleKey: 'myLoans.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/my-loans')) {
+    return { titleKey: 'menus.myLoans', subtitleKey: 'myLoans.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/settings')) {
+    return { titleKey: 'menus.logisticsSettings', subtitleKey: 'logisticsSettings.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/ice-voucher-report')) {
+    return { titleKey: 'menus.iceVoucherReport', subtitleKey: 'iceVoucherReports.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/ice-vouchers/new')) {
+    return { titleKey: 'iceVouchers.create', subtitleKey: 'iceVouchers.createSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/ice-vouchers/') && pathname !== '/logistics/ice-vouchers') {
+    return { titleKey: 'iceVouchers.details', subtitleKey: 'iceVouchers.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/ice-vouchers')) {
+    return { titleKey: 'menus.iceVouchers', subtitleKey: 'iceVouchers.subtitle' }
+  }
+  if (pathname.startsWith('/logistics/my-ice-vouchers/new')) {
+    return { titleKey: 'iceVouchers.create', subtitleKey: 'iceVouchers.createSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/my-ice-vouchers/') && pathname !== '/logistics/my-ice-vouchers') {
+    return { titleKey: 'iceVouchers.details', subtitleKey: 'myIceVouchers.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/logistics/my-ice-vouchers')) {
+    return { titleKey: 'menus.myIceVouchers', subtitleKey: 'myIceVouchers.subtitle' }
+  }
   return { titleKey: 'menus.overview', subtitleKey: 'dashboard.subtitle' }
 }

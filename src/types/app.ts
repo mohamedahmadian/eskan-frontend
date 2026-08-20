@@ -58,6 +58,54 @@ export const managementTypes = {
 
 export type ManagementType = (typeof managementTypes)[keyof typeof managementTypes]
 
+export const supplierTypes = {
+  GOVERNMENT_ORGANIZATION: 'GOVERNMENT_ORGANIZATION',
+  CHARITY: 'CHARITY',
+  COMPANY: 'COMPANY',
+  STORE: 'STORE',
+  MANUFACTURER: 'MANUFACTURER',
+  WAREHOUSE: 'WAREHOUSE',
+  SUPPLIER: 'SUPPLIER',
+  OTHER: 'OTHER',
+} as const
+
+export type SupplierType = (typeof supplierTypes)[keyof typeof supplierTypes]
+
+export const itemUnits = {
+  PIECE: 'PIECE',
+  PAIR: 'PAIR',
+  SET: 'SET',
+  DEVICE: 'DEVICE',
+  KILOGRAM: 'KILOGRAM',
+  GRAM: 'GRAM',
+  TON: 'TON',
+  LITER: 'LITER',
+  METER: 'METER',
+  SQUARE_METER: 'SQUARE_METER',
+  CUBIC_METER: 'CUBIC_METER',
+  CARTON: 'CARTON',
+  PACK: 'PACK',
+  BOX: 'BOX',
+  BAG: 'BAG',
+  ROLL: 'ROLL',
+  SHEET: 'SHEET',
+  BOLT: 'BOLT',
+  BRANCH: 'BRANCH',
+  GALLON: 'GALLON',
+  CAN: 'CAN',
+  OTHER: 'OTHER',
+} as const
+
+export type ItemUnit = (typeof itemUnits)[keyof typeof itemUnits]
+
+export function isPresetItemUnit(unit: string): unit is Exclude<ItemUnit, 'OTHER'> {
+  return unit in itemUnits && unit !== itemUnits.OTHER
+}
+
+export function formatItemUnit(unit: string, t: (key: string) => string) {
+  return isPresetItemUnit(unit) ? t(`itemUnits.${unit}`) : unit
+}
+
 export type NavMenu = {
   code: string
   nameKey: string
@@ -234,11 +282,11 @@ export type City = GeoName & {
 
 export type AccommodationManagerLink = {
   id: string
-  userId: string
+  userId: string | null
   isPrimary: boolean
   year: number
   createdAt: string
-  user: { id: string; username: string; fullName: string }
+  user: { id: string; username: string; fullName: string } | null
 }
 
 export type Accommodation = {
@@ -284,7 +332,16 @@ export type Accommodation = {
 }
 
 export type AccommodationReport = {
+  year: number
   total: number
+  byManagerStatus: {
+    withManager: number
+    withoutManager: number
+  }
+  byYearActivity: {
+    active: number
+    inactive: number
+  }
   byGenderType: { genderType: GenderType; count: number }[]
   byManagementType: { managementType: ManagementType; count: number }[]
   byCombination: {
@@ -351,3 +408,305 @@ export type MedicalCenter = {
 export type RedCrescent = MedicalCenter
 
 export type Benefactor = MedicalCenter
+
+export type Supplier = {
+  id: string
+  name: string
+  type: SupplierType
+  address: string | null
+  phone: string | null
+  contactPerson: string | null
+  description: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type SupplierItem = {
+  id: string
+  supplierId: string
+  year: number
+  name: string
+  unit: string
+  quantity: number
+  remainingQuantity: number
+  deliveryDate: string
+  returnDate: string | null
+  description: string | null
+  supplier: Pick<Supplier, 'id' | 'name' | 'type'>
+  createdAt: string
+  updatedAt: string
+}
+
+export type AccommodationLoan = {
+  id: string
+  supplierItemId: string
+  accommodationManagerId: string
+  quantity: number
+  returnedQuantity: number | null
+  shortage: number | null
+  deliveryDate: string
+  plannedReturnDate: string | null
+  actualReturnDate: string | null
+  description: string | null
+  supplierItem: {
+    id: string
+    name: string
+    unit: string
+    year: number
+    supplier: { id: string; name: string }
+  }
+  accommodationManager: { id: string; fullName: string; username: string }
+  createdAt: string
+  updatedAt: string
+}
+
+export type LoanReportItemRow = {
+  itemName: string
+  unit: string
+  received: number
+  delivered: number
+  returned: number
+  unreturned: number
+}
+
+export type LoanReportItemStockRow = {
+  itemId: string
+  itemName: string
+  supplierName: string
+  quantity: number
+  unit: string
+  delivered: number
+  returned: number
+  remaining: number
+}
+
+export type LoanReportSupplierRow = {
+  supplierId: string
+  supplierName: string
+  received: number
+  delivered: number
+  returned: number
+  unreturned: number
+}
+
+export type LoanReportManagerRow = {
+  managerId: string
+  managerName: string
+  delivered: number
+  returned: number
+  unreturned: number
+}
+
+export type LoanReport = {
+  year: number
+  receivedFromSuppliers: number
+  deliveredToManagers: number
+  returned: number
+  unreturned: number
+  warehouseRemaining: number
+  itemStock: LoanReportItemStockRow[]
+  byItem: LoanReportItemRow[]
+  bySupplier: LoanReportSupplierRow[]
+  byManager: LoanReportManagerRow[]
+}
+
+export type ItemQuota = {
+  id: string
+  year: number
+  name: string
+  unit: string
+  quantity: number
+  remainingQuantity: number
+  supplierId: string | null
+  description: string | null
+  supplier: Pick<Supplier, 'id' | 'name' | 'type' | 'phone' | 'address'> | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type ItemQuotaVoucher = {
+  id: string
+  code: string
+  quotaId: string
+  accommodationManagerId: string
+  quantity: number
+  supplierId: string | null
+  supplierName: string
+  pickupLocation: string | null
+  description: string | null
+  issuedAt: string
+  quota: {
+    id: string
+    year: number
+    name: string
+    unit: string
+    quantity: number
+  }
+  accommodationManager: {
+    id: string
+    fullName: string
+    username: string
+    firstName: string
+    lastName: string
+    gender: UserGender | null
+    nationalId: string | null
+    phone: string | null
+  }
+  supplier: Pick<Supplier, 'id' | 'name' | 'phone' | 'address' | 'type'> | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type ItemQuotaVoucherReportQuotaRow = {
+  quotaId: string
+  itemName: string
+  unit: string
+  supplierName: string | null
+  quotaQuantity: number
+  issuedQuantity: number
+  remainingQuantity: number
+  voucherCount: number
+}
+
+export type ItemQuotaVoucherReportItemRow = {
+  itemName: string
+  unit: string
+  quotaQuantity: number
+  issuedQuantity: number
+  remainingQuantity: number
+  voucherCount: number
+}
+
+export type ItemQuotaVoucherReportSupplierRow = {
+  supplierId: string | null
+  supplierName: string
+  voucherCount: number
+  issuedQuantity: number
+}
+
+export type ItemQuotaVoucherReportManagerRow = {
+  managerId: string
+  managerName: string
+  voucherCount: number
+  issuedQuantity: number
+}
+
+export type ItemQuotaVoucherReportDay = {
+  date: string
+  voucherCount: number
+  issuedQuantity: number
+}
+
+export type ItemQuotaVoucherReport = {
+  year: number
+  quotaCount: number
+  issuedCount: number
+  quotaQuantity: number
+  issuedQuantity: number
+  remainingQuantity: number
+  managerCount: number
+  supplierCount: number
+  byQuota: ItemQuotaVoucherReportQuotaRow[]
+  byItem: ItemQuotaVoucherReportItemRow[]
+  bySupplier: ItemQuotaVoucherReportSupplierRow[]
+  byManager: ItemQuotaVoucherReportManagerRow[]
+  byDay: ItemQuotaVoucherReportDay[]
+}
+
+export const iceVoucherStatuses = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const
+
+export type IceVoucherStatus = (typeof iceVoucherStatuses)[keyof typeof iceVoucherStatuses]
+
+export const iceVoucherPaymentStatuses = {
+  UNPAID: 'UNPAID',
+  PAID: 'PAID',
+} as const
+
+export type IceVoucherPaymentStatus =
+  (typeof iceVoucherPaymentStatuses)[keyof typeof iceVoucherPaymentStatuses]
+
+export type IceVoucherSettings = {
+  id: string
+  moldsPer50Pilgrims: number
+  costPerMold: number
+  activityStartDate: string | null
+  activityEndDate: string | null
+}
+
+export type IceVoucherQuota = {
+  accommodationId: string
+  accommodationName: string
+  capacity: number
+  moldsPer50Pilgrims: number
+  costPerMold: number
+  maxMoldCount: number
+}
+
+export type IceVoucherAccommodationOption = {
+  id: string
+  name: string
+  maleCapacity: number
+  femaleCapacity: number
+  managerName: string | null
+}
+
+export type IceVoucher = {
+  id: string
+  code: string
+  year: number
+  accommodationId: string
+  accommodationManagerId: string
+  requestedAt: string
+  moldCount: number
+  costPerMold: number
+  totalCost: number
+  description: string | null
+  status: IceVoucherStatus
+  paymentStatus: IceVoucherPaymentStatus
+  paidAt: string | null
+  approvedAt: string | null
+  approvedById: string | null
+  accommodation: {
+    id: string
+    name: string
+    maleCapacity: number
+    femaleCapacity: number
+  }
+  accommodationManager: { id: string; fullName: string; username: string; phone: string | null }
+  approvedBy: { id: string; fullName: string; username: string } | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type IceVoucherReportDay = {
+  date: string
+  voucherCount: number
+  moldCount: number
+  totalCost: number
+}
+
+export type IceVoucherReport = {
+  year: number
+  issuedCount: number
+  moldCount: number
+  totalCost: number
+  paidCount: number
+  paidCost: number
+  unpaidCount: number
+  unpaidCost: number
+  byDay: IceVoucherReportDay[]
+}
+
+export type IceVoucherStats = {
+  year: number
+  total: number
+  approved: number
+  unapproved: number
+  paid: number
+  unpaid: number
+  payableUnpaid?: { id: string; totalCost: number }[]
+}

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { sendSms, type SendSmsPayload } from '../lib/sms'
 
-/** ارسال پیامک از هر فرم: const sms = useSendSms(); await sms.mutateAsync({ phone, body }) */
+/** صف ارسال پیامک از هر فرم: const sms = useSendSms(); await sms.mutateAsync({ phone, body }) */
 export function useSendSms() {
   const queryClient = useQueryClient()
 

@@ -10,6 +10,7 @@ import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Accommodation } from '../../types/app'
 import { DetailRow } from '../geo/GeoShared'
+import { AccommodationYearAlert, managerDisplayName } from './AccommodationYearAlert'
 import { AccommodationTabNav, accommodationTabs, type AccommodationTab } from './AccommodationTabs'
 
 export function AccommodationDetailPage() {
@@ -53,6 +54,7 @@ export function AccommodationDetailPage() {
         }
       />
       <div className="space-y-4">
+        <AccommodationYearAlert accommodation={item} />
         <AccommodationTabNav tab={tab} tabs={[...accommodationTabs]} onChange={setTab} />
 
         <article className={panelClass('general')}>
@@ -150,7 +152,9 @@ export function AccommodationDetailPage() {
                   .map((manager) => (
                     <tr key={manager.id} className="border-t border-line">
                       <td className="px-4 py-3">{formatNumber(manager.year, locale)}</td>
-                      <td className="px-4 py-3">{manager.user.fullName}</td>
+                      <td className="px-4 py-3">
+                        {managerDisplayName(manager, t('accommodations.unassignedManager'))}
+                      </td>
                     </tr>
                   ))}
               </tbody>

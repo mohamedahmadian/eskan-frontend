@@ -7,19 +7,25 @@ export function CheckboxField({
   onChange,
   label,
   disabled,
+  compact,
 }: {
   id?: string
   checked: boolean
   onChange: (checked: boolean) => void
   label: ReactNode
   disabled?: boolean
+  compact?: boolean
 }) {
   return (
     <label
-      className={`relative flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm transition ${
-        checked
-          ? 'border-teal-200 bg-teal-50 text-ink-900'
-          : 'border-line bg-cream-50 text-ink-800 hover:border-teal-200 hover:bg-white'
+      className={`relative flex items-center transition ${
+        compact
+          ? 'size-9 justify-center'
+          : `gap-3 rounded-2xl border px-3 py-2.5 text-sm ${
+              checked
+                ? 'border-teal-200 bg-teal-50 text-ink-900'
+                : 'border-line bg-cream-50 text-ink-800 hover:border-teal-200 hover:bg-white'
+            }`
       } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
     >
       <input
@@ -40,7 +46,7 @@ export function CheckboxField({
       >
         <Check className="size-3.5 stroke-[3]" />
       </span>
-      <span className="min-w-0 flex-1">{label}</span>
+      {compact ? <span className="sr-only">{label}</span> : <span className="min-w-0 flex-1">{label}</span>}
     </label>
   )
 }

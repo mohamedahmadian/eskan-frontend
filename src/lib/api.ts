@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { isPublicVoucherPath } from './voucher-links'
 
 const envApiUrl = import.meta.env.VITE_API_URL?.trim()
 
@@ -31,7 +32,8 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('eskan_token')
-  if (token) {
+  const url = `${config.baseURL ?? ''}${config.url ?? ''}`
+  if (token && !url.includes('/public/vouchers/')) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
@@ -42,7 +44,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('eskan_token')
-      if (!window.location.pathname.startsWith('/login')) {
+      const path = window.location.pathname
+      if (!path.startsWith('/login') && !isPublicVoucherPath(path)) {
         window.location.assign('/login')
       }
     }

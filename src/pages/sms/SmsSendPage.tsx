@@ -42,34 +42,15 @@ export function SmsSendPage() {
     }
     setSending(true)
     try {
-      let sent = 0
-      let lastError: unknown
-      for (const phone of phones) {
-        try {
-          await sms.mutateAsync({ phone, body })
-          sent += 1
-        } catch (error) {
-          lastError = error
-        }
-      }
-      const failed = phones.length - sent
-      if (sent === 0) {
-        toast.error(getApiErrorMessage(lastError, t('sms.sendFailed')))
-        return
-      }
-      if (failed > 0) {
-        toast.success(
-          t('sms.sentPartial', {
-            sent: formatNumber(sent, locale),
-            total: formatNumber(phones.length, locale),
-          }),
-        )
-      } else if (phones.length > 1) {
-        toast.success(t('sms.sentCount', { count: formatNumber(sent, locale) }))
-      } else {
-        toast.success(t('sms.sent'))
-      }
+      await sms.mutateAsync({ phones, body })
+      toast.success(
+        phones.length > 1
+          ? t('sms.queuedCount', { count: formatNumber(phones.length, locale) })
+          : t('sms.queued'),
+      )
       setBody('')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('sms.sendFailed')))
     } finally {
       setSending(false)
     }

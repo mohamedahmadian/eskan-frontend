@@ -19,11 +19,11 @@
   --color-teal-800: #0f6e6a;
   --color-teal-900: #0c4d4a;
 
-  --color-gold-50: #fbf6e8;
-  --color-gold-100: #f5edd6;
-  --color-gold-400: #d4b44a;
-  --color-gold-500: #c4a35a;
-  --color-gold-600: #a8883d;
+  --color-gold-50: #fffaf0;
+  --color-gold-100: #fff2d6;
+  --color-gold-400: #f5cd6a;
+  --color-gold-500: #e8b83a;
+  --color-gold-600: #c4921a;
 
   --color-cream-50: #f8f7f2;
   --color-cream-100: #efeee8;
@@ -68,6 +68,12 @@ th {
 .rmdp-wrapper {
   font-family: var(--font-sans);
   z-index: 80;
+}
+
+.recharts-wrapper,
+.recharts-wrapper text,
+.recharts-legend-item-text {
+  font-family: var(--font-sans);
 }
 
 .rmdp-calendar {
@@ -157,4 +163,36 @@ th {
   .animate-loading-pulse {
     animation: none;
   }
+}
+
+[data-sonner-toaster].app-toaster [data-sonner-toast] {
+  --y: translateX(-100%);
+}
+
+[data-sonner-toaster].app-toaster [data-sonner-toast][data-mounted='true'] {
+  --y: translateX(0);
+}
+
+[data-sonner-toaster].app-toaster [data-sonner-toast][data-expanded='false'][data-front='false'] {
+  --y: translateX(0) translateY(calc(var(--lift-amount) * var(--toasts-before)))
+    scale(calc(-1 * var(--scale)));
+}
+
+[data-sonner-toaster].app-toaster [data-sonner-toast][data-mounted='true'][data-expanded='true'] {
+  --y: translateX(0) translateY(calc(var(--lift) * var(--offset)));
+}
+
+[data-sonner-toaster].app-toaster
+  [data-sonner-toast][data-removed='true'][data-front='true'][data-swipe-out='false'] {
+  --y: translateX(-100%);
+}
+
+[data-sonner-toaster].app-toaster
+  [data-sonner-toast][data-removed='true'][data-front='false'][data-swipe-out='false'][data-expanded='true'] {
+  --y: translateX(-100%) translateY(calc(var(--lift) * var(--offset)));
+}
+
+[data-sonner-toaster].app-toaster
+  [data-sonner-toast][data-removed='true'][data-front='false'][data-swipe-out='false'][data-expanded='false'] {
+  --y: translateX(-100%);
 }

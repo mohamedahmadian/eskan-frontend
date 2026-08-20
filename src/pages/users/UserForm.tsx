@@ -36,7 +36,9 @@ import {
 } from '../../components/ui/Form'
 import { languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
+import { parseDigitString } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
+import { isValidIranianNationalId, normalizeNationalId } from '../../lib/national-id'
 import {
   religions,
   userGenders,
@@ -217,6 +219,11 @@ export function UserForm({
       toast.error(t('users.nationalIdRequired'))
       return
     }
+    if (!isValidIranianNationalId(nationalId)) {
+      setTab('personal')
+      toast.error(t('users.nationalIdInvalid'))
+      return
+    }
     if (!phone.trim()) {
       setTab('personal')
       toast.error(t('users.phoneRequired'))
@@ -250,7 +257,7 @@ export function UserForm({
         roleIds: nextRoleIds,
         status,
         gender: gender ? (gender as UserGender) : null,
-        nationalId: nationalId.trim(),
+        nationalId: normalizeNationalId(nationalId),
         phone: phone.trim(),
         email: emptyToNull(email),
         address: emptyToNull(address),
@@ -285,7 +292,11 @@ export function UserForm({
           toast.error(message)
         }
       } else {
-        toast.error(getApiErrorMessage(error, t('common.error')))
+        const message = getApiErrorMessage(error, t('common.error'))
+        if (message.includes('کد ملی')) {
+          setTab('personal')
+        }
+        toast.error(message)
       }
     } finally {
       setSaving(false)
@@ -361,7 +372,10 @@ export function UserForm({
             id="nationalId"
             className={fieldClassName}
             value={nationalId}
-            onChange={(e) => setNationalId(e.target.value)}
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={10}
+            onChange={(e) => setNationalId(parseDigitString(e.target.value).slice(0, 10))}
           />
         </FormField>
         <FormField icon={Phone} label={t('users.phone')} htmlFor="phone">

@@ -1,12 +1,69 @@
-import { Menu, Search, X } from 'lucide-react'
+import { Boxes, Menu, PackageOpen, Search, Snowflake, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { getNavIcon } from '../../lib/icons'
 import { getPageMeta } from '../../lib/page-meta'
+import type { NavMenu, NavModule } from '../../types/app'
 import { PageTransition } from '../ui/PageTransition'
 import { UserMenu } from './UserMenu'
+
+const menuSections: Record<string, { titleKey: string; icon?: typeof Snowflake; codes: string[] }[]> = {
+  logistics: [
+    {
+      titleKey: 'menus.loanItemsSection',
+      icon: PackageOpen,
+      codes: ['logistics.loans', 'logistics.loan-report', 'logistics.my-loans'],
+    },
+    {
+      titleKey: 'menus.quotaItemsSection',
+      icon: Boxes,
+      codes: [
+        'logistics.item-quotas',
+        'logistics.issue-voucher',
+        'logistics.vouchers',
+        'logistics.voucher-report',
+        'logistics.my-vouchers',
+      ],
+    },
+    {
+      titleKey: 'menus.iceVouchersSection',
+      icon: Snowflake,
+      codes: [
+        'logistics.ice-vouchers',
+        'logistics.ice-voucher-report',
+        'logistics.my-ice-vouchers',
+        'logistics.settings',
+      ],
+    },
+  ],
+}
+
+function splitMenus(mod: NavModule) {
+  const sections = menuSections[mod.code] ?? []
+  const groupedCodes = new Set(sections.flatMap((section) => section.codes))
+  return {
+    ungrouped: mod.menus.filter((item) => !groupedCodes.has(item.code)),
+    sections: sections
+      .map((section) => ({
+        ...section,
+        items: section.codes
+          .map((code) => mod.menus.find((item) => item.code === code))
+          .filter((item): item is NavMenu => Boolean(item)),
+      }))
+      .filter((section) => section.items.length > 0),
+  }
+}
+
+function menuMatchesSearch(mod: NavModule, item: NavMenu, needle: string, label: (key: string) => string) {
+  if (label(item.nameKey).includes(needle) || label(mod.nameKey).includes(needle)) {
+    return true
+  }
+  return (menuSections[mod.code] ?? []).some(
+    (section) => section.codes.includes(item.code) && label(section.titleKey).includes(needle),
+  )
+}
 
 export function DashboardLayout() {
   const { user } = useAuth()
@@ -27,10 +84,7 @@ export function DashboardLayout() {
     return (user?.modules ?? [])
       .map((mod) => ({
         ...mod,
-        menus: mod.menus.filter(
-          (item) =>
-            t(item.nameKey).includes(needle) || t(mod.nameKey).includes(needle),
-        ),
+        menus: mod.menus.filter((item) => menuMatchesSearch(mod, item, needle, t)),
       }))
       .filter((mod) => mod.menus.length > 0)
   }, [query, t, user?.modules])
@@ -84,43 +138,41 @@ export function DashboardLayout() {
           </div>
 
           <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
-            {modules.map((mod) => (
-              <div key={mod.code}>
-                <p className="mb-1 px-3 text-[11px] font-medium text-ink-400">
-                  {t(mod.nameKey)}
-                </p>
-                <div className="space-y-1">
-                  {mod.menus.map((item) => {
-                    const Icon = getNavIcon(item.icon)
+            {modules.map((mod) => {
+              const { ungrouped, sections } = splitMenus(mod)
+              return (
+                <div key={mod.code}>
+                  <p className="mb-1 px-3 text-[11px] font-medium text-ink-400">
+                    {t(mod.nameKey)}
+                  </p>
+                  <div className="space-y-1">
+                    {ungrouped.map((item) => (
+                      <SidebarMenuLink key={item.code} item={item} onNavigate={() => setOpen(false)} />
+                    ))}
+                  </div>
+                  {sections.map((section) => {
+                    const SectionIcon = section.icon
                     return (
-                      <NavLink
-                        key={item.code}
-                        to={item.path}
-                        end={item.path === '/'}
-                        onClick={() => setOpen(false)}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${
-                            isActive
-                              ? 'bg-teal-500 text-white shadow-sm'
-                              : 'text-ink-700 hover:bg-cream-50'
-                          }`
-                        }
-                      >
-                        {({ isActive }) => (
-                          <>
-                            <Icon
-                              className={`size-4 ${isActive ? 'text-white' : 'text-ink-400'}`}
-                              aria-hidden
+                      <div key={section.titleKey} className="mt-3">
+                        <p className="mb-1 flex items-center gap-1.5 px-3 text-[11px] font-medium text-teal-700">
+                          {SectionIcon ? <SectionIcon className="size-3.5" aria-hidden /> : null}
+                          {t(section.titleKey)}
+                        </p>
+                        <div className="ms-3 space-y-1 border-s border-teal-100 ps-2">
+                          {section.items.map((item) => (
+                            <SidebarMenuLink
+                              key={item.code}
+                              item={item}
+                              onNavigate={() => setOpen(false)}
                             />
-                            {t(item.nameKey)}
-                          </>
-                        )}
-                      </NavLink>
+                          ))}
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </nav>
         </aside>
 
@@ -157,3 +209,34 @@ export function DashboardLayout() {
     </div>
   )
 }
+
+function SidebarMenuLink({
+  item,
+  onNavigate,
+}: {
+  item: NavMenu
+  onNavigate: () => void
+}) {
+  const { t } = useTranslation()
+  const Icon = getNavIcon(item.icon)
+  return (
+    <NavLink
+      to={item.path}
+      end={item.path === '/'}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${
+          isActive ? 'bg-teal-500 text-white shadow-sm' : 'text-ink-700 hover:bg-cream-50'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon className={`size-4 ${isActive ? 'text-white' : 'text-ink-400'}`} aria-hidden />
+          {t(item.nameKey)}
+        </>
+      )}
+    </NavLink>
+  )
+}
+

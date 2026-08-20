@@ -21,7 +21,12 @@ export type SmsSettings = {
   hasPassword: boolean
 }
 
+export type QueuedSms = {
+  queued: true
+  recipientCount: number
+}
+
 export async function sendSms(payload: SendSmsPayload) {
-  const { data } = await api.post<SmsMessage | SmsMessage[]>('/sms/send', payload)
+  const { data } = await api.post<QueuedSms>('/sms/send', payload)
   return data
 }

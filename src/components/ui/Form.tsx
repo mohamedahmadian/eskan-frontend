@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 const variants = {
   primary:
     'bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-60 shadow-sm',
-  gold: 'bg-gold-500 text-white hover:bg-gold-600 disabled:opacity-60',
+  gold: 'bg-gold-400 text-ink-900 hover:bg-gold-500 disabled:opacity-60 shadow-sm',
   ghost:
     'bg-white text-ink-700 hover:bg-cream-100 border border-line',
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:opacity-60',

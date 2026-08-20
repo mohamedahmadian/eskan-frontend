@@ -17,6 +17,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
 import type { Accommodation, ManagedUser } from '../../types/app'
+import { managerDisplayName } from './AccommodationYearAlert'
 
 export function AccommodationManagersCard({
   accommodation,
@@ -33,7 +34,9 @@ export function AccommodationManagersCard({
 
   const rows = [...accommodation.managers].sort((a, b) => {
     if (b.year !== a.year) return b.year - a.year
-    return a.user.fullName.localeCompare(b.user.fullName, 'fa')
+    const nameA = a.user?.fullName ?? ''
+    const nameB = b.user?.fullName ?? ''
+    return nameA.localeCompare(nameB, 'fa')
   })
 
   async function refresh() {
@@ -129,7 +132,7 @@ export function AccommodationManagersCard({
             {rows.map((item) => (
               <tr key={item.id} className="border-t border-line">
                 <td className="px-4 py-3">{formatNumber(item.year, locale)}</td>
-                <td className="px-4 py-3">{item.user.fullName}</td>
+                <td className="px-4 py-3">{managerDisplayName(item, t('accommodations.unassignedManager'))}</td>
                 <td className="px-4 py-3">
                   <Button
                     type="button"

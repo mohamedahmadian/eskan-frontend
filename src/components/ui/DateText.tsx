@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { formatDate, formatDateTime } from '../../lib/datetime'
+import { formatDate, formatDateTimeDate, formatTime } from '../../lib/datetime'
 
 export function DateText({
   value,
@@ -13,5 +13,13 @@ export function DateText({
     return '—'
   }
   const locale = i18n.language.split('-')[0] ?? 'fa'
-  return withTime ? formatDateTime(value, locale) : formatDate(value, locale)
+  if (!withTime) {
+    return formatDate(value, locale)
+  }
+  return (
+    <span className="inline-flex items-baseline gap-2 whitespace-nowrap" dir="ltr">
+      <span>{formatDateTimeDate(value, locale)}</span>
+      <span>{formatTime(value, locale)}</span>
+    </span>
+  )
 }

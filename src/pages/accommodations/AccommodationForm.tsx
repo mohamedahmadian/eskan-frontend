@@ -51,6 +51,7 @@ import {
 } from '../../types/app'
 import { AccommodationManagersCard } from './AccommodationManagersCard'
 import { AccommodationTabNav, type AccommodationTab } from './AccommodationTabs'
+import { AccommodationYearAlert } from './AccommodationYearAlert'
 
 export type AccommodationPayload = {
   name: string
@@ -170,11 +171,11 @@ export function AccommodationForm({
     bathroomCount: initial?.bathroomCount != null ? String(initial.bathroomCount) : '',
     toiletCount: initial?.toiletCount != null ? String(initial.toiletCount) : '',
     managerUserIds: (initial?.managers ?? [])
-      .filter((item) => item.year === currentPersianYear())
-      .map((item) => item.userId),
+      .filter((item) => item.year === currentPersianYear() && item.userId)
+      .map((item) => item.userId as string),
     primaryManagerUserId:
       (initial?.managers ?? []).find(
-        (item) => item.year === currentPersianYear() && item.isPrimary,
+        (item) => item.year === currentPersianYear() && item.isPrimary && item.userId,
       )?.userId ?? '',
     isPrimary: initial?.managers
       ? initial.managers.some(
@@ -271,6 +272,7 @@ export function AccommodationForm({
 
   return (
     <div className="space-y-4">
+      {initial ? <AccommodationYearAlert accommodation={initial} /> : null}
       <AccommodationTabNav tab={tab} tabs={tabs} onChange={setTab} />
 
       {tab === 'managers' && editManagers && initial ? (

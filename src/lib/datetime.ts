@@ -58,19 +58,55 @@ export function formatDate(value: string, locale: string) {
   )
 }
 
-export function formatDateTime(value: string, locale: string) {
+export function formatDateTimeDate(value: string, locale: string) {
   const date = toDisplayDate(value, locale, false)
+  return localizeDigits(
+    `${date.year}/${pad2(date.month.number)}/${pad2(date.day)}`,
+    locale,
+  )
+}
+
+export function formatTime(value: string, locale: string) {
   const time = new Date(value)
-  const formatted = `${date.year}/${pad2(date.month.number)}/${pad2(date.day)} - ${pad2(time.getHours())}:${pad2(time.getMinutes())}:${pad2(time.getSeconds())}`
-  return localizeDigits(formatted, locale)
+  return localizeDigits(
+    `${pad2(time.getHours())}:${pad2(time.getMinutes())}:${pad2(time.getSeconds())}`,
+    locale,
+  )
+}
+
+export function formatDateTime(value: string, locale: string) {
+  return `${formatDateTimeDate(value, locale)} ${formatTime(value, locale)}`
 }
 
 export function formatNumber(value: number, locale: string) {
   return localizeDigits(String(value), locale)
 }
 
+export function parseDigitString(input: string) {
+  return toLatinDigits(input).replace(/\D/g, '')
+}
+
+export function formatGroupedNumber(value: number, locale: string) {
+  if (!Number.isFinite(value)) {
+    return ''
+  }
+  const grouped = Math.trunc(value).toLocaleString('en-US').replace(/,/g, '٬')
+  return localizeDigits(grouped, locale)
+}
+
 export function currentPersianYear() {
   return new DateObject({ calendar: persian }).year
+}
+
+export function persianYearOptions(locale: string, selected?: number) {
+  const current = currentPersianYear()
+  const max = Math.max(current + 1, selected ?? current)
+  const min = Math.min(current - 10, selected ?? current)
+  const options = []
+  for (let year = max; year >= min; year -= 1) {
+    options.push({ value: String(year), label: formatNumber(year, locale) })
+  }
+  return options
 }
 
 export function fromIsoDateOnly(value?: string) {

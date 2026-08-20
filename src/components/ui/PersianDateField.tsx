@@ -16,10 +16,14 @@ export function PersianDateField({
   id,
   value,
   onChange,
+  minDate,
+  maxDate,
 }: {
   id?: string
   value?: string
   onChange: (isoDate?: string) => void
+  minDate?: string
+  maxDate?: string
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -27,10 +31,14 @@ export function PersianDateField({
   const selected = value
     ? fromIsoDateOnly(value)?.convert(persian)
     : undefined
+  const min = minDate ? fromIsoDateOnly(minDate)?.convert(persian) : undefined
+  const max = maxDate ? fromIsoDateOnly(maxDate)?.convert(persian) : undefined
 
   return (
     <DatePicker
       value={selected}
+      minDate={min}
+      maxDate={max}
       calendar={persian}
       locale={persian_fa}
       format="YYYY/M/D"

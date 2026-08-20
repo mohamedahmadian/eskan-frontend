@@ -1,4 +1,4 @@
-import { BadgeCheck, Download, MapPin, MapPinned, Mars, Plus, UserRound, Users, Venus } from 'lucide-react'
+import { BadgeCheck, CalendarDays, Download, MapPin, MapPinned, Mars, Plus, UserRound, Users, Venus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,7 +10,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { formatNumber } from '../../lib/datetime'
+import { formatNumber, persianYearOptions } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import {
   genderTypes,
@@ -34,6 +34,7 @@ export function AccommodationsListPage() {
   const managementType = (searchParams.get('managementType') ?? '') as ManagementType | ''
   const provinceId = searchParams.get('provinceId') ?? ''
   const cityId = searchParams.get('cityId') ?? ''
+  const year = searchParams.get('year') ?? ''
   const hasManagerThisYear = searchParams.get('hasManagerThisYear') ?? ''
 
   const provinces = useQuery({
@@ -62,11 +63,12 @@ export function AccommodationsListPage() {
     ...(managementType ? { managementType } : {}),
     ...(provinceId ? { provinceId } : {}),
     ...(cityId ? { cityId } : {}),
+    ...(year ? { year } : {}),
     ...(hasManagerThisYear ? { hasManagerThisYear } : {}),
   }
 
   const query = useQuery({
-    queryKey: ['accommodations', q, genderType, managementType, provinceId, cityId, hasManagerThisYear, page],
+    queryKey: ['accommodations', q, genderType, managementType, provinceId, cityId, year, hasManagerThisYear, page],
     queryFn: async () => {
       const { data } = await api.get<Paginated<Accommodation>>('/accommodations', {
         params: listParams,
@@ -89,6 +91,7 @@ export function AccommodationsListPage() {
           ...(managementType ? { managementType } : {}),
           ...(provinceId ? { provinceId } : {}),
           ...(cityId ? { cityId } : {}),
+          ...(year ? { year } : {}),
           ...(hasManagerThisYear ? { hasManagerThisYear } : {}),
         },
         responseType: 'blob',
@@ -118,7 +121,7 @@ export function AccommodationsListPage() {
 
   const rows = query.data?.items ?? []
   const emptyMessage =
-    q || genderType || managementType || provinceId || cityId || hasManagerThisYear
+    q || genderType || managementType || provinceId || cityId || year || hasManagerThisYear
       ? t('accommodations.noResults')
       : t('accommodations.empty')
 
@@ -143,10 +146,22 @@ export function AccommodationsListPage() {
         onSubmit={onSearch}
         label={t('common.search')}
         placeholder={t('accommodations.searchPlaceholder')}
-        filtersActive={Boolean(genderType || managementType || provinceId || cityId || hasManagerThisYear)}
+        filtersActive={Boolean(genderType || managementType || provinceId || cityId || year || hasManagerThisYear)}
         extra={
           <>
             <FilterPair columns={3}>
+              <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor="accommodation-year">
+                <SearchSelect
+                  id="accommodation-year"
+                  value={year}
+                  placeholder={t('accommodations.allYears')}
+                  onChange={(next) => setParams({ year: next || undefined }, { resetPage: true })}
+                  options={[
+                    { value: '', label: t('accommodations.allYears') },
+                    ...persianYearOptions(locale, year ? Number(year) : undefined),
+                  ]}
+                />
+              </FormField>
               <FormField icon={MapPinned} label={t('geo.province')} htmlFor="accommodation-province">
                 <SearchSelect
                   id="accommodation-province"
@@ -180,6 +195,8 @@ export function AccommodationsListPage() {
                   ]}
                 />
               </FormField>
+            </FilterPair>
+            <FilterPair columns={3}>
               <FormField icon={Users} label={t('accommodations.genderType')} htmlFor="accommodation-gender-type">
                 <SearchSelect
                   id="accommodation-gender-type"
@@ -195,8 +212,6 @@ export function AccommodationsListPage() {
                   ]}
                 />
               </FormField>
-            </FilterPair>
-            <FilterPair>
               <FormField
                 icon={UserRound}
                 label={t('accommodations.currentYearManager')}
