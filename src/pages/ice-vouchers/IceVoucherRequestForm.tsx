@@ -10,7 +10,12 @@ import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatGroupedNumber, formatNumber, toIsoDateOnly } from '../../lib/datetime'
-import type { IceVoucherAccommodationOption, IceVoucherQuota, IceVoucherSettings } from '../../types/app'
+import type {
+  IceVoucher,
+  IceVoucherAccommodationOption,
+  IceVoucherQuota,
+  IceVoucherSettings,
+} from '../../types/app'
 
 export type IceVoucherRequestPayload = {
   accommodationId: string
@@ -36,19 +41,22 @@ function clampIsoDate(value: string, min?: string | null, max?: string | null) {
 
 export function IceVoucherRequestForm({
   accommodations,
+  initial,
   onSubmit,
 }: {
   accommodations: IceVoucherAccommodationOption[]
+  initial?: IceVoucher
   onSubmit: (payload: IceVoucherRequestPayload) => Promise<void>
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const [saving, setSaving] = useState(false)
   const [values, setValues] = useState({
-    accommodationId: accommodations.length === 1 ? accommodations[0].id : '',
-    requestedAt: todayIso(),
-    moldCount: '',
-    description: '',
+    accommodationId:
+      initial?.accommodationId ?? (accommodations.length === 1 ? accommodations[0].id : ''),
+    requestedAt: initial?.requestedAt ?? todayIso(),
+    moldCount: initial ? String(initial.moldCount) : '',
+    description: initial?.description ?? '',
   })
 
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
@@ -85,21 +93,39 @@ export function IceVoucherRequestForm({
   })
 
   const moldCount = Number(values.moldCount)
+  const costPerMold = initial?.costPerMold ?? quota.data?.costPerMold
   const estimatedCost =
-    quota.data && Number.isFinite(moldCount) && moldCount > 0
-      ? moldCount * quota.data.costPerMold
+    costPerMold != null && Number.isFinite(moldCount) && moldCount > 0
+      ? moldCount * costPerMold
       : null
 
-  const accommodationOptions = useMemo(
-    () => [
-      { value: '', label: t('iceVouchers.selectAccommodation') },
+  const accommodationOptions = useMemo(() => {
+    const extras =
+      initial && !accommodations.some((item) => item.id === initial.accommodationId)
+        ? [
+            {
+              id: initial.accommodationId,
+              name: initial.accommodation.name,
+              managerName: initial.accommodationManager.fullName,
+            },
+          ]
+        : []
+    const items = [
+      ...extras,
       ...accommodations.map((item) => ({
+        id: item.id,
+        name: item.name,
+        managerName: item.managerName,
+      })),
+    ]
+    return [
+      { value: '', label: t('iceVouchers.selectAccommodation') },
+      ...items.map((item) => ({
         value: item.id,
         label: item.managerName ? `${item.name} - ${item.managerName}` : item.name,
       })),
-    ],
-    [accommodations, t],
-  )
+    ]
+  }, [accommodations, initial, t])
 
   function notifyOverMax(max: number) {
     toast.error(t('iceVouchers.maxMoldHint', { max: formatNumber(max, locale) }), {
@@ -176,7 +202,8 @@ export function IceVoucherRequestForm({
             {t('iceVouchers.maxMoldCount')}: {formatNumber(quota.data.maxMoldCount, locale)}
           </p>
           <p className="mt-1">
-            {t('iceVouchers.unitCostPreview')}: {formatGroupedNumber(quota.data.costPerMold, locale)}{' '}
+            {t('iceVouchers.unitCostPreview')}:{' '}
+            {formatGroupedNumber(costPerMold ?? quota.data.costPerMold, locale)}{' '}
             {t('logisticsSettings.toman')}
           </p>
         </div>
@@ -211,7 +238,7 @@ export function IceVoucherRequestForm({
         />
       </FormField>
       <FormActions
-        submitLabel={t('iceVouchers.save')}
+        submitLabel={initial ? t('iceVouchers.saveEdit') : t('iceVouchers.save')}
         cancelLabel={t('iceVouchers.cancel')}
         submitting={saving}
         onCancel={() => history.back()}

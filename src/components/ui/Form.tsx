@@ -72,6 +72,13 @@ export function FormField({
 export const fieldClassName =
   'w-full rounded-2xl border border-line bg-cream-50 px-3 py-2.5 text-sm text-ink-900 placeholder:text-ink-400'
 
+export const fieldErrorClassName =
+  '!border-red-300 !bg-red-50/70 focus:!border-red-400 focus:!outline-none focus:!ring-2 focus:!ring-red-200/70'
+
+export function inputClassName(error?: boolean) {
+  return error ? `${fieldClassName} ${fieldErrorClassName}` : fieldClassName
+}
+
 export function ToggleField({
   id,
   checked,
@@ -144,11 +151,11 @@ export function PageHeader({
 }
 
 function submitIfValid(form: HTMLFormElement) {
-  if (form.checkValidity()) {
+  if (form.noValidate || form.checkValidity()) {
     form.requestSubmit()
-  } else {
-    form.reportValidity()
+    return
   }
+  form.querySelector<HTMLElement>(':invalid')?.focus()
 }
 
 export function handleFormEnter(event: KeyboardEvent<HTMLFormElement>) {

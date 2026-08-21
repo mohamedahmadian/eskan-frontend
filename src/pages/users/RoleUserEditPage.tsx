@@ -43,6 +43,7 @@ export function RoleUserEditPage({ scope }: { scope: RoleUserScope }) {
         lockedRoleCodes={scope.lockedRoleCodes}
         hideRoles={scope.hideRoles}
         requirePassword={false}
+        identityCheckPath={`${scope.apiBase}/identity-check`}
         extraTabs={
           scope.showAccommodations
             ? [

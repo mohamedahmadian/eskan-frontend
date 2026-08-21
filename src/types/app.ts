@@ -133,6 +133,9 @@ export type AuthUser = {
   username: string
   fullName: string
   locale: string
+  provinceId?: string | null
+  cityId?: string | null
+  countryId?: string | null
   roles: Pick<RoleOption, 'code' | 'nameKey'>[]
   modules: NavModule[]
 }
@@ -140,9 +143,66 @@ export type AuthUser = {
 export type Caravan = {
   id: string
   name: string
-  originCity: string
-  plannedArrival: string | null
+  description: string | null
+  officeAddress: string | null
+  officePhone: string | null
+  foundedYear: number | null
+  licenseNumber: string | null
+  cityId: string
+  city?: {
+    id: string
+    nameFa: string
+    nameEn: string
+    provinceId: string
+    province?: {
+      id: string
+      nameFa: string
+      nameEn: string
+      countryId: string
+      country?: {
+        id: string
+        nameFa: string
+        nameEn: string
+      }
+    }
+  } | null
+  licenseImageId: string | null
+  managerUserId: string | null
+  manager?: {
+    id: string
+    firstName: string
+    lastName: string
+    fullName: string
+    nationalId: string | null
+    phone: string | null
+    birthDate?: string | null
+    status: UserStatus
+  } | null
+  contacts?: Array<{
+    id: string
+    role: 'DEPUTY' | 'CLERIC' | 'CULTURAL' | 'SECURITY' | 'RECEPTION'
+    userId: string
+    user: {
+      id: string
+      firstName: string
+      lastName: string
+      fullName: string
+      nationalId: string | null
+      phone: string | null
+      birthDate?: string | null
+      status: UserStatus
+    }
+  }>
+  eitaa: string | null
+  bale: string | null
+  telegram: string | null
+  instagram: string | null
+  totalCount: number
+  maleCount: number
+  femaleCount: number
+  isActive: boolean
   createdAt: string
+  managerReused?: boolean
 }
 
 export type Paginated<T> = {
@@ -176,6 +236,7 @@ export type ManagedUser = {
   gender: UserGender | null
   nationalId: string | null
   phone: string | null
+  birthDate?: string | null
   email: string | null
   address: string | null
   notes: string | null

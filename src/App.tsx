@@ -4,11 +4,15 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AuthProvider } from './auth/AuthProvider'
 import { DashboardLayout } from './components/layout/DashboardLayout'
+import { useSelectNumberOnFocus } from './hooks/useSelectNumberOnFocus'
 import { languages, type AppLanguage } from './i18n'
 import { CaravanCreatePage } from './pages/caravans/CaravanCreatePage'
 import { CaravanDetailPage } from './pages/caravans/CaravanDetailPage'
 import { CaravanEditPage } from './pages/caravans/CaravanEditPage'
+import { CaravanPilgrimageHistoryPage } from './pages/caravans/CaravanPilgrimageHistoryPage'
 import { CaravansListPage } from './pages/caravans/CaravansListPage'
+import { MyCaravanCreatePage } from './pages/caravans/MyCaravanCreatePage'
+import { MyCaravansListPage } from './pages/caravans/MyCaravansListPage'
 import { ChangePasswordPage } from './pages/ChangePasswordPage'
 import { CitiesListPage } from './pages/geo/CitiesListPage'
 import { CityCreatePage } from './pages/geo/CityCreatePage'
@@ -101,7 +105,7 @@ import { MyVoucherDetailPage } from './pages/item-quota-vouchers/MyVoucherDetail
 import { MyVouchersListPage } from './pages/item-quota-vouchers/MyVouchersListPage'
 import { MyLoanDetailPage } from './pages/accommodation-loans/MyLoanDetailPage'
 import { MyLoansListPage } from './pages/accommodation-loans/MyLoansListPage'
-import { IceVoucherCreatePage, MyIceVoucherCreatePage } from './pages/ice-vouchers/MyIceVoucherCreatePage'
+import { IceVoucherCreatePage, IceVoucherEditPage, MyIceVoucherCreatePage } from './pages/ice-vouchers/MyIceVoucherCreatePage'
 import { IceVoucherDetailPage } from './pages/ice-vouchers/IceVoucherDetailPage'
 import { IceVoucherReportPage } from './pages/ice-vouchers/IceVoucherReportPage'
 import { IceVouchersListPage } from './pages/ice-vouchers/IceVouchersListPage'
@@ -130,6 +134,8 @@ function AppToaster() {
 }
 
 export default function App() {
+  useSelectNumberOnFocus()
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -150,10 +156,21 @@ export default function App() {
                   <Route path="/pilgrims/:id" element={<PilgrimDetailPage />} />
                   <Route path="/pilgrims/:id/edit" element={<PilgrimEditPage />} />
                 </Route>
-                <Route path="/caravans" element={<CaravansListPage />} />
-                <Route path="/caravans/new" element={<CaravanCreatePage />} />
-                <Route path="/caravans/:id" element={<CaravanDetailPage />} />
-                <Route path="/caravans/:id/edit" element={<CaravanEditPage />} />
+                <Route element={<RequireMenuAccess path="/caravans" />}>
+                  <Route path="/caravans" element={<CaravansListPage />} />
+                  <Route path="/caravans/new" element={<CaravanCreatePage />} />
+                  <Route path="/caravans/:id/pilgrimage-history" element={<CaravanPilgrimageHistoryPage />} />
+                  <Route path="/caravans/:id/edit" element={<CaravanEditPage />} />
+                  <Route path="/caravans/:id" element={<CaravanDetailPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/my-caravans" />}>
+                  <Route path="/my-caravans" element={<MyCaravansListPage />} />
+                  <Route path="/my-caravans/new" element={<MyCaravanCreatePage />} />
+                  <Route
+                    path="/my-caravans/:id/pilgrimage-history"
+                    element={<CaravanPilgrimageHistoryPage />}
+                  />
+                </Route>
                 <Route element={<RequireMenuAccess path="/base-info/countries" />}>
                   <Route path="/base-info/countries" element={<CountriesListPage />} />
                   <Route path="/base-info/countries/new" element={<CountryCreatePage />} />
@@ -310,6 +327,7 @@ export default function App() {
                     path="/logistics/ice-vouchers/new"
                     element={<IceVoucherCreatePage basePath="/logistics/ice-vouchers" />}
                   />
+                  <Route path="/logistics/ice-vouchers/:id/edit" element={<IceVoucherEditPage />} />
                   <Route path="/logistics/ice-vouchers/:id" element={<IceVoucherDetailPage />} />
                 </Route>
                 <Route element={<RequireMenuAccess path="/logistics/my-ice-vouchers" />}>

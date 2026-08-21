@@ -1,24 +1,22 @@
-import { Plus } from 'lucide-react'
+import { History, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { PaginationBar, SearchBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
 import { Button, PageHeader, listShellClassName } from '../../components/ui/Form'
-import { useConfirmDelete } from '../../hooks/useConfirmDelete'
+import { PaginationBar, SearchBar, TableCard } from '../../components/ui/ListControls'
 import { useListParams } from '../../hooks/useListParams'
 import { api } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
 import type { Caravan, Paginated } from '../../types/app'
 
-export function CaravansListPage() {
+export function MyCaravansListPage() {
   const { t } = useTranslation()
   const nameOf = useGeoName()
-  const { confirmDelete } = useConfirmDelete()
   const { q, page, term, setTerm, applySearch, setPage } = useListParams()
   const query = useQuery({
-    queryKey: ['caravans', q, page],
+    queryKey: ['caravans', 'mine', q, page],
     queryFn: async () => {
-      const { data } = await api.get<Paginated<Caravan>>('/caravans', {
+      const { data } = await api.get<Paginated<Caravan>>('/caravans/mine', {
         params: { q: q || undefined, page },
       })
       return data
@@ -30,10 +28,10 @@ export function CaravansListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
-        title={t('menus.caravansList')}
-        subtitle={t('caravans.subtitle')}
+        title={t('menus.myCaravans')}
+        subtitle={t('myCaravans.subtitle')}
         action={
-          <Link to="/caravans/new">
+          <Link to="/my-caravans/new">
             <Button>
               <Plus className="size-4" />
               {t('caravans.create')}
@@ -46,11 +44,11 @@ export function CaravansListPage() {
         onTermChange={setTerm}
         onSubmit={() => applySearch()}
         label={t('common.search')}
-        placeholder={t('caravans.searchPlaceholder')}
+        placeholder={t('myCaravans.searchPlaceholder')}
       />
       <TableCard
         loading={query.isLoading}
-        empty={q ? t('caravans.noResults') : t('caravans.empty')}
+        empty={q ? t('myCaravans.noResults') : t('myCaravans.empty')}
         hasRows={rows.length > 0}
       >
         <table className="w-full text-sm">
@@ -58,7 +56,6 @@ export function CaravansListPage() {
             <tr>
               <th className="px-4 py-3 text-start font-medium">{t('caravans.name')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('caravans.city')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('caravans.manager')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('caravans.status')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
@@ -68,23 +65,16 @@ export function CaravansListPage() {
               <tr key={caravan.id} className="border-t border-line">
                 <td className="px-4 py-3">{caravan.name}</td>
                 <td className="px-4 py-3">{caravan.city ? nameOf(caravan.city) : '—'}</td>
-                <td className="px-4 py-3">{caravan.manager?.fullName ?? '—'}</td>
                 <td className="px-4 py-3">
                   {caravan.isActive ? t('geo.active') : t('geo.inactive')}
                 </td>
                 <td className="px-4 py-3">
-                  <EntityRowActions
-                    viewTo={`/caravans/${caravan.id}`}
-                    editTo={`/caravans/${caravan.id}/edit`}
-                    onDelete={() =>
-                      confirmDelete({
-                        message: t('caravans.confirmDelete'),
-                        successMessage: t('caravans.deleted'),
-                        path: `/caravans/${caravan.id}`,
-                        queryKey: ['caravans'],
-                      })
-                    }
-                  />
+                  <Link to={`/my-caravans/${caravan.id}/pilgrimage-history`}>
+                    <Button type="button" variant="gold">
+                      <History className="size-4" aria-hidden />
+                      {t('caravanPilgrimageHistory.open')}
+                    </Button>
+                  </Link>
                 </td>
               </tr>
             ))}

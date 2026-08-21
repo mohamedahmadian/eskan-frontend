@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LoadingState, PageHeader, cardClassName, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import type { IceVoucherAccommodationOption } from '../../types/app'
+import type { IceVoucher, IceVoucherAccommodationOption } from '../../types/app'
 import { IceVoucherRequestForm } from './IceVoucherRequestForm'
 
 export function IceVoucherCreatePage({
@@ -49,6 +49,49 @@ export function IceVoucherCreatePage({
           const { data } = await api.post<{ id: string }>('/ice-vouchers/mine', payload)
           toast.success(t('iceVouchers.created'))
           navigate(`${basePath}/${data.id}`)
+        }}
+      />
+    </div>
+  )
+}
+
+export function IceVoucherEditPage() {
+  const { t } = useTranslation()
+  const { id } = useParams()
+  const navigate = useNavigate()
+
+  const item = useQuery({
+    queryKey: ['ice-voucher', id],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const { data } = await api.get<IceVoucher>(`/ice-vouchers/${id}`)
+      return data
+    },
+  })
+  const accommodations = useQuery({
+    queryKey: ['ice-vouchers', 'accommodations'],
+    queryFn: async () => {
+      const { data } = await api.get<IceVoucherAccommodationOption[]>(
+        '/ice-vouchers/accommodations',
+      )
+      return data
+    },
+  })
+
+  if (!item.data || !accommodations.data || !id) {
+    return <LoadingState />
+  }
+
+  return (
+    <div className={formShellClassName}>
+      <PageHeader title={t('iceVouchers.edit')} subtitle={t('iceVouchers.editSubtitle')} />
+      <IceVoucherRequestForm
+        accommodations={accommodations.data}
+        initial={item.data}
+        onSubmit={async (payload) => {
+          await api.patch(`/ice-vouchers/${id}`, payload)
+          toast.success(t('iceVouchers.updated'))
+          navigate(`/logistics/ice-vouchers/${id}`)
         }}
       />
     </div>

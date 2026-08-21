@@ -26,11 +26,29 @@ export function getPageMeta(pathname: string) {
   if (pathname.includes('/edit') && pathname.startsWith('/caravans/')) {
     return { titleKey: 'caravans.edit', subtitleKey: 'caravans.editSubtitle' }
   }
+  if (pathname.includes('/pilgrimage-history') && pathname.startsWith('/caravans/')) {
+    return {
+      titleKey: 'caravanPilgrimageHistory.title',
+      subtitleKey: 'caravanPilgrimageHistory.subtitle',
+    }
+  }
   if (pathname.startsWith('/caravans/') && pathname !== '/caravans') {
     return { titleKey: 'caravans.details', subtitleKey: 'caravans.detailsSubtitle' }
   }
   if (pathname.startsWith('/caravans')) {
     return { titleKey: 'menus.caravansList', subtitleKey: 'caravans.subtitle' }
+  }
+  if (pathname.includes('/pilgrimage-history') && pathname.startsWith('/my-caravans/')) {
+    return {
+      titleKey: 'caravanPilgrimageHistory.title',
+      subtitleKey: 'caravanPilgrimageHistory.listSubtitle',
+    }
+  }
+  if (pathname.startsWith('/my-caravans/new')) {
+    return { titleKey: 'caravans.create', subtitleKey: 'myCaravans.createSubtitle' }
+  }
+  if (pathname.startsWith('/my-caravans')) {
+    return { titleKey: 'menus.myCaravans', subtitleKey: 'myCaravans.subtitle' }
   }
   if (pathname.startsWith('/base-info/countries/new')) {
     return { titleKey: 'countries.create', subtitleKey: 'countries.createSubtitle' }
@@ -343,6 +361,9 @@ export function getPageMeta(pathname: string) {
   }
   if (pathname.startsWith('/logistics/ice-vouchers/new')) {
     return { titleKey: 'iceVouchers.create', subtitleKey: 'iceVouchers.createSubtitle' }
+  }
+  if (pathname.includes('/edit') && pathname.startsWith('/logistics/ice-vouchers/')) {
+    return { titleKey: 'iceVouchers.edit', subtitleKey: 'iceVouchers.editSubtitle' }
   }
   if (pathname.startsWith('/logistics/ice-vouchers/') && pathname !== '/logistics/ice-vouchers') {
     return { titleKey: 'iceVouchers.details', subtitleKey: 'iceVouchers.detailsSubtitle' }

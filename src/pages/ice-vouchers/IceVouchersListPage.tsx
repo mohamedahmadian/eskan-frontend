@@ -222,6 +222,7 @@ export function IceVouchersListPage() {
                         {t('iceVouchers.sms')}
                       </Button>
                     }
+                    editTo={`/logistics/ice-vouchers/${item.id}/edit`}
                     onDelete={
                       item.status !== 'APPROVED'
                         ? () =>
