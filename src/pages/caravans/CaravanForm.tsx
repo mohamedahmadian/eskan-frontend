@@ -35,7 +35,6 @@ import { CaravanContactsPanel, firstIncompleteContactRole } from './CaravanConta
 import {
   caravanContactRoles,
   contactDraftsFromInitial,
-  isContactComplete,
   isContactIncomplete,
   toContactPayloads,
   type CaravanContactDraft,
@@ -183,7 +182,7 @@ export function CaravanForm({
   const [telegram, setTelegram] = useState(initial?.telegram ?? '')
   const [instagram, setInstagram] = useState(initial?.instagram ?? '')
   const [isActive, setIsActive] = useState(initial?.isActive ?? true)
-  const [extraManagers, setExtraManagers] = useState<ManagerOption[]>(() =>
+  const [extraManagers] = useState<ManagerOption[]>(() =>
     initial?.manager ? [toManagerOption(initial.manager)] : [],
   )
   const [contactDrafts, setContactDrafts] = useState<
