@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { LoadingState, DetailActions, PageHeader, cardClassName, userFormShellClassName } from '../../components/ui/Form'
+import { useNavigate, useParams } from 'react-router-dom'
+import { LoadingState, DetailActions, PageHeader, EntityNameSubtitle, cardClassName, userFormShellClassName } from '../../components/ui/Form'
 import { TableCard } from '../../components/ui/ListControls'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
@@ -46,12 +47,7 @@ export function AccommodationDetailPage() {
     <div className={userFormShellClassName}>
       <PageHeader
         title={t('accommodations.details')}
-        subtitle={t('accommodations.detailsSubtitle')}
-        action={
-          <Link to="/accommodations" className="text-sm text-teal-700 hover:underline">
-            {t('accommodations.backToList')}
-          </Link>
-        }
+        subtitle={<EntityNameSubtitle name={item.name} icon={Building2} />}
       />
       <div className="space-y-4">
         <AccommodationYearAlert accommodation={item} />

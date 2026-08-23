@@ -13,6 +13,12 @@ import { CaravanPilgrimageHistoryPage } from './pages/caravans/CaravanPilgrimage
 import { CaravansListPage } from './pages/caravans/CaravansListPage'
 import { MyCaravanCreatePage } from './pages/caravans/MyCaravanCreatePage'
 import { MyCaravansListPage } from './pages/caravans/MyCaravansListPage'
+import { MyReservationsListPage } from './pages/reservations/MyReservationsListPage'
+import { ReceptionSettingsPage } from './pages/reservations/ReceptionSettingsPage'
+import { ReservationAdminDetailPage } from './pages/reservations/ReservationAdminDetailPage'
+import { ReservationCreatePage } from './pages/reservations/ReservationCreatePage'
+import { ReservationsAdminListPage } from './pages/reservations/ReservationsAdminListPage'
+import { ReservationWizardPage } from './pages/reservations/ReservationWizardPage'
 import { ChangePasswordPage } from './pages/ChangePasswordPage'
 import { CitiesListPage } from './pages/geo/CitiesListPage'
 import { CityCreatePage } from './pages/geo/CityCreatePage'
@@ -44,10 +50,15 @@ import { RedCrescentEditPage } from './pages/red-crescents/RedCrescentEditPage'
 import { RedCrescentsListPage } from './pages/red-crescents/RedCrescentsListPage'
 import { LoginPage } from './pages/LoginPage'
 import { OverviewPage } from './pages/OverviewPage'
+import { PilgrimCardPage } from './pages/pilgrims/PilgrimCardPage'
 import { PilgrimCreatePage } from './pages/pilgrims/PilgrimCreatePage'
 import { PilgrimDetailPage } from './pages/pilgrims/PilgrimDetailPage'
 import { PilgrimEditPage } from './pages/pilgrims/PilgrimEditPage'
+import { PilgrimSendSmsPage } from './pages/pilgrims/PilgrimSendSmsPage'
+import { PilgrimSetPasswordPage } from './pages/pilgrims/PilgrimSetPasswordPage'
+import { PilgrimsImportPage } from './pages/pilgrims/PilgrimsImportPage'
 import { PilgrimsListPage } from './pages/pilgrims/PilgrimsListPage'
+import { PilgrimsReportPage } from './pages/pilgrims/PilgrimsReportPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SmsReportPage } from './pages/sms/SmsReportPage'
 import { SmsSendPage } from './pages/sms/SmsSendPage'
@@ -59,6 +70,7 @@ import { UsersListPage } from './pages/users/UsersListPage'
 import { AccommodationCreatePage } from './pages/accommodations/AccommodationCreatePage'
 import { AccommodationDetailPage } from './pages/accommodations/AccommodationDetailPage'
 import { AccommodationEditPage } from './pages/accommodations/AccommodationEditPage'
+import { AccommodationYearManagementPage } from './pages/accommodations/AccommodationYearManagementPage'
 import { AccommodationReportPage } from './pages/accommodations/AccommodationReportPage'
 import { AccommodationsListPage } from './pages/accommodations/AccommodationsListPage'
 import { AccommodationManagerCreatePage } from './pages/accommodation-managers/AccommodationManagerCreatePage'
@@ -125,9 +137,9 @@ function AppToaster() {
   return (
     <Toaster
       richColors
-      position="top-left"
+      position="bottom-center"
       className="app-toaster"
-      swipeDirections={['left', 'right']}
+      swipeDirections={['bottom', 'left', 'right']}
       dir={languages[lang]?.dir ?? 'rtl'}
     />
   )
@@ -153,8 +165,15 @@ export default function App() {
                 <Route element={<RequireMenuAccess path="/pilgrims" />}>
                   <Route path="/pilgrims" element={<PilgrimsListPage />} />
                   <Route path="/pilgrims/new" element={<PilgrimCreatePage />} />
-                  <Route path="/pilgrims/:id" element={<PilgrimDetailPage />} />
+                  <Route path="/pilgrims/import" element={<PilgrimsImportPage />} />
+                  <Route path="/pilgrims/:id/card" element={<PilgrimCardPage />} />
+                  <Route path="/pilgrims/:id/sms" element={<PilgrimSendSmsPage />} />
+                  <Route path="/pilgrims/:id/password" element={<PilgrimSetPasswordPage />} />
                   <Route path="/pilgrims/:id/edit" element={<PilgrimEditPage />} />
+                  <Route path="/pilgrims/:id" element={<PilgrimDetailPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/pilgrim-report" />}>
+                  <Route path="/pilgrim-report" element={<PilgrimsReportPage />} />
                 </Route>
                 <Route element={<RequireMenuAccess path="/caravans" />}>
                   <Route path="/caravans" element={<CaravansListPage />} />
@@ -170,6 +189,18 @@ export default function App() {
                     path="/my-caravans/:id/pilgrimage-history"
                     element={<CaravanPilgrimageHistoryPage />}
                   />
+                </Route>
+                <Route element={<RequireMenuAccess path="/my-reservations" />}>
+                  <Route path="/my-reservations" element={<MyReservationsListPage />} />
+                  <Route path="/my-reservations/new" element={<ReservationCreatePage />} />
+                  <Route path="/my-reservations/:id" element={<ReservationWizardPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/reservations" />}>
+                  <Route path="/reservations" element={<ReservationsAdminListPage />} />
+                  <Route path="/reservations/:id" element={<ReservationAdminDetailPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/reception-settings" />}>
+                  <Route path="/reception-settings" element={<ReceptionSettingsPage />} />
                 </Route>
                 <Route element={<RequireMenuAccess path="/base-info/countries" />}>
                   <Route path="/base-info/countries" element={<CountriesListPage />} />
@@ -257,6 +288,12 @@ export default function App() {
                   <Route path="/accommodations/new" element={<AccommodationCreatePage />} />
                   <Route path="/accommodations/:id" element={<AccommodationDetailPage />} />
                   <Route path="/accommodations/:id/edit" element={<AccommodationEditPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/accommodation-year-management" />}>
+                  <Route
+                    path="/accommodation-year-management"
+                    element={<AccommodationYearManagementPage />}
+                  />
                 </Route>
                 <Route element={<RequireMenuAccess path="/accommodation-report" />}>
                   <Route path="/accommodation-report" element={<AccommodationReportPage />} />

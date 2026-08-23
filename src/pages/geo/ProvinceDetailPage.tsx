@@ -38,15 +38,7 @@ export function ProvinceDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('provinces.details')}
-        subtitle={t('provinces.detailsSubtitle')}
-        action={
-          <Link to="/base-info/provinces" className="text-sm text-teal-700 hover:underline">
-            {t('provinces.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('provinces.details')} subtitle={t('provinces.detailsSubtitle')} />
       <div className="space-y-4">
         <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
           <dl className="grid gap-3 text-sm">

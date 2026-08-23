@@ -12,7 +12,7 @@ export function geoName(item: GeoName, locale: string) {
 export function useGeoName() {
   const { i18n } = useTranslation()
   const locale = i18n.language.split('-')[0]
-  return (item: GeoName) => geoName(item, locale)
+  return (item?: GeoName | null) => (item ? geoName(item, locale) : '—')
 }
 
 export function slugifyCode(value: string) {

@@ -12,11 +12,13 @@ import {
   FilterPair,
   PaginationBar,
   SearchBar,
+  SortableTh,
   TableCard,
 } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatGroupedNumber, formatNumber, persianYearOptions } from '../../lib/datetime'
 import type {
@@ -38,6 +40,7 @@ export function MyIceVouchersListPage() {
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const queryClient = useQueryClient()
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const currentYear = currentPersianYear()
   const yearParam = searchParams.get('year')
@@ -47,7 +50,7 @@ export function MyIceVouchersListPage() {
   const [selected, setSelected] = useState<Record<string, number>>({})
 
   const query = useQuery({
-    queryKey: ['ice-vouchers', 'mine', q, year, status, paymentStatus, page],
+    queryKey: ['ice-vouchers', 'mine', q, year, status, paymentStatus, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<IceVoucher>>('/ice-vouchers/mine', {
         params: {
@@ -56,6 +59,7 @@ export function MyIceVouchersListPage() {
           ...(q ? { q } : {}),
           ...(status ? { status } : {}),
           ...(paymentStatus ? { paymentStatus } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -276,13 +280,55 @@ export function MyIceVouchersListPage() {
                   label={t('iceVouchers.selectAllUnpaid')}
                 />
               </th>
-              <th className="px-4 py-3 text-start font-medium">{t('iceVouchers.code')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('iceVouchers.accommodation')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('iceVouchers.moldCount')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('iceVouchers.totalCost')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('iceVouchers.requestedAt')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('iceVouchers.status')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('iceVouchers.paymentStatus')}</th>
+              <SortableTh
+                column="code"
+                label={t('iceVouchers.code')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="accommodation"
+                label={t('iceVouchers.accommodation')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="moldCount"
+                label={t('iceVouchers.moldCount')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="totalCost"
+                label={t('iceVouchers.totalCost')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="requestedAt"
+                label={t('iceVouchers.requestedAt')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="status"
+                label={t('iceVouchers.status')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="paymentStatus"
+                label={t('iceVouchers.paymentStatus')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

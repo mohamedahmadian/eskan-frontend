@@ -1,21 +1,43 @@
-import { BadgeCheck, CalendarDays, Download, MapPin, MapPinned, Mars, Plus, UserRound, Users, Venus } from 'lucide-react'
+import {
+  BadgeCheck,
+  CalendarDays,
+  Download,
+  Landmark,
+  MapPin,
+  MapPinned,
+  Mars,
+  Plus,
+  UserRound,
+  Users,
+  Venus,
+} from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PaginationBar, SearchBar, TableCard, EntityRowActions, FilterPair } from '../../components/ui/ListControls'
+import {
+  PaginationBar,
+  SearchBar,
+  TableCard,
+  EntityRowActions,
+  FilterPair,
+  SortableTh,
+} from '../../components/ui/ListControls'
 import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber, persianYearOptions } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import {
+  accommodationTypes,
   genderTypes,
   managementTypes,
   type Accommodation,
+  type AccommodationType,
   type City,
   type GenderType,
   type ManagementType,
@@ -28,8 +50,10 @@ export function AccommodationsListPage() {
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const [exporting, setExporting] = useState(false)
+  const type = (searchParams.get('type') ?? '') as AccommodationType | ''
   const genderType = (searchParams.get('genderType') ?? '') as GenderType | ''
   const managementType = (searchParams.get('managementType') ?? '') as ManagementType | ''
   const provinceId = searchParams.get('provinceId') ?? ''
@@ -59,16 +83,31 @@ export function AccommodationsListPage() {
   const listParams = {
     page,
     ...(q ? { q } : {}),
+    ...(type ? { type } : {}),
     ...(genderType ? { genderType } : {}),
     ...(managementType ? { managementType } : {}),
     ...(provinceId ? { provinceId } : {}),
     ...(cityId ? { cityId } : {}),
     ...(year ? { year } : {}),
     ...(hasManagerThisYear ? { hasManagerThisYear } : {}),
+    ...sortParams,
   }
 
   const query = useQuery({
-    queryKey: ['accommodations', q, genderType, managementType, provinceId, cityId, year, hasManagerThisYear, page],
+    queryKey: [
+      'accommodations',
+      q,
+      type,
+      genderType,
+      managementType,
+      provinceId,
+      cityId,
+      year,
+      hasManagerThisYear,
+      sortBy,
+      sortDir,
+      page,
+    ],
     queryFn: async () => {
       const { data } = await api.get<Paginated<Accommodation>>('/accommodations', {
         params: listParams,
@@ -87,12 +126,14 @@ export function AccommodationsListPage() {
       const { data } = await api.get<Blob>('/accommodations/export', {
         params: {
           ...(term.trim() || q ? { q: term.trim() || q } : {}),
+          ...(type ? { type } : {}),
           ...(genderType ? { genderType } : {}),
           ...(managementType ? { managementType } : {}),
           ...(provinceId ? { provinceId } : {}),
           ...(cityId ? { cityId } : {}),
           ...(year ? { year } : {}),
           ...(hasManagerThisYear ? { hasManagerThisYear } : {}),
+          ...sortParams,
         },
         responseType: 'blob',
       })
@@ -120,10 +161,11 @@ export function AccommodationsListPage() {
   }
 
   const rows = query.data?.items ?? []
+  const filtersActive = Boolean(
+    type || genderType || managementType || provinceId || cityId || year || hasManagerThisYear,
+  )
   const emptyMessage =
-    q || genderType || managementType || provinceId || cityId || year || hasManagerThisYear
-      ? t('accommodations.noResults')
-      : t('accommodations.empty')
+    q || filtersActive ? t('accommodations.noResults') : t('accommodations.empty')
 
   return (
     <div className={listShellClassName}>
@@ -146,7 +188,7 @@ export function AccommodationsListPage() {
         onSubmit={onSearch}
         label={t('common.search')}
         placeholder={t('accommodations.searchPlaceholder')}
-        filtersActive={Boolean(genderType || managementType || provinceId || cityId || year || hasManagerThisYear)}
+        filtersActive={filtersActive}
         extra={
           <>
             <FilterPair columns={3}>
@@ -196,7 +238,22 @@ export function AccommodationsListPage() {
                 />
               </FormField>
             </FilterPair>
-            <FilterPair columns={3}>
+            <FilterPair columns={2}>
+              <FormField icon={Landmark} label={t('accommodations.type')} htmlFor="accommodation-type">
+                <SearchSelect
+                  id="accommodation-type"
+                  value={type}
+                  placeholder={t('accommodations.allTypes')}
+                  onChange={(next) => setParams({ type: next || undefined }, { resetPage: true })}
+                  options={[
+                    { value: '', label: t('accommodations.allTypes') },
+                    ...Object.values(accommodationTypes).map((value) => ({
+                      value,
+                      label: t(`accommodationTypes.${value}`),
+                    })),
+                  ]}
+                />
+              </FormField>
               <FormField icon={Users} label={t('accommodations.genderType')} htmlFor="accommodation-gender-type">
                 <SearchSelect
                   id="accommodation-gender-type"
@@ -205,13 +262,15 @@ export function AccommodationsListPage() {
                   onChange={(next) => setParams({ genderType: next || undefined }, { resetPage: true })}
                   options={[
                     { value: '', label: t('accommodations.allGenderTypes') },
-                    ...Object.values(genderTypes).map((type) => ({
-                      value: type,
-                      label: t(`genderTypes.${type}`),
+                    ...Object.values(genderTypes).map((value) => ({
+                      value,
+                      label: t(`genderTypes.${value}`),
                     })),
                   ]}
                 />
               </FormField>
+            </FilterPair>
+            <FilterPair columns={2}>
               <FormField
                 icon={UserRound}
                 label={t('accommodations.currentYearManager')}
@@ -241,9 +300,9 @@ export function AccommodationsListPage() {
                   }
                   options={[
                     { value: '', label: t('accommodations.allManagementTypes') },
-                    ...Object.values(managementTypes).map((type) => ({
-                      value: type,
-                      label: t(`managementTypes.${type}`),
+                    ...Object.values(managementTypes).map((value) => ({
+                      value,
+                      label: t(`managementTypes.${value}`),
                     })),
                   ]}
                 />
@@ -256,10 +315,34 @@ export function AccommodationsListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodations.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodations.type')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodations.managementType')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodations.genderType')}</th>
+              <SortableTh
+                column="name"
+                label={t('accommodations.name')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="type"
+                label={t('accommodations.type')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="managementType"
+                label={t('accommodations.managementType')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="genderType"
+                label={t('accommodations.genderType')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

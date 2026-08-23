@@ -3,8 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Button, PageHeader, listShellClassName } from '../../components/ui/Form'
-import { PaginationBar, SearchBar, TableCard } from '../../components/ui/ListControls'
+import {
+  PaginationBar,
+  SearchBar,
+  TableCard,
+  SortableTh,
+} from '../../components/ui/ListControls'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
 import type { Caravan, Paginated } from '../../types/app'
@@ -12,12 +18,13 @@ import type { Caravan, Paginated } from '../../types/app'
 export function MyCaravansListPage() {
   const { t } = useTranslation()
   const nameOf = useGeoName()
-  const { q, page, term, setTerm, applySearch, setPage } = useListParams()
+  const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const query = useQuery({
-    queryKey: ['caravans', 'mine', q, page],
+    queryKey: ['caravans', 'mine', q, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<Caravan>>('/caravans/mine', {
-        params: { q: q || undefined, page },
+        params: { q: q || undefined, page, ...sortParams },
       })
       return data
     },
@@ -54,9 +61,27 @@ export function MyCaravansListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('caravans.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('caravans.city')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('caravans.status')}</th>
+              <SortableTh
+                column="name"
+                label={t('caravans.name')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="city"
+                label={t('caravans.city')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="isActive"
+                label={t('caravans.status')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>
@@ -70,7 +95,7 @@ export function MyCaravansListPage() {
                 </td>
                 <td className="px-4 py-3">
                   <Link to={`/my-caravans/${caravan.id}/pilgrimage-history`}>
-                    <Button type="button" variant="gold">
+                    <Button type="button" variant="soft">
                       <History className="size-4" aria-hidden />
                       {t('caravanPilgrimageHistory.open')}
                     </Button>

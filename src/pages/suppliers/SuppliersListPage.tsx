@@ -2,28 +2,37 @@ import { Filter, Package, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { EntityRowActions, PaginationBar, SearchBar, TableCard } from '../../components/ui/ListControls'
+import {
+  EntityRowActions,
+  PaginationBar,
+  SearchBar,
+  SortableTh,
+  TableCard,
+} from '../../components/ui/ListControls'
 import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { supplierTypes, type Paginated, type Supplier } from '../../types/app'
 
 export function SuppliersListPage() {
   const { t } = useTranslation()
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const type = searchParams.get('type') ?? ''
 
   const query = useQuery({
-    queryKey: ['suppliers', 'list', q, type, page],
+    queryKey: ['suppliers', 'list', q, type, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<Supplier>>('/suppliers', {
         params: {
           page,
           ...(q ? { q } : {}),
           ...(type ? { type } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -83,10 +92,16 @@ export function SuppliersListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('suppliers.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('suppliers.type')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('suppliers.contactPerson')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('suppliers.phone')}</th>
+              <SortableTh column="name" label={t('suppliers.name')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="type" label={t('suppliers.type')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh
+                column="contactPerson"
+                label={t('suppliers.contactPerson')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh column="phone" label={t('suppliers.phone')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>
@@ -112,7 +127,7 @@ export function SuppliersListPage() {
                       }
                     />
                     <Link to={`/logistics/suppliers/${item.id}/items`}>
-                      <Button type="button" variant="gold">
+                      <Button type="button" variant="soft">
                         <Package className="size-4" aria-hidden />
                         {t('supplierItems.goods')}
                       </Button>

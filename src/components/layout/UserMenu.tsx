@@ -1,16 +1,19 @@
-import { ChevronDown, KeyRound, LogOut, Settings } from 'lucide-react'
+import { ChevronDown, CircleHelp, KeyRound, LogOut, Settings } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { formatRoles } from '../../lib/roles'
+import { useRecoverPilgrimPassword } from '../../hooks/useRecoverPilgrimPassword'
+import { formatRoles, isPilgrim } from '../../lib/roles'
 
 export function UserMenu() {
   const { user, logout } = useAuth()
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { recoverPassword } = useRecoverPilgrimPassword()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const pilgrim = isPilgrim(user)
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -59,6 +62,19 @@ export function UserMenu() {
             <KeyRound className="size-4 text-teal-600" />
             {t('nav.changePassword')}
           </Link>
+          {pilgrim ? (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
+              onClick={() => {
+                setOpen(false)
+                recoverPassword()
+              }}
+            >
+              <CircleHelp className="size-4 text-teal-600" />
+              {t('nav.forgotPassword')}
+            </button>
+          ) : null}
           <button
             type="button"
             className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"

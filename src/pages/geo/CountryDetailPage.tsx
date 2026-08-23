@@ -30,15 +30,7 @@ export function CountryDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('countries.details')}
-        subtitle={t('countries.detailsSubtitle')}
-        action={
-          <Link to="/base-info/countries" className="text-sm text-teal-700 hover:underline">
-            {t('countries.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('countries.details')} subtitle={t('countries.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('geo.nameFa')} value={country.nameFa} />

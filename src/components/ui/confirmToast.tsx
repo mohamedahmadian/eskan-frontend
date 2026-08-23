@@ -7,28 +7,29 @@ export function confirmToast({
   confirmLabel,
   cancelLabel,
   onConfirm,
-  confirmVariant = 'danger',
+  confirmVariant = 'primary',
 }: {
   title: string
   confirmLabel: string
   cancelLabel: string
   onConfirm: () => void | Promise<void>
+  /** `primary` (فیروزه‌ای) برای بله/تأیید؛ فقط حذف و انصراف/رد مخرب `danger` */
   confirmVariant?: 'primary' | 'danger'
 }) {
-  const isPrimary = confirmVariant === 'primary'
+  const isDanger = confirmVariant === 'danger'
   toast.custom(
     (id) => (
       <div className="w-[min(100vw-2rem,22rem)] rounded-[22px] border border-white bg-white p-4 shadow-[0_16px_40px_rgba(20,40,40,0.14)]">
         <div className="flex items-start gap-3">
           <div
             className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${
-              isPrimary ? 'bg-teal-50 text-teal-600' : 'bg-red-50 text-red-600'
+              isDanger ? 'bg-red-50 text-red-600' : 'bg-teal-50 text-teal-600'
             }`}
           >
-            {isPrimary ? (
-              <Check className="size-5" aria-hidden />
-            ) : (
+            {isDanger ? (
               <AlertTriangle className="size-5" aria-hidden />
+            ) : (
+              <Check className="size-5" aria-hidden />
             )}
           </div>
           <p className="pt-1.5 text-sm font-medium text-ink-900">{title}</p>

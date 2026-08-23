@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Check, Download, MessageSquare, X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { SmsPreviewModal } from '../../components/sms/SmsPreviewModal'
 import { Button, DetailActions, LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
@@ -95,15 +95,7 @@ export function IceVoucherDetailPage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader
-        title={t('iceVouchers.details')}
-        subtitle={t('iceVouchers.detailsSubtitle')}
-        action={
-          <Link to="/logistics/ice-vouchers" className="text-sm text-teal-700 hover:underline">
-            {t('iceVouchers.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('iceVouchers.details')} subtitle={t('iceVouchers.detailsSubtitle')} />
       <IceVoucherCard ref={cardRef} voucher={item} qrUrl={qrUrl} />
       {item.status === 'PENDING' ? (
         <div className="mt-6 flex flex-wrap gap-3">
@@ -124,6 +116,7 @@ export function IceVoucherDetailPage() {
                 title: t('iceVouchers.confirmReject'),
                 confirmLabel: t('iceVouchers.reject'),
                 cancelLabel: t('iceVouchers.cancel'),
+                confirmVariant: 'danger',
                 onConfirm: () => decide.mutate('reject'),
               })
             }
@@ -157,7 +150,7 @@ export function IceVoucherDetailPage() {
         </Button>
         <Button
           type="button"
-          variant="gold"
+          variant="soft"
           className="ms-auto"
           onClick={() => void downloadCard()}
           disabled={downloading || sharing || !qrUrl}

@@ -1,6 +1,7 @@
 import {
   Building2,
   Boxes,
+  CalendarRange,
   ChartColumn,
   ClipboardList,
   Database,
@@ -55,6 +56,7 @@ const icons: Record<string, LucideIcon> = {
   route: Route,
   'building-2': Building2,
   boxes: Boxes,
+  'calendar-range': CalendarRange,
   'chart-column': ChartColumn,
   'utensils-crossed': UtensilsCrossed,
   hospital: Hospital,

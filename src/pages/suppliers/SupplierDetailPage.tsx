@@ -35,15 +35,7 @@ export function SupplierDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('suppliers.details')}
-        subtitle={t('suppliers.detailsSubtitle')}
-        action={
-          <Link to="/logistics/suppliers" className="text-sm text-teal-700 hover:underline">
-            {t('suppliers.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('suppliers.details')} subtitle={t('suppliers.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('suppliers.name')} value={item.name} />
@@ -68,7 +60,7 @@ export function SupplierDetailPage() {
           }
           extra={
             <Link to={`/logistics/suppliers/${item.id}/items`}>
-              <Button type="button" variant="gold">
+              <Button type="button" variant="soft">
                 <Package className="size-4" aria-hidden />
                 {t('supplierItems.manage')}
               </Button>

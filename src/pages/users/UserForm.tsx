@@ -35,6 +35,7 @@ import {
   fieldClassName,
   inputClassName,
 } from '../../components/ui/Form'
+import { LoadingSpinner } from '../../components/ui/LoadingState'
 import { languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { parseDigitString } from '../../lib/datetime'
@@ -109,6 +110,7 @@ export function UserForm({
   lockedRoleCodes = [],
   hideRoles = false,
   requirePassword,
+  defaultPassword = '',
   extraTabs,
   identityCheckPath = '/users/identity-check',
   onSubmit,
@@ -118,6 +120,7 @@ export function UserForm({
   lockedRoleCodes?: string[]
   hideRoles?: boolean
   requirePassword: boolean
+  defaultPassword?: string
   extraTabs?: UserFormExtraTab[]
   identityCheckPath?: string
   onSubmit: (payload: UserPayload) => Promise<void>
@@ -133,7 +136,7 @@ export function UserForm({
   const [username, setUsername] = useState(initial?.username ?? '')
   const [firstName, setFirstName] = useState(initial?.firstName ?? '')
   const [lastName, setLastName] = useState(initial?.lastName ?? '')
-  const [password, setPassword] = useState('')
+  const [password, setPassword] = useState(defaultPassword)
   const [locale, setLocale] = useState(initial?.locale ?? 'fa')
   const [status, setStatus] = useState<UserStatus>(initial?.status ?? userStatuses.ACTIVE)
   const [gender, setGender] = useState(initial?.gender ?? '')
@@ -163,12 +166,18 @@ export function UserForm({
     [...new Set([...(initial?.roleIds ?? initial?.roles?.map((role) => role.id) ?? []), ...lockedIds])],
   )
   const [saving, setSaving] = useState(false)
+  const [checkingNationalId, setCheckingNationalId] = useState(false)
+  const [nationalIdReady, setNationalIdReady] = useState(
+    Boolean(initial?.nationalId && isValidIranianNationalId(initial.nationalId)),
+  )
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const pendingFocusId = useRef<string | null>(null)
   const lastNationalIdCheck = useRef<string | null>(null)
   const lastPhoneCheck = useRef<string | null>(null)
   const nationalIdCheckSeq = useRef(0)
   const phoneCheckSeq = useRef(0)
+  const personalFieldsLocked = !nationalIdReady
+  const isCreate = !initial
 
   useEffect(() => {
     const id = pendingFocusId.current
@@ -202,12 +211,14 @@ export function UserForm({
       return data
     },
   })
+  const iranCountryId = countries.data?.find((country) => country.iso2 === 'IR')?.id ?? ''
+  const selectedCountryId = countryId || (isCreate ? iranCountryId : '')
   const provinces = useQuery({
-    queryKey: ['provinces', 'lookup', countryId],
-    enabled: Boolean(countryId),
+    queryKey: ['provinces', 'lookup', selectedCountryId],
+    enabled: Boolean(selectedCountryId),
     queryFn: async () => {
       const { data } = await api.get<Province[]>('/provinces', {
-        params: { countryId, activeOnly: true },
+        params: { countryId: selectedCountryId, activeOnly: true },
       })
       return data
     },
@@ -246,16 +257,18 @@ export function UserForm({
     }
   }
 
-  async function checkNationalIdTaken() {
-    const value = normalizeNationalId(nationalId)
+  async function checkNationalIdTaken(raw?: string) {
+    const value = normalizeNationalId(raw ?? nationalId)
     if (!value) {
       lastNationalIdCheck.current = null
+      setNationalIdReady(false)
       clearError('nationalId')
       return
     }
     if (lastNationalIdCheck.current === value) return
     if (!isValidIranianNationalId(value)) {
       lastNationalIdCheck.current = value
+      setNationalIdReady(false)
       const message = t('users.nationalIdInvalid')
       setFieldError('nationalId', message)
       toast.error(message)
@@ -263,61 +276,81 @@ export function UserForm({
     }
     if (initial?.nationalId && normalizeNationalId(initial.nationalId) === value) {
       lastNationalIdCheck.current = value
+      setNationalIdReady(true)
       clearError('nationalId')
       return
     }
     lastNationalIdCheck.current = value
     const seq = ++nationalIdCheckSeq.current
+    setCheckingNationalId(true)
+    setNationalIdReady(false)
     try {
-      const { data } = await api.post<{ taken: boolean }>(identityCheckPath, {
-        nationalId: value,
-        ...(initial?.id ? { excludeId: initial.id } : {}),
-      })
+      const { data } = await api.post<{ taken: boolean; nationalIdTaken?: boolean }>(
+        identityCheckPath,
+        {
+          nationalId: value,
+          ...(initial?.id ? { excludeId: initial.id } : {}),
+        },
+      )
       if (seq !== nationalIdCheckSeq.current) return
-      if (data.taken) {
+      if (data.nationalIdTaken ?? data.taken) {
+        setNationalIdReady(false)
         const message = t('users.nationalIdTaken')
         setFieldError('nationalId', message)
         toast.error(message)
       } else {
+        setNationalIdReady(true)
         clearError('nationalId')
       }
     } catch (error) {
-      if (seq === nationalIdCheckSeq.current) lastNationalIdCheck.current = null
+      if (seq === nationalIdCheckSeq.current) {
+        lastNationalIdCheck.current = null
+        setNationalIdReady(false)
+      }
       if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return
+    } finally {
+      if (seq === nationalIdCheckSeq.current) setCheckingNationalId(false)
     }
   }
 
-  async function checkPhoneTaken() {
-    const value = phone.trim()
+  async function checkPhoneTaken(): Promise<boolean> {
+    const value = parseDigitString(phone).trim()
     if (!value) {
       lastPhoneCheck.current = null
       clearError('phone')
-      return
+      return true
     }
-    if (lastPhoneCheck.current === value) return
-    if (initial?.phone && initial.phone.trim() === value) {
+    if (initial?.phone && parseDigitString(initial.phone) === value) {
       lastPhoneCheck.current = value
       clearError('phone')
-      return
+      return true
+    }
+    if (lastPhoneCheck.current === value && !fieldErrors.phone) {
+      return true
     }
     lastPhoneCheck.current = value
     const seq = ++phoneCheckSeq.current
     try {
-      const { data } = await api.post<{ taken: boolean }>(identityCheckPath, {
-        phone: value,
-        ...(initial?.id ? { excludeId: initial.id } : {}),
-      })
-      if (seq !== phoneCheckSeq.current) return
-      if (data.taken) {
+      const { data } = await api.post<{ taken: boolean; phoneTaken?: boolean }>(
+        identityCheckPath,
+        {
+          phone: value,
+          ...(initial?.id ? { excludeId: initial.id } : {}),
+        },
+      )
+      if (seq !== phoneCheckSeq.current) return false
+      if (data.phoneTaken ?? data.taken) {
         const message = t('users.phoneTaken')
         setFieldError('phone', message)
         toast.error(message)
-      } else {
-        clearError('phone')
+        return false
       }
+      clearError('phone')
+      return true
     } catch (error) {
       if (seq === phoneCheckSeq.current) lastPhoneCheck.current = null
-      if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return
+      if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return false
+      return false
     }
   }
 
@@ -352,6 +385,12 @@ export function UserForm({
       failField('personal', 'phone', fieldErrors.phone)
       return
     }
+    const phoneAvailable = await checkPhoneTaken()
+    if (!phoneAvailable) {
+      pendingFocusId.current = 'phone'
+      if (tab !== 'personal') setTab('personal')
+      return
+    }
     if (!nextRoleIds.length) {
       failField('account', 'roles', t('users.rolesRequired'))
       return
@@ -378,7 +417,7 @@ export function UserForm({
         status,
         gender: gender ? (gender as UserGender) : null,
         nationalId: normalizeNationalId(nationalId),
-        phone: phone.trim(),
+        phone: parseDigitString(phone),
         email: emptyToNull(email),
         address: emptyToNull(address),
         notes: emptyToNull(notes),
@@ -390,7 +429,7 @@ export function UserForm({
         whatsapp: emptyToNull(whatsapp),
         otherSocial: emptyToNull(otherSocial),
         vehiclePlates: vehiclePlates.map((item) => item.trim()).filter(Boolean),
-        countryId: emptyToNull(countryId),
+        countryId: emptyToNull(selectedCountryId),
         provinceId: emptyToNull(provinceId),
         cityId: emptyToNull(cityId),
         photoId: emptyToNull(photoId),
@@ -458,132 +497,164 @@ export function UserForm({
           htmlFor="nationalId"
           error={fieldErrors.nationalId}
         >
-          <input
-            id="nationalId"
-            className={inputClassName(Boolean(fieldErrors.nationalId))}
-            value={nationalId}
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={10}
-            required
-            aria-invalid={Boolean(fieldErrors.nationalId)}
-            onChange={(e) => {
-              lastNationalIdCheck.current = null
-              setNationalId(parseDigitString(e.target.value).slice(0, 10))
-              clearError('nationalId')
-            }}
-            onBlur={() => void checkNationalIdTaken()}
-            onMouseLeave={() => {
-              if (normalizeNationalId(nationalId).length === 10) void checkNationalIdTaken()
-            }}
-          />
+          <div className="relative">
+            <input
+              id="nationalId"
+              className={`${inputClassName(Boolean(fieldErrors.nationalId))} ${
+                checkingNationalId ? 'pe-11' : ''
+              }`}
+              value={nationalId}
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={10}
+              required
+              aria-invalid={Boolean(fieldErrors.nationalId)}
+              aria-busy={checkingNationalId}
+              onChange={(e) => {
+                lastNationalIdCheck.current = null
+                const next = parseDigitString(e.target.value).slice(0, 10)
+                setNationalId(next)
+                setNationalIdReady(false)
+                clearError('nationalId')
+                if (next.length === 10) void checkNationalIdTaken(next)
+              }}
+              onBlur={() => void checkNationalIdTaken()}
+              onMouseLeave={() => {
+                if (normalizeNationalId(nationalId).length === 10) void checkNationalIdTaken()
+              }}
+            />
+            {checkingNationalId ? (
+              <span
+                className="pointer-events-none absolute inset-y-0 end-3 flex items-center"
+                role="status"
+                aria-live="polite"
+                aria-label={t('users.nationalIdChecking')}
+              >
+                <LoadingSpinner size="xs" />
+              </span>
+            ) : null}
+          </div>
         </FormField>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            icon={UserRound}
-            label={t('users.firstName')}
-            htmlFor="firstName"
-            error={fieldErrors.firstName}
-          >
-            <input
-              id="firstName"
-              className={inputClassName(Boolean(fieldErrors.firstName))}
-              value={firstName}
-              required
-              aria-invalid={Boolean(fieldErrors.firstName)}
-              onChange={(e) => {
-                setFirstName(e.target.value)
-                clearError('firstName')
-              }}
-            />
-          </FormField>
-          <FormField
-            icon={UserRound}
-            label={t('users.lastName')}
-            htmlFor="lastName"
-            error={fieldErrors.lastName}
-          >
-            <input
-              id="lastName"
-              className={inputClassName(Boolean(fieldErrors.lastName))}
-              value={lastName}
-              required
-              aria-invalid={Boolean(fieldErrors.lastName)}
-              onChange={(e) => {
-                setLastName(e.target.value)
-                clearError('lastName')
-              }}
-            />
-          </FormField>
-        </div>
-        <FormField
-          icon={Phone}
-          label={t('users.phone')}
-          htmlFor="phone"
-          error={fieldErrors.phone}
+        <div
+          className={`space-y-4 transition-opacity duration-200 ${
+            personalFieldsLocked ? 'opacity-50' : ''
+          }`}
+          aria-busy={checkingNationalId}
+          aria-disabled={personalFieldsLocked}
         >
-          <input
-            id="phone"
-            className={inputClassName(Boolean(fieldErrors.phone))}
-            value={phone}
-            required
-            aria-invalid={Boolean(fieldErrors.phone)}
-            onChange={(e) => {
-              const value = e.target.value
-              lastPhoneCheck.current = null
-              setPhone(value)
-              clearError('phone')
-              if (!usernameTouched.current) {
-                setUsername(value)
-                clearError('username')
-              }
-            }}
-            onBlur={() => void checkPhoneTaken()}
-            onMouseLeave={() => {
-              if (phone.trim().length >= 10) void checkPhoneTaken()
-            }}
-          />
-        </FormField>
-        <FormField icon={UserRound} label={t('users.gender')} htmlFor="gender">
-          <SearchSelect
-            id="gender"
-            value={gender}
-            onChange={setGender}
-            placeholder={t('users.selectOptional')}
-            options={[
-              { value: '', label: t('users.selectOptional') },
-              ...Object.values(userGenders).map((item) => ({
-                value: item,
-                label: t(`userGenders.${item}`),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={Share2} label={t('users.religion')} htmlFor="religion">
-          <SearchSelect
-            id="religion"
-            value={religion}
-            onChange={setReligion}
-            placeholder={t('users.selectOptional')}
-            options={[
-              { value: '', label: t('users.selectOptional') },
-              ...Object.values(religions).map((item) => ({
-                value: item,
-                label: t(`religions.${item}`),
-              })),
-            ]}
-          />
-        </FormField>
-        {religion === religions.OTHER ? (
-          <FormField icon={FileText} label={t('users.religionOther')} htmlFor="religionOther">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              icon={UserRound}
+              label={t('users.firstName')}
+              htmlFor="firstName"
+              error={fieldErrors.firstName}
+            >
+              <input
+                id="firstName"
+                className={`${inputClassName(Boolean(fieldErrors.firstName))} disabled:cursor-not-allowed`}
+                value={firstName}
+                required
+                disabled={personalFieldsLocked}
+                aria-invalid={Boolean(fieldErrors.firstName)}
+                onChange={(e) => {
+                  setFirstName(e.target.value)
+                  clearError('firstName')
+                }}
+              />
+            </FormField>
+            <FormField
+              icon={UserRound}
+              label={t('users.lastName')}
+              htmlFor="lastName"
+              error={fieldErrors.lastName}
+            >
+              <input
+                id="lastName"
+                className={`${inputClassName(Boolean(fieldErrors.lastName))} disabled:cursor-not-allowed`}
+                value={lastName}
+                required
+                disabled={personalFieldsLocked}
+                aria-invalid={Boolean(fieldErrors.lastName)}
+                onChange={(e) => {
+                  setLastName(e.target.value)
+                  clearError('lastName')
+                }}
+              />
+            </FormField>
+          </div>
+          <FormField
+            icon={Phone}
+            label={t('users.phone')}
+            htmlFor="phone"
+            error={fieldErrors.phone}
+          >
             <input
-              id="religionOther"
-              className={fieldClassName}
-              value={religionOther}
-              onChange={(e) => setReligionOther(e.target.value)}
+              id="phone"
+              className={`${inputClassName(Boolean(fieldErrors.phone))} disabled:cursor-not-allowed`}
+              value={phone}
+              required
+              disabled={personalFieldsLocked}
+              aria-invalid={Boolean(fieldErrors.phone)}
+              onChange={(e) => {
+                const value = parseDigitString(e.target.value).slice(0, 15)
+                lastPhoneCheck.current = null
+                setPhone(value)
+                clearError('phone')
+                if (!usernameTouched.current) {
+                  setUsername(value)
+                  clearError('username')
+                }
+              }}
+              onBlur={() => void checkPhoneTaken()}
+              onMouseLeave={() => {
+                if (parseDigitString(phone).length >= 10) void checkPhoneTaken()
+              }}
             />
           </FormField>
-        ) : null}
+          <FormField icon={UserRound} label={t('users.gender')} htmlFor="gender">
+            <SearchSelect
+              id="gender"
+              value={gender}
+              disabled={personalFieldsLocked}
+              onChange={setGender}
+              placeholder={t('users.selectOptional')}
+              options={[
+                { value: '', label: t('users.selectOptional') },
+                ...Object.values(userGenders).map((item) => ({
+                  value: item,
+                  label: t(`userGenders.${item}`),
+                })),
+              ]}
+            />
+          </FormField>
+          <FormField icon={Share2} label={t('users.religion')} htmlFor="religion">
+            <SearchSelect
+              id="religion"
+              value={religion}
+              disabled={personalFieldsLocked}
+              onChange={setReligion}
+              placeholder={t('users.selectOptional')}
+              options={[
+                { value: '', label: t('users.selectOptional') },
+                ...Object.values(religions).map((item) => ({
+                  value: item,
+                  label: t(`religions.${item}`),
+                })),
+              ]}
+            />
+          </FormField>
+          {religion === religions.OTHER ? (
+            <FormField icon={FileText} label={t('users.religionOther')} htmlFor="religionOther">
+              <input
+                id="religionOther"
+                className={`${fieldClassName} disabled:cursor-not-allowed`}
+                value={religionOther}
+                disabled={personalFieldsLocked}
+                onChange={(e) => setReligionOther(e.target.value)}
+              />
+            </FormField>
+          ) : null}
+        </div>
       </div>
 
       <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'account' ? '' : 'hidden'}`}>
@@ -676,7 +747,7 @@ export function UserForm({
         <FormField icon={Flag} label={t('geo.country')} htmlFor="countryId">
           <SearchSelect
             id="countryId"
-            value={countryId}
+            value={selectedCountryId}
             onChange={(next) => {
               setCountryId(next)
               setProvinceId('')
@@ -696,7 +767,7 @@ export function UserForm({
           <SearchSelect
             id="provinceId"
             value={provinceId}
-            disabled={!countryId}
+            disabled={!selectedCountryId}
             onChange={(next) => {
               setProvinceId(next)
               setCityId('')

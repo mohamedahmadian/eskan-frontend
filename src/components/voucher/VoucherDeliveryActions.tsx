@@ -35,7 +35,7 @@ export function VoucherDeliveryActions({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Button
           type="button"
-          variant="gold"
+          variant="soft"
           className="w-full"
           onClick={onDownload}
           disabled={disabled || downloading || sharing}

@@ -40,15 +40,7 @@ export function CaravanDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('caravans.details')}
-        subtitle={t('caravans.detailsSubtitle')}
-        action={
-          <Link to="/caravans" className="text-sm text-teal-700 hover:underline">
-            {t('caravans.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('caravans.details')} subtitle={t('caravans.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <div className="flex justify-between gap-4 border-b border-line py-2">
@@ -210,7 +202,7 @@ export function CaravanDetailPage() {
           }
           extra={
             <Link to={`/caravans/${caravan.id}/pilgrimage-history`}>
-              <Button type="button" variant="gold">
+              <Button type="button" variant="soft">
                 <History className="size-4" aria-hidden />
                 {t('caravanPilgrimageHistory.manage')}
               </Button>

@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { getNavIcon } from '../../lib/icons'
+import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { getPageMeta } from '../../lib/page-meta'
+import { canAccessMyCaravans, usesDedicatedHomeDashboard } from '../../lib/roles'
 import type { NavMenu, NavModule } from '../../types/app'
 import { PageTransition } from '../ui/PageTransition'
 import { UserMenu } from './UserMenu'
@@ -67,27 +69,39 @@ function menuMatchesSearch(mod: NavModule, item: NavMenu, needle: string, label:
 
 export function DashboardLayout() {
   const { user } = useAuth()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const mainRef = useRef<HTMLElement>(null)
   const meta = getPageMeta(location.pathname)
+  const subtitleKey =
+    (location.pathname === '/' || location.pathname === '') && usesDedicatedHomeDashboard(user)
+      ? 'dashboard.userSubtitle'
+      : meta.subtitleKey
 
   useEffect(() => {
     mainRef.current?.scrollTo(0, 0)
-  }, [location.pathname, location.search])
+  }, [location.pathname])
 
   const modules = useMemo(() => {
+    const showMyCaravans = canAccessMyCaravans(user)
+    const visible = (user?.modules ?? [])
+      .map((mod) => ({
+        ...mod,
+        menus: mod.menus.filter((item) => item.code !== 'caravans.mine' || showMyCaravans),
+      }))
+      .filter((mod) => mod.menus.length > 0)
     const needle = query.trim()
-    if (!needle) return user?.modules ?? []
-    return (user?.modules ?? [])
+    if (!needle) return visible
+    return visible
       .map((mod) => ({
         ...mod,
         menus: mod.menus.filter((item) => menuMatchesSearch(mod, item, needle, t)),
       }))
       .filter((mod) => mod.menus.length > 0)
-  }, [query, t, user?.modules])
+  }, [query, t, user])
 
   return (
     <div className="h-svh overflow-hidden bg-cream-50">
@@ -188,10 +202,10 @@ export function DashboardLayout() {
             </button>
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-lg font-semibold text-ink-900">
-                {t(meta.titleKey)}
+                {t(meta.titleKey, { year: formatNumber(currentPersianYear(), locale) })}
               </h1>
-              {meta.subtitleKey ? (
-                <p className="truncate text-xs text-ink-400">{t(meta.subtitleKey)}</p>
+              {subtitleKey ? (
+                <p className="truncate text-xs text-ink-400">{t(subtitleKey)}</p>
               ) : null}
             </div>
             <UserMenu />

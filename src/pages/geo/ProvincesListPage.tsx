@@ -2,11 +2,18 @@ import { Filter, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { PaginationBar, SearchBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
+import {
+  PaginationBar,
+  SearchBar,
+  TableCard,
+  EntityRowActions,
+  SortableTh,
+} from '../../components/ui/ListControls'
 import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
@@ -18,6 +25,7 @@ export function ProvincesListPage() {
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const countryId = searchParams.get('countryId') ?? ''
 
@@ -30,13 +38,14 @@ export function ProvincesListPage() {
   })
 
   const query = useQuery({
-    queryKey: ['provinces', 'list', q, countryId, page],
+    queryKey: ['provinces', 'list', q, countryId, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<Province>>('/provinces', {
         params: {
           page,
           ...(q ? { q } : {}),
           ...(countryId ? { countryId } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -102,13 +111,13 @@ export function ProvincesListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.nameFa')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.country')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.code')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.cityCount')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.hasRailway')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.hasAirport')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.isActive')}</th>
+              <SortableTh column="nameFa" label={t('geo.nameFa')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="country" label={t('geo.country')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="code" label={t('geo.code')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="cityCount" label={t('geo.cityCount')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="hasRailway" label={t('geo.hasRailway')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="hasAirport" label={t('geo.hasAirport')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="isActive" label={t('geo.isActive')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

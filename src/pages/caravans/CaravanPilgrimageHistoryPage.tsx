@@ -1,7 +1,7 @@
 import { History } from 'lucide-react'
 import { type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { AppForm, FormActions, PageHeader, cardClassName, formShellClassName } from '../../components/ui/Form'
 
 /** Stub UI only — pilgrimage history logic not implemented yet. */
@@ -11,9 +11,6 @@ export function CaravanPilgrimageHistoryPage() {
   const location = useLocation()
   const fromMyCaravans = location.pathname.startsWith('/my-caravans/')
   const backTo = fromMyCaravans ? '/my-caravans' : `/caravans/${id}`
-  const backLabel = fromMyCaravans
-    ? t('caravanPilgrimageHistory.backToMyCaravans')
-    : t('caravanPilgrimageHistory.backToCaravan')
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -24,11 +21,7 @@ export function CaravanPilgrimageHistoryPage() {
       <PageHeader
         title={t('caravanPilgrimageHistory.title')}
         subtitle={t('caravanPilgrimageHistory.listSubtitle')}
-        action={
-          <Link to={backTo} className="text-sm text-teal-700 hover:underline">
-            {backLabel}
-          </Link>
-        }
+        backTo={backTo}
       />
       <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
         <p className="flex items-center gap-2 text-sm text-ink-500">

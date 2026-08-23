@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { SmsPreviewModal } from '../../components/sms/SmsPreviewModal'
 import {
@@ -147,11 +147,6 @@ export function ItemQuotaVoucherDetailPage() {
       <PageHeader
         title={t('itemQuotaVouchers.details')}
         subtitle={t('itemQuotaVouchers.detailsSubtitle')}
-        action={
-          <Link to={listPath} className="text-sm text-teal-700 hover:underline">
-            {t('itemQuotaVouchers.backToList')}
-          </Link>
-        }
       />
       <VoucherCard ref={cardRef} voucher={item} qrUrl={qrUrl} />
       <DetailActions

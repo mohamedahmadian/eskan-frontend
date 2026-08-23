@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
+import { LoadingState, PageHeader, EntityNameSubtitle, userFormShellClassName } from '../../components/ui/Form'
 import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
 import { isAdmin } from '../../lib/roles'
@@ -73,7 +74,10 @@ export function AccommodationEditPage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t('accommodations.edit')} subtitle={t('accommodations.editSubtitle')} />
+      <PageHeader
+        title={t('accommodations.edit')}
+        subtitle={<EntityNameSubtitle name={item.data.name} icon={Building2} />}
+      />
       <AccommodationForm
         initial={item.data}
         countries={countries.data}

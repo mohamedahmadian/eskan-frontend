@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { LoadingState, DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
@@ -30,15 +30,7 @@ export function BenefactorDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('benefactors.details')}
-        subtitle={t('benefactors.detailsSubtitle')}
-        action={
-          <Link to="/base-info/benefactors" className="text-sm text-teal-700 hover:underline">
-            {t('benefactors.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('benefactors.details')} subtitle={t('benefactors.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('benefactors.name')} value={item.name} />

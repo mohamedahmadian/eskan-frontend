@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
+import { canAccessMyCaravans } from '../lib/roles'
 
 export function hasMenuAccess(path: string, modules: { menus: { path: string }[] }[]) {
   return modules.some((mod) =>
@@ -14,6 +15,10 @@ export function RequireMenuAccess({ path }: { path: string }) {
   const { user } = useAuth()
 
   if (!user || !hasMenuAccess(path, user.modules)) {
+    return <Navigate to="/" replace />
+  }
+
+  if (path === '/my-caravans' && !canAccessMyCaravans(user)) {
     return <Navigate to="/" replace />
   }
 

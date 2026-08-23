@@ -133,6 +133,7 @@ export type AuthUser = {
   username: string
   fullName: string
   locale: string
+  gender?: UserGender | null
   provinceId?: string | null
   cityId?: string | null
   countryId?: string | null
@@ -403,6 +404,7 @@ export type AccommodationReport = {
     active: number
     inactive: number
   }
+  byType: { type: AccommodationType; count: number }[]
   byGenderType: { genderType: GenderType; count: number }[]
   byManagementType: { managementType: ManagementType; count: number }[]
   byCombination: {
@@ -411,6 +413,71 @@ export type AccommodationReport = {
     count: number
   }[]
 }
+
+export type AccommodationYearStats = {
+  year: number
+  total: number
+  active: number
+  inactive: number
+}
+
+export type AccommodationYearRow = Accommodation & {
+  activeInYear: boolean
+}
+
+export type AccommodationYearTransferResult = {
+  sourceYear: number
+  targetYear: number
+  copyManagers: boolean
+  requested: number
+  transferred: number
+  skipped: number
+  errors: { accommodationId: string; message: string }[]
+}
+
+export type PilgrimReportNamedCount = {
+  id: string
+  name: string
+  count: number
+}
+
+export type PilgrimReportSummary = {
+  year: number | null
+  total: number
+  byGender: {
+    male: number
+    female: number
+    unspecified: number
+  }
+  byStatus: {
+    active: number
+    inactive: number
+  }
+}
+
+export type PilgrimReportGeo = {
+  year: number | null
+  byCountry: PilgrimReportNamedCount[]
+  byProvince: PilgrimReportNamedCount[]
+  byCity: PilgrimReportNamedCount[]
+}
+
+export type PilgrimReportReligion = {
+  year: number | null
+  byReligion: { religion: Religion; count: number }[]
+}
+
+export type PilgrimReportTimeline = {
+  year: number | null
+  byYear: { year: number; count: number }[]
+  byMonth: { month: number; count: number }[]
+}
+
+export type PilgrimReport = PilgrimReportSummary &
+  PilgrimReportGeo &
+  PilgrimReportReligion &
+  Pick<PilgrimReportTimeline, 'byYear' | 'byMonth'>
+
 
 export type WalkingRouteStage = {
   id?: string
@@ -770,4 +837,266 @@ export type IceVoucherStats = {
   paid: number
   unpaid: number
   payableUnpaid?: { id: string; totalCost: number }[]
+}
+
+export const reservationTypes = {
+  INDIVIDUAL: 'INDIVIDUAL',
+  GROUP: 'GROUP',
+  CARAVAN: 'CARAVAN',
+} as const
+
+export type ReservationType = (typeof reservationTypes)[keyof typeof reservationTypes]
+
+export const reservationStatuses = {
+  DRAFT: 'DRAFT',
+  PENDING_MANAGEMENT_REVIEW: 'PENDING_MANAGEMENT_REVIEW',
+  COMPANIONS: 'COMPANIONS',
+  CARAVAN_CONTACTS: 'CARAVAN_CONTACTS',
+  INSURANCE: 'INSURANCE',
+  COMPLETED: 'COMPLETED',
+  REJECTED: 'REJECTED',
+  CANCELLED: 'CANCELLED',
+} as const
+
+export type ReservationStatus =
+  (typeof reservationStatuses)[keyof typeof reservationStatuses]
+
+export const reservationMemberInsuranceStatuses = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const
+
+export type ReservationMemberInsuranceStatus =
+  (typeof reservationMemberInsuranceStatuses)[keyof typeof reservationMemberInsuranceStatuses]
+
+export type ReservationInsuranceSummary = {
+  total: number
+  pending: number
+  paid: number
+  approved: number
+  rejected: number
+  completed: boolean
+  paidAmount?: number
+  lastPaidAt?: string | null
+}
+
+export type ReservationPerson = {
+  id: string
+  firstName: string
+  lastName: string
+  fullName: string
+  nationalId: string | null
+  phone: string | null
+  gender: UserGender | null
+  birthDate: string | null
+  status: UserStatus
+}
+
+export type ReservationMember = {
+  id: string
+  user: ReservationPerson
+  insuranceStatus: ReservationMemberInsuranceStatus
+  insurancePaidAt: string | null
+  insurancePaidAmount: number | null
+  insurancePaymentRef: string | null
+  insuranceManualNote: string | null
+}
+
+export type MemberImportRowStatus = 'VALID' | 'INVALID' | 'DUPLICATE'
+export type MemberImportUserState = 'NEW' | 'EXISTING' | 'ALREADY_MEMBER'
+
+export type MemberImportPreviewRow = {
+  rowNumber: number
+  nationalId: string
+  firstName: string
+  lastName: string
+  gender: UserGender | null
+  genderText: string
+  phone: string | null
+  birthDate: string | null
+  status: MemberImportRowStatus
+  errors: string[]
+  duplicateOfRow?: number
+  userState: MemberImportUserState
+  existingUser?: { fullName: string; gender: UserGender | null }
+}
+
+export type MemberImportPreview = {
+  total: number
+  valid: number
+  invalid: number
+  duplicate: number
+  maleCount: number
+  femaleCount: number
+  remainingMale: number
+  remainingFemale: number
+  rows: MemberImportPreviewRow[]
+}
+
+export type PreviousReservationMembers = {
+  reservation: { id: string; year: number; type: ReservationType } | null
+  members: {
+    userId: string
+    alreadyMember: boolean
+    user: ReservationPerson
+  }[]
+}
+
+export type ReservationCaravanContact = {
+  id: string
+  role: 'DEPUTY' | 'CLERIC' | 'CULTURAL' | 'SECURITY' | 'RECEPTION'
+  user: ReservationPerson
+}
+
+export type ReservationListItem = {
+  id: string
+  year: number
+  type: ReservationType
+  status: ReservationStatus
+  originCity: (GeoName & { id: string; provinceId: string }) | null
+  stayStartDate: string | null
+  stayEndDate: string | null
+  walkingStartDate: string | null
+  maleCount: number
+  femaleCount: number
+  totalCount: number
+  createdAt: string
+  updatedAt: string
+  completedAt: string | null
+  caravan: { id: string; name: string; managerUserId: string | null } | null
+  createdBy?: ReservationPerson
+  caravanManager?: ReservationPerson | null
+}
+
+export type Reservation = ReservationListItem & {
+  createdBy: ReservationPerson
+  walkingRoute: { id: string; name: string } | null
+  stayStartDate: string | null
+  stayEndDate: string | null
+  walkingStartDate: string | null
+  caravanManager: ReservationPerson | null
+  caravanManagerNotes: string | null
+  managementNotes: string | null
+  rejectionReason: string | null
+  basicInfoLockedAt: string | null
+  basicInfoCompletedAt: string | null
+  managementReviewedAt: string | null
+  companionsCompletedAt: string | null
+  caravanContactsCompletedAt: string | null
+  insuranceCompletedAt: string | null
+  cancelledAt: string | null
+  rejectedAt: string | null
+  returnedToStatus?: ReservationStatus | null
+  basicInfoCompletedBy?: ReservationPerson | null
+  managementReviewedBy?: ReservationPerson | null
+  companionsCompletedBy?: ReservationPerson | null
+  caravanContactsCompletedBy?: ReservationPerson | null
+  insuranceCompletedBy?: ReservationPerson | null
+  completedBy?: ReservationPerson | null
+  rejectedBy?: ReservationPerson | null
+  cancelledBy?: ReservationPerson | null
+  members?: ReservationMember[]
+  caravanContacts?: ReservationCaravanContact[]
+}
+
+export type ReceptionSettings = {
+  year: number
+  exists: boolean
+  individualEnabled: boolean
+  individualMaleCapacity: number
+  individualFemaleCapacity: number
+  individualAutoApprove: boolean
+  groupEnabled: boolean
+  groupMaleCapacity: number
+  groupFemaleCapacity: number
+  groupAutoApprove: boolean
+  caravanEnabled: boolean
+  caravanMaleCapacity: number
+  caravanFemaleCapacity: number
+  caravanAutoApprove: boolean
+  insuranceOrganization: string
+  insurancePremiumAmount: number
+  insuranceCoverage: string
+}
+
+export type ReceptionCapacitySlice = {
+  maleCapacity: number
+  femaleCapacity: number
+  maleUsed: number
+  femaleUsed: number
+  maleRemaining: number
+  femaleRemaining: number
+}
+
+export type ReceptionDashboardTypeSlice = {
+  reservations: number
+  maleCount: number
+  femaleCount: number
+  totalCount: number
+}
+
+export type ReceptionDashboard = {
+  year: number
+  totals: {
+    all: number
+    pendingReview: number
+    inProgress: number
+    completed: number
+    rejected: number
+    cancelled: number
+  }
+  progress: {
+    draft: number
+    companions: number
+    contacts: number
+    insurance: number
+  }
+  types: {
+    individual: ReceptionDashboardTypeSlice
+    group: ReceptionDashboardTypeSlice
+    caravan: ReceptionDashboardTypeSlice
+  }
+  capacity: ReceptionCapacity
+}
+
+export type ReceptionCapacity = {
+  year: number
+  exists: boolean
+  individual: ReceptionCapacitySlice
+  group: ReceptionCapacitySlice
+  caravan: ReceptionCapacitySlice
+}
+
+export type UserHomeReservationTotals = {
+  all: number
+  inProgress: number
+  pendingReview: number
+  completed: number
+}
+
+export type UserHomeCaravan = {
+  id: string
+  name: string
+  isActive: boolean
+  city: GeoName & { id: string; provinceId: string }
+}
+
+export type UserHomePilgrim = {
+  totals: UserHomeReservationTotals
+  recent: ReservationListItem[]
+}
+
+export type UserHomeCaravanManager = {
+  caravanCount: number
+  activeCaravanCount: number
+  totals: UserHomeReservationTotals
+  recentCaravans: UserHomeCaravan[]
+  recentReservations: ReservationListItem[]
+}
+
+export type UserHomeDashboard = {
+  pilgrim: UserHomePilgrim | null
+  caravanManager: UserHomeCaravanManager | null
 }

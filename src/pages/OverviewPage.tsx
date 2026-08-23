@@ -11,9 +11,12 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/AuthProvider'
 import { api } from '../lib/api'
 import { cardClassName, listShellClassName } from '../components/ui/Form'
 import { formatNumber } from '../lib/datetime'
+import { usesDedicatedHomeDashboard } from '../lib/roles'
+import { UserHomeDashboard } from './dashboard/UserHomeDashboard'
 
 const quickTone = {
   teal: 'bg-teal-50 text-teal-700',
@@ -44,7 +47,7 @@ function QuickCard({
   )
 }
 
-export function OverviewPage() {
+function AdminOverview() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const stats = useQuery({
@@ -144,4 +147,12 @@ export function OverviewPage() {
       </p>
     </div>
   )
+}
+
+export function OverviewPage() {
+  const { user } = useAuth()
+  if (usesDedicatedHomeDashboard(user)) {
+    return <UserHomeDashboard />
+  }
+  return <AdminOverview />
 }

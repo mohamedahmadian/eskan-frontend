@@ -1,4 +1,4 @@
-export function getPageMeta(pathname: string) {
+export function getPageMeta(pathname: string): { titleKey: string; subtitleKey?: string } {
   if (pathname.startsWith('/settings/password')) {
     return {
       titleKey: 'auth.changePassword',
@@ -8,8 +8,23 @@ export function getPageMeta(pathname: string) {
   if (pathname.startsWith('/settings')) {
     return { titleKey: 'settings.title', subtitleKey: 'settings.subtitle' }
   }
+  if (pathname.startsWith('/pilgrim-report')) {
+    return { titleKey: 'menus.pilgrimsReport', subtitleKey: 'pilgrimReports.subtitle' }
+  }
   if (pathname.startsWith('/pilgrims/new')) {
     return { titleKey: 'pilgrims.create', subtitleKey: 'pilgrims.createSubtitle' }
+  }
+  if (pathname.startsWith('/pilgrims/import')) {
+    return { titleKey: 'pilgrims.import', subtitleKey: 'pilgrims.importSubtitle' }
+  }
+  if (pathname.includes('/sms') && pathname.startsWith('/pilgrims/')) {
+    return { titleKey: 'pilgrims.sendSms', subtitleKey: 'pilgrims.sendSmsSubtitle' }
+  }
+  if (pathname.includes('/password') && pathname.startsWith('/pilgrims/')) {
+    return { titleKey: 'pilgrims.setPassword', subtitleKey: 'pilgrims.setPasswordSubtitle' }
+  }
+  if (pathname.includes('/card') && pathname.startsWith('/pilgrims/')) {
+    return { titleKey: 'pilgrims.card', subtitleKey: 'pilgrims.cardSubtitle' }
   }
   if (pathname.includes('/edit') && pathname.startsWith('/pilgrims/')) {
     return { titleKey: 'pilgrims.edit', subtitleKey: 'pilgrims.editSubtitle' }
@@ -49,6 +64,24 @@ export function getPageMeta(pathname: string) {
   }
   if (pathname.startsWith('/my-caravans')) {
     return { titleKey: 'menus.myCaravans', subtitleKey: 'myCaravans.subtitle' }
+  }
+  if (pathname.startsWith('/my-reservations/new')) {
+    return { titleKey: 'reservations.createPageTitle' }
+  }
+  if (pathname.startsWith('/my-reservations/') && pathname !== '/my-reservations') {
+    return { titleKey: 'reservations.wizard', subtitleKey: 'reservations.detailsSubtitle' }
+  }
+  if (pathname.startsWith('/my-reservations')) {
+    return { titleKey: 'menus.myReservations' }
+  }
+  if (pathname.startsWith('/reception-settings')) {
+    return { titleKey: 'menus.receptionSettings', subtitleKey: 'receptionSettings.subtitle' }
+  }
+  if (pathname.startsWith('/reservations/') && pathname !== '/reservations') {
+    return { titleKey: 'reservations.adminDetails', subtitleKey: 'reservations.adminDetailsSubtitle' }
+  }
+  if (pathname.startsWith('/reservations')) {
+    return { titleKey: 'menus.reservationsAdmin', subtitleKey: 'reservations.adminSubtitle' }
   }
   if (pathname.startsWith('/base-info/countries/new')) {
     return { titleKey: 'countries.create', subtitleKey: 'countries.createSubtitle' }
@@ -240,6 +273,12 @@ export function getPageMeta(pathname: string) {
     return {
       titleKey: 'menus.accommodationManagers',
       subtitleKey: 'accommodationManagers.subtitle',
+    }
+  }
+  if (pathname.startsWith('/accommodation-year-management')) {
+    return {
+      titleKey: 'menus.accommodationYearManagement',
+      subtitleKey: 'accommodationYearManagement.subtitle',
     }
   }
   if (pathname.startsWith('/accommodation-report')) {

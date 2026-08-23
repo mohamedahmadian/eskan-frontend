@@ -16,6 +16,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -45,6 +46,12 @@ const COLORS = {
 }
 
 const chartAxisTick = { fill: '#7a756c', fontSize: 12 }
+const chartValueLabel = { fill: '#3f3a34', fontSize: 12, fontWeight: 600 }
+
+function chartValueText(value: unknown, locale: string) {
+  const n = Number(value ?? 0)
+  return n > 0 ? formatNumber(n, locale) : ''
+}
 
 function percentOf(count: number, total: number) {
   if (total <= 0) return 0
@@ -233,7 +240,7 @@ export function ItemQuotaVoucherReportPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={overviewBars}
-                        margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                        margin={{ top: 28, right: 8, left: 0, bottom: 8 }}
                         barCategoryGap="28%"
                       >
                         <CartesianGrid stroke="#eceae3" vertical={false} />
@@ -251,6 +258,13 @@ export function ItemQuotaVoucherReportPage() {
                           {overviewBars.map((item) => (
                             <Cell key={item.key} fill={item.fill} />
                           ))}
+                          <LabelList
+                            dataKey="value"
+                            position="top"
+                            offset={6}
+                            style={chartValueLabel}
+                            formatter={(value) => chartValueText(value, locale)}
+                          />
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
@@ -267,23 +281,31 @@ export function ItemQuotaVoucherReportPage() {
                     <>
                       <div className="relative h-64" dir="ltr">
                         <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
+                          <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                             <Pie
                               data={quotaSplit}
                               dataKey="value"
                               nameKey="name"
                               cx="50%"
                               cy="50%"
-                              innerRadius={62}
-                              outerRadius={96}
+                              innerRadius={54}
+                              outerRadius={84}
                               paddingAngle={3}
                               cornerRadius={6}
                               stroke="#ffffff"
                               strokeWidth={3}
+                              labelLine={false}
                             >
                               {quotaSplit.map((item) => (
                                 <Cell key={item.key} fill={item.fill} />
                               ))}
+                              <LabelList
+                                dataKey="value"
+                                position="outside"
+                                offset={10}
+                                style={chartValueLabel}
+                                formatter={(value) => chartValueText(value, locale)}
+                              />
                             </Pie>
                             <Tooltip content={<ReportTooltip />} />
                           </PieChart>
@@ -368,7 +390,7 @@ export function ItemQuotaVoucherReportPage() {
                       <BarChart
                         data={itemBars}
                         layout="vertical"
-                        margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        margin={{ top: 8, right: 40, left: 8, bottom: 8 }}
                         barCategoryGap="22%"
                       >
                         <CartesianGrid stroke="#eceae3" horizontal={false} />
@@ -389,9 +411,15 @@ export function ItemQuotaVoucherReportPage() {
                           tickLine={false}
                         />
                         <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
-                        <Bar dataKey="quota" name={t('voucherReports.quota')} fill={COLORS.quota} radius={[0, 10, 10, 0]} maxBarSize={14} />
-                        <Bar dataKey="issued" name={t('voucherReports.issued')} fill={COLORS.issued} radius={[0, 10, 10, 0]} maxBarSize={14} />
-                        <Bar dataKey="remaining" name={t('voucherReports.remaining')} fill={COLORS.remaining} radius={[0, 10, 10, 0]} maxBarSize={14} />
+                        <Bar dataKey="quota" name={t('voucherReports.quota')} fill={COLORS.quota} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="quota" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="issued" name={t('voucherReports.issued')} fill={COLORS.issued} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="issued" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="remaining" name={t('voucherReports.remaining')} fill={COLORS.remaining} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="remaining" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -411,7 +439,7 @@ export function ItemQuotaVoucherReportPage() {
                       <BarChart
                         data={supplierBars}
                         layout="vertical"
-                        margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        margin={{ top: 8, right: 40, left: 8, bottom: 8 }}
                         barCategoryGap="22%"
                       >
                         <CartesianGrid stroke="#eceae3" horizontal={false} />
@@ -432,8 +460,12 @@ export function ItemQuotaVoucherReportPage() {
                           tickLine={false}
                         />
                         <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
-                        <Bar dataKey="issued" name={t('voucherReports.issued')} fill={COLORS.issued} radius={[0, 10, 10, 0]} maxBarSize={16} />
-                        <Bar dataKey="vouchers" name={t('voucherReports.voucherCount')} fill={COLORS.vouchers} radius={[0, 10, 10, 0]} maxBarSize={16} />
+                        <Bar dataKey="issued" name={t('voucherReports.issued')} fill={COLORS.issued} radius={[0, 10, 10, 0]} maxBarSize={16}>
+                          <LabelList dataKey="issued" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="vouchers" name={t('voucherReports.voucherCount')} fill={COLORS.vouchers} radius={[0, 10, 10, 0]} maxBarSize={16}>
+                          <LabelList dataKey="vouchers" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -453,7 +485,7 @@ export function ItemQuotaVoucherReportPage() {
                       <BarChart
                         data={managerBars}
                         layout="vertical"
-                        margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        margin={{ top: 8, right: 40, left: 8, bottom: 8 }}
                         barCategoryGap="22%"
                       >
                         <CartesianGrid stroke="#eceae3" horizontal={false} />
@@ -474,8 +506,12 @@ export function ItemQuotaVoucherReportPage() {
                           tickLine={false}
                         />
                         <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
-                        <Bar dataKey="issued" name={t('voucherReports.issued')} fill={COLORS.issued} radius={[0, 10, 10, 0]} maxBarSize={16} />
-                        <Bar dataKey="vouchers" name={t('voucherReports.voucherCount')} fill={COLORS.vouchers} radius={[0, 10, 10, 0]} maxBarSize={16} />
+                        <Bar dataKey="issued" name={t('voucherReports.issued')} fill={COLORS.issued} radius={[0, 10, 10, 0]} maxBarSize={16}>
+                          <LabelList dataKey="issued" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="vouchers" name={t('voucherReports.voucherCount')} fill={COLORS.vouchers} radius={[0, 10, 10, 0]} maxBarSize={16}>
+                          <LabelList dataKey="vouchers" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -487,7 +523,7 @@ export function ItemQuotaVoucherReportPage() {
                   <h2 className="mb-4 text-sm font-medium text-ink-500">{t('voucherReports.byDay')}</h2>
                   <div className="h-80" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={byDay} margin={{ top: 8, right: 8, left: 0, bottom: 8 }} barCategoryGap="28%">
+                      <BarChart data={byDay} margin={{ top: 28, right: 8, left: 0, bottom: 8 }} barCategoryGap="28%">
                         <CartesianGrid stroke="#eceae3" vertical={false} />
                         <XAxis dataKey="label" tick={chartAxisTick} axisLine={false} tickLine={false} />
                         <YAxis
@@ -505,7 +541,15 @@ export function ItemQuotaVoucherReportPage() {
                           fill={COLORS.issued}
                           radius={[10, 10, 0, 0]}
                           maxBarSize={42}
-                        />
+                        >
+                          <LabelList
+                            dataKey="voucherCount"
+                            position="top"
+                            offset={6}
+                            style={chartValueLabel}
+                            formatter={(value) => chartValueText(value, locale)}
+                          />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

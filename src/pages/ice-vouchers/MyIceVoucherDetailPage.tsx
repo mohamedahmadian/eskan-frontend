@@ -1,7 +1,7 @@
 import { Download, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button, LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
@@ -37,15 +37,7 @@ export function MyIceVoucherDetailPage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader
-        title={t('iceVouchers.details')}
-        subtitle={t('myIceVouchers.detailsSubtitle')}
-        action={
-          <Link to="/logistics/my-ice-vouchers" className="text-sm text-teal-700 hover:underline">
-            {t('myIceVouchers.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('iceVouchers.details')} subtitle={t('myIceVouchers.detailsSubtitle')} />
       <IceVoucherCard ref={cardRef} voucher={item} qrUrl={qrUrl} />
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {item.status === 'PENDING' ? (
@@ -68,7 +60,7 @@ export function MyIceVoucherDetailPage() {
         ) : null}
         <Button
           type="button"
-          variant="gold"
+          variant="soft"
           className="ms-auto"
           onClick={() => void downloadCard()}
           disabled={downloading || sharing || !qrUrl}

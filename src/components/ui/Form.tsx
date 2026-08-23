@@ -1,11 +1,19 @@
-import { Check, type LucideIcon, Pencil, Trash2, X } from 'lucide-react'
-import type { ButtonHTMLAttributes, KeyboardEvent, FormHTMLAttributes, ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { ArrowRight, Check, type LucideIcon, Pencil, Trash2, X } from 'lucide-react'
+import {
+  useEffect,
+  useRef,
+  type ButtonHTMLAttributes,
+  type KeyboardEvent,
+  type FormHTMLAttributes,
+  type ReactNode,
+} from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useLocation } from 'react-router-dom'
 
 const variants = {
   primary:
     'bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-60 shadow-sm',
-  gold: 'bg-gold-400 text-ink-900 hover:bg-gold-500 disabled:opacity-60 shadow-sm',
+  soft: 'bg-mint-300 text-ink-900 hover:bg-mint-400 disabled:opacity-60 shadow-sm',
   ghost:
     'bg-white text-ink-700 hover:bg-cream-100 border border-line',
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:opacity-60',
@@ -128,25 +136,111 @@ export function ToggleField({
   )
 }
 
+const PAGE_BACK_LEAVES = new Set([
+  'new',
+  'edit',
+  'card',
+  'sms',
+  'password',
+  'import',
+  'pilgrimage-history',
+])
+
+const PAGE_BACK_NESTED_LISTS = new Set(['items', 'vouchers'])
+
+const UUID_SEGMENT =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function looksLikeId(segment: string) {
+  return UUID_SEGMENT.test(segment)
+}
+
+function joinPath(segments: string[]) {
+  return `/${segments.join('/')}`
+}
+
+/** مسیر مرحلهٔ قبل یا فهرست والد از روی URL فعلی */
+function resolvePageBackTo(pathname: string): string | undefined {
+  const segments = pathname.replace(/\/+$/, '').split('/').filter(Boolean)
+  if (segments.length === 0 || segments[0] === 'v') return undefined
+
+  const last = segments[segments.length - 1]
+  if (segments[0] === 'my-caravans' && last === 'pilgrimage-history') {
+    return '/my-caravans'
+  }
+  if (PAGE_BACK_LEAVES.has(last)) {
+    return segments.length > 1 ? joinPath(segments.slice(0, -1)) : undefined
+  }
+  if (
+    PAGE_BACK_NESTED_LISTS.has(last) &&
+    segments.length >= 2 &&
+    looksLikeId(segments[segments.length - 2])
+  ) {
+    return joinPath(segments.slice(0, -1))
+  }
+  if (looksLikeId(last) && segments.length > 1) {
+    return joinPath(segments.slice(0, -1))
+  }
+  return undefined
+}
+
 export function PageHeader({
   title,
   subtitle,
   action,
+  backTo,
+  className = 'mb-6',
 }: {
   title: string
-  subtitle?: string
+  subtitle?: ReactNode
   action?: ReactNode
+  /** مسیر بازگشت؛ اگر نیاید از URL استنباط می‌شود. `false` آیکون را مخفی می‌کند. */
+  backTo?: string | false
+  className?: string
 }) {
+  const { t } = useTranslation()
+  const { pathname } = useLocation()
+  const resolvedBackTo = backTo === false ? undefined : backTo ?? resolvePageBackTo(pathname)
+
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className={`flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between ${className}`}>
       <div>
-        <h1 className="text-2xl font-semibold text-ink-900">{title}</h1>
+        <div className="flex items-center gap-2">
+          {resolvedBackTo ? (
+            <Link
+              to={resolvedBackTo}
+              aria-label={t('common.back')}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl text-teal-700 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 print:hidden"
+            >
+              <ArrowRight className="size-5 ltr:rotate-180" aria-hidden />
+            </Link>
+          ) : null}
+          <h1 className="text-2xl font-semibold text-ink-900">{title}</h1>
+        </div>
         {subtitle ? (
-          <p className="mt-1 max-w-2xl text-sm text-ink-500">{subtitle}</p>
+          <div className={`mt-1 max-w-2xl text-sm text-ink-500 ${resolvedBackTo ? 'ps-11' : ''}`}>
+            {subtitle}
+          </div>
         ) : null}
       </div>
       {action}
     </div>
+  )
+}
+
+/** نام موجودیت زیر عنوان در صفحات ویرایش و جزئیات */
+export function EntityNameSubtitle({
+  name,
+  icon: Icon,
+}: {
+  name: string
+  icon: LucideIcon
+}) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-2 rounded-2xl bg-teal-50 px-3 py-1.5 text-sm font-medium text-teal-800">
+      <Icon className="size-4 shrink-0" aria-hidden />
+      <span className="truncate">{name}</span>
+    </span>
   )
 }
 
@@ -156,6 +250,60 @@ function submitIfValid(form: HTMLFormElement) {
     return
   }
   form.querySelector<HTMLElement>(':invalid')?.focus()
+}
+
+function isCreateFormPath(pathname: string) {
+  return /\/new\/?$/.test(pathname)
+}
+
+function isVisibleFocusableField(el: HTMLElement) {
+  if (el.closest('[hidden], [aria-hidden="true"]')) return false
+  if (el.closest('.hidden')) return false
+  if (!el.getClientRects().length) return false
+
+  if (el instanceof HTMLInputElement) {
+    if (el.disabled || el.readOnly) return false
+    if (el.tabIndex < 0) return false
+    if (
+      el.type === 'hidden' ||
+      el.type === 'submit' ||
+      el.type === 'button' ||
+      el.type === 'reset' ||
+      el.type === 'file' ||
+      el.type === 'checkbox' ||
+      el.type === 'radio'
+    ) {
+      return false
+    }
+    return true
+  }
+
+  if (el instanceof HTMLTextAreaElement) {
+    return !el.disabled && !el.readOnly && el.tabIndex >= 0
+  }
+
+  if (el instanceof HTMLSelectElement) {
+    return !el.disabled && el.tabIndex >= 0
+  }
+
+  if (el instanceof HTMLButtonElement) {
+    if (el.disabled || el.tabIndex < 0) return false
+    if (el.type === 'submit' || el.type === 'reset') return false
+    if (el.dataset.formCancel != null || el.closest('[data-form-cancel]')) return false
+    if (el.closest('[data-toggle]')) return false
+    return true
+  }
+
+  return false
+}
+
+function focusFirstFormField(form: HTMLFormElement) {
+  const candidates = form.querySelectorAll<HTMLElement>('input, textarea, select, button')
+  for (const el of candidates) {
+    if (!isVisibleFocusableField(el)) continue
+    el.focus()
+    return
+  }
 }
 
 export function handleFormEnter(event: KeyboardEvent<HTMLFormElement>) {
@@ -179,11 +327,28 @@ export function handleFormEnter(event: KeyboardEvent<HTMLFormElement>) {
 export function AppForm({
   onKeyDown,
   children,
+  autoFocusFirst,
   ...props
-}: FormHTMLAttributes<HTMLFormElement>) {
+}: FormHTMLAttributes<HTMLFormElement> & {
+  /** Focus the first field on mount. Defaults to true on `/…/new` create routes. */
+  autoFocusFirst?: boolean
+}) {
+  const formRef = useRef<HTMLFormElement>(null)
+  const location = useLocation()
+  const shouldFocus = autoFocusFirst ?? isCreateFormPath(location.pathname)
+
+  useEffect(() => {
+    if (!shouldFocus) return
+    const form = formRef.current
+    if (!form) return
+    const frame = requestAnimationFrame(() => focusFirstFormField(form))
+    return () => cancelAnimationFrame(frame)
+  }, [shouldFocus, location.pathname])
+
   return (
     <form
       {...props}
+      ref={formRef}
       onKeyDown={(event) => {
         onKeyDown?.(event)
         if (event.defaultPrevented) return

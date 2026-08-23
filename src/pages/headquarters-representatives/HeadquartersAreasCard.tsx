@@ -102,6 +102,7 @@ export function HeadquartersAreasCard({
       title: message,
       confirmLabel: t('common.yesDelete'),
       cancelLabel: t('common.cancel'),
+      confirmVariant: 'danger',
       onConfirm: async () => {
         try {
           await api.delete(path)

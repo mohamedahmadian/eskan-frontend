@@ -1,9 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
+import { IdCard, KeyRound, MessageSquare } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { LoadingState, DetailActions, PageHeader, cardClassName, userFormShellClassName } from '../../components/ui/Form'
+import {
+  Button,
+  LoadingState,
+  DetailActions,
+  PageHeader,
+  cardClassName,
+  userFormShellClassName,
+} from '../../components/ui/Form'
 import { DateText } from '../../components/ui/DateText'
 import { TableCard } from '../../components/ui/ListControls'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
@@ -72,15 +80,7 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader
-        title={t(`${keys}.details`)}
-        subtitle={t(`${keys}.detailsSubtitle`)}
-        action={
-          <Link to={scope.listPath} className="text-sm text-teal-700 hover:underline">
-            {t(`${keys}.backToList`)}
-          </Link>
-        }
-      />
+      <PageHeader title={t(`${keys}.details`)} subtitle={t(`${keys}.detailsSubtitle`)} />
 
       <div className="space-y-4">
         <nav className={`flex flex-wrap gap-2 p-3 ${cardClassName}`}>
@@ -244,6 +244,30 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                     queryKey: [scope.queryKey],
                     onDeleted: () => navigate(scope.listPath),
                   })
+          }
+          extra={
+            scope.showPilgrimCard ? (
+              <>
+                <Link to={`${scope.listPath}/${user.id}/sms`}>
+                  <Button type="button" variant="soft">
+                    <MessageSquare className="size-4" aria-hidden />
+                    {t('pilgrims.sendSms')}
+                  </Button>
+                </Link>
+                <Link to={`${scope.listPath}/${user.id}/password`}>
+                  <Button type="button" variant="soft">
+                    <KeyRound className="size-4" aria-hidden />
+                    {t('pilgrims.setPassword')}
+                  </Button>
+                </Link>
+                <Link to={`${scope.listPath}/${user.id}/card`}>
+                  <Button type="button" variant="soft">
+                    <IdCard className="size-4" aria-hidden />
+                    {t('pilgrims.card')}
+                  </Button>
+                </Link>
+              </>
+            ) : undefined
           }
         />
       </div>

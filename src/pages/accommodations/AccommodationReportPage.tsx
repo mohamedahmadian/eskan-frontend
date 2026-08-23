@@ -1,14 +1,6 @@
 import {
-  CircleCheck,
-  CircleX,
-  BadgeCheck,
   Building2,
   CalendarDays,
-  Mars,
-  UserRoundCheck,
-  UserRoundX,
-  Users,
-  Venus,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -19,6 +11,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -38,9 +31,11 @@ import { useListParams } from '../../hooks/useListParams'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
 import {
+  accommodationTypes,
   genderTypes,
   managementTypes,
   type AccommodationReport,
+  type AccommodationType,
   type GenderType,
   type ManagementType,
 } from '../../types/app'
@@ -57,22 +52,19 @@ const managementOrder: ManagementType[] = [
   managementTypes.NON_SELF_SUFFICIENT,
 ]
 
+const typeOrder: AccommodationType[] = [
+  accommodationTypes.SCHOOL,
+  accommodationTypes.MOSQUE,
+  accommodationTypes.HUSSEINIEH,
+  accommodationTypes.HALL,
+  accommodationTypes.HOUSE,
+  accommodationTypes.OTHER,
+]
+
 const genderColors: Record<GenderType, string> = {
   FEMALE: '#2ebdb6',
   MALE: '#e8b83a',
   MIXED: '#7a756c',
-}
-
-const genderIcon: Record<GenderType, LucideIcon> = {
-  FEMALE: Venus,
-  MALE: Mars,
-  MIXED: Users,
-}
-
-const genderTone: Record<GenderType, string> = {
-  FEMALE: 'bg-teal-50 text-teal-700',
-  MALE: 'bg-gold-50 text-gold-600',
-  MIXED: 'bg-cream-100 text-ink-700',
 }
 
 const managementColors: Record<ManagementType, string> = {
@@ -81,13 +73,22 @@ const managementColors: Record<ManagementType, string> = {
   NON_SELF_SUFFICIENT: '#f5cd6a',
 }
 
-const managementTone: Record<ManagementType, string> = {
-  SELF_SUFFICIENT: 'bg-teal-50 text-teal-700',
-  SEMI_SELF_SUFFICIENT: 'bg-teal-50 text-teal-600',
-  NON_SELF_SUFFICIENT: 'bg-gold-50 text-gold-600',
+const typeColors: Record<AccommodationType, string> = {
+  SCHOOL: '#148f8a',
+  MOSQUE: '#2ebdb6',
+  HUSSEINIEH: '#5ed4ce',
+  HALL: '#e8b83a',
+  HOUSE: '#f5cd6a',
+  OTHER: '#7a756c',
 }
 
 const chartAxisTick = { fill: '#7a756c', fontSize: 12 }
+const chartValueLabel = { fill: '#3f3a34', fontSize: 12, fontWeight: 600 }
+
+function chartValueText(value: unknown, locale: string) {
+  const n = Number(value ?? 0)
+  return n > 0 ? formatNumber(n, locale) : ''
+}
 
 function percentOf(count: number, total: number) {
   if (total <= 0) return 0
@@ -125,6 +126,9 @@ export function AccommodationReportPage() {
   })
 
   const report = query.data
+  const typeCounts = Object.fromEntries(
+    (report?.byType ?? []).map((row) => [row.type, row.count]),
+  ) as Record<AccommodationType, number>
   const genderCounts = Object.fromEntries(
     (report?.byGenderType ?? []).map((row) => [row.genderType, row.count]),
   ) as Record<GenderType, number>
@@ -173,6 +177,11 @@ export function AccommodationReportPage() {
     },
   ]
 
+  const typeBarData = typeOrder.map((type) => ({
+    name: t(`accommodationTypes.${type}`),
+    value: typeCounts[type] ?? 0,
+    fill: typeColors[type],
+  }))
   const genderPieData = genderOrder.map((genderType) => ({
     name: t(`genderTypes.${genderType}`),
     value: genderCounts[genderType] ?? 0,
@@ -220,128 +229,28 @@ export function AccommodationReportPage() {
         <p className={`${cardClassName} px-5 py-4 text-sm text-red-700`}>{t('common.error')}</p>
       ) : (
         <div className={`space-y-6 ${query.isFetching ? 'opacity-70' : ''}`}>
-          <section className="grid gap-4 lg:grid-cols-2">
-            <article className={`${cardClassName} p-5`}>
-              <h2 className="mb-4 text-sm font-medium text-ink-500">
-                {t('accommodations.reportByManagerStatus')}
-              </h2>
-              <div className="relative h-64" dir="ltr">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={managerStatusData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={62}
-                      outerRadius={96}
-                      paddingAngle={3}
-                      cornerRadius={6}
-                      stroke="#ffffff"
-                      strokeWidth={3}
-                    >
-                      {managerStatusData.map((item) => (
-                        <Cell key={item.key} fill={item.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ReportTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-semibold text-ink-900">
-                    {formatNumber(total, locale)}
-                  </span>
-                  <span className="text-[11px] text-ink-400">{t('accommodations.reportTotal')}</span>
-                </div>
-              </div>
-              <ChartLegend items={managerStatusData} total={total} locale={locale} />
-            </article>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              <KpiCard
-                icon={Building2}
-                tone="bg-teal-50 text-teal-700"
-                label={t('accommodations.reportTotal')}
-                value={formatNumber(total, locale)}
-              />
-              <KpiCard
-                icon={UserRoundCheck}
-                tone="bg-teal-50 text-teal-700"
-                label={t('accommodations.reportHasManager')}
-                value={formatNumber(withManager, locale)}
-                hint={t('accommodations.reportPercent', {
-                  value: formatNumber(percentOf(withManager, total), locale),
-                })}
-              />
-              <KpiCard
-                icon={UserRoundX}
-                tone="bg-gold-50 text-gold-600"
-                label={t('accommodations.reportNoManager')}
-                value={formatNumber(withoutManager, locale)}
-                hint={t('accommodations.reportPercent', {
-                  value: formatNumber(percentOf(withoutManager, total), locale),
-                })}
-              />
-            </div>
-          </section>
+          <KpiCard
+            icon={Building2}
+            tone="bg-teal-50 text-teal-700"
+            label={t('accommodations.reportTotal')}
+            value={formatNumber(total, locale)}
+          />
 
           <section className="grid gap-4 lg:grid-cols-2">
-            <article className={`${cardClassName} p-5`}>
-              <h2 className="mb-4 text-sm font-medium text-ink-500">
-                {t('accommodations.reportByYearActivity')}
-              </h2>
-              <div className="relative h-64" dir="ltr">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={yearActivityData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={62}
-                      outerRadius={96}
-                      paddingAngle={3}
-                      cornerRadius={6}
-                      stroke="#ffffff"
-                      strokeWidth={3}
-                    >
-                      {yearActivityData.map((item) => (
-                        <Cell key={item.key} fill={item.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ReportTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-semibold text-ink-900">
-                    {formatNumber(total, locale)}
-                  </span>
-                  <span className="text-[11px] text-ink-400">{t('accommodations.reportTotal')}</span>
-                </div>
-              </div>
-              <ChartLegend items={yearActivityData} total={total} locale={locale} />
-            </article>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              <KpiCard
-                icon={CircleCheck}
-                tone="bg-teal-50 text-teal-700"
-                label={t('accommodations.reportActive')}
-                value={formatNumber(activeInYear, locale)}
-                hint={t('accommodations.reportPercent', {
-                  value: formatNumber(percentOf(activeInYear, total), locale),
-                })}
-              />
-              <KpiCard
-                icon={CircleX}
-                tone="bg-gold-50 text-gold-600"
-                label={t('accommodations.reportInactive')}
-                value={formatNumber(inactiveInYear, locale)}
-                hint={t('accommodations.reportPercent', {
-                  value: formatNumber(percentOf(inactiveInYear, total), locale),
-                })}
-              />
-            </div>
+            <DonutCard
+              title={t('accommodations.reportByManagerStatus')}
+              data={managerStatusData}
+              total={total}
+              locale={locale}
+              centerLabel={t('accommodations.reportTotal')}
+            />
+            <DonutCard
+              title={t('accommodations.reportByYearActivity')}
+              data={yearActivityData}
+              total={total}
+              locale={locale}
+              centerLabel={t('accommodations.reportTotal')}
+            />
           </section>
 
           {total === 0 ? (
@@ -350,20 +259,53 @@ export function AccommodationReportPage() {
             </p>
           ) : (
             <>
-              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {genderOrder.map((genderType) => (
-                  <KpiCard
-                    key={genderType}
-                    icon={genderIcon[genderType]}
-                    tone={genderTone[genderType]}
-                    label={t(`genderTypes.${genderType}`)}
-                    value={formatNumber(genderCounts[genderType] ?? 0, locale)}
-                    hint={t('accommodations.reportPercent', {
-                      value: formatNumber(percentOf(genderCounts[genderType] ?? 0, total), locale),
-                    })}
-                  />
-                ))}
-              </section>
+              <article className={`${cardClassName} p-5`}>
+                <h2 className="mb-4 text-sm font-medium text-ink-500">
+                  {t('accommodations.reportByType')}
+                </h2>
+                <div className="h-80" dir="ltr">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={typeBarData}
+                      layout="vertical"
+                      margin={{ top: 8, right: 36, left: 8, bottom: 8 }}
+                      barCategoryGap="20%"
+                    >
+                      <CartesianGrid stroke="#eceae3" horizontal={false} />
+                      <XAxis
+                        type="number"
+                        allowDecimals={false}
+                        tick={chartAxisTick}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value: number) => formatNumber(value, locale)}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={72}
+                        tick={chartAxisTick}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
+                      <Bar dataKey="value" name={t('accommodations.reportCount')} radius={[0, 10, 10, 0]} maxBarSize={28}>
+                        {typeBarData.map((item) => (
+                          <Cell key={item.name} fill={item.fill} />
+                        ))}
+                        <LabelList
+                          dataKey="value"
+                          position="right"
+                          offset={6}
+                          style={chartValueLabel}
+                          formatter={(value) => chartValueText(value, locale)}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </article>
+
               <section className="grid gap-4 lg:grid-cols-2">
                 <article className={`${cardClassName} p-5`}>
                   <h2 className="mb-4 text-sm font-medium text-ink-500">
@@ -371,21 +313,29 @@ export function AccommodationReportPage() {
                   </h2>
                   <div className="h-64" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                      <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                         <Pie
                           data={genderPieData}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
                           cy="50%"
-                          outerRadius={96}
+                          outerRadius={84}
                           paddingAngle={3}
                           stroke="#ffffff"
                           strokeWidth={3}
+                          labelLine={false}
                         >
                           {genderPieData.map((item) => (
                             <Cell key={item.name} fill={item.fill} />
                           ))}
+                          <LabelList
+                            dataKey="value"
+                            position="outside"
+                            offset={10}
+                            style={chartValueLabel}
+                            formatter={(value) => chartValueText(value, locale)}
+                          />
                         </Pie>
                         <Tooltip content={<ReportTooltip />} />
                       </PieChart>
@@ -394,60 +344,13 @@ export function AccommodationReportPage() {
                   <ChartLegend items={genderPieData} total={total} locale={locale} />
                 </article>
 
-                <article className={`${cardClassName} p-5`}>
-                  <h2 className="mb-4 text-sm font-medium text-ink-500">
-                    {t('accommodations.reportByManagementType')}
-                  </h2>
-                  <div className="relative h-64" dir="ltr">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={managementDonutData}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={62}
-                          outerRadius={96}
-                          paddingAngle={3}
-                          cornerRadius={6}
-                          stroke="#ffffff"
-                          strokeWidth={3}
-                        >
-                          {managementDonutData.map((item) => (
-                            <Cell key={item.name} fill={item.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<ReportTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-semibold text-ink-900">
-                        {formatNumber(total, locale)}
-                      </span>
-                      <span className="text-[11px] text-ink-400">{t('accommodations.reportTotal')}</span>
-                    </div>
-                  </div>
-                  <ChartLegend items={managementDonutData} total={total} locale={locale} />
-                </article>
-              </section>
-
-              <section className="grid gap-4 sm:grid-cols-3">
-                {managementOrder.map((managementType) => (
-                  <KpiCard
-                    key={managementType}
-                    icon={BadgeCheck}
-                    tone={managementTone[managementType]}
-                    label={t(`managementTypes.${managementType}`)}
-                    value={formatNumber(managementCounts[managementType] ?? 0, locale)}
-                    hint={t('accommodations.reportPercent', {
-                      value: formatNumber(
-                        percentOf(managementCounts[managementType] ?? 0, total),
-                        locale,
-                      ),
-                    })}
-                  />
-                ))}
+                <DonutCard
+                  title={t('accommodations.reportByManagementType')}
+                  data={managementDonutData}
+                  total={total}
+                  locale={locale}
+                  centerLabel={t('accommodations.reportTotal')}
+                />
               </section>
 
               <section className="space-y-4">
@@ -459,7 +362,7 @@ export function AccommodationReportPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={combinationBarData}
-                        margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                        margin={{ top: 28, right: 8, left: 0, bottom: 8 }}
                         barCategoryGap="28%"
                         barGap={6}
                       >
@@ -478,10 +381,7 @@ export function AccommodationReportPage() {
                           width={36}
                           tickFormatter={(value: number) => formatNumber(value, locale)}
                         />
-                        <Tooltip
-                          cursor={{ fill: '#eefaf9' }}
-                          content={<ReportTooltip />}
-                        />
+                        <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
                         {managementOrder.map((managementType) => (
                           <Bar
                             key={managementType}
@@ -490,7 +390,15 @@ export function AccommodationReportPage() {
                             fill={managementColors[managementType]}
                             radius={[10, 10, 0, 0]}
                             maxBarSize={36}
-                          />
+                          >
+                            <LabelList
+                              dataKey={managementType}
+                              position="top"
+                              offset={6}
+                              style={chartValueLabel}
+                              formatter={(value) => chartValueText(value, locale)}
+                            />
+                          </Bar>
                         ))}
                       </BarChart>
                     </ResponsiveContainer>
@@ -508,40 +416,71 @@ export function AccommodationReportPage() {
                     ))}
                   </ul>
                 </article>
-                <div className="grid gap-4 lg:grid-cols-3">
-                  {genderOrder.map((genderType) => (
-                    <article key={genderType} className={`${cardClassName} p-5`}>
-                      <GenderHeading genderType={genderType} />
-                      <div className="space-y-3">
-                        {managementOrder.map((managementType) => {
-                          const count = comboCounts[`${genderType}:${managementType}`] ?? 0
-                          return (
-                            <div
-                              key={managementType}
-                              className="flex items-center justify-between gap-3 rounded-2xl bg-cream-50 px-3 py-2.5"
-                            >
-                              <p className="text-sm text-ink-700">
-                                {t('accommodations.reportCombination', {
-                                  gender: t(`genderTypes.${genderType}`),
-                                  management: t(`managementTypes.${managementType}`),
-                                })}
-                              </p>
-                              <p className="text-base font-semibold text-ink-900">
-                                {formatNumber(count, locale)}
-                              </p>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </article>
-                  ))}
-                </div>
               </section>
             </>
           )}
         </div>
       )}
     </div>
+  )
+}
+
+function DonutCard({
+  title,
+  data,
+  total,
+  locale,
+  centerLabel,
+}: {
+  title: string
+  data: { key?: string; name: string; value: number; fill: string }[]
+  total: number
+  locale: string
+  centerLabel: string
+}) {
+  return (
+    <article className={`${cardClassName} p-5`}>
+      <h2 className="mb-4 text-sm font-medium text-ink-500">{title}</h2>
+      <div className="relative h-64" dir="ltr">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={54}
+              outerRadius={84}
+              paddingAngle={3}
+              cornerRadius={6}
+              stroke="#ffffff"
+              strokeWidth={3}
+              labelLine={false}
+            >
+              {data.map((item) => (
+                <Cell key={item.key ?? item.name} fill={item.fill} />
+              ))}
+              <LabelList
+                dataKey="value"
+                position="outside"
+                offset={10}
+                style={chartValueLabel}
+                formatter={(value) => chartValueText(value, locale)}
+              />
+            </Pie>
+            <Tooltip content={<ReportTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-semibold text-ink-900">
+            {formatNumber(total, locale)}
+          </span>
+          <span className="text-[11px] text-ink-400">{centerLabel}</span>
+        </div>
+      </div>
+      <ChartLegend items={data} total={total} locale={locale} />
+    </article>
   )
 }
 
@@ -559,7 +498,7 @@ function KpiCard({
   hint?: string
 }) {
   return (
-    <article className={`${cardClassName} flex items-center gap-4 p-5`}>
+    <article className={`${cardClassName} flex max-w-sm items-center gap-4 p-5`}>
       <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${tone}`}>
         <Icon className="size-5" aria-hidden />
       </span>
@@ -569,19 +508,6 @@ function KpiCard({
         {hint ? <p className="mt-0.5 text-[11px] text-ink-400">{hint}</p> : null}
       </div>
     </article>
-  )
-}
-
-function GenderHeading({ genderType }: { genderType: GenderType }) {
-  const { t } = useTranslation()
-  const Icon = genderIcon[genderType]
-  return (
-    <div className="mb-4 flex items-center gap-2">
-      <span className={`flex size-9 items-center justify-center rounded-2xl ${genderTone[genderType]}`}>
-        <Icon className="size-4" aria-hidden />
-      </span>
-      <h3 className="text-sm font-medium text-ink-900">{t(`genderTypes.${genderType}`)}</h3>
-    </div>
   )
 }
 

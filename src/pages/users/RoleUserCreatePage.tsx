@@ -37,6 +37,7 @@ export function RoleUserCreatePage({ scope }: { scope: RoleUserScope }) {
         lockedRoleCodes={scope.lockedRoleCodes}
         hideRoles={scope.hideRoles}
         requirePassword
+        defaultPassword={scope.i18nPrefix === 'pilgrims' ? '11111111' : undefined}
         identityCheckPath={`${scope.apiBase}/identity-check`}
         onSubmit={async (payload) => {
           await api.post(scope.apiBase, payload)

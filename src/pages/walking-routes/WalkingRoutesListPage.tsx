@@ -2,7 +2,14 @@ import { Filter, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { PaginationBar, SearchBar, TableCard, EntityRowActions, FilterPair } from '../../components/ui/ListControls'
+import {
+  PaginationBar,
+  SearchBar,
+  TableCard,
+  EntityRowActions,
+  FilterPair,
+  SortableTh,
+} from '../../components/ui/ListControls'
 import {
   Button,
   FormField,
@@ -12,6 +19,7 @@ import {
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
@@ -22,6 +30,7 @@ export function WalkingRoutesListPage() {
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const originCountryId = searchParams.get('originCountryId') ?? ''
   const provinceId = searchParams.get('provinceId') ?? ''
@@ -60,7 +69,17 @@ export function WalkingRoutesListPage() {
   })
 
   const query = useQuery({
-    queryKey: ['walking-routes', 'list', q, originCountryId, provinceId, cityId, page],
+    queryKey: [
+      'walking-routes',
+      'list',
+      q,
+      originCountryId,
+      provinceId,
+      cityId,
+      page,
+      sortBy,
+      sortDir,
+    ],
     queryFn: async () => {
       const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
         params: {
@@ -69,6 +88,7 @@ export function WalkingRoutesListPage() {
           ...(originCountryId ? { originCountryId } : {}),
           ...(provinceId ? { provinceId } : {}),
           ...(cityId ? { cityId } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -171,11 +191,29 @@ export function WalkingRoutesListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('walkingRoutes.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('walkingRoutes.entryBorder')}</th>
+              <SortableTh column="name" label={t('walkingRoutes.name')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh
+                column="entryBorder"
+                label={t('walkingRoutes.entryBorder')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('walkingRoutes.originCountries')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('walkingRoutes.distanceToMashhadKm')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('walkingRoutes.stageCount')}</th>
+              <SortableTh
+                column="distanceToMashhadKm"
+                label={t('walkingRoutes.distanceToMashhadKm')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="stageCount"
+                label={t('walkingRoutes.stageCount')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

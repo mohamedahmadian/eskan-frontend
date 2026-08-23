@@ -9,12 +9,14 @@ import {
   FilterPair,
   PaginationBar,
   SearchBar,
+  SortableTh,
   TableCard,
 } from '../../components/ui/ListControls'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import {
@@ -31,6 +33,7 @@ export function ItemQuotaVouchersAdminListPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const managerId = searchParams.get('accommodationManagerId') ?? ''
   const supplierId = searchParams.get('supplierId') ?? ''
@@ -61,7 +64,18 @@ export function ItemQuotaVouchersAdminListPage() {
     },
   })
   const query = useQuery({
-    queryKey: ['item-quota-vouchers', 'admin', q, managerId, supplierId, quotaId, issuedAt, page],
+    queryKey: [
+      'item-quota-vouchers',
+      'admin',
+      q,
+      managerId,
+      supplierId,
+      quotaId,
+      issuedAt,
+      page,
+      sortBy,
+      sortDir,
+    ],
     queryFn: async () => {
       const { data } = await api.get<Paginated<ItemQuotaVoucher>>('/item-quota-vouchers', {
         params: {
@@ -71,6 +85,7 @@ export function ItemQuotaVouchersAdminListPage() {
           ...(supplierId ? { supplierId } : {}),
           ...(quotaId ? { quotaId } : {}),
           ...(issuedAt ? { issuedAt } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -175,12 +190,48 @@ export function ItemQuotaVouchersAdminListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.code')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.item')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.manager')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.quantity')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.supplier')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.issuedAt')}</th>
+              <SortableTh
+                column="code"
+                label={t('itemQuotaVouchers.code')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="item"
+                label={t('itemQuotaVouchers.item')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="manager"
+                label={t('itemQuotaVouchers.manager')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="quantity"
+                label={t('itemQuotaVouchers.quantity')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="supplier"
+                label={t('itemQuotaVouchers.supplier')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="issuedAt"
+                label={t('itemQuotaVouchers.issuedAt')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

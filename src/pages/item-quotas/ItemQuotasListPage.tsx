@@ -8,11 +8,13 @@ import {
   FilterPair,
   PaginationBar,
   SearchBar,
+  SortableTh,
   TableCard,
 } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
 import { formatItemUnit, type ItemQuota, type Paginated, type Supplier } from '../../types/app'
@@ -21,6 +23,7 @@ export function ItemQuotasListPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const currentYear = currentPersianYear()
   const yearParam = searchParams.get('year')
@@ -36,7 +39,7 @@ export function ItemQuotasListPage() {
   })
 
   const query = useQuery({
-    queryKey: ['item-quotas', 'list', q, year, supplierId, page],
+    queryKey: ['item-quotas', 'list', q, year, supplierId, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<ItemQuota>>('/item-quotas', {
         params: {
@@ -44,6 +47,7 @@ export function ItemQuotasListPage() {
           year: Number(year),
           ...(q ? { q } : {}),
           ...(supplierId ? { supplierId } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -117,11 +121,35 @@ export function ItemQuotasListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotas.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotas.year')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotas.quantity')}</th>
+              <SortableTh
+                column="name"
+                label={t('itemQuotas.name')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="year"
+                label={t('itemQuotas.year')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="quantity"
+                label={t('itemQuotas.quantity')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('itemQuotas.remainingQuantity')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotas.supplier')}</th>
+              <SortableTh
+                column="supplier"
+                label={t('itemQuotas.supplier')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>
@@ -154,7 +182,7 @@ export function ItemQuotasListPage() {
                       }
                     />
                     <Link to={`/logistics/item-quotas/${item.id}/vouchers`}>
-                      <Button type="button" variant="gold">
+                      <Button type="button" variant="soft">
                         <Ticket className="size-4" aria-hidden />
                         {t('itemQuotaVouchers.manage')}
                       </Button>

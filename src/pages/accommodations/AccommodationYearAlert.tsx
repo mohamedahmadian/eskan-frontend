@@ -71,7 +71,7 @@ export function AccommodationYearAlert({ accommodation }: { accommodation: Accom
         {previousManager ? (
           <Button
             type="button"
-            variant="gold"
+            variant="soft"
             disabled={activate.isPending}
             onClick={() => activate.mutate(true)}
           >

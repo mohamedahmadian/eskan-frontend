@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
 import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
@@ -28,15 +28,7 @@ export function MyLoanDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('accommodationLoans.details')}
-        subtitle={t('myLoans.detailsSubtitle')}
-        action={
-          <Link to="/logistics/my-loans" className="text-sm text-teal-700 hover:underline">
-            {t('myLoans.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('accommodationLoans.details')} subtitle={t('myLoans.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('suppliers.name')} value={item.supplierItem.supplier.name} />

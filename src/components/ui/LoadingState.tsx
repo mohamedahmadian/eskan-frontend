@@ -6,9 +6,9 @@ type LoadingStateProps = {
   className?: string
 }
 
-export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+export function LoadingSpinner({ size = 'md' }: { size?: 'xs' | 'sm' | 'md' | 'lg' }) {
   const sizeClass =
-    size === 'sm' ? 'size-9' : size === 'lg' ? 'size-16' : 'size-12'
+    size === 'xs' ? 'size-5' : size === 'sm' ? 'size-9' : size === 'lg' ? 'size-16' : 'size-12'
 
   return (
     <div

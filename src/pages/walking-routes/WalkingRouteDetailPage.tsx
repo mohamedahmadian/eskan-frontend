@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { LoadingState, DetailActions, PageHeader, cardClassName, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
@@ -39,11 +39,6 @@ export function WalkingRouteDetailPage() {
       <PageHeader
         title={t('walkingRoutes.details')}
         subtitle={t('walkingRoutes.detailsSubtitle')}
-        action={
-          <Link to="/base-info/walking-routes" className="text-sm text-teal-700 hover:underline">
-            {t('walkingRoutes.backToList')}
-          </Link>
-        }
       />
       <div className="space-y-4">
         <Section title={t('walkingRoutes.sectionGeneral')}>

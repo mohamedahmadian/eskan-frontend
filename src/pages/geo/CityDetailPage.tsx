@@ -39,15 +39,7 @@ export function CityDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('cities.details')}
-        subtitle={t('cities.detailsSubtitle')}
-        action={
-          <Link to="/base-info/cities" className="text-sm text-teal-700 hover:underline">
-            {t('cities.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('cities.details')} subtitle={t('cities.detailsSubtitle')} />
       <div className="space-y-4">
         <article className={`p-6 ${cardClassName}`}>
           <dl className="grid gap-3 text-sm">

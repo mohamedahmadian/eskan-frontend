@@ -9,6 +9,7 @@ export type RoleUserScope = {
   showRoleFilter?: boolean
   showAccommodations?: boolean
   showHeadquartersAreas?: boolean
+  showPilgrimCard?: boolean
 }
 
 export const userScopes: Record<string, RoleUserScope> = {
@@ -29,6 +30,7 @@ export const userScopes: Record<string, RoleUserScope> = {
     i18nPrefix: 'pilgrims',
     listTitleKey: 'menus.pilgrimsList',
     hideRoles: true,
+    showPilgrimCard: true,
   },
   accommodationManager: {
     queryKey: 'accommodation-managers',

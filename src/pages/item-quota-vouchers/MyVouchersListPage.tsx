@@ -3,9 +3,16 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
 import { FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
-import { EntityRowActions, PaginationBar, SearchBar, TableCard } from '../../components/ui/ListControls'
+import {
+  EntityRowActions,
+  PaginationBar,
+  SearchBar,
+  SortableTh,
+  TableCard,
+} from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
 import { formatItemUnit, type ItemQuotaVoucher, type Paginated } from '../../types/app'
@@ -14,18 +21,20 @@ export function MyVouchersListPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const currentYear = currentPersianYear()
   const yearParam = searchParams.get('year')
   const year = yearParam || String(currentYear)
 
   const query = useQuery({
-    queryKey: ['item-quota-vouchers', 'mine', q, year, page],
+    queryKey: ['item-quota-vouchers', 'mine', q, year, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<ItemQuotaVoucher>>('/item-quota-vouchers/mine', {
         params: {
           page,
           year: Number(year),
           ...(q ? { q } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -69,11 +78,41 @@ export function MyVouchersListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.code')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.item')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.quantity')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.supplier')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('itemQuotaVouchers.issuedAt')}</th>
+              <SortableTh
+                column="code"
+                label={t('itemQuotaVouchers.code')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="item"
+                label={t('itemQuotaVouchers.item')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="quantity"
+                label={t('itemQuotaVouchers.quantity')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="supplier"
+                label={t('itemQuotaVouchers.supplier')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="issuedAt"
+                label={t('itemQuotaVouchers.issuedAt')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

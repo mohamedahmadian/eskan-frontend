@@ -44,6 +44,7 @@ export function FileDropField({
   const dragCount = useRef(0)
   const [dragging, setDragging] = useState(false)
   const [localPreview, setLocalPreview] = useState<string>()
+  const [selectedName, setSelectedName] = useState<string>()
   const cameraEnabled = allowCamera ?? accept.includes('image')
 
   useEffect(() => {
@@ -65,7 +66,11 @@ export function FileDropField({
     if (file.type.startsWith('image/')) {
       if (localPreview) URL.revokeObjectURL(localPreview)
       setLocalPreview(URL.createObjectURL(file))
+    } else if (localPreview) {
+      URL.revokeObjectURL(localPreview)
+      setLocalPreview(undefined)
     }
+    setSelectedName(file.name)
     onFile(file)
   }
 
@@ -97,6 +102,7 @@ export function FileDropField({
   }
 
   const preview = localPreview || previewUrl
+  const hasFile = Boolean(preview || selectedName)
 
   return (
     <div
@@ -142,6 +148,10 @@ export function FileDropField({
         </span>
       )}
 
+      {selectedName && !preview ? (
+        <p className="mb-2 text-sm font-medium text-ink-800">{selectedName}</p>
+      ) : null}
+
       <p className="text-sm text-ink-700">{t('common.dropFileHint')}</p>
       <p className="mt-1 text-xs text-ink-400">{t('common.orSelect')}</p>
 
@@ -167,7 +177,7 @@ export function FileDropField({
             {t('common.takePhoto')}
           </Button>
         ) : null}
-        {preview && onClear ? (
+        {hasFile && onClear ? (
           <Button
             type="button"
             variant="ghost"
@@ -175,6 +185,7 @@ export function FileDropField({
             onClick={() => {
               if (localPreview) URL.revokeObjectURL(localPreview)
               setLocalPreview(undefined)
+              setSelectedName(undefined)
               onClear()
             }}
           >
@@ -187,7 +198,7 @@ export function FileDropField({
       {uploading ? (
         <div className="mt-3 flex flex-col items-center gap-2">
           <LoadingSpinner size="sm" />
-          <p className="text-xs text-teal-700">{t('common.uploading')}</p>
+          <p className="mt-1 text-xs text-teal-700">{t('common.uploading')}</p>
         </div>
       ) : null}
     </div>

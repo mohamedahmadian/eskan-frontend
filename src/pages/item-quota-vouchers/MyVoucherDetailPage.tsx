@@ -1,7 +1,7 @@
 import { Download } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Button, LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
 import { VoucherShareButton } from '../../components/voucher/VoucherShareButton'
 import { useVoucherCardImage } from '../../hooks/useVoucherCardImage'
@@ -34,15 +34,7 @@ export function MyVoucherDetailPage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader
-        title={t('itemQuotaVouchers.details')}
-        subtitle={t('myVouchers.detailsSubtitle')}
-        action={
-          <Link to="/logistics/my-vouchers" className="text-sm text-teal-700 hover:underline">
-            {t('myVouchers.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('itemQuotaVouchers.details')} subtitle={t('myVouchers.detailsSubtitle')} />
       <VoucherCard ref={cardRef} voucher={item} qrUrl={qrUrl} />
       <div className="mt-6">
         <Button type="button" variant="ghost" onClick={() => void downloadCard()} disabled={downloading || sharing || !qrUrl}>

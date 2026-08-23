@@ -2,11 +2,19 @@ import { Filter, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { PaginationBar, SearchBar, TableCard, EntityRowActions, FilterPair } from '../../components/ui/ListControls'
+import {
+  PaginationBar,
+  SearchBar,
+  TableCard,
+  EntityRowActions,
+  FilterPair,
+  SortableTh,
+} from '../../components/ui/ListControls'
 import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
 import type { City, Paginated, Province, RedCrescent } from '../../types/app'
@@ -15,6 +23,7 @@ export function RedCrescentsListPage() {
   const { t } = useTranslation()
   const name = useGeoName()
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const provinceId = searchParams.get('provinceId') ?? ''
   const cityId = searchParams.get('cityId') ?? ''
@@ -39,7 +48,7 @@ export function RedCrescentsListPage() {
   })
 
   const query = useQuery({
-    queryKey: ['red-crescents', 'list', q, provinceId, cityId, page],
+    queryKey: ['red-crescents', 'list', q, provinceId, cityId, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<RedCrescent>>('/red-crescents', {
         params: {
@@ -47,6 +56,7 @@ export function RedCrescentsListPage() {
           ...(q ? { q } : {}),
           ...(provinceId ? { provinceId } : {}),
           ...(cityId ? { cityId } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -136,10 +146,10 @@ export function RedCrescentsListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('redCrescents.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.province')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.city')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('redCrescents.phone')}</th>
+              <SortableTh column="name" label={t('redCrescents.name')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="province" label={t('geo.province')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="city" label={t('geo.city')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="phone" label={t('redCrescents.phone')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

@@ -3,7 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { PaginationBar, SearchBar, TableCard, EntityRowActions, FilterPair } from '../../components/ui/ListControls'
+import {
+  PaginationBar,
+  SearchBar,
+  TableCard,
+  EntityRowActions,
+  FilterPair,
+  SortableTh,
+} from '../../components/ui/ListControls'
 import {
   Button,
   FormField,
@@ -13,6 +20,7 @@ import {
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { formatRoles } from '../../lib/roles'
@@ -27,6 +35,7 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   const { confirmDelete } = useConfirmDelete()
   const geoName = useGeoName()
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const roleCode = scope.showRoleFilter ? (searchParams.get('roleCode') ?? '') : ''
   const provinceId = scope.showHeadquartersAreas ? (searchParams.get('provinceId') ?? '') : ''
   const cityId = scope.showHeadquartersAreas ? (searchParams.get('cityId') ?? '') : ''
@@ -56,7 +65,7 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
     },
   })
   const query = useQuery({
-    queryKey: [scope.queryKey, q, page, roleCode, provinceId, cityId],
+    queryKey: [scope.queryKey, q, page, roleCode, provinceId, cityId, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<ManagedUser>>(scope.apiBase, {
         params: {
@@ -65,6 +74,7 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
           roleCode: roleCode || undefined,
           provinceId: provinceId || undefined,
           cityId: cityId || undefined,
+          ...sortParams,
         },
       })
       return data
@@ -176,9 +186,27 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('users.fullName')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('users.username')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('users.phone')}</th>
+              <SortableTh
+                column="fullName"
+                label={t('users.fullName')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="username"
+                label={t('users.username')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="phone"
+                label={t('users.phone')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               {scope.showHeadquartersAreas ? (
                 <>
                   <th className="px-4 py-3 text-start font-medium">
@@ -189,14 +217,30 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
                   </th>
                 </>
               ) : (
-                <th className="px-4 py-3 text-start font-medium">{t('geo.city')}</th>
+                <SortableTh
+                  column="city"
+                  label={t('geo.city')}
+                  sortBy={sortBy}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                />
               )}
               <th className="px-4 py-3 text-start font-medium">{t('users.roles')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('users.status')}</th>
+              <SortableTh
+                column="status"
+                label={t('users.status')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               {scope.showAccommodations ? (
-                <th className="px-4 py-3 text-start font-medium">
-                  {t('accommodationManagers.accommodationCount')}
-                </th>
+                <SortableTh
+                  column="accommodationCount"
+                  label={t('accommodationManagers.accommodationCount')}
+                  sortBy={sortBy}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                />
               ) : null}
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>

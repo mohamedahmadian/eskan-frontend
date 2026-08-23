@@ -68,6 +68,7 @@ export function AccommodationManagersCard({
       title: t('accommodations.confirmUnassignManager'),
       confirmLabel: t('common.yesDelete'),
       cancelLabel: t('common.cancel'),
+      confirmVariant: 'danger',
       onConfirm: async () => {
         try {
           await api.delete(`/accommodations/${accommodation.id}/managers/${assignmentId}`)

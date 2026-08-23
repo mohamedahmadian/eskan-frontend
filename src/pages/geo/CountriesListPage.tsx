@@ -2,10 +2,17 @@ import { Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { PaginationBar, SearchBar, TableCard, EntityRowActions } from '../../components/ui/ListControls'
+import {
+  PaginationBar,
+  SearchBar,
+  TableCard,
+  EntityRowActions,
+  SortableTh,
+} from '../../components/ui/ListControls'
 import { Button, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
@@ -16,13 +23,14 @@ export function CountriesListPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
-  const { q, page, term, setTerm, applySearch, setPage } = useListParams()
+  const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const query = useQuery({
-    queryKey: ['countries', 'list', q, page],
+    queryKey: ['countries', 'list', q, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<Country>>('/countries', {
-        params: { q: q || undefined, page },
+        params: { q: q || undefined, page, ...sortParams },
       })
       return data
     },
@@ -59,11 +67,17 @@ export function CountriesListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.nameFa')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.iso2')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.phoneCode')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.provinceCount')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('geo.isActive')}</th>
+              <SortableTh column="nameFa" label={t('geo.nameFa')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="iso2" label={t('geo.iso2')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="phoneCode" label={t('geo.phoneCode')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh
+                column="provinceCount"
+                label={t('geo.provinceCount')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh column="isActive" label={t('geo.isActive')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

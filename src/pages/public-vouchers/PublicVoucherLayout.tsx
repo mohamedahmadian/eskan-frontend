@@ -17,7 +17,7 @@ export function PublicVoucherLayout({
     <div className="min-h-svh bg-cream-50 px-4 py-8 sm:px-8">
       <div className={userFormShellClassName}>
         <p className="mb-2 text-xs font-medium text-teal-700">{t('app.name')}</p>
-        <PageHeader title={title} subtitle={subtitle} />
+        <PageHeader title={title} subtitle={subtitle} backTo={false} />
         {children}
       </div>
     </div>

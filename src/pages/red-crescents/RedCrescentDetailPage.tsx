@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { LoadingState, DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
@@ -30,15 +30,7 @@ export function RedCrescentDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('redCrescents.details')}
-        subtitle={t('redCrescents.detailsSubtitle')}
-        action={
-          <Link to="/base-info/red-crescents" className="text-sm text-teal-700 hover:underline">
-            {t('redCrescents.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('redCrescents.details')} subtitle={t('redCrescents.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('redCrescents.name')} value={item.name} />

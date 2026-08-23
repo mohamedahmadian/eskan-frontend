@@ -123,3 +123,13 @@ export function toIsoDateOnly(date: DateObject) {
   }).convert(gregorian)
   return `${gregorianDate.year}-${pad2(gregorianDate.month.number)}-${pad2(gregorianDate.day)}`
 }
+
+export function todayIsoDate() {
+  return toIsoDateOnly(new DateObject({ calendar: gregorian }))
+}
+
+export function addDaysIso(iso: string, days: number) {
+  const date = fromIsoDateOnly(iso)
+  if (!date) return ''
+  return toIsoDateOnly(date.add(days, 'days'))
+}

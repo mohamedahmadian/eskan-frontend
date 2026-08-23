@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
 import { DetailActions, LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
@@ -34,14 +34,6 @@ export function SupplierItemDetailPage() {
       <PageHeader
         title={t('supplierItems.details')}
         subtitle={t('supplierItems.detailsSubtitle')}
-        action={
-          <Link
-            to={`/logistics/suppliers/${supplierId}/items`}
-            className="text-sm text-teal-700 hover:underline"
-          >
-            {t('supplierItems.backToList')}
-          </Link>
-        }
       />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">

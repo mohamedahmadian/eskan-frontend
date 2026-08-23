@@ -19,6 +19,13 @@
   --color-teal-800: #0f6e6a;
   --color-teal-900: #0c4d4a;
 
+  --color-mint-50: #f1faf4;
+  --color-mint-100: #d9f2e2;
+  --color-mint-300: #9eddb0;
+  --color-mint-400: #7dce94;
+  --color-mint-500: #5fbf7a;
+  --color-mint-600: #3fa05c;
+
   --color-gold-50: #fffaf0;
   --color-gold-100: #fff2d6;
   --color-gold-400: #f5cd6a;
@@ -166,33 +173,442 @@ th {
 }
 
 [data-sonner-toaster].app-toaster [data-sonner-toast] {
-  --y: translateX(-100%);
+  --y: translateY(100%);
 }
 
 [data-sonner-toaster].app-toaster [data-sonner-toast][data-mounted='true'] {
-  --y: translateX(0);
+  --y: translateY(0);
 }
 
 [data-sonner-toaster].app-toaster [data-sonner-toast][data-expanded='false'][data-front='false'] {
-  --y: translateX(0) translateY(calc(var(--lift-amount) * var(--toasts-before)))
+  --y: translateY(calc(var(--lift-amount) * var(--toasts-before)))
     scale(calc(-1 * var(--scale)));
 }
 
 [data-sonner-toaster].app-toaster [data-sonner-toast][data-mounted='true'][data-expanded='true'] {
-  --y: translateX(0) translateY(calc(var(--lift) * var(--offset)));
+  --y: translateY(calc(var(--lift) * var(--offset)));
 }
 
 [data-sonner-toaster].app-toaster
   [data-sonner-toast][data-removed='true'][data-front='true'][data-swipe-out='false'] {
-  --y: translateX(-100%);
+  --y: translateY(100%);
 }
 
 [data-sonner-toaster].app-toaster
   [data-sonner-toast][data-removed='true'][data-front='false'][data-swipe-out='false'][data-expanded='true'] {
-  --y: translateX(-100%) translateY(calc(var(--lift) * var(--offset)));
+  --y: translateY(calc(var(--lift) * var(--offset) + 100%));
 }
 
 [data-sonner-toaster].app-toaster
   [data-sonner-toast][data-removed='true'][data-front='false'][data-swipe-out='false'][data-expanded='false'] {
-  --y: translateX(-100%);
+  --y: translateY(100%);
+}
+
+/* —— زائر کارت —— */
+.pilgrim-id-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #d5f3f1;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 110, 106, 0.1);
+  font-family: var(--font-sans);
+  color: #2c2a26;
+}
+
+.pilgrim-id-card--pocket {
+  width: 85.6mm;
+  height: 53.98mm;
+}
+
+.pilgrim-id-card--classic {
+  width: 120mm;
+  height: 170mm;
+}
+
+.pilgrim-id-card__header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  background: #2ebdb6;
+  color: #ffffff;
+  padding: 6px 9px 7px;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__header {
+  padding: 12px 14px 14px;
+}
+
+.pilgrim-id-card__header-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image: repeating-linear-gradient(
+    -18deg,
+    transparent,
+    transparent 8px,
+    #ffffff 8px,
+    #ffffff 9px
+  );
+  pointer-events: none;
+}
+
+.pilgrim-id-card__brand,
+.pilgrim-id-card__badge-wrap {
+  position: relative;
+}
+
+.pilgrim-id-card__badge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  max-width: 44%;
+}
+
+.pilgrim-id-card__seal {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f5cd6a;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__seal {
+  width: 14px;
+  height: 14px;
+}
+
+.pilgrim-id-card__app {
+  margin: 0;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #eefaf9;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__app {
+  font-size: 11px;
+}
+
+.pilgrim-id-card__title {
+  margin: 1px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__title {
+  margin-top: 3px;
+  font-size: 18px;
+}
+
+.pilgrim-id-card__badge {
+  margin: 0;
+  text-align: end;
+  font-size: 7px;
+  line-height: 1.35;
+  color: #eefaf9;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__badge {
+  font-size: 11px;
+}
+
+.pilgrim-id-card__gold {
+  height: 2.5px;
+  background: #f5cd6a;
+  flex-shrink: 0;
+}
+
+.pilgrim-id-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 5px 7px 4px;
+  flex: 1;
+  min-height: 0;
+  background: #f8f7f2;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__body {
+  gap: 10px;
+  padding: 12px 14px 10px;
+  background: #ffffff;
+}
+
+.pilgrim-id-card__identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__identity {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.pilgrim-id-card__photo-wrap {
+  width: 16mm;
+  height: 20mm;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1.5px solid #b0e8e5;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(20, 40, 40, 0.06);
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__photo-wrap {
+  width: 46mm;
+  height: 56mm;
+  border-radius: 16px;
+  border-width: 2px;
+  border-color: #f5cd6a;
+}
+
+.pilgrim-id-card__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pilgrim-id-card__photo-fallback {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: #d5f3f1;
+  color: #148f8a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__photo-fallback {
+  font-size: 30px;
+}
+
+.pilgrim-id-card__name-block {
+  min-width: 0;
+}
+
+.pilgrim-id-card__name {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #0c4d4a;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__name {
+  font-size: 18px;
+}
+
+.pilgrim-id-card__gender {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 2px 0 0;
+  font-size: 7.5px;
+  font-weight: 500;
+  color: #148f8a;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__gender {
+  margin-top: 4px;
+  font-size: 12px;
+  gap: 5px;
+}
+
+.pilgrim-id-card__gender-icon {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__gender-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.pilgrim-id-card__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  min-height: 0;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__facts {
+  gap: 6px;
+}
+
+.pilgrim-id-card__fact {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px 4px;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__fact {
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 12px;
+  background: #f8f7f2;
+}
+
+.pilgrim-id-card__fact--wide {
+  grid-column: 1 / -1;
+}
+
+.pilgrim-id-card__fact-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #eefaf9;
+  color: #1aa8a2;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__fact-icon {
+  width: 26px;
+  height: 26px;
+  background: #ffffff;
+  color: #148f8a;
+  box-shadow: 0 1px 4px rgba(15, 110, 106, 0.08);
+}
+
+.pilgrim-id-card__fact-icon svg {
+  width: 8px;
+  height: 8px;
+  stroke-width: 2.2;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__fact-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pilgrim-id-card__fact-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.pilgrim-id-card__fact-label {
+  margin: 0;
+  font-size: 6px;
+  color: #9a958c;
+  line-height: 1.2;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__fact-label {
+  font-size: 10px;
+}
+
+.pilgrim-id-card__fact-value {
+  margin: 0;
+  font-size: 7.5px;
+  font-weight: 700;
+  color: #2c2a26;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__fact-value {
+  margin-top: 1px;
+  font-size: 12px;
+  white-space: normal;
+}
+
+.pilgrim-id-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 3px 8px 4px;
+  border-top: 1px solid #eceae3;
+  background: #ffffff;
+  font-size: 6.5px;
+  color: #7a756c;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__footer {
+  gap: 8px;
+  padding: 8px 12px 10px;
+  font-size: 11px;
+  background: #f8f7f2;
+}
+
+.pilgrim-id-card__footer-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #f5cd6a;
+}
+
+.pilgrim-print-root {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  pointer-events: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  body.pilgrim-print-pocket *,
+  body.pilgrim-print-classic * {
+    visibility: hidden !important;
+  }
+
+  body.pilgrim-print-pocket .pilgrim-print-root,
+  body.pilgrim-print-pocket .pilgrim-print-root *,
+  body.pilgrim-print-classic .pilgrim-print-root,
+  body.pilgrim-print-classic .pilgrim-print-root * {
+    visibility: visible !important;
+  }
+
+  body.pilgrim-print-pocket .pilgrim-print-root,
+  body.pilgrim-print-classic .pilgrim-print-root {
+    position: static !important;
+    left: auto !important;
+    pointer-events: auto !important;
+  }
+
+  body.pilgrim-print-pocket .pilgrim-print-classic-target,
+  body.pilgrim-print-classic .pilgrim-print-pocket-target {
+    display: none !important;
+  }
+
+  body.pilgrim-print-pocket .pilgrim-print-pocket-target,
+  body.pilgrim-print-classic .pilgrim-print-classic-target {
+    display: flex !important;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.pilgrim-print-pocket .pilgrim-id-card,
+  body.pilgrim-print-classic .pilgrim-id-card {
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

@@ -8,10 +8,12 @@ import {
   FilterPair,
   PaginationBar,
   SearchBar,
+  SortableTh,
   TableCard,
 } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
 import type { AccommodationLoan, Paginated } from '../../types/app'
@@ -20,13 +22,14 @@ export function MyLoansListPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const currentYear = currentPersianYear()
   const yearParam = searchParams.get('year')
   const year = yearParam || String(currentYear)
   const status = searchParams.get('status') ?? ''
 
   const query = useQuery({
-    queryKey: ['accommodation-loans', 'mine', q, year, status, page],
+    queryKey: ['accommodation-loans', 'mine', q, year, status, page, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<AccommodationLoan>>('/accommodation-loans/mine', {
         params: {
@@ -34,6 +37,7 @@ export function MyLoansListPage() {
           year: Number(year),
           ...(q ? { q } : {}),
           ...(status ? { status } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -92,12 +96,42 @@ export function MyLoansListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodationLoans.item')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('suppliers.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodationLoans.quantity')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodationLoans.returnedQuantity')}</th>
+              <SortableTh
+                column="item"
+                label={t('accommodationLoans.item')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="supplier"
+                label={t('suppliers.name')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="quantity"
+                label={t('accommodationLoans.quantity')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="returnedQuantity"
+                label={t('accommodationLoans.returnedQuantity')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('accommodationLoans.shortage')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodationLoans.deliveryDate')}</th>
+              <SortableTh
+                column="deliveryDate"
+                label={t('accommodationLoans.deliveryDate')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

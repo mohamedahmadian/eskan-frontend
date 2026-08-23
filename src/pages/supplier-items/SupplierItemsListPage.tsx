@@ -4,10 +4,17 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
 import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
-import { EntityRowActions, PaginationBar, SearchBar, TableCard } from '../../components/ui/ListControls'
+import {
+  EntityRowActions,
+  PaginationBar,
+  SearchBar,
+  SortableTh,
+  TableCard,
+} from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
 import { formatItemUnit, type Paginated, type Supplier, type SupplierItem } from '../../types/app'
@@ -17,6 +24,7 @@ export function SupplierItemsListPage() {
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { supplierId } = useParams()
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const currentYear = currentPersianYear()
   const yearParam = searchParams.get('year')
@@ -32,7 +40,7 @@ export function SupplierItemsListPage() {
   })
 
   const query = useQuery({
-    queryKey: ['supplier-items', 'list', supplierId, q, year, page],
+    queryKey: ['supplier-items', 'list', supplierId, q, year, page, sortBy, sortDir],
     enabled: Boolean(supplierId),
     queryFn: async () => {
       const { data } = await api.get<Paginated<SupplierItem>>('/supplier-items', {
@@ -41,6 +49,7 @@ export function SupplierItemsListPage() {
           supplierId,
           year: Number(year),
           ...(q ? { q } : {}),
+          ...sortParams,
         },
       })
       return data
@@ -60,20 +69,12 @@ export function SupplierItemsListPage() {
         title={t('supplierItems.title')}
         subtitle={supplier.data?.name ?? t('supplierItems.subtitle')}
         action={
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to={`/logistics/suppliers/${supplierId}`}
-              className="text-sm text-teal-700 hover:underline"
-            >
-              {t('supplierItems.backToSupplier')}
-            </Link>
-            <Link to={`/logistics/suppliers/${supplierId}/items/new`}>
-              <Button>
-                <Plus className="size-4" />
-                {t('supplierItems.create')}
-              </Button>
-            </Link>
-          </div>
+          <Link to={`/logistics/suppliers/${supplierId}/items/new`}>
+            <Button>
+              <Plus className="size-4" />
+              {t('supplierItems.create')}
+            </Button>
+          </Link>
         }
       />
       <SearchBar
@@ -102,11 +103,17 @@ export function SupplierItemsListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('supplierItems.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('supplierItems.unit')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('supplierItems.quantity')}</th>
+              <SortableTh column="name" label={t('supplierItems.name')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="unit" label={t('supplierItems.unit')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="quantity" label={t('supplierItems.quantity')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="px-4 py-3 text-start font-medium">{t('supplierItems.remainingQuantity')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('supplierItems.deliveryDate')}</th>
+              <SortableTh
+                column="deliveryDate"
+                label={t('supplierItems.deliveryDate')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>

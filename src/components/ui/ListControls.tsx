@@ -1,10 +1,82 @@
-import { ChevronDown, ChevronLeft, ChevronRight, Eye, Pencil, Search, SlidersHorizontal, Trash2 } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Pencil,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react'
 import { type FormEvent, type MouseEvent, type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { formatNumber } from '../../lib/datetime'
 import { AppForm, Button, FormField, cardClassName, fieldClassName } from './Form'
 import { LoadingState } from './LoadingState'
+
+export type SortDir = 'asc' | 'desc'
+
+/** Cycles: none → asc → desc → none. Persists via caller (URL params). */
+export function nextSortState(
+  column: string,
+  sortBy: string,
+  sortDir: SortDir | '',
+): { sortBy?: string; sortDir?: SortDir } {
+  if (sortBy !== column || !sortDir) {
+    return { sortBy: column, sortDir: 'asc' }
+  }
+  if (sortDir === 'asc') {
+    return { sortBy: column, sortDir: 'desc' }
+  }
+  return { sortBy: undefined, sortDir: undefined }
+}
+
+export function SortableTh({
+  column,
+  label,
+  sortBy,
+  sortDir,
+  onSort,
+}: {
+  column: string
+  label: string
+  sortBy: string
+  sortDir: SortDir | ''
+  onSort: (column: string) => void
+}) {
+  const { t } = useTranslation()
+  const active = sortBy === column && (sortDir === 'asc' || sortDir === 'desc')
+  const ariaSort = !active ? 'none' : sortDir === 'asc' ? 'ascending' : 'descending'
+  const nextHint =
+    !active ? t('common.sortAsc') : sortDir === 'asc' ? t('common.sortDesc') : t('common.sortClear')
+
+  return (
+    <th className="px-4 py-3 text-start font-medium" aria-sort={ariaSort}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        title={nextHint}
+        aria-label={`${label} — ${nextHint}`}
+        className={`inline-flex items-center gap-1.5 rounded-lg px-1 py-0.5 -mx-1 text-start font-medium transition hover:bg-cream-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${
+          active ? 'text-teal-800' : 'text-ink-700'
+        }`}
+      >
+        <span>{label}</span>
+        {active && sortDir === 'asc' ? (
+          <ArrowUp className="size-3.5 shrink-0 text-teal-600" aria-hidden />
+        ) : active && sortDir === 'desc' ? (
+          <ArrowDown className="size-3.5 shrink-0 text-teal-600" aria-hidden />
+        ) : (
+          <ArrowUpDown className="size-3.5 shrink-0 text-ink-300" aria-hidden />
+        )}
+      </button>
+    </th>
+  )
+}
 
 const filtersOpenById = new Map<string, boolean>()
 
@@ -33,9 +105,11 @@ export function SearchBar({
   label,
   placeholder,
   extra,
+  beside,
   filtersActive = false,
   extraClassName = 'sm:grid-cols-2',
   inputId = 'list-search',
+  autoFocus = false,
 }: {
   term: string
   onTermChange: (value: string) => void
@@ -43,9 +117,11 @@ export function SearchBar({
   label: string
   placeholder: string
   extra?: ReactNode
+  beside?: ReactNode
   filtersActive?: boolean
   extraClassName?: string
   inputId?: string
+  autoFocus?: boolean
 }) {
   const { t } = useTranslation()
   const [filtersOpen, setFiltersOpen] = useState(() => filtersOpenById.get(inputId) ?? false)
@@ -63,23 +139,43 @@ export function SearchBar({
     })
   }
 
+  const searchInput = (
+    <input
+      id={inputId}
+      className={`${fieldClassName} min-w-0 ${beside ? 'w-full' : 'flex-1'}`}
+      value={term}
+      onChange={(e) => onTermChange(e.target.value)}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+    />
+  )
+  const searchButton = (
+    <Button type="submit" className={`shrink-0 sm:min-w-28 ${beside ? 'w-full lg:w-auto' : ''}`}>
+      <Search className="size-4" aria-hidden />
+      {t('common.search')}
+    </Button>
+  )
+
   return (
     <AppForm onSubmit={handleSubmit} className={`mb-4 p-4 ${cardClassName}`}>
-      <FormField icon={Search} label={label} htmlFor={inputId}>
-        <div className="flex w-full flex-col gap-3 sm:flex-row">
-          <input
-            id={inputId}
-            className={`${fieldClassName} min-w-0 flex-1`}
-            value={term}
-            onChange={(e) => onTermChange(e.target.value)}
-            placeholder={placeholder}
-          />
-          <Button type="submit" className="shrink-0 sm:min-w-28">
-            <Search className="size-4" aria-hidden />
-            {t('common.search')}
-          </Button>
+      {beside ? (
+        <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-end">
+          <div className="min-w-0 flex-1">
+            <FormField icon={Search} label={label} htmlFor={inputId}>
+              {searchInput}
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:contents">{beside}</div>
+          {searchButton}
         </div>
-      </FormField>
+      ) : (
+        <FormField icon={Search} label={label} htmlFor={inputId}>
+          <div className="flex w-full flex-col gap-3 sm:flex-row">
+            {searchInput}
+            {searchButton}
+          </div>
+        </FormField>
+      )}
       {extra ? (
         <div className="mt-3">
           <button

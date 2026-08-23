@@ -1,21 +1,36 @@
-import { KeyRound, Lock } from 'lucide-react'
+import { CircleHelp, KeyRound, Lock } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormField, FormActions, PageHeader, cardClassName, fieldClassName, formShellClassName } from '../components/ui/Form'
-import { api } from '../lib/api'
+import { useAuth } from '../auth/AuthProvider'
+import {
+  AppForm,
+  Button,
+  FormField,
+  FormActions,
+  PageHeader,
+  cardClassName,
+  fieldClassName,
+  formShellClassName,
+} from '../components/ui/Form'
+import { useRecoverPilgrimPassword } from '../hooks/useRecoverPilgrimPassword'
+import { api, getApiErrorMessage } from '../lib/api'
+import { isPilgrim } from '../lib/roles'
 
 export function ChangePasswordPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const { recoverPassword } = useRecoverPilgrimPassword()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
+  const pilgrim = isPilgrim(user)
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     if (newPassword !== confirmPassword) {
-      toast.error(t('auth.required'))
+      toast.error(t('auth.passwordMismatch'))
       return
     }
     setSaving(true)
@@ -25,8 +40,8 @@ export function ChangePasswordPage() {
       setNewPassword('')
       setConfirmPassword('')
       toast.success(t('auth.passwordUpdated'))
-    } catch {
-      toast.error(t('common.error'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
       setSaving(false)
     }
@@ -72,7 +87,15 @@ export function ChangePasswordPage() {
             minLength={8}
           />
         </FormField>
-        <FormActions submitLabel={t('auth.changePassword')} submitting={saving} />
+        <div className={`flex flex-wrap items-center gap-3 ${pilgrim ? 'justify-between' : ''}`}>
+          <FormActions submitLabel={t('auth.changePassword')} submitting={saving} />
+          {pilgrim ? (
+            <Button type="button" variant="soft" onClick={recoverPassword}>
+              <CircleHelp className="size-4" aria-hidden />
+              {t('auth.forgotPassword')}
+            </Button>
+          ) : null}
+        </div>
       </AppForm>
     </div>
   )

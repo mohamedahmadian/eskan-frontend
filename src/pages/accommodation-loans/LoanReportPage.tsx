@@ -18,6 +18,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -48,6 +49,12 @@ const COLORS = {
 }
 
 const chartAxisTick = { fill: '#7a756c', fontSize: 12 }
+const chartValueLabel = { fill: '#3f3a34', fontSize: 12, fontWeight: 600 }
+
+function chartValueText(value: unknown, locale: string) {
+  const n = Number(value ?? 0)
+  return n > 0 ? formatNumber(n, locale) : ''
+}
 
 function percentOf(count: number, total: number) {
   if (total <= 0) return 0
@@ -218,7 +225,7 @@ export function LoanReportPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={overviewBars}
-                        margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+                        margin={{ top: 28, right: 8, left: 0, bottom: 8 }}
                         barCategoryGap="28%"
                       >
                         <CartesianGrid stroke="#eceae3" vertical={false} />
@@ -236,6 +243,13 @@ export function LoanReportPage() {
                           {overviewBars.map((item) => (
                             <Cell key={item.key} fill={item.fill} />
                           ))}
+                          <LabelList
+                            dataKey="value"
+                            position="top"
+                            offset={6}
+                            style={chartValueLabel}
+                            formatter={(value) => chartValueText(value, locale)}
+                          />
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
@@ -248,23 +262,31 @@ export function LoanReportPage() {
                   </h2>
                   <div className="relative h-64" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                      <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                         <Pie
                           data={receivedSplit}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
                           cy="50%"
-                          innerRadius={62}
-                          outerRadius={96}
+                          innerRadius={54}
+                          outerRadius={84}
                           paddingAngle={3}
                           cornerRadius={6}
                           stroke="#ffffff"
                           strokeWidth={3}
+                          labelLine={false}
                         >
                           {receivedSplit.map((item) => (
                             <Cell key={item.key} fill={item.fill} />
                           ))}
+                          <LabelList
+                            dataKey="value"
+                            position="outside"
+                            offset={10}
+                            style={chartValueLabel}
+                            formatter={(value) => chartValueText(value, locale)}
+                          />
                         </Pie>
                         <Tooltip content={<ReportTooltip />} />
                       </PieChart>
@@ -285,23 +307,31 @@ export function LoanReportPage() {
                   </h2>
                   <div className="relative h-64" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                      <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                         <Pie
                           data={deliveredSplit}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
                           cy="50%"
-                          innerRadius={62}
-                          outerRadius={96}
+                          innerRadius={54}
+                          outerRadius={84}
                           paddingAngle={3}
                           cornerRadius={6}
                           stroke="#ffffff"
                           strokeWidth={3}
+                          labelLine={false}
                         >
                           {deliveredSplit.map((item) => (
                             <Cell key={item.key} fill={item.fill} />
                           ))}
+                          <LabelList
+                            dataKey="value"
+                            position="outside"
+                            offset={10}
+                            style={chartValueLabel}
+                            formatter={(value) => chartValueText(value, locale)}
+                          />
                         </Pie>
                         <Tooltip content={<ReportTooltip />} />
                       </PieChart>
@@ -388,7 +418,7 @@ export function LoanReportPage() {
                       <BarChart
                         data={itemBars}
                         layout="vertical"
-                        margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        margin={{ top: 8, right: 40, left: 8, bottom: 8 }}
                         barCategoryGap="22%"
                       >
                         <CartesianGrid stroke="#eceae3" horizontal={false} />
@@ -409,9 +439,15 @@ export function LoanReportPage() {
                           tickLine={false}
                         />
                         <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
-                        <Bar dataKey="received" name={t('loanReports.received')} fill={COLORS.received} radius={[0, 10, 10, 0]} maxBarSize={14} />
-                        <Bar dataKey="delivered" name={t('loanReports.delivered')} fill={COLORS.delivered} radius={[0, 10, 10, 0]} maxBarSize={14} />
-                        <Bar dataKey="unreturned" name={t('loanReports.unreturned')} fill={COLORS.unreturned} radius={[0, 10, 10, 0]} maxBarSize={14} />
+                        <Bar dataKey="received" name={t('loanReports.received')} fill={COLORS.received} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="received" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="delivered" name={t('loanReports.delivered')} fill={COLORS.delivered} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="delivered" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="unreturned" name={t('loanReports.unreturned')} fill={COLORS.unreturned} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="unreturned" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -431,7 +467,7 @@ export function LoanReportPage() {
                       <BarChart
                         data={supplierBars}
                         layout="vertical"
-                        margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        margin={{ top: 8, right: 40, left: 8, bottom: 8 }}
                         barCategoryGap="22%"
                       >
                         <CartesianGrid stroke="#eceae3" horizontal={false} />
@@ -452,9 +488,15 @@ export function LoanReportPage() {
                           tickLine={false}
                         />
                         <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
-                        <Bar dataKey="received" name={t('loanReports.received')} fill={COLORS.received} radius={[0, 10, 10, 0]} maxBarSize={14} />
-                        <Bar dataKey="delivered" name={t('loanReports.delivered')} fill={COLORS.delivered} radius={[0, 10, 10, 0]} maxBarSize={14} />
-                        <Bar dataKey="unreturned" name={t('loanReports.unreturned')} fill={COLORS.unreturned} radius={[0, 10, 10, 0]} maxBarSize={14} />
+                        <Bar dataKey="received" name={t('loanReports.received')} fill={COLORS.received} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="received" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="delivered" name={t('loanReports.delivered')} fill={COLORS.delivered} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="delivered" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="unreturned" name={t('loanReports.unreturned')} fill={COLORS.unreturned} radius={[0, 10, 10, 0]} maxBarSize={14}>
+                          <LabelList dataKey="unreturned" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -474,7 +516,7 @@ export function LoanReportPage() {
                       <BarChart
                         data={managerBars}
                         layout="vertical"
-                        margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        margin={{ top: 8, right: 40, left: 8, bottom: 8 }}
                         barCategoryGap="22%"
                       >
                         <CartesianGrid stroke="#eceae3" horizontal={false} />
@@ -495,9 +537,15 @@ export function LoanReportPage() {
                           tickLine={false}
                         />
                         <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
-                        <Bar dataKey="delivered" name={t('loanReports.delivered')} fill={COLORS.delivered} radius={[0, 10, 10, 0]} maxBarSize={16} />
-                        <Bar dataKey="returned" name={t('loanReports.returned')} fill={COLORS.returned} radius={[0, 10, 10, 0]} maxBarSize={16} />
-                        <Bar dataKey="unreturned" name={t('loanReports.unreturned')} fill={COLORS.unreturned} radius={[0, 10, 10, 0]} maxBarSize={16} />
+                        <Bar dataKey="delivered" name={t('loanReports.delivered')} fill={COLORS.delivered} radius={[0, 10, 10, 0]} maxBarSize={16}>
+                          <LabelList dataKey="delivered" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="returned" name={t('loanReports.returned')} fill={COLORS.returned} radius={[0, 10, 10, 0]} maxBarSize={16}>
+                          <LabelList dataKey="returned" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
+                        <Bar dataKey="unreturned" name={t('loanReports.unreturned')} fill={COLORS.unreturned} radius={[0, 10, 10, 0]} maxBarSize={16}>
+                          <LabelList dataKey="unreturned" position="right" offset={6} style={chartValueLabel} formatter={(value) => chartValueText(value, locale)} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

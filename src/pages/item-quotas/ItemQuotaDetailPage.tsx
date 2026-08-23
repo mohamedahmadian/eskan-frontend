@@ -37,15 +37,7 @@ export function ItemQuotaDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('itemQuotas.details')}
-        subtitle={t('itemQuotas.detailsSubtitle')}
-        action={
-          <Link to="/logistics/item-quotas" className="text-sm text-teal-700 hover:underline">
-            {t('itemQuotas.backToList')}
-          </Link>
-        }
-      />
+      <PageHeader title={t('itemQuotas.details')} subtitle={t('itemQuotas.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('itemQuotas.year')} value={formatNumber(item.year, locale)} />
@@ -80,7 +72,7 @@ export function ItemQuotaDetailPage() {
           }
           extra={
             <Link to={`/logistics/item-quotas/${item.id}/vouchers`}>
-              <Button type="button" variant="gold">
+              <Button type="button" variant="soft">
                 <Ticket className="size-4" aria-hidden />
                 {t('itemQuotaVouchers.manage')}
               </Button>

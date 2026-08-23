@@ -6,6 +6,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -25,6 +26,7 @@ import { currentPersianYear, formatDate, formatGroupedNumber, formatNumber, pers
 import type { IceVoucherReport } from '../../types/app'
 
 const chartAxisTick = { fill: '#7a756c', fontSize: 12 }
+const chartValueLabel = { fill: '#3f3a34', fontSize: 12, fontWeight: 600 }
 
 function parseYear(raw: string | null, fallback: number) {
   const year = Number(raw)
@@ -157,7 +159,7 @@ export function IceVoucherReportPage() {
               <h2 className="mb-4 text-sm font-medium text-ink-500">{t('iceVoucherReports.byDay')}</h2>
               <div className="h-80" dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={byDay} margin={{ top: 8, right: 8, left: 0, bottom: 8 }} barCategoryGap="28%">
+                  <BarChart data={byDay} margin={{ top: 28, right: 8, left: 0, bottom: 8 }} barCategoryGap="28%">
                     <CartesianGrid stroke="#eceae3" vertical={false} />
                     <XAxis dataKey="label" tick={chartAxisTick} axisLine={false} tickLine={false} />
                     <YAxis
@@ -175,7 +177,15 @@ export function IceVoucherReportPage() {
                       fill="#148f8a"
                       radius={[10, 10, 0, 0]}
                       maxBarSize={42}
-                    />
+                    >
+                      <LabelList
+                        dataKey="voucherCount"
+                        position="top"
+                        offset={6}
+                        style={chartValueLabel}
+                        formatter={(value) => formatNumber(Number(value ?? 0), locale)}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
