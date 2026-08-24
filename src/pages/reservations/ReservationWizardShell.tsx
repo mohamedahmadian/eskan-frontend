@@ -16,6 +16,7 @@ import type { Reservation } from '../../types/app'
 import {
   currentStepFromStatus,
   isStepDone,
+  ownerFlowSteps,
   stepCardDate,
   stepHasProgress,
   stepsForType,
@@ -37,11 +38,13 @@ export function ReservationWizardShell({
   reservation,
   viewedStep,
   onViewStep,
+  audience = 'owner',
   children,
 }: {
   reservation: Reservation
   viewedStep: ReservationStepCode | null
   onViewStep: (step: ReservationStepCode) => void
+  audience?: 'owner' | 'admin'
   children: React.ReactNode
 }) {
   const { t, i18n } = useTranslation()
@@ -92,16 +95,18 @@ export function ReservationWizardShell({
                 locale={locale}
                 label={t(`reservations.steps.${step}`)}
                 recordedAt={stepCardDate(step, reservation)}
-                state={chipState(step, reservation, current)}
+                state={chipState(step, reservation, current, viewedStep, audience)}
                 active={viewedStep === step}
                 onSelect={onViewStep}
               />
             ))}
           </ol>
         </div>
-        <div className="mt-3">
-          {viewedStep ? <StepGuideButton step={viewedStep} /> : null}
-        </div>
+        {audience === 'owner' && viewedStep ? (
+          <div className="mt-3">
+            <StepGuideButton step={viewedStep} />
+          </div>
+        ) : null}
       </div>
       {children}
     </div>
@@ -112,14 +117,21 @@ function chipState(
   step: ReservationStepCode,
   reservation: Reservation,
   current: ReservationStepCode,
+  viewedStep: ReservationStepCode | null,
+  audience: 'owner' | 'admin',
 ) {
   const { status, type } = reservation
   if (status === 'REJECTED' || status === 'CANCELLED') {
     return stepHasProgress(step, reservation) ? 'done' : 'pending'
   }
+  const flow = ownerFlowSteps(type)
+  if (viewedStep && flow.includes(viewedStep) && status !== 'COMPLETED') {
+    if (step === viewedStep) return 'current'
+    if (isStepDone(step, status, type) || step === current) return 'done'
+  }
   if (isStepDone(step, status, type)) return 'done'
   if (step === current && status === 'PENDING_MANAGEMENT_REVIEW' && step === 'review') {
-    return 'waiting'
+    return audience === 'admin' ? 'current' : 'waiting'
   }
   if (step === current) return 'current'
   return 'pending'
@@ -176,8 +188,8 @@ function StepCard({
         {formatNumber(index + 1, locale)}
       </span>
       {recordedAt ? (
-        <span className={`text-[10px] font-medium leading-4 ${dateClass}`}>
-          <DateText value={recordedAt} />
+        <span className={`max-w-full text-[10px] font-medium leading-4 ${dateClass}`}>
+          <DateText value={recordedAt} withTime />
         </span>
       ) : null}
     </>

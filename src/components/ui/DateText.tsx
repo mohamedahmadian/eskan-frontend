@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { formatDate, formatDateTimeDate, formatTime } from '../../lib/datetime'
+import { formatDate, formatDateTimeDate, formatHijriDate, formatTime } from '../../lib/datetime'
 
 export function DateText({
   value,
@@ -21,5 +21,18 @@ export function DateText({
       <span>{formatDateTimeDate(value, locale)}</span>
       <span>{formatTime(value, locale)}</span>
     </span>
+  )
+}
+
+export function HijriDateText({ value }: { value?: string | null }) {
+  const { i18n } = useTranslation()
+  if (!value) return null
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const text = formatHijriDate(value, locale)
+  if (!text) return null
+  return (
+    <p className="text-xs leading-6 text-ink-500" dir="rtl" lang="ar">
+      {text}
+    </p>
   )
 }

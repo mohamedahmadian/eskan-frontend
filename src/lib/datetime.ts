@@ -1,6 +1,8 @@
 import { DateObject } from 'react-multi-date-picker'
+import arabic from 'react-date-object/calendars/arabic'
 import gregorian from 'react-date-object/calendars/gregorian'
 import persian from 'react-date-object/calendars/persian'
+import arabic_ar from 'react-date-object/locales/arabic_ar'
 
 export const numberingDigits: Record<string, string[]> = {
   fa: ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'],
@@ -56,6 +58,14 @@ export function formatDate(value: string, locale: string) {
     `${date.year}/${date.month.number}/${date.day}`,
     locale,
   )
+}
+
+export function formatHijriDate(value: string, locale: string) {
+  const date = fromIsoDateOnly(value)
+  if (!date) return ''
+  const hijri = date.convert(arabic, arabic_ar)
+  const month = String(hijri.month?.name ?? '').trim()
+  return localizeDigits(`${hijri.day} ${month} ${hijri.year}`, locale)
 }
 
 export function formatDateTimeDate(value: string, locale: string) {
@@ -126,6 +136,18 @@ export function toIsoDateOnly(date: DateObject) {
 
 export function todayIsoDate() {
   return toIsoDateOnly(new DateObject({ calendar: gregorian }))
+}
+
+/** شنبهٔ هفتهٔ جاری در تقویم ایران */
+export function startOfIranWeekIso(iso = todayIsoDate()) {
+  const js = new Date(`${iso}T12:00:00`)
+  if (Number.isNaN(js.getTime())) return iso
+  const daysSinceSaturday = (js.getDay() + 1) % 7
+  return addDaysIso(iso, -daysSinceSaturday)
+}
+
+export function endOfIranWeekIso(iso = todayIsoDate()) {
+  return addDaysIso(startOfIranWeekIso(iso), 6)
 }
 
 export function addDaysIso(iso: string, days: number) {

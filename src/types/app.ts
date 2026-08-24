@@ -206,6 +206,47 @@ export type Caravan = {
   managerReused?: boolean
 }
 
+export type Group = {
+  id: string
+  name: string
+  cityId: string
+  city?: {
+    id: string
+    nameFa: string
+    nameEn: string
+    provinceId: string
+    province?: {
+      id: string
+      nameFa: string
+      nameEn: string
+      countryId: string
+      country?: {
+        id: string
+        nameFa: string
+        nameEn: string
+      }
+    }
+  } | null
+  managerUserId: string | null
+  manager?: {
+    id: string
+    firstName: string
+    lastName: string
+    fullName: string
+    nationalId: string | null
+    phone: string | null
+    status: UserStatus
+  } | null
+  eitaa: string | null
+  bale: string | null
+  telegram: string | null
+  instagram: string | null
+  totalCount: number
+  maleCount: number
+  femaleCount: number
+  createdAt: string
+}
+
 export type Paginated<T> = {
   items: T[]
   total: number
@@ -871,6 +912,14 @@ export const reservationMemberInsuranceStatuses = {
 export type ReservationMemberInsuranceStatus =
   (typeof reservationMemberInsuranceStatuses)[keyof typeof reservationMemberInsuranceStatuses]
 
+export const reservationMemberInsurancePaidMethods = {
+  MANAGEMENT: 'MANAGEMENT',
+  ONLINE_GATEWAY: 'ONLINE_GATEWAY',
+} as const
+
+export type ReservationMemberInsurancePaidMethod =
+  (typeof reservationMemberInsurancePaidMethods)[keyof typeof reservationMemberInsurancePaidMethods]
+
 export type ReservationInsuranceSummary = {
   total: number
   pending: number
@@ -901,6 +950,9 @@ export type ReservationMember = {
   insurancePaidAt: string | null
   insurancePaidAmount: number | null
   insurancePaymentRef: string | null
+  insurancePaidMethod: ReservationMemberInsurancePaidMethod | null
+  insurancePaidById: string | null
+  insurancePaidBy: ReservationPerson | null
   insuranceManualNote: string | null
 }
 
@@ -935,13 +987,22 @@ export type MemberImportPreview = {
   rows: MemberImportPreviewRow[]
 }
 
-export type PreviousReservationMembers = {
-  reservation: { id: string; year: number; type: ReservationType } | null
-  members: {
-    userId: string
-    alreadyMember: boolean
-    user: ReservationPerson
-  }[]
+export type PreviousCaravanReservation = {
+  id: string
+  year: number
+  status: ReservationStatus
+  stayStartDate: string | null
+  stayEndDate: string | null
+  originCity: { nameFa: string } | null
+  memberCount: number
+  maleCount: number
+  femaleCount: number
+  alreadyMemberCount: number
+  transferableCount: number
+}
+
+export type PreviousCaravanReservations = {
+  items: PreviousCaravanReservation[]
 }
 
 export type ReservationCaravanContact = {
@@ -959,13 +1020,20 @@ export type ReservationListItem = {
   stayStartDate: string | null
   stayEndDate: string | null
   walkingStartDate: string | null
+  requestsAccommodation: boolean
+  requestsBus: boolean
+  requestedMaleCount: number
+  requestedFemaleCount: number
   maleCount: number
   femaleCount: number
   totalCount: number
   createdAt: string
   updatedAt: string
   completedAt: string | null
+  caravanId: string | null
+  groupId: string | null
   caravan: { id: string; name: string; managerUserId: string | null } | null
+  group: { id: string; name: string; managerUserId: string | null } | null
   createdBy?: ReservationPerson
   caravanManager?: ReservationPerson | null
 }
@@ -1019,6 +1087,8 @@ export type ReceptionSettings = {
   insuranceOrganization: string
   insurancePremiumAmount: number
   insuranceCoverage: string
+  imamRezaMartyrdomDate: string | null
+  prophetDemiseDate: string | null
 }
 
 export type ReceptionCapacitySlice = {

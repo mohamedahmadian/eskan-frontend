@@ -1,9 +1,19 @@
-import type {
-  ReservationMemberInsuranceStatus,
-  ReservationPerson,
-  ReservationStatus,
-  ReservationType,
+import {
+  reservationStatuses,
+  type ReservationMemberInsurancePaidMethod,
+  type ReservationMemberInsuranceStatus,
+  type ReservationPerson,
+  type ReservationStatus,
+  type ReservationType,
 } from '../../types/app'
+
+export const inProgressFilter = 'IN_PROGRESS'
+export const inProgressStatuses: ReservationStatus[] = [
+  reservationStatuses.DRAFT,
+  reservationStatuses.COMPANIONS,
+  reservationStatuses.CARAVAN_CONTACTS,
+  reservationStatuses.INSURANCE,
+]
 
 type ReservationStepDates = {
   createdAt: string
@@ -87,6 +97,47 @@ export function isStepDone(
   return steps.indexOf(step) < steps.indexOf(current)
 }
 
+/** Owner can still edit these steps after completing them, until the file is finished. */
+/** Steps the owner can walk back and forth after management review. */
+export function ownerFlowSteps(type: ReservationType): ReservationStepCode[] {
+  return stepsForType(type).filter(
+    (step) => step === 'companions' || step === 'contacts' || step === 'insurance',
+  )
+}
+
+export function neighborFlowStep(
+  type: ReservationType,
+  step: ReservationStepCode,
+  direction: -1 | 1,
+): ReservationStepCode | null {
+  const flow = ownerFlowSteps(type)
+  const index = flow.indexOf(step)
+  if (index < 0) return null
+  return flow[index + direction] ?? null
+}
+
+export function ownerCanEditStep(
+  step: ReservationStepCode,
+  status: ReservationStatus,
+  type: ReservationType,
+) {
+  if (step === 'companions') {
+    if (type === 'GROUP') return status === 'COMPANIONS' || status === 'INSURANCE'
+    if (type === 'CARAVAN') {
+      return (
+        status === 'COMPANIONS' ||
+        status === 'CARAVAN_CONTACTS' ||
+        status === 'INSURANCE'
+      )
+    }
+    return false
+  }
+  if (step === 'contacts') {
+    return type === 'CARAVAN' && (status === 'CARAVAN_CONTACTS' || status === 'INSURANCE')
+  }
+  return false
+}
+
 export function stepCompletedAt(step: ReservationStepCode, reservation: ReservationStepDates) {
   if (step === 'travel') return reservation.basicInfoCompletedAt
   if (step === 'review') return reservation.managementReviewedAt
@@ -155,6 +206,32 @@ export function validReturnStatuses(type: ReservationType): ReservationStatus[] 
   return ['DRAFT', 'COMPANIONS', 'CARAVAN_CONTACTS', 'INSURANCE']
 }
 
+const rewindStatusOrder: ReservationStatus[] = [
+  'DRAFT',
+  'PENDING_MANAGEMENT_REVIEW',
+  'COMPANIONS',
+  'CARAVAN_CONTACTS',
+  'INSURANCE',
+  'COMPLETED',
+]
+
+function statusRank(status: ReservationStatus) {
+  return rewindStatusOrder.indexOf(status)
+}
+
+/** Stages management can rewind a file to, from its current status. */
+export function validRewindStatuses(
+  type: ReservationType,
+  status: ReservationStatus,
+): ReservationStatus[] {
+  if (status === 'CANCELLED') return []
+  const allowed = validReturnStatuses(type)
+  if (status === 'REJECTED') return allowed
+  const currentRank = statusRank(status)
+  if (currentRank < 0) return []
+  return allowed.filter((item) => statusRank(item) < currentRank)
+}
+
 export const CAPACITY_WARNING_RATIO = 0.8
 
 export function capacityKey(type: ReservationType) {
@@ -165,6 +242,14 @@ export function capacityKey(type: ReservationType) {
 
 export function isInsuranceAccepted(status: ReservationMemberInsuranceStatus) {
   return status === 'PAID' || status === 'APPROVED'
+}
+
+export function insurancePaidMethodLabel(
+  method: ReservationMemberInsurancePaidMethod | null | undefined,
+  t: (key: string) => string,
+) {
+  if (!method) return null
+  return t(`reservations.insurancePaidMethods.${method}`)
 }
 
 export function canPayInsurance(status: ReservationMemberInsuranceStatus) {
@@ -197,8 +282,8 @@ export function summarizeInsurance(
   return {
     total: members.length,
     pending,
-    paid,
-    approved,
+    paid: 0,
+    approved: paid + approved,
     rejected,
     paidAmount,
     lastPaidAt,

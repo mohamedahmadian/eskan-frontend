@@ -1,35 +1,47 @@
 import {
   Building2,
+  Bus,
   Calendar,
-  Check,
   Footprints,
   HeartHandshake,
   MapPin,
-  Mars,
+  MoonStar,
   Route,
-  UserRound,
-  Users,
-  Venus,
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
-import { DateText } from '../../components/ui/DateText'
-import { FormField, fieldClassName } from '../../components/ui/Form'
+import { CheckboxField } from '../../components/ui/CheckboxField'
+import { DateText, HijriDateText } from '../../components/ui/DateText'
+import { FormField } from '../../components/ui/Form'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
-import { api } from '../../lib/api'
-import { addDaysIso, formatNumber, todayIsoDate } from '../../lib/datetime'
+import { api, getApiErrorMessage } from '../../lib/api'
+import { currentPersianYear } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import { canAccessMyCaravans } from '../../lib/roles'
-import type { Caravan, City, Paginated, Province, ReservationType, WalkingRoute } from '../../types/app'
-import { GROUP_MAX_SIZE } from './reservation-steps'
+import type {
+  City,
+  Paginated,
+  Province,
+  ReceptionSettings,
+  ReservationType,
+  WalkingRoute,
+} from '../../types/app'
+import { ReservationCountFields } from './ReservationCountFields'
+import {
+  createReservationParty,
+  emptyPartyDraft,
+  partyDraftError,
+  ReservationPartyFields,
+  type PartyDraft,
+  type PartyKind,
+} from './ReservationPartyFields'
 
 export function travelDatesError(
   values: Pick<TravelValues, 'walkingStartDate' | 'stayStartDate' | 'stayEndDate'>,
   t: (key: string) => string,
-  existingWalkingStart?: string | null,
 ) {
   if (!values.stayStartDate) {
     return t('reservations.stayStartRequired')
@@ -37,17 +49,10 @@ export function travelDatesError(
   if (!values.stayEndDate) {
     return t('reservations.stayEndRequired')
   }
-  if (
-    values.walkingStartDate &&
-    values.walkingStartDate < todayIsoDate() &&
-    values.walkingStartDate !== existingWalkingStart
-  ) {
-    return t('reservations.walkingDateInPast')
-  }
   if (values.stayStartDate && values.walkingStartDate && values.stayStartDate <= values.walkingStartDate) {
     return t('reservations.walkingRangeInvalid')
   }
-  if (values.stayEndDate && values.stayStartDate && values.stayEndDate < values.stayStartDate) {
+  if (values.stayEndDate && values.stayStartDate && values.stayEndDate <= values.stayStartDate) {
     return t('reservations.stayRangeInvalid')
   }
   return null
@@ -63,6 +68,9 @@ export type TravelValues = {
   maleCount: string
   femaleCount: string
   caravanId: string
+  groupId: string
+  requestsAccommodation: boolean
+  requestsBus: boolean
 }
 
 export function ReservationTravelFields({
@@ -85,10 +93,12 @@ export function ReservationTravelFields({
         <h3 className="text-sm font-semibold text-ink-800">{t('reservations.createSteps.count')}</h3>
         <ReservationCountFields values={values} onChange={onChange} type={type} locked={locked} />
       </section>
-      {type === 'CARAVAN' ? (
+      {type === 'GROUP' || type === 'CARAVAN' ? (
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-ink-800">{t('reservations.caravan')}</h3>
-          <ReservationCaravanField values={values} onChange={onChange} locked={locked} />
+          <h3 className="text-sm font-semibold text-ink-800">
+            {t(type === 'CARAVAN' ? 'reservations.createSteps.caravan' : 'reservations.createSteps.group')}
+          </h3>
+          <ReservationTravelPartyField values={values} onChange={onChange} type={type} locked={locked} />
         </section>
       ) : null}
       <section className="space-y-4">
@@ -97,6 +107,7 @@ export function ReservationTravelFields({
       </section>
       <section className="space-y-4">
         <h3 className="text-sm font-semibold text-ink-800">{t('reservations.createSteps.optional')}</h3>
+        <ReservationApplicantFields values={values} onChange={onChange} locked={locked} />
         <OptionalInfoHint />
         <ReservationOptionalGeoFields
           values={values}
@@ -105,6 +116,46 @@ export function ReservationTravelFields({
           iranId={iranId}
         />
       </section>
+    </div>
+  )
+}
+
+export function ReservationApplicantFields({
+  values,
+  onChange,
+  locked,
+}: {
+  values: Pick<TravelValues, 'requestsAccommodation' | 'requestsBus'>
+  onChange: (patch: Partial<TravelValues>) => void
+  locked?: boolean
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <CheckboxField
+        id="requestsAccommodation"
+        checked={values.requestsAccommodation}
+        disabled={locked}
+        onChange={(requestsAccommodation) => onChange({ requestsAccommodation })}
+        label={
+          <span className="flex items-center gap-2">
+            <Building2 className="size-4 shrink-0 text-teal-600" aria-hidden />
+            {t('reservations.requestsAccommodation')}
+          </span>
+        }
+      />
+      <CheckboxField
+        id="requestsBus"
+        checked={values.requestsBus}
+        disabled={locked}
+        onChange={(requestsBus) => onChange({ requestsBus })}
+        label={
+          <span className="flex items-center gap-2">
+            <Bus className="size-4 shrink-0 text-teal-600" aria-hidden />
+            {t('reservations.requestsBus')}
+          </span>
+        }
+      />
     </div>
   )
 }
@@ -121,93 +172,64 @@ export function OptionalInfoHint() {
   )
 }
 
-export function ReservationCountFields({
-  values,
-  onChange,
-  type,
-  locked,
-}: {
-  values: TravelValues
-  onChange: (patch: Partial<TravelValues>) => void
-  type: ReservationType
-  locked?: boolean
-}) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language.split('-')[0] ?? 'fa'
-  const male = Number(values.maleCount) || 0
-  const female = Number(values.femaleCount) || 0
-  const individualMale = type === 'INDIVIDUAL' && male === 1 && female === 0
-  const individualFemale = type === 'INDIVIDUAL' && female === 1 && male === 0
-
-  if (type === 'INDIVIDUAL') {
-    return (
-      <FormField icon={UserRound} label={t('reservations.selectMyGender')}>
-        <div className="relative">
-          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t('reservations.selectMyGender')}>
-            <GenderChoiceCard
-              selected={individualMale}
-              disabled={locked}
-              icon={Mars}
-              label={t('reservations.iAmMale')}
-              tone="teal"
-              onSelect={() => onChange({ maleCount: '1', femaleCount: '0' })}
-            />
-            <GenderChoiceCard
-              selected={individualFemale}
-              disabled={locked}
-              icon={Venus}
-              label={t('reservations.iAmFemale')}
-              tone="mint"
-              onSelect={() => onChange({ maleCount: '0', femaleCount: '1' })}
-            />
-          </div>
-          {!locked ? (
-            <RequiredHidden value={individualMale || individualFemale ? '1' : ''} />
-          ) : null}
-        </div>
-      </FormField>
-    )
-  }
+export function OccasionStayHint() {
+  const { t } = useTranslation()
+  const year = currentPersianYear()
+  const settings = useQuery({
+    queryKey: ['reception-settings', year],
+    queryFn: async () => {
+      const { data } = await api.get<ReceptionSettings>(`/reception-settings/${year}`)
+      return data
+    },
+  })
+  const prophetDate = settings.data?.prophetDemiseDate
+  const imamDate = settings.data?.imamRezaMartyrdomDate
+  if (!prophetDate && !imamDate) return null
 
   return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <FormField icon={Mars} label={t('reservations.maleCount')} htmlFor="maleCount">
-          <input
-            id="maleCount"
-            type="number"
-            min={0}
-            max={type === 'GROUP' ? GROUP_MAX_SIZE : undefined}
-            className={fieldClassName}
-            value={values.maleCount}
-            onChange={(event) => onChange({ maleCount: event.target.value })}
-            required
-            disabled={locked}
-          />
-        </FormField>
-        <FormField icon={Venus} label={t('reservations.femaleCount')} htmlFor="femaleCount">
-          <input
-            id="femaleCount"
-            type="number"
-            min={0}
-            max={type === 'GROUP' ? GROUP_MAX_SIZE : undefined}
-            className={fieldClassName}
-            value={values.femaleCount}
-            onChange={(event) => onChange({ femaleCount: event.target.value })}
-            required
-            disabled={locked}
-          />
-        </FormField>
+    <aside
+      className="relative overflow-hidden rounded-[22px] border border-gold-100 bg-gradient-to-b from-gold-50 via-white to-cream-50 p-4 shadow-[0_12px_28px_rgba(232,184,58,0.14)]"
+      role="note"
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-gold-400 via-gold-500 to-teal-400"
+        aria-hidden
+      />
+      <div className="flex items-start gap-3 pt-1">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold-100 bg-white text-gold-600 shadow-sm">
+          <MoonStar className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1 space-y-3">
+          <p className="text-sm font-semibold text-ink-900">{t('reservations.occasionStayTitle')}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {prophetDate ? (
+              <OccasionDateChip
+                label={t('reservations.occasionProphetLabel')}
+                value={prophetDate}
+              />
+            ) : null}
+            {imamDate ? (
+              <OccasionDateChip
+                label={t('reservations.occasionImamRezaLabel')}
+                value={imamDate}
+              />
+            ) : null}
+          </div>
+        </div>
       </div>
-      <p className="rounded-2xl bg-cream-50 px-3 py-2 text-sm text-ink-700">
-        {t('reservations.totalCount')}: {formatNumber(male + female, locale)} {t('reservations.people')}
-        {type === 'GROUP' ? (
-          <span className="ms-2 text-ink-500">
-            ({t('reservations.groupMaxHint', { count: formatNumber(GROUP_MAX_SIZE, locale) })})
-          </span>
-        ) : null}
+    </aside>
+  )
+}
+
+function OccasionDateChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-gold-100 bg-white/90 px-3 py-2.5 shadow-[0_4px_12px_rgba(196,146,26,0.06)]">
+      <p className="text-[11px] leading-5 text-ink-500">{label}</p>
+      <p className="mt-0.5 text-sm font-semibold text-ink-900">
+        <DateText value={value} />
       </p>
-    </>
+      <HijriDateText value={value} />
+    </div>
   )
 }
 
@@ -215,33 +237,14 @@ export function ReservationDateFields({
   values,
   onChange,
   locked,
+  showOccasionHint = true,
 }: {
   values: TravelValues
   onChange: (patch: Partial<TravelValues>) => void
   locked?: boolean
+  showOccasionHint?: boolean
 }) {
   const { t } = useTranslation()
-  const today = todayIsoDate()
-  const stayStartMin = values.walkingStartDate
-    ? addDaysIso(values.walkingStartDate, 1)
-    : undefined
-  const walkingMax = values.stayStartDate
-    ? addDaysIso(values.stayStartDate, -1)
-    : undefined
-
-  function patchStayStart(stayStartDate: string) {
-    const patch: Partial<TravelValues> = { stayStartDate }
-    if (stayStartDate) {
-      const autoEnd = addDaysIso(stayStartDate, 3)
-      const previousAutoEnd = values.stayStartDate
-        ? addDaysIso(values.stayStartDate, 3)
-        : ''
-      if (!values.stayEndDate || values.stayEndDate === previousAutoEnd) {
-        patch.stayEndDate = autoEnd
-      }
-    }
-    onChange(patch)
-  }
 
   return (
     <div className="space-y-4">
@@ -251,31 +254,29 @@ export function ReservationDateFields({
         label={t('reservations.walkingStartDate')}
         value={values.walkingStartDate}
         locked={locked}
-        minDate={today}
-        maxDate={walkingMax}
         onChange={(walkingStartDate) => onChange({ walkingStartDate })}
       />
-      <DateValueField
-        id="stayStartDate"
-        icon={Calendar}
-        label={t('reservations.stayStartDate')}
-        value={values.stayStartDate}
-        locked={locked}
-        required
-        minDate={stayStartMin}
-        maxDate={values.stayEndDate || undefined}
-        onChange={patchStayStart}
-      />
-      <DateValueField
-        id="stayEndDate"
-        icon={Calendar}
-        label={t('reservations.stayEndDate')}
-        value={values.stayEndDate}
-        locked={locked}
-        required
-        minDate={values.stayStartDate || stayStartMin}
-        onChange={(stayEndDate) => onChange({ stayEndDate })}
-      />
+      <div className="grid grid-cols-2 gap-4">
+        <DateValueField
+          id="stayStartDate"
+          icon={Calendar}
+          label={t('reservations.stayStartDate')}
+          value={values.stayStartDate}
+          locked={locked}
+          required
+          onChange={(stayStartDate) => onChange({ stayStartDate })}
+        />
+        <DateValueField
+          id="stayEndDate"
+          icon={Calendar}
+          label={t('reservations.stayEndDate')}
+          value={values.stayEndDate}
+          locked={locked}
+          required
+          onChange={(stayEndDate) => onChange({ stayEndDate })}
+        />
+      </div>
+      {showOccasionHint ? <OccasionStayHint /> : null}
     </div>
   )
 }
@@ -379,50 +380,74 @@ export function ReservationOptionalGeoFields({
   )
 }
 
-export function ReservationCaravanField({
+export function ReservationTravelPartyField({
   values,
   onChange,
+  type,
   locked,
 }: {
   values: TravelValues
   onChange: (patch: Partial<TravelValues>) => void
+  type: PartyKind
   locked?: boolean
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const { user } = useAuth()
-  const canCreateCaravan = canAccessMyCaravans(user)
+  const [draft, setDraft] = useState<PartyDraft>(() => emptyPartyDraft(user))
+  const [creating, setCreating] = useState(false)
+  const queryClient = useQueryClient()
+  const selectedId = type === 'CARAVAN' ? values.caravanId : values.groupId
+  const needsCity = !user?.cityId
 
-  const caravans = useQuery({
-    queryKey: ['caravans', 'mine', 'lookup'],
-    queryFn: async () => {
-      const { data } = await api.get<Paginated<Caravan>>('/caravans/mine', {
-        params: { pageSize: 100 },
+  async function createParty() {
+    const error = partyDraftError(draft, type, t, locale, needsCity)
+    if (error) {
+      toast.error(error)
+      return
+    }
+    setCreating(true)
+    try {
+      const created = await createReservationParty(type, draft)
+      onChange({
+        caravanId: type === 'CARAVAN' ? created.id : '',
+        groupId: type === 'GROUP' ? created.id : '',
+        maleCount: String(created.maleCount),
+        femaleCount: String(created.femaleCount),
       })
-      return data.items
-    },
-  })
+      setDraft(emptyPartyDraft(user))
+      await queryClient.invalidateQueries({
+        queryKey: type === 'CARAVAN' ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
+      })
+      toast.success(t(type === 'CARAVAN' ? 'caravans.created' : 'groups.created'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+    } finally {
+      setCreating(false)
+    }
+  }
 
   return (
-    <div className="space-y-2">
-      <FormField icon={Users} label={t('reservations.caravan')}>
-        <SearchSelect
-          value={values.caravanId}
-          onChange={(caravanId) => onChange({ caravanId })}
-          options={(caravans.data ?? []).map((item) => ({
-            value: item.id,
-            label: item.name,
-          }))}
-          placeholder={t('reservations.selectCaravan')}
-          required
-          disabled={locked}
-        />
-      </FormField>
-      {!locked && canCreateCaravan ? (
-        <Link to="/my-caravans/new" className="text-sm text-teal-700 hover:underline">
-          {t('reservations.createCaravan')}
-        </Link>
-      ) : null}
-    </div>
+    <ReservationPartyFields
+      type={type}
+      selectedId={selectedId}
+      locked={locked}
+      draft={draft}
+      onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+      onSelect={(item) =>
+        onChange({
+          caravanId: type === 'CARAVAN' ? item.id : '',
+          groupId: type === 'GROUP' ? item.id : '',
+          maleCount: String(item.maleCount),
+          femaleCount: String(item.femaleCount),
+        })
+      }
+      showCreateAction={!locked}
+      creating={creating}
+      onCreate={() => {
+        void createParty()
+      }}
+    />
   )
 }
 
@@ -450,84 +475,20 @@ function DateValueField({
   return (
     <FormField icon={Icon} label={required ? `${label} *` : label} htmlFor={id}>
       {locked ? (
-        <p className="text-sm text-ink-800">{value ? <DateText value={value} /> : '—'}</p>
+        <div className="space-y-1.5">
+          <p className="text-sm text-ink-800">{value ? <DateText value={value} /> : '—'}</p>
+          <HijriDateText value={value} />
+        </div>
       ) : (
         <PersianDateField
           id={id}
           value={value}
           minDate={minDate}
           maxDate={maxDate}
+          showHijri
           onChange={(next) => onChange(next ?? '')}
         />
       )}
     </FormField>
-  )
-}
-
-function RequiredHidden({ value }: { value: string }) {
-  return (
-    <input
-      tabIndex={-1}
-      required
-      value={value}
-      onChange={() => undefined}
-      aria-hidden
-      className="pointer-events-none absolute h-px w-px overflow-hidden opacity-0"
-    />
-  )
-}
-
-function GenderChoiceCard({
-  selected,
-  disabled,
-  icon: Icon,
-  label,
-  tone,
-  onSelect,
-}: {
-  selected: boolean
-  disabled?: boolean
-  icon: typeof Mars
-  label: string
-  tone: 'teal' | 'mint'
-  onSelect: () => void
-}) {
-  const idle =
-    tone === 'teal'
-      ? 'border-line bg-white hover:border-teal-200'
-      : 'border-line bg-white hover:border-mint-300'
-  const active =
-    tone === 'teal'
-      ? 'border-teal-500 bg-teal-50 shadow-[0_8px_18px_rgba(46,189,182,0.2)]'
-      : 'border-mint-400 bg-mint-50 shadow-[0_8px_18px_rgba(95,191,122,0.18)]'
-  const iconWrap = tone === 'teal' ? 'bg-teal-500 text-white' : 'bg-mint-500 text-white'
-
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      disabled={disabled}
-      data-enter-ignore=""
-      onClick={onSelect}
-      className={`flex items-center gap-2 rounded-2xl border px-2.5 py-2 text-start shadow-[0_4px_12px_rgba(20,40,40,0.04)] transition-[box-shadow,transform,border-color,background-color] duration-200 ${
-        selected ? active : idle
-      } ${
-        disabled
-          ? 'cursor-not-allowed opacity-70'
-          : 'cursor-pointer hover:-translate-y-0.5 hover:border-teal-400'
-      }`}
-    >
-      <span className={`flex size-7 shrink-0 items-center justify-center rounded-xl ${iconWrap}`}>
-        <Icon className="size-3.5" aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1 text-xs font-semibold text-ink-900">{label}</span>
-      {selected ? (
-        <Check
-          className={`size-3.5 shrink-0 ${tone === 'teal' ? 'text-teal-700' : 'text-mint-600'}`}
-          aria-hidden
-        />
-      ) : null}
-    </button>
   )
 }

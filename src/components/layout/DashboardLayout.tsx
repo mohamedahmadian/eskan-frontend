@@ -6,7 +6,7 @@ import { useAuth } from '../../auth/AuthProvider'
 import { getNavIcon } from '../../lib/icons'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { getPageMeta } from '../../lib/page-meta'
-import { canAccessMyCaravans, usesDedicatedHomeDashboard } from '../../lib/roles'
+import { canAccessMyCaravans, canAccessMyGroups, usesDedicatedHomeDashboard } from '../../lib/roles'
 import type { NavMenu, NavModule } from '../../types/app'
 import { PageTransition } from '../ui/PageTransition'
 import { UserMenu } from './UserMenu'
@@ -87,10 +87,15 @@ export function DashboardLayout() {
 
   const modules = useMemo(() => {
     const showMyCaravans = canAccessMyCaravans(user)
+    const showMyGroups = canAccessMyGroups(user)
     const visible = (user?.modules ?? [])
       .map((mod) => ({
         ...mod,
-        menus: mod.menus.filter((item) => item.code !== 'caravans.mine' || showMyCaravans),
+        menus: mod.menus.filter(
+          (item) =>
+            (item.code !== 'caravans.mine' || showMyCaravans) &&
+            (item.code !== 'groups.mine' || showMyGroups),
+        ),
       }))
       .filter((mod) => mod.menus.length > 0)
     const needle = query.trim()

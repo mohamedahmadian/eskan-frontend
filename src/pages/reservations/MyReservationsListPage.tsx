@@ -1,4 +1,4 @@
-import { CalendarDays, Filter, Mars, Plus, Users, Venus } from 'lucide-react'
+import { CalendarDays, Filter, Plus } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -22,6 +22,7 @@ import {
   type ReservationListItem,
   type ReservationType,
 } from '../../types/app'
+import { HeadcountPills } from './HeadcountPills'
 import { listStepProgress } from './reservation-steps'
 import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { StepProgressChart } from './StepProgressChart'
@@ -177,6 +178,7 @@ export function MyReservationsListPage() {
                   </td>
                   <td className="px-4 py-3">
                     <HeadcountPills
+                      type={row.type}
                       male={row.maleCount}
                       female={row.femaleCount}
                       total={row.totalCount}
@@ -232,53 +234,6 @@ export function MyReservationsListPage() {
         total={query.data?.total ?? 0}
         onPageChange={setPage}
       />
-    </div>
-  )
-}
-
-function HeadcountPills({
-  male,
-  female,
-  total,
-  format,
-  maleLabel,
-  femaleLabel,
-  totalLabel,
-}: {
-  male: number
-  female: number
-  total: number
-  format: (value: number) => string
-  maleLabel: string
-  femaleLabel: string
-  totalLabel: string
-}) {
-  return (
-    <div className="inline-flex flex-wrap items-center gap-1">
-      <span
-        className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-sky-700"
-        title={maleLabel}
-      >
-        <Mars className="size-3 shrink-0" aria-hidden />
-        <span>{format(male)}</span>
-        <span>{maleLabel}</span>
-      </span>
-      <span
-        className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-rose-700"
-        title={femaleLabel}
-      >
-        <Venus className="size-3 shrink-0" aria-hidden />
-        <span>{format(female)}</span>
-        <span>{femaleLabel}</span>
-      </span>
-      <span
-        className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-teal-50 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-teal-800"
-        title={totalLabel}
-      >
-        <Users className="size-3 shrink-0" aria-hidden />
-        <span>{format(total)}</span>
-        <span>{totalLabel}</span>
-      </span>
     </div>
   )
 }

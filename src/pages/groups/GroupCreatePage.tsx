@@ -3,12 +3,12 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
+import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import type { Caravan, City, Country, Province } from '../../types/app'
-import { CaravanForm } from './CaravanForm'
+import type { City, Country, Group, Province } from '../../types/app'
+import { GroupForm } from './GroupForm'
 
-export function CaravanCreatePage() {
+export function GroupCreatePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [countryId, setCountryId] = useState('')
@@ -52,21 +52,20 @@ export function CaravanCreatePage() {
   }
 
   return (
-    <div className={userFormShellClassName}>
-      <PageHeader title={t('caravans.create')} subtitle={t('caravans.createSubtitle')} />
-      <CaravanForm
+    <div className={formShellClassName}>
+      <PageHeader title={t('groups.create')} subtitle={t('groups.createSubtitle')} />
+      <GroupForm
         initialCountryId={selectedCountryId}
         initialProvinceId={provinceId}
         countries={countries.data}
         provinces={provinces.data ?? []}
         cities={cities.data ?? []}
-        selectManager
         onCountryChange={setCountryId}
         onProvinceChange={setProvinceId}
         onSubmit={async (payload) => {
-          await api.post<Caravan>('/caravans', payload)
-          toast.success(t('caravans.created'))
-          navigate('/caravans')
+          await api.post<Group>('/groups', payload)
+          toast.success(t('groups.created'))
+          navigate('/groups')
         }}
       />
     </div>

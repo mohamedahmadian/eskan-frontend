@@ -1,14 +1,13 @@
 import {
   Building2,
+  Bus,
   CalendarCheck,
   CalendarX,
   ClipboardCheck,
   Footprints,
-  Lock,
   MapPin,
   Mars,
   Route,
-  ScrollText,
   Users,
   Venus,
   type LucideIcon,
@@ -20,6 +19,8 @@ import { cardClassName } from '../../components/ui/Form'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
+import { ReservationCountMetrics } from './ReservationCountMetrics'
+import { ReservationIdentityChips, ReservationSectionHeader } from './ReservationSectionHeader'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -66,59 +67,31 @@ export function ReservationTravelSummary({
   const n = (value: number) => formatNumber(value, locale)
   const nameOf = useGeoName()
   const empty = t('reservations.notEntered')
-  const unspecified = t('reservations.optionalUnspecified')
   const individual = reservation.type === 'INDIVIDUAL'
   const individualMale = individual && reservation.maleCount >= 1
   const individualFemale = individual && reservation.femaleCount >= 1
   const nights = stayNightCount(reservation.stayStartDate, reservation.stayEndDate)
   const HeaderIcon = variant === 'review' ? ClipboardCheck : MapPin
-  const origin = reservation.originCity ? nameOf(reservation.originCity) : unspecified
-  const route = reservation.walkingRoute?.name ?? unspecified
+  const origin = reservation.originCity ? nameOf(reservation.originCity) : ''
+  const route = reservation.walkingRoute?.name ?? ''
 
   return (
     <section className={`${cardClassName} overflow-hidden`}>
-      <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
-        <div
-          className="pointer-events-none absolute -start-8 -top-10 size-32 rounded-full bg-teal-200/30"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
-          aria-hidden
-        />
-        <div className="relative flex items-start gap-3">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
-            <HeaderIcon className="size-6" aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold text-ink-900">
-                {t(`reservations.steps.${variant}`)}
-              </h2>
-              {readonly ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-teal-800 ring-1 ring-teal-100">
-                  <Lock className="size-3" aria-hidden />
-                  {t('reservations.readonlyBadge')}
-                </span>
-              ) : null}
-              {variant === 'review' && reservation.managementReviewedAt ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-teal-500 px-2 py-0.5 text-[11px] font-medium text-white">
-                  <CalendarCheck className="size-3" aria-hidden />
-                  {t('reservations.reviewApprovedBadge')}
-                </span>
-              ) : null}
-            </div>
-            {hint ? <p className="mt-1 text-xs leading-6 text-ink-600">{hint}</p> : null}
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <MetaChip
-                icon={ScrollText}
-                label={`${t('reservations.year')} ${n(reservation.year)}`}
-              />
-              <MetaChip icon={Users} label={t(`reservations.types.${reservation.type}`)} />
-            </div>
-          </div>
-        </div>
-      </header>
+      <ReservationSectionHeader
+        icon={HeaderIcon}
+        title={t(`reservations.steps.${variant}`)}
+        hint={hint}
+        readonly={readonly}
+        badge={
+          variant === 'review' && reservation.managementReviewedAt ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-teal-500 px-2 py-0.5 text-[11px] font-medium text-white">
+              <CalendarCheck className="size-3" aria-hidden />
+              {t('reservations.reviewApprovedBadge')}
+            </span>
+          ) : null
+        }
+        chips={<ReservationIdentityChips reservation={reservation} />}
+      />
 
       <div className="space-y-5 p-5 sm:p-6">
         <section>
@@ -138,29 +111,10 @@ export function ReservationTravelSummary({
               tone={individualMale ? 'teal' : 'mint'}
             />
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <MetricTile
-                icon={Mars}
-                label={t('reservations.male')}
-                value={n(reservation.maleCount)}
-                unit={t('reservations.people')}
-                tone="teal"
-              />
-              <MetricTile
-                icon={Venus}
-                label={t('reservations.female')}
-                value={n(reservation.femaleCount)}
-                unit={t('reservations.people')}
-                tone="mint"
-              />
-              <MetricTile
-                icon={Users}
-                label={t('reservations.totalCount')}
-                value={n(reservation.totalCount)}
-                unit={t('reservations.people')}
-                tone="ink"
-              />
-            </div>
+            <ReservationCountMetrics
+              reservation={reservation}
+              dual={variant === 'review'}
+            />
           )}
         </section>
 
@@ -180,20 +134,19 @@ export function ReservationTravelSummary({
               className="pointer-events-none absolute top-7 start-10 end-10 hidden h-0.5 bg-gradient-to-l from-teal-200 via-mint-100 to-teal-100 sm:block"
               aria-hidden
             />
-            <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
-              <FactTile
-                icon={Footprints}
-                label={t('reservations.walkingStartDateShort')}
-                value={
-                  reservation.walkingStartDate ? (
-                    <DateText value={reservation.walkingStartDate} />
-                  ) : (
-                    empty
-                  )
-                }
-                empty={!reservation.walkingStartDate}
-                tone="mint"
-              />
+            <div
+              className={`grid gap-2 sm:gap-3 ${
+                reservation.walkingStartDate ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+              }`}
+            >
+              {reservation.walkingStartDate ? (
+                <FactTile
+                  icon={Footprints}
+                  label={t('reservations.walkingStartDateShort')}
+                  value={<DateText value={reservation.walkingStartDate} />}
+                  tone="mint"
+                />
+              ) : null}
               <FactTile
                 icon={CalendarCheck}
                 label={t('reservations.stayStartDateShort')}
@@ -217,35 +170,61 @@ export function ReservationTravelSummary({
         </section>
 
         <section>
-          <SectionTitle icon={MapPin}>{t('reservations.createSteps.optional')}</SectionTitle>
-          <div
-            className={`grid gap-2 sm:gap-3 ${reservation.type === 'CARAVAN' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}
-          >
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <FactTile
-              icon={MapPin}
-              label={t('reservations.originCity')}
-              value={origin}
-              empty={!reservation.originCity}
+              icon={Building2}
+              label={t('reservations.requestsAccommodation')}
+              value={reservation.requestsAccommodation ? t('common.yes') : t('common.no')}
               tone="teal"
             />
             <FactTile
-              icon={Route}
-              label={t('reservations.walkingRoute')}
-              value={route}
-              empty={!reservation.walkingRoute}
+              icon={Bus}
+              label={t('reservations.requestsBus')}
+              value={reservation.requestsBus ? t('common.yes') : t('common.no')}
               tone="mint"
             />
-            {reservation.type === 'CARAVAN' ? (
-              <FactTile
-                icon={Building2}
-                label={t('reservations.caravan')}
-                value={reservation.caravan?.name ?? empty}
-                empty={!reservation.caravan}
-                tone="ink"
-              />
-            ) : null}
           </div>
         </section>
+
+        {origin || route || reservation.caravan || reservation.group ? (
+          <section>
+            <SectionTitle icon={MapPin}>{t('reservations.createSteps.optional')}</SectionTitle>
+            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+              {origin ? (
+                <FactTile
+                  icon={MapPin}
+                  label={t('reservations.originCity')}
+                  value={origin}
+                  tone="teal"
+                />
+              ) : null}
+              {route ? (
+                <FactTile
+                  icon={Route}
+                  label={t('reservations.walkingRoute')}
+                  value={route}
+                  tone="mint"
+                />
+              ) : null}
+              {reservation.caravan ? (
+                <FactTile
+                  icon={Building2}
+                  label={t('reservations.caravan')}
+                  value={reservation.caravan.name}
+                  tone="ink"
+                />
+              ) : null}
+              {reservation.group ? (
+                <FactTile
+                  icon={Users}
+                  label={t('reservations.groupName')}
+                  value={reservation.group.name}
+                  tone="ink"
+                />
+              ) : null}
+            </div>
+          </section>
+        ) : null}
       </div>
 
       {footer ? <div className="border-t border-line px-5 py-4 sm:px-6">{footer}</div> : null}
@@ -269,15 +248,6 @@ function SectionTitle({
       </span>
       {children}
     </h3>
-  )
-}
-
-function MetaChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-teal-100">
-      <Icon className="size-3 text-teal-600" aria-hidden />
-      {label}
-    </span>
   )
 }
 
@@ -306,32 +276,6 @@ function FactTile({
           {value}
         </p>
       </div>
-    </article>
-  )
-}
-
-function MetricTile({
-  icon: Icon,
-  label,
-  value,
-  unit,
-  tone,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  unit: string
-  tone: Tone
-}) {
-  const colors = toneClass[tone]
-  return (
-    <article className={`flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-center ${colors.wrap}`}>
-      <span className={`flex size-9 items-center justify-center rounded-xl ${colors.icon}`}>
-        <Icon className="size-4" aria-hidden />
-      </span>
-      <p className="text-[11px] font-medium text-ink-500">{label}</p>
-      <p className="text-lg font-bold leading-none text-ink-900">{value}</p>
-      <p className="text-[10px] text-ink-400">{unit}</p>
     </article>
   )
 }

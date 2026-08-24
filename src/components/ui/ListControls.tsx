@@ -110,6 +110,8 @@ export function SearchBar({
   extraClassName = 'sm:grid-cols-2',
   inputId = 'list-search',
   autoFocus = false,
+  hideSubmit = false,
+  bare = false,
 }: {
   term: string
   onTermChange: (value: string) => void
@@ -122,6 +124,8 @@ export function SearchBar({
   extraClassName?: string
   inputId?: string
   autoFocus?: boolean
+  hideSubmit?: boolean
+  bare?: boolean
 }) {
   const { t } = useTranslation()
   const [filtersOpen, setFiltersOpen] = useState(() => filtersOpenById.get(inputId) ?? false)
@@ -157,7 +161,10 @@ export function SearchBar({
   )
 
   return (
-    <AppForm onSubmit={handleSubmit} className={`mb-4 p-4 ${cardClassName}`}>
+    <AppForm
+      onSubmit={handleSubmit}
+      className={bare ? 'mb-4' : `mb-4 p-4 ${cardClassName}`}
+    >
       {beside ? (
         <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-end">
           <div className="min-w-0 flex-1">
@@ -166,14 +173,18 @@ export function SearchBar({
             </FormField>
           </div>
           <div className="grid grid-cols-2 gap-3 lg:contents">{beside}</div>
-          {searchButton}
+          {hideSubmit ? null : searchButton}
         </div>
       ) : (
         <FormField icon={Search} label={label} htmlFor={inputId}>
-          <div className="flex w-full flex-col gap-3 sm:flex-row">
-            {searchInput}
-            {searchButton}
-          </div>
+          {hideSubmit ? (
+            searchInput
+          ) : (
+            <div className="flex w-full flex-col gap-3 sm:flex-row">
+              {searchInput}
+              {searchButton}
+            </div>
+          )}
         </FormField>
       )}
       {extra ? (

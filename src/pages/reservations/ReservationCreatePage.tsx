@@ -14,11 +14,12 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
+import { confirmToast } from '../../components/ui/confirmToast'
 import {
   AppForm,
   Button,
@@ -27,7 +28,7 @@ import {
   userFormShellClassName,
 } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear, formatNumber } from '../../lib/datetime'
+import { addDaysIso, currentPersianYear, formatNumber } from '../../lib/datetime'
 import { isCaravanManager } from '../../lib/roles'
 import type {
   Country,
@@ -43,13 +44,22 @@ import {
   capacityKey,
   settingsEnabledKey,
 } from './reservation-steps'
+import { ReservationCountFields } from './ReservationCountFields'
+import {
+  createReservationParty,
+  emptyPartyDraft,
+  partyDraftError,
+  ReservationPartyFields,
+  type PartyDraft,
+  type PartyKind,
+} from './ReservationPartyFields'
 import {
   travelDatesError,
-  ReservationCaravanField,
-  ReservationCountFields,
+  OccasionStayHint,
   ReservationDateFields,
   ReservationOptionalGeoFields,
   OptionalInfoHint,
+  ReservationApplicantFields,
   type TravelValues,
 } from './ReservationTravelFields'
 import { StepProgressChart } from './StepProgressChart'
@@ -65,13 +75,35 @@ const typeHintCounts: Record<ReservationType, number> = {
   CARAVAN: 3,
 }
 
-const createSteps = ['type', 'count', 'dates', 'optional'] as const
-type CreateStep = (typeof createSteps)[number]
+type CreateStep = 'type' | 'party' | 'count' | 'dates' | 'optional'
+const defaultCreateSteps: CreateStep[] = ['type', 'count', 'dates', 'optional']
+const partyCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'optional']
+
+function stepsForCreateType(type: ReservationType | ''): CreateStep[] {
+  return type === 'GROUP' || type === 'CARAVAN' ? partyCreateSteps : defaultCreateSteps
+}
+
 const createStepIcons: Record<CreateStep, LucideIcon> = {
   type: Users,
+  party: Users,
   count: User,
   dates: Calendar,
   optional: MapPin,
+}
+
+function stayDatesFromOccasions(
+  settings?: Pick<ReceptionSettings, 'prophetDemiseDate' | 'imamRezaMartyrdomDate'> | null,
+) {
+  const stayStartDate = settings?.prophetDemiseDate
+    ? addDaysIso(settings.prophetDemiseDate, -1)
+    : ''
+  return {
+    stayStartDate,
+    stayEndDate: settings?.imamRezaMartyrdomDate
+      ? addDaysIso(settings.imamRezaMartyrdomDate, 1)
+      : '',
+    walkingStartDate: stayStartDate ? addDaysIso(stayStartDate, -3) : '',
+  }
 }
 
 const emptyTravel = (): TravelValues => ({
@@ -84,6 +116,9 @@ const emptyTravel = (): TravelValues => ({
   maleCount: '0',
   femaleCount: '0',
   caravanId: '',
+  groupId: '',
+  requestsAccommodation: true,
+  requestsBus: true,
 })
 
 function countsForIndividualGender(gender: 'MALE' | 'FEMALE' | null | undefined) {
@@ -107,9 +142,18 @@ export function ReservationCreatePage() {
     provinceId: user?.provinceId ?? '',
     originCityId: user?.cityId ?? '',
   }))
+  const [partyDraft, setPartyDraft] = useState<PartyDraft>(() => emptyPartyDraft(user))
   const [submitting, setSubmitting] = useState(false)
-  const stepIndex = createSteps.indexOf(step)
+  const queryClient = useQueryClient()
+  const steps = stepsForCreateType(type)
+  const stepIndex = steps.indexOf(step)
   const lastStep = step === 'optional'
+  const partyKind: PartyKind | null = type === 'GROUP' || type === 'CARAVAN' ? type : null
+  const needsPartyCity = !user?.cityId
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [step])
 
   useEffect(() => {
     if (!user) return
@@ -117,6 +161,11 @@ export function ReservationCreatePage() {
       ...current,
       provinceId: current.provinceId || user.provinceId || '',
       originCityId: current.originCityId || user.cityId || '',
+    }))
+    setPartyDraft((current) => ({
+      ...current,
+      provinceId: current.provinceId || user.provinceId || '',
+      cityId: current.cityId || user.cityId || '',
     }))
   }, [user])
 
@@ -137,6 +186,24 @@ export function ReservationCreatePage() {
     },
   })
 
+  useEffect(() => {
+    const defaults = stayDatesFromOccasions(settings.data)
+    if (!defaults.stayStartDate && !defaults.stayEndDate) return
+    setValues((current) => {
+      const stayStartDate = current.stayStartDate || defaults.stayStartDate
+      const stayEndDate = current.stayEndDate || defaults.stayEndDate
+      const walkingStartDate = current.walkingStartDate || defaults.walkingStartDate
+      if (
+        stayStartDate === current.stayStartDate &&
+        stayEndDate === current.stayEndDate &&
+        walkingStartDate === current.walkingStartDate
+      ) {
+        return current
+      }
+      return { ...current, stayStartDate, stayEndDate, walkingStartDate }
+    })
+  }, [settings.data])
+
   const capacity = useQuery({
     queryKey: ['reception-settings', year, 'capacity'],
     queryFn: async () => {
@@ -152,8 +219,12 @@ export function ReservationCreatePage() {
 
   function selectType(next: ReservationType) {
     setType(next)
+    setPartyDraft(emptyPartyDraft(user))
     setValues((current) => {
-      const patch: Partial<TravelValues> = { caravanId: next === 'CARAVAN' ? current.caravanId : '' }
+      const patch: Partial<TravelValues> = {
+        caravanId: next === 'CARAVAN' ? current.caravanId : '',
+        groupId: next === 'GROUP' ? current.groupId : '',
+      }
       if (next !== 'INDIVIDUAL') return { ...current, ...patch }
       const male = Number(current.maleCount) || 0
       const female = Number(current.femaleCount) || 0
@@ -164,18 +235,53 @@ export function ReservationCreatePage() {
     })
   }
 
-  function goToCountStep(next: ReservationType) {
+  function goAfterType(next: ReservationType) {
     selectType(next)
-    if (next === 'CARAVAN' && !values.caravanId) {
-      toast.error(t('reservations.caravanRequired'))
-      return
-    }
-    setStep('count')
+    setStep(next === 'GROUP' || next === 'CARAVAN' ? 'party' : 'count')
   }
 
   function goBack() {
     if (stepIndex <= 0) return
-    setStep(createSteps[stepIndex - 1])
+    setStep(steps[stepIndex - 1])
+  }
+
+  function selectedPartyId() {
+    if (type === 'CARAVAN') return values.caravanId
+    if (type === 'GROUP') return values.groupId
+    return ''
+  }
+
+  function applyParty(item: { id: string; maleCount: number; femaleCount: number }) {
+    setValues((current) => ({
+      ...current,
+      caravanId: type === 'CARAVAN' ? item.id : '',
+      groupId: type === 'GROUP' ? item.id : '',
+      maleCount: String(item.maleCount),
+      femaleCount: String(item.femaleCount),
+    }))
+  }
+
+  async function ensurePartySelected(): Promise<boolean> {
+    if (!partyKind) return true
+    if (selectedPartyId()) return true
+    const error = partyDraftError(partyDraft, partyKind, t, locale, needsPartyCity)
+    if (error) {
+      toast.error(error)
+      return false
+    }
+    try {
+      const created = await createReservationParty(partyKind, partyDraft)
+      applyParty(created)
+      setPartyDraft(emptyPartyDraft(user))
+      await queryClient.invalidateQueries({
+        queryKey: partyKind === 'CARAVAN' ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
+      })
+      toast.success(t(partyKind === 'CARAVAN' ? 'caravans.created' : 'groups.created'))
+      return true
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+      return false
+    }
   }
 
   function validateStep(): boolean {
@@ -184,8 +290,17 @@ export function ReservationCreatePage() {
         toast.error(t('reservations.typeRequired'))
         return false
       }
-      if (type === 'CARAVAN' && !values.caravanId) {
-        toast.error(t('reservations.caravanRequired'))
+      return true
+    }
+    if (step === 'party') {
+      if (selectedPartyId()) return true
+      if (!partyKind) {
+        toast.error(t('reservations.groupRequired'))
+        return false
+      }
+      const error = partyDraftError(partyDraft, partyKind, t, locale, needsPartyCity)
+      if (error) {
+        toast.error(error)
         return false
       }
       return true
@@ -216,17 +331,49 @@ export function ReservationCreatePage() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!validateStep()) return
+    if (step === 'party') {
+      setSubmitting(true)
+      try {
+        const ok = await ensurePartySelected()
+        if (ok) setStep(steps[stepIndex + 1])
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
     if (!lastStep) {
-      setStep(createSteps[stepIndex + 1])
+      setStep(steps[stepIndex + 1])
       return
     }
     if (!type) return
+    if (type === 'GROUP' && !values.groupId) {
+      toast.error(t('reservations.groupRequired'))
+      setStep('party')
+      return
+    }
+    if (type === 'CARAVAN' && !values.caravanId) {
+      toast.error(t('reservations.caravanRequired'))
+      setStep('party')
+      return
+    }
     const dateError = travelDatesError(values, t)
     if (dateError) {
       toast.error(dateError)
       setStep('dates')
       return
     }
+    confirmToast({
+      title: t('reservations.confirmSubmitForReview'),
+      confirmLabel: t('reservations.createAndSubmit'),
+      cancelLabel: t('common.cancel'),
+      onConfirm: () => {
+        void createReservation()
+      },
+    })
+  }
+
+  async function createReservation() {
+    if (!type) return
     const male = Number(values.maleCount) || 0
     const female = Number(values.femaleCount) || 0
     setSubmitting(true)
@@ -239,9 +386,12 @@ export function ReservationCreatePage() {
         stayStartDate: values.stayStartDate || null,
         stayEndDate: values.stayEndDate || null,
         walkingStartDate: values.walkingStartDate || null,
+        requestsAccommodation: values.requestsAccommodation,
+        requestsBus: values.requestsBus,
         maleCount: male,
         femaleCount: female,
         caravanId: type === 'CARAVAN' ? values.caravanId || null : null,
+        groupId: type === 'GROUP' ? values.groupId || null : null,
       })
       toast.success(
         data.status === 'PENDING_MANAGEMENT_REVIEW'
@@ -263,16 +413,21 @@ export function ReservationCreatePage() {
     <div className={userFormShellClassName}>
       <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
 
-      <CreateStepBar current={step} onSelect={(next) => {
-        const target = createSteps.indexOf(next)
-        if (target >= 0 && target <= stepIndex) setStep(next)
-      }} />
+      <CreateStepBar
+        current={step}
+        steps={steps}
+        type={type}
+        onSelect={(next) => {
+          const target = steps.indexOf(next)
+          if (target >= 0 && target <= stepIndex) setStep(next)
+        }}
+      />
 
       <AppForm
         key={step}
         autoFocusFirst={step !== 'type'}
         onSubmit={submit}
-        className={step === 'type' ? 'space-y-4' : `space-y-4 p-6 ${cardClassName}`}
+        className={step === 'type' || step === 'party' ? 'space-y-4' : `space-y-4 p-6 ${cardClassName}`}
       >
         {step === 'type' ? (
           <>
@@ -292,7 +447,7 @@ export function ReservationCreatePage() {
                     type="button"
                     disabled={!enabled}
                     data-enter-ignore=""
-                    onClick={() => goToCountStep(item)}
+                    onClick={() => goAfterType(item)}
                     className={`w-full rounded-[22px] border p-5 text-start transition-[box-shadow,transform,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:p-6 ${
                       selected
                         ? 'border-teal-500 bg-teal-50 shadow-[0_16px_36px_rgba(46,189,182,0.24),0_0_0_4px_rgba(255,255,255,0.95),0_0_0_7px_rgba(46,189,182,0.32)]'
@@ -326,13 +481,27 @@ export function ReservationCreatePage() {
                 )
               })}
             </div>
-            {type === 'CARAVAN' ? (
-              <div className={`space-y-4 p-6 ${cardClassName}`}>
-                <ReservationCaravanField values={values} onChange={patchValues} />
-              </div>
-            ) : null}
             <RequiredHidden value={type} />
           </>
+        ) : null}
+
+        {step === 'party' && partyKind ? (
+          <ReservationPartyFields
+            type={partyKind}
+            selectedId={selectedPartyId()}
+            draft={partyDraft}
+            onDraftChange={(patch) => {
+              setPartyDraft((current) => ({ ...current, ...patch }))
+              if (selectedPartyId()) {
+                setValues((current) => ({ ...current, caravanId: '', groupId: '' }))
+              }
+            }}
+            onSelect={(item) => {
+              applyParty(item)
+              setPartyDraft(emptyPartyDraft(user))
+            }}
+            onAdvance={() => setStep('count')}
+          />
         ) : null}
 
         {step === 'count' && type ? (
@@ -352,17 +521,18 @@ export function ReservationCreatePage() {
         ) : null}
 
         {step === 'dates' ? (
-          <ReservationDateFields values={values} onChange={patchValues} />
+          <ReservationDateFields values={values} onChange={patchValues} showOccasionHint={false} />
         ) : null}
 
         {step === 'optional' ? (
           <>
+            <ReservationApplicantFields values={values} onChange={patchValues} />
             <OptionalInfoHint />
             <ReservationOptionalGeoFields values={values} onChange={patchValues} iranId={iranId} />
           </>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 pt-6">
           {stepIndex > 0 ? (
             <Button type="button" onClick={goBack}>
               <ChevronRight className="size-4" aria-hidden />
@@ -378,6 +548,7 @@ export function ReservationCreatePage() {
             {lastStep ? <Check className="size-4" aria-hidden /> : <ChevronLeft className="size-4" aria-hidden />}
           </Button>
         </div>
+        {step === 'dates' ? <OccasionStayHint /> : null}
       </AppForm>
     </div>
   )
@@ -385,15 +556,19 @@ export function ReservationCreatePage() {
 
 function CreateStepBar({
   current,
+  steps,
+  type,
   onSelect,
 }: {
   current: CreateStep
+  steps: CreateStep[]
+  type: ReservationType | ''
   onSelect: (step: CreateStep) => void
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
-  const currentIndex = createSteps.indexOf(current)
-  const total = createSteps.length
+  const currentIndex = steps.indexOf(current)
+  const total = steps.length
   return (
     <div className={`${cardClassName} mb-4 p-4`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
@@ -406,9 +581,14 @@ function CreateStepBar({
             total: formatNumber(total, locale),
           })}
         />
-        <div className="grid min-w-0 w-full flex-1 grid-cols-4 gap-2 sm:order-first">
-          {createSteps.map((item, index) => {
-            const Icon = createStepIcons[item]
+        <div
+          className={`grid min-w-0 w-full flex-1 gap-2 sm:order-first ${
+            total === 5 ? 'grid-cols-5' : 'grid-cols-4'
+          }`}
+        >
+          {steps.map((item, index) => {
+            const Icon =
+              item === 'party' ? (type === 'CARAVAN' ? Footprints : Users) : createStepIcons[item]
             const state = index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'pending'
             const styles = {
               done: 'border-teal-200 bg-teal-50 text-teal-800',
@@ -417,11 +597,15 @@ function CreateStepBar({
               pending: 'border-line bg-cream-50 text-ink-400',
             }
             const clickable = index <= currentIndex
-            const className = `flex h-full w-full flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-center transition-[box-shadow,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${styles[state]} ${
+            const className = `flex h-full w-full flex-col items-center gap-1 rounded-2xl border px-1.5 py-3 text-center transition-[box-shadow,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${styles[state]} ${
               clickable ? 'cursor-pointer' : 'cursor-not-allowed'
             }`
             const numberClass =
               state === 'current' ? 'text-white' : state === 'done' ? 'text-teal-800' : 'text-ink-400'
+            const label =
+              item === 'party'
+                ? t(type === 'CARAVAN' ? 'reservations.createSteps.caravan' : 'reservations.createSteps.group')
+                : t(`reservations.createSteps.${item}`)
             const content = (
               <>
                 <span
@@ -436,7 +620,7 @@ function CreateStepBar({
                   {state === 'done' ? <Check className="size-4" aria-hidden /> : <Icon className="size-4" aria-hidden />}
                 </span>
                 <span className="text-[11px] font-medium leading-5 sm:text-xs">
-                  {t(`reservations.createSteps.${item}`)}
+                  {label}
                 </span>
                 <span className={`text-base font-semibold ${numberClass}`}>
                   {formatNumber(index + 1, locale)}
@@ -538,8 +722,7 @@ function RemainingCapacityCard({
           <Gauge className="size-3.5" aria-hidden />
         </span>
         <p className="min-w-0 text-xs font-medium text-ink-900">
-          {t('reservations.capacityTitle')}
-          <span className="ms-1.5 font-normal text-ink-500">{t(`reservations.types.${type}`)}</span>
+          {t('reservations.capacityTitle', { type: t(`reservations.types.${type}`) })}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-1.5">

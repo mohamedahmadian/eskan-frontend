@@ -1,5 +1,6 @@
 import {
   Building2,
+  Bus,
   CalendarCheck,
   CalendarX,
   Check,
@@ -8,7 +9,6 @@ import {
   Mars,
   Route,
   ScrollText,
-  ShieldCheck,
   UserRoundCog,
   Users,
   UserRound,
@@ -19,11 +19,14 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
 import { cardClassName } from '../../components/ui/Form'
-import { formatNumber, localizeDigits } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
 import { contactRoles } from './reservation-steps'
-import { InsuranceStatusBadge, ReservationStatusBadge } from './ReservationStatusBadge'
+import { ReservationMembersGrid } from './ReservationMembersGrid'
+import { ReservationStatusBadge } from './ReservationStatusBadge'
+import { ReservationCountMetrics } from './ReservationCountMetrics'
+import { ReservationIdentityChips } from './ReservationSectionHeader'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -55,10 +58,12 @@ function stayNightCount(start: string | null, end: string | null) {
 export function ReservationCompleteSummary({
   reservation,
   variant = 'complete',
+  audience = 'owner',
   footer,
 }: {
   reservation: Reservation
   variant?: 'complete' | 'cancelled'
+  audience?: 'owner' | 'admin'
   footer?: ReactNode
 }) {
   const { t, i18n } = useTranslation()
@@ -66,13 +71,12 @@ export function ReservationCompleteSummary({
   const n = (value: number) => formatNumber(value, locale)
   const nameOf = useGeoName()
   const empty = t('reservations.notEntered')
-  const unspecified = t('reservations.optionalUnspecified')
   const individual = reservation.type === 'INDIVIDUAL'
   const individualMale = individual && reservation.maleCount >= 1
   const individualFemale = individual && reservation.femaleCount >= 1
   const nights = stayNightCount(reservation.stayStartDate, reservation.stayEndDate)
-  const origin = reservation.originCity ? nameOf(reservation.originCity) : unspecified
-  const route = reservation.walkingRoute?.name ?? unspecified
+  const origin = reservation.originCity ? nameOf(reservation.originCity) : ''
+  const route = reservation.walkingRoute?.name ?? ''
   const members = reservation.members
   const contacts = reservation.caravanContacts
   const cancelled = variant === 'cancelled'
@@ -95,7 +99,13 @@ export function ReservationCompleteSummary({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-semibold text-ink-900">
-                {cancelled ? t('reservations.cancelledFileInfo') : t('reservations.completedTitle')}
+                {cancelled
+                  ? t('reservations.cancelledFileInfo')
+                  : t(
+                      audience === 'admin'
+                        ? 'reservations.completedTitleAdmin'
+                        : 'reservations.completedTitle',
+                    )}
               </h2>
               {cancelled ? null : <ReservationStatusBadge status={reservation.status} />}
             </div>
@@ -103,13 +113,19 @@ export function ReservationCompleteSummary({
               <p className="mt-1 text-xs leading-6 text-ink-600">{t('reservations.cancelledFileHint')}</p>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-1.5">
-              <MetaChip icon={ScrollText} label={`${t('reservations.year')} ${n(reservation.year)}`} />
-              <MetaChip icon={Users} label={t(`reservations.types.${reservation.type}`)} />
+              <ReservationIdentityChips reservation={reservation} />
               {reservation.completedAt ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-teal-100">
                   <CalendarCheck className="size-3 shrink-0 text-teal-600" aria-hidden />
                   <span>{t('reservations.completedAt')}</span>
                   <DateText value={reservation.completedAt} withTime />
+                </span>
+              ) : null}
+              {cancelled && reservation.cancelledAt ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-red-100">
+                  <CalendarX className="size-3 shrink-0 text-red-600" aria-hidden />
+                  <span>{t('reservations.cancelledAt')}</span>
+                  <DateText value={reservation.cancelledAt} withTime />
                 </span>
               ) : null}
             </div>
@@ -118,7 +134,7 @@ export function ReservationCompleteSummary({
       </header>
 
       <div className="space-y-5 p-5 sm:p-6">
-        {cancelled ? null : (
+        {cancelled || audience === 'admin' ? null : (
           <p className="rounded-2xl border border-teal-100 bg-gradient-to-l from-white to-teal-50 px-4 py-3 text-sm leading-7 text-ink-700">
             {t('reservations.completedBody')}
           </p>
@@ -140,29 +156,7 @@ export function ReservationCompleteSummary({
               tone={individualMale ? 'teal' : 'mint'}
             />
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <MetricTile
-                icon={Mars}
-                label={t('reservations.male')}
-                value={n(reservation.maleCount)}
-                unit={t('reservations.people')}
-                tone="teal"
-              />
-              <MetricTile
-                icon={Venus}
-                label={t('reservations.female')}
-                value={n(reservation.femaleCount)}
-                unit={t('reservations.people')}
-                tone="mint"
-              />
-              <MetricTile
-                icon={Users}
-                label={t('reservations.totalCount')}
-                value={n(reservation.totalCount)}
-                unit={t('reservations.people')}
-                tone="ink"
-              />
-            </div>
+            <ReservationCountMetrics reservation={reservation} dual />
           )}
         </section>
 
@@ -177,20 +171,19 @@ export function ReservationCompleteSummary({
               </span>
             ) : null}
           </div>
-          <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
-            <FactTile
-              icon={Footprints}
-              label={t('reservations.walkingStartDateShort')}
-              value={
-                reservation.walkingStartDate ? (
-                  <DateText value={reservation.walkingStartDate} />
-                ) : (
-                  empty
-                )
-              }
-              empty={!reservation.walkingStartDate}
-              tone="mint"
-            />
+          <div
+            className={`grid gap-2 sm:gap-3 ${
+              reservation.walkingStartDate ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+            }`}
+          >
+            {reservation.walkingStartDate ? (
+              <FactTile
+                icon={Footprints}
+                label={t('reservations.walkingStartDateShort')}
+                value={<DateText value={reservation.walkingStartDate} />}
+                tone="mint"
+              />
+            ) : null}
             <FactTile
               icon={CalendarCheck}
               label={t('reservations.stayStartDateShort')}
@@ -211,61 +204,72 @@ export function ReservationCompleteSummary({
         </section>
 
         <section>
-          <SectionTitle icon={MapPin}>{t('reservations.createSteps.optional')}</SectionTitle>
-          <div
-            className={`grid gap-2 sm:gap-3 ${reservation.type === 'CARAVAN' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}
-          >
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <FactTile
-              icon={MapPin}
-              label={t('reservations.originCity')}
-              value={origin}
-              empty={!reservation.originCity}
+              icon={Building2}
+              label={t('reservations.requestsAccommodation')}
+              value={reservation.requestsAccommodation ? t('common.yes') : t('common.no')}
               tone="teal"
             />
             <FactTile
-              icon={Route}
-              label={t('reservations.walkingRoute')}
-              value={route}
-              empty={!reservation.walkingRoute}
+              icon={Bus}
+              label={t('reservations.requestsBus')}
+              value={reservation.requestsBus ? t('common.yes') : t('common.no')}
               tone="mint"
             />
-            {reservation.type === 'CARAVAN' ? (
-              <FactTile
-                icon={Building2}
-                label={t('reservations.caravan')}
-                value={reservation.caravan?.name ?? empty}
-                empty={!reservation.caravan}
-                tone="ink"
-              />
-            ) : null}
           </div>
         </section>
+
+        {origin || route || reservation.caravan || reservation.group ? (
+          <section>
+            <SectionTitle icon={MapPin}>{t('reservations.createSteps.optional')}</SectionTitle>
+            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+              {origin ? (
+                <FactTile
+                  icon={MapPin}
+                  label={t('reservations.originCity')}
+                  value={origin}
+                  tone="teal"
+                />
+              ) : null}
+              {route ? (
+                <FactTile
+                  icon={Route}
+                  label={t('reservations.walkingRoute')}
+                  value={route}
+                  tone="mint"
+                />
+              ) : null}
+              {reservation.caravan ? (
+                <FactTile
+                  icon={Building2}
+                  label={t('reservations.caravan')}
+                  value={reservation.caravan.name}
+                  tone="ink"
+                />
+              ) : null}
+              {reservation.group ? (
+                <FactTile
+                  icon={Users}
+                  label={t('reservations.groupName')}
+                  value={reservation.group.name}
+                  tone="ink"
+                />
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
         {members?.length ? (
           <section>
             <SectionTitle icon={UserRound}>
               {cancelled ? t('reservations.steps.companions') : t('reservations.insuranceMembers')}
             </SectionTitle>
-            <ul className="space-y-2">
-              {members.map((item) => (
-                <li key={item.id}>
-                  <article className="flex items-center gap-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50 to-white px-3 py-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
-                      <ShieldCheck className="size-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-ink-900">{item.user.fullName}</p>
-                      {item.user.nationalId ? (
-                        <p className="mt-1 text-xs font-medium text-ink-600">
-                          {localizeDigits(item.user.nationalId, locale)}
-                        </p>
-                      ) : null}
-                    </div>
-                    <InsuranceStatusBadge status={item.insuranceStatus} />
-                  </article>
-                </li>
-              ))}
-            </ul>
+            <ReservationMembersGrid
+              members={members}
+              inputId="file-members-search"
+              showInsurance
+            />
           </section>
         ) : null}
 
@@ -323,15 +327,6 @@ function SectionTitle({
   )
 }
 
-function MetaChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-teal-100">
-      <Icon className="size-3 text-teal-600" aria-hidden />
-      {label}
-    </span>
-  )
-}
-
 function FactTile({
   icon: Icon,
   label,
@@ -357,32 +352,6 @@ function FactTile({
           {value}
         </p>
       </div>
-    </article>
-  )
-}
-
-function MetricTile({
-  icon: Icon,
-  label,
-  value,
-  unit,
-  tone,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  unit: string
-  tone: Tone
-}) {
-  const colors = toneClass[tone]
-  return (
-    <article className={`flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-center ${colors.wrap}`}>
-      <span className={`flex size-9 items-center justify-center rounded-xl ${colors.icon}`}>
-        <Icon className="size-4" aria-hidden />
-      </span>
-      <p className="text-[11px] font-medium text-ink-500">{label}</p>
-      <p className="text-lg font-bold leading-none text-ink-900">{value}</p>
-      <p className="text-[10px] text-ink-400">{unit}</p>
     </article>
   )
 }

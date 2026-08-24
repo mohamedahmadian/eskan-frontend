@@ -10,7 +10,7 @@ export function CaravanPilgrimageHistoryPage() {
   const { id } = useParams()
   const location = useLocation()
   const fromMyCaravans = location.pathname.startsWith('/my-caravans/')
-  const backTo = fromMyCaravans ? '/my-caravans' : `/caravans/${id}`
+  const backTo = fromMyCaravans ? `/my-caravans/${id}` : `/caravans/${id}`
 
   function submit(event: FormEvent) {
     event.preventDefault()

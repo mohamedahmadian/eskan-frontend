@@ -1,4 +1,4 @@
-import { History, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -13,18 +13,20 @@ import {
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
+import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import type { Caravan, Paginated } from '../../types/app'
+import type { Group, Paginated } from '../../types/app'
 
-export function MyCaravansListPage() {
-  const { t } = useTranslation()
+export function MyGroupsListPage() {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const nameOf = useGeoName()
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const query = useQuery({
-    queryKey: ['caravans', 'mine', q, page, sortBy, sortDir],
+    queryKey: ['groups', 'mine', q, page, sortBy, sortDir],
     queryFn: async () => {
-      const { data } = await api.get<Paginated<Caravan>>('/caravans/mine', {
+      const { data } = await api.get<Paginated<Group>>('/groups/mine', {
         params: { q: q || undefined, page, ...sortParams },
       })
       return data
@@ -36,13 +38,13 @@ export function MyCaravansListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
-        title={t('menus.myCaravans')}
-        subtitle={t('myCaravans.subtitle')}
+        title={t('menus.myGroups')}
+        subtitle={t('myGroups.subtitle')}
         action={
-          <Link to="/my-caravans/new">
+          <Link to="/my-groups/new">
             <Button>
               <Plus className="size-4" />
-              {t('caravans.create')}
+              {t('groups.create')}
             </Button>
           </Link>
         }
@@ -52,11 +54,11 @@ export function MyCaravansListPage() {
         onTermChange={setTerm}
         onSubmit={() => applySearch()}
         label={t('common.search')}
-        placeholder={t('myCaravans.searchPlaceholder')}
+        placeholder={t('myGroups.searchPlaceholder')}
       />
       <TableCard
         loading={query.isLoading}
-        empty={q ? t('myCaravans.noResults') : t('myCaravans.empty')}
+        empty={q ? t('myGroups.noResults') : t('myGroups.empty')}
         hasRows={rows.length > 0}
       >
         <table className="w-full text-sm">
@@ -64,21 +66,35 @@ export function MyCaravansListPage() {
             <tr>
               <SortableTh
                 column="name"
-                label={t('caravans.name')}
+                label={t('groups.name')}
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={onSort}
               />
               <SortableTh
                 column="city"
-                label={t('caravans.city')}
+                label={t('groups.city')}
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={onSort}
               />
               <SortableTh
-                column="isActive"
-                label={t('caravans.status')}
+                column="maleCount"
+                label={t('groups.maleCount')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="femaleCount"
+                label={t('groups.femaleCount')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="totalCount"
+                label={t('groups.totalCount')}
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={onSort}
@@ -87,25 +103,17 @@ export function MyCaravansListPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((caravan) => (
-              <tr key={caravan.id} className="border-t border-line">
-                <td className="px-4 py-3">{caravan.name}</td>
-                <td className="px-4 py-3">{caravan.city ? nameOf(caravan.city) : '—'}</td>
-                <td className="px-4 py-3">
-                  {caravan.isActive ? t('geo.active') : t('geo.inactive')}
-                </td>
+            {rows.map((group) => (
+              <tr key={group.id} className="border-t border-line">
+                <td className="px-4 py-3">{group.name}</td>
+                <td className="px-4 py-3">{group.city ? nameOf(group.city) : '—'}</td>
+                <td className="px-4 py-3">{formatNumber(group.maleCount, locale)}</td>
+                <td className="px-4 py-3">{formatNumber(group.femaleCount, locale)}</td>
+                <td className="px-4 py-3">{formatNumber(group.totalCount, locale)}</td>
                 <td className="px-4 py-3">
                   <EntityRowActions
-                    viewTo={`/my-caravans/${caravan.id}`}
-                    extra={
-                      <Link to={`/my-caravans/${caravan.id}/pilgrimage-history`}>
-                        <Button type="button" variant="soft">
-                          <History className="size-4" aria-hidden />
-                          {t('caravanPilgrimageHistory.open')}
-                        </Button>
-                      </Link>
-                    }
-                    editTo={`/my-caravans/${caravan.id}/edit`}
+                    viewTo={`/my-groups/${group.id}`}
+                    editTo={`/my-groups/${group.id}/edit`}
                   />
                 </td>
               </tr>

@@ -30,8 +30,12 @@ import { FileDropField } from '../../components/ui/FileDropField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
-import type { Caravan, City, Country, ManagedUser, Province } from '../../types/app'
+import type { Caravan, City, Country, Province } from '../../types/app'
 import { CaravanContactsPanel, firstIncompleteContactRole } from './CaravanContactsPanel'
+import {
+  CaravanManagerPicker,
+  type CaravanManagerChoice,
+} from './CaravanManagerPicker'
 import {
   caravanContactRoles,
   contactDraftsFromInitial,
@@ -64,12 +68,7 @@ export type CaravanPayload = {
   contacts: CaravanContactPayload[]
 }
 
-type ManagerOption = {
-  id: string
-  fullName: string
-  nationalId: string | null
-  phone: string | null
-}
+type ManagerOption = CaravanManagerChoice
 
 function emptyToNull(value: string) {
   const trimmed = value.trim()
@@ -107,13 +106,18 @@ function toOptionalYear(value: string) {
 }
 
 function toManagerOption(
-  user: Pick<ManagedUser, 'id' | 'fullName' | 'nationalId' | 'phone'> | NonNullable<Caravan['manager']>,
+  user:
+    | CaravanManagerChoice
+    | NonNullable<Caravan['manager']>,
 ): ManagerOption {
   return {
     id: user.id,
     fullName: user.fullName,
     nationalId: user.nationalId,
     phone: user.phone,
+    countryId: 'countryId' in user ? user.countryId : null,
+    provinceId: 'provinceId' in user ? user.provinceId : null,
+    cityId: 'cityId' in user ? user.cityId : null,
   }
 }
 
@@ -124,7 +128,6 @@ export function CaravanForm({
   countries,
   provinces,
   cities,
-  pilgrims = [],
   selectManager = true,
   currentUserId,
   defaultCountryId,
@@ -140,7 +143,6 @@ export function CaravanForm({
   countries: Country[]
   provinces: Province[]
   cities: City[]
-  pilgrims?: ManagedUser[]
   /** Admin can pick a pilgrim as manager; pilgrims/managers use current user. */
   selectManager?: boolean
   currentUserId?: string
@@ -175,6 +177,9 @@ export function CaravanForm({
   const [managerUserId, setManagerUserId] = useState(
     initial?.managerUserId ?? (selectManager ? '' : (currentUserId ?? '')),
   )
+  const [selectedManager, setSelectedManager] = useState<ManagerOption | null>(() =>
+    initial?.manager ? toManagerOption(initial.manager) : null,
+  )
   const [maleCount, setMaleCount] = useState(String(initial?.maleCount ?? 0))
   const [femaleCount, setFemaleCount] = useState(String(initial?.femaleCount ?? 0))
   const [eitaa, setEitaa] = useState(initial?.eitaa ?? '')
@@ -182,9 +187,6 @@ export function CaravanForm({
   const [telegram, setTelegram] = useState(initial?.telegram ?? '')
   const [instagram, setInstagram] = useState(initial?.instagram ?? '')
   const [isActive, setIsActive] = useState(initial?.isActive ?? true)
-  const [extraManagers] = useState<ManagerOption[]>(() =>
-    initial?.manager ? [toManagerOption(initial.manager)] : [],
-  )
   const [contactDrafts, setContactDrafts] = useState<
     Record<CaravanContactRole, CaravanContactDraft>
   >(() => initialContactDrafts(initial))
@@ -194,18 +196,6 @@ export function CaravanForm({
   const geoTouchedRef = useRef(Boolean(initial?.cityId))
 
   const totalCountValue = toCount(maleCount) + toCount(femaleCount)
-
-  const pilgrimOptions = [
-    ...extraManagers,
-    ...pilgrims
-      .filter((pilgrim) => !extraManagers.some((item) => item.id === pilgrim.id))
-      .map(toManagerOption),
-  ].map((pilgrim) => ({
-    value: pilgrim.id,
-    label: [pilgrim.fullName, pilgrim.nationalId, pilgrim.phone]
-      .filter(Boolean)
-      .join(' — '),
-  }))
 
   function applyGeoFromProfile(
     nextCountryId?: string | null,
@@ -334,26 +324,17 @@ export function CaravanForm({
           </FormField>
 
           {selectManager ? (
-            <FormField icon={UserRound} label={t('caravans.manager')} htmlFor="managerUserId">
-              <SearchSelect
-                id="managerUserId"
-                value={managerUserId}
-                required
-                onChange={(next) => {
-                  setManagerUserId(next)
-                  const pilgrim = pilgrims.find((item) => item.id === next)
-                  if (pilgrim?.provinceId && pilgrim.cityId) {
-                    applyGeoFromProfile(pilgrim.countryId, pilgrim.provinceId, pilgrim.cityId)
-                    geoTouchedRef.current = true
-                  }
-                }}
-                placeholder={t('caravans.selectManager')}
-                options={[
-                  { value: '', label: t('caravans.selectManager') },
-                  ...pilgrimOptions,
-                ]}
-              />
-            </FormField>
+            <CaravanManagerPicker
+              value={selectedManager}
+              onChange={(next) => {
+                setSelectedManager(next)
+                setManagerUserId(next.id)
+                if (next.provinceId && next.cityId) {
+                  applyGeoFromProfile(next.countryId, next.provinceId, next.cityId)
+                  geoTouchedRef.current = true
+                }
+              }}
+            />
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-3">

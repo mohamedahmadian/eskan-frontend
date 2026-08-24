@@ -1,32 +1,30 @@
-import { Tent } from 'lucide-react'
+import { UsersRound } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { useAuth } from '../../auth/AuthProvider'
 import {
   EntityNameSubtitle,
   LoadingState,
   PageHeader,
-  userFormShellClassName,
+  formShellClassName,
 } from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import type { Caravan, City, Country, Province } from '../../types/app'
-import { CaravanForm } from './CaravanForm'
+import type { City, Country, Group, Province } from '../../types/app'
+import { GroupForm } from './GroupForm'
 
-export function CaravanEditPage() {
+export function GroupEditPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
-  const fromMine = useLocation().pathname.startsWith('/my-caravans')
-  const listPath = fromMine ? '/my-caravans' : '/caravans'
+  const fromMine = useLocation().pathname.startsWith('/my-groups')
+  const listPath = fromMine ? '/my-groups' : '/groups'
   const item = useQuery({
-    queryKey: ['caravan', id],
+    queryKey: ['group', id],
     enabled: Boolean(id),
     queryFn: async () => {
-      const { data } = await api.get<Caravan>(`/caravans/${id}`)
+      const { data } = await api.get<Group>(`/groups/${id}`)
       return data
     },
   })
@@ -65,28 +63,26 @@ export function CaravanEditPage() {
     },
   })
 
-  if (!item.data || !countries.data || (fromMine && !user)) {
+  if (!item.data || !countries.data) {
     return <LoadingState />
   }
 
   return (
-    <div className={userFormShellClassName}>
+    <div className={formShellClassName}>
       <PageHeader
-        title={t('caravans.edit')}
-        subtitle={<EntityNameSubtitle name={item.data.name} icon={Tent} />}
+        title={t('groups.edit')}
+        subtitle={<EntityNameSubtitle name={item.data.name} icon={UsersRound} />}
       />
-      <CaravanForm
+      <GroupForm
         initial={item.data}
         countries={countries.data}
         provinces={provinces.data ?? []}
         cities={cities.data ?? []}
-        selectManager={!fromMine}
-        currentUserId={fromMine ? user?.id : undefined}
         onCountryChange={setCountryId}
         onProvinceChange={setProvinceId}
         onSubmit={async (payload) => {
-          await api.patch(`/caravans/${id}`, payload)
-          toast.success(t('caravans.updated'))
+          await api.patch(`/groups/${id}`, payload)
+          toast.success(t('groups.updated'))
           navigate(`${listPath}/${id}`)
         }}
       />

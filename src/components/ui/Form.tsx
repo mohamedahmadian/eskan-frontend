@@ -165,9 +165,6 @@ function resolvePageBackTo(pathname: string): string | undefined {
   if (segments.length === 0 || segments[0] === 'v') return undefined
 
   const last = segments[segments.length - 1]
-  if (segments[0] === 'my-caravans' && last === 'pilgrimage-history') {
-    return '/my-caravans'
-  }
   if (PAGE_BACK_LEAVES.has(last)) {
     return segments.length > 1 ? joinPath(segments.slice(0, -1)) : undefined
   }

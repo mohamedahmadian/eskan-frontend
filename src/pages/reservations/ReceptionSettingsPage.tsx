@@ -1,4 +1,4 @@
-import { Banknote, Building2, Calendar, FileText, Info, Users } from 'lucide-react'
+import { Banknote, Building2, Calendar, CalendarDays, FileText, Info, Users } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -13,13 +13,14 @@ import {
   fieldClassName,
   formShellClassName,
 } from '../../components/ui/Form'
+import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear, persianYearOptions } from '../../lib/datetime'
+import { addDaysIso, currentPersianYear, persianYearOptions } from '../../lib/datetime'
 import type { ReceptionSettings, ReservationType } from '../../types/app'
 
 type Draft = Omit<ReceptionSettings, 'year' | 'exists'>
-type ReceptionTab = ReservationType | 'INSURANCE'
+type ReceptionTab = ReservationType | 'INSURANCE' | 'OCCASIONS'
 
 const emptyDraft = (): Draft => ({
   individualEnabled: false,
@@ -37,6 +38,8 @@ const emptyDraft = (): Draft => ({
   insuranceOrganization: '',
   insurancePremiumAmount: 0,
   insuranceCoverage: '',
+  imamRezaMartyrdomDate: null,
+  prophetDemiseDate: null,
 })
 
 function toDraft(data: ReceptionSettings | Draft): Draft {
@@ -56,11 +59,13 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     insuranceOrganization: data.insuranceOrganization ?? '',
     insurancePremiumAmount: data.insurancePremiumAmount ?? 0,
     insuranceCoverage: data.insuranceCoverage ?? '',
+    imamRezaMartyrdomDate: data.imamRezaMartyrdomDate ?? null,
+    prophetDemiseDate: data.prophetDemiseDate ?? null,
   }
 }
 
 const types: ReservationType[] = ['INDIVIDUAL', 'GROUP', 'CARAVAN']
-const tabs: ReceptionTab[] = [...types, 'INSURANCE']
+const tabs: ReceptionTab[] = [...types, 'INSURANCE', 'OCCASIONS']
 
 function typeKeys(type: ReservationType) {
   if (type === 'INDIVIDUAL') {
@@ -95,6 +100,7 @@ function typeKeys(type: ReservationType) {
 
 function tabLabel(item: ReceptionTab, t: (key: string) => string) {
   if (item === 'INSURANCE') return t('receptionSettings.insurance')
+  if (item === 'OCCASIONS') return t('receptionSettings.occasions')
   return t(`receptionSettings.${typeKeys(item).title}`)
 }
 
@@ -167,8 +173,34 @@ export function ReceptionSettingsPage() {
     setDraft((current) => ({ ...current, [key]: value }))
   }
 
+  function patchProphetDemiseDate(iso?: string) {
+    const prophetDemiseDate = iso ?? null
+    setDraft((current) => ({
+      ...current,
+      prophetDemiseDate,
+      imamRezaMartyrdomDate: prophetDemiseDate ? addDaysIso(prophetDemiseDate, 1) : null,
+    }))
+  }
+
+  function occasionsSequenceError() {
+    const prophet = draft.prophetDemiseDate
+    const imam = draft.imamRezaMartyrdomDate
+    if (!prophet && !imam) return null
+    if (!prophet || !imam || imam !== addDaysIso(prophet, 1)) {
+      return t('receptionSettings.occasionsSequenceInvalid')
+    }
+    return null
+  }
+
+  const occasionError = occasionsSequenceError()
+
   function submit(event: FormEvent) {
     event.preventDefault()
+    if (occasionError) {
+      setTab('OCCASIONS')
+      toast.error(occasionError)
+      return
+    }
     save.mutate()
   }
 
@@ -306,6 +338,38 @@ export function ReceptionSettingsPage() {
               maxLength={4000}
             />
           </FormField>
+        </section>
+        <section data-tab="OCCASIONS" className={panelClass('OCCASIONS')}>
+          <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.occasionsHint')}</p>
+          <FormField
+            icon={CalendarDays}
+            label={t('receptionSettings.prophetDemiseDate')}
+            htmlFor="prophetDemiseDate"
+          >
+            <PersianDateField
+              id="prophetDemiseDate"
+              value={draft.prophetDemiseDate || undefined}
+              onChange={patchProphetDemiseDate}
+              showHijri
+            />
+          </FormField>
+          <FormField
+            icon={CalendarDays}
+            label={t('receptionSettings.imamRezaMartyrdomDate')}
+            htmlFor="imamRezaMartyrdomDate"
+          >
+            <PersianDateField
+              id="imamRezaMartyrdomDate"
+              value={draft.imamRezaMartyrdomDate || undefined}
+              onChange={(iso) => patch('imamRezaMartyrdomDate', iso ?? null)}
+              showHijri
+            />
+          </FormField>
+          {occasionError ? (
+            <p className="text-sm font-medium leading-7 text-red-700" role="alert">
+              {occasionError}
+            </p>
+          ) : null}
         </section>
         <FormActions submitLabel={t('receptionSettings.save')} submitting={save.isPending} />
       </AppForm>

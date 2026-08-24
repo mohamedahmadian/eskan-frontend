@@ -96,7 +96,7 @@ export function SearchSelect({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative z-20">
       <button
         id={fieldId}
         type="button"
@@ -125,7 +125,7 @@ export function SearchSelect({
       {open ? (
         <div
           data-enter-ignore
-          className="absolute inset-inline-start-0 z-50 mt-1 w-full overflow-hidden rounded-2xl border border-line bg-white shadow-[0_16px_40px_rgba(20,40,40,0.12)]"
+          className="absolute inset-inline-start-0 z-50 mt-1 w-full rounded-2xl border border-line bg-white shadow-[0_16px_40px_rgba(20,40,40,0.12)]"
         >
           <div className="border-b border-line p-2">
             <label className="flex items-center gap-2 rounded-xl bg-cream-50 px-3 py-2">

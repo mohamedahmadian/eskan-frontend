@@ -3,16 +3,18 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
+import { useAuth } from '../../auth/AuthProvider'
+import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import type { Caravan, City, Country, Province } from '../../types/app'
-import { CaravanForm } from './CaravanForm'
+import type { City, Country, Group, Province } from '../../types/app'
+import { GroupForm } from './GroupForm'
 
-export function CaravanCreatePage() {
+export function MyGroupCreatePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [countryId, setCountryId] = useState('')
-  const [provinceId, setProvinceId] = useState('')
+  const { user, refresh } = useAuth()
+  const [countryId, setCountryId] = useState(user?.countryId ?? '')
+  const [provinceId, setProvinceId] = useState(user?.provinceId ?? '')
 
   const countries = useQuery({
     queryKey: ['countries', 'lookup'],
@@ -23,7 +25,7 @@ export function CaravanCreatePage() {
   })
 
   const iranId = countries.data?.find((country) => country.iso2 === 'IR')?.id ?? ''
-  const selectedCountryId = countryId || iranId
+  const selectedCountryId = countryId || user?.countryId || iranId
 
   const provinces = useQuery({
     queryKey: ['provinces', 'lookup', selectedCountryId],
@@ -47,26 +49,29 @@ export function CaravanCreatePage() {
     },
   })
 
-  if (!countries.data) {
+  if (!countries.data || !user) {
     return <LoadingState />
   }
 
   return (
-    <div className={userFormShellClassName}>
-      <PageHeader title={t('caravans.create')} subtitle={t('caravans.createSubtitle')} />
-      <CaravanForm
+    <div className={formShellClassName}>
+      <PageHeader title={t('groups.create')} subtitle={t('myGroups.createSubtitle')} />
+      <GroupForm
         initialCountryId={selectedCountryId}
         initialProvinceId={provinceId}
         countries={countries.data}
         provinces={provinces.data ?? []}
         cities={cities.data ?? []}
-        selectManager
+        defaultCountryId={user.countryId || iranId}
+        defaultProvinceId={user.provinceId}
+        defaultCityId={user.cityId}
         onCountryChange={setCountryId}
         onProvinceChange={setProvinceId}
         onSubmit={async (payload) => {
-          await api.post<Caravan>('/caravans', payload)
-          toast.success(t('caravans.created'))
-          navigate('/caravans')
+          await api.post<Group>('/groups', payload)
+          await refresh()
+          toast.success(t('groups.created'))
+          navigate('/my-groups')
         }}
       />
     </div>

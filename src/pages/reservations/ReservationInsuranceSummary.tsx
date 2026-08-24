@@ -2,7 +2,6 @@ import {
   Banknote,
   CalendarDays,
   Clock3,
-  Lock,
   Shield,
   ShieldCheck,
   Users,
@@ -15,10 +14,11 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
 import { cardClassName } from '../../components/ui/Form'
-import { formatGroupedNumber, formatNumber, localizeDigits } from '../../lib/datetime'
-import type { Reservation, ReservationMemberInsuranceStatus } from '../../types/app'
-import { summarizeInsurance } from './reservation-steps'
-import { InsuranceStatusBadge } from './ReservationStatusBadge'
+import { formatGroupedNumber, formatNumber } from '../../lib/datetime'
+import type { Reservation } from '../../types/app'
+import { insurancePaidMethodLabel, summarizeInsurance } from './reservation-steps'
+import { ReservationMembersGrid } from './ReservationMembersGrid'
+import { ReservationIdentityChips, ReservationSectionHeader } from './ReservationSectionHeader'
 
 type Tone = 'teal' | 'mint' | 'ink' | 'amber' | 'red'
 
@@ -45,20 +45,6 @@ const toneClass: Record<Tone, { wrap: string; icon: string }> = {
   },
 }
 
-const memberTone: Record<ReservationMemberInsuranceStatus, Tone> = {
-  PENDING: 'amber',
-  PAID: 'teal',
-  APPROVED: 'mint',
-  REJECTED: 'red',
-}
-
-const memberIcon: Record<ReservationMemberInsuranceStatus, LucideIcon> = {
-  PENDING: Clock3,
-  PAID: Wallet,
-  APPROVED: ShieldCheck,
-  REJECTED: XCircle,
-}
-
 export function ReservationInsuranceSummary({
   reservation,
   hint,
@@ -76,7 +62,7 @@ export function ReservationInsuranceSummary({
   const members = reservation.members
   const summary = summarizeInsurance(members ?? [])
   const individual = reservation.type === 'INDIVIDUAL'
-  const hasPayment = summary.paid + summary.approved > 0 || Boolean(summary.lastPaidAt)
+  const hasPayment = summary.approved > 0 || Boolean(summary.lastPaidAt)
   const amountText = `${formatGroupedNumber(summary.paidAmount, locale)} ${t('receptionSettings.toman')}`
 
   if (members === undefined) {
@@ -104,13 +90,6 @@ export function ReservationInsuranceSummary({
       tone: 'mint',
     },
     {
-      key: 'paid',
-      label: t('reservations.insurancePaidCount'),
-      value: summary.paid,
-      icon: Wallet,
-      tone: 'teal',
-    },
-    {
       key: 'pending',
       label: t('reservations.insurancePendingCount'),
       value: summary.pending,
@@ -128,58 +107,27 @@ export function ReservationInsuranceSummary({
 
   return (
     <section className={`${cardClassName} overflow-hidden`}>
-      <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
-        <div
-          className="pointer-events-none absolute -start-8 -top-10 size-32 rounded-full bg-teal-200/30"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
-          aria-hidden
-        />
-        <div className="relative flex items-start gap-3">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
-            <Shield className="size-6" aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold text-ink-900">{t('reservations.steps.insurance')}</h2>
-              {readonly ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-teal-800 ring-1 ring-teal-100">
-                  <Lock className="size-3" aria-hidden />
-                  {t('reservations.readonlyBadge')}
-                </span>
-              ) : null}
-              {summary.completed ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-teal-500 px-2 py-0.5 text-[11px] font-medium text-white">
-                  <ShieldCheck className="size-3" aria-hidden />
-                  {t('reservations.insuranceCompleteBadge')}
-                </span>
-              ) : null}
-            </div>
-            {hint ? <p className="mt-1 text-xs leading-6 text-ink-600">{hint}</p> : null}
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <MetaChip
-                icon={ShieldCheck}
-                label={
-                  individual
-                    ? t('reservations.insuranceIndividualPaidSummary')
-                    : t('reservations.insuranceSummary', {
-                        approved: n(summary.approved + summary.paid),
-                        total: n(summary.total),
-                      })
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </header>
+      <ReservationSectionHeader
+        icon={Shield}
+        title={t('reservations.steps.insurance')}
+        hint={hint}
+        readonly={readonly}
+        badge={
+          summary.completed ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-teal-500 px-2 py-0.5 text-[11px] font-medium text-white">
+              <ShieldCheck className="size-3" aria-hidden />
+              {t('reservations.insuranceCompleteBadge')}
+            </span>
+          ) : null
+        }
+        chips={<ReservationIdentityChips reservation={reservation} />}
+      />
 
       <div className="space-y-5 p-5 sm:p-6">
         {individual ? null : (
           <section>
             <SectionTitle icon={Users}>{t('reservations.insuranceTotal')}</SectionTitle>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
               {metrics.map((item) => (
                 <MetricTile
                   key={item.key}
@@ -223,45 +171,35 @@ export function ReservationInsuranceSummary({
                 empty={!summary.lastPaidAt}
                 tone="mint"
               />
+              {individual && members[0] ? (
+                <>
+                  <FactTile
+                    icon={Wallet}
+                    label={t('reservations.insurancePaidMethod')}
+                    value={insurancePaidMethodLabel(members[0].insurancePaidMethod, t) ?? '—'}
+                    empty={!members[0].insurancePaidMethod}
+                    tone="teal"
+                  />
+                  <FactTile
+                    icon={UserRound}
+                    label={t('reservations.insurancePaidBy')}
+                    value={members[0].insurancePaidBy?.fullName ?? '—'}
+                    empty={!members[0].insurancePaidBy}
+                    tone="ink"
+                  />
+                </>
+              ) : null}
             </div>
           </section>
         ) : null}
 
         <section>
           <SectionTitle icon={UserRound}>{t('reservations.insuranceMembers')}</SectionTitle>
-          {members.length ? (
-            <ul className="space-y-2">
-              {members.map((item) => {
-                const tone = memberTone[item.insuranceStatus]
-                const Icon = memberIcon[item.insuranceStatus]
-                const colors = toneClass[tone]
-                return (
-                  <li key={item.id}>
-                    <article
-                      className={`flex items-center gap-3 rounded-2xl border px-3 py-3 ${colors.wrap}`}
-                    >
-                      <span
-                        className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${colors.icon}`}
-                      >
-                        <Icon className="size-4" aria-hidden />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-ink-900">{item.user.fullName}</p>
-                        {item.user.nationalId ? (
-                          <p className="mt-1 text-xs font-medium text-ink-600">
-                            {localizeDigits(item.user.nationalId, locale)}
-                          </p>
-                        ) : null}
-                      </div>
-                      <InsuranceStatusBadge status={item.insuranceStatus} />
-                    </article>
-                  </li>
-                )
-              })}
-            </ul>
-          ) : (
-            <p className="text-sm text-ink-500">{t('reservations.membersEmpty')}</p>
-          )}
+          <ReservationMembersGrid
+            members={members}
+            inputId="insurance-members-search"
+            showInsurance
+          />
         </section>
       </div>
 
@@ -286,15 +224,6 @@ function SectionTitle({
       </span>
       {children}
     </h3>
-  )
-}
-
-function MetaChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-teal-100">
-      <Icon className="size-3 text-teal-600" aria-hidden />
-      {label}
-    </span>
   )
 }
 

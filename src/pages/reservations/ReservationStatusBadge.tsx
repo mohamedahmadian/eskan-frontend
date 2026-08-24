@@ -1,5 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import type { ReservationMemberInsuranceStatus, ReservationStatus } from '../../types/app'
+import type {
+  ReservationMemberInsuranceStatus,
+  ReservationStatus,
+  ReservationType,
+} from '../../types/app'
 
 const statusTones: Record<ReservationStatus, { wrap: string; dot: string }> = {
   DRAFT: { wrap: 'bg-amber-100 text-amber-900', dot: 'bg-amber-500' },
@@ -41,17 +45,29 @@ export function ReservationStatusBadge({ status }: { status: ReservationStatus }
   return <StatusChip label={t(`reservations.statuses.${status}`)} tone={statusTones[status]} />
 }
 
+const typeTones: Record<ReservationType, { wrap: string; dot: string }> = {
+  INDIVIDUAL: { wrap: 'bg-teal-100 text-teal-800', dot: 'bg-teal-500' },
+  GROUP: { wrap: 'bg-mint-100 text-mint-600', dot: 'bg-mint-500' },
+  CARAVAN: { wrap: 'bg-gold-100 text-gold-600', dot: 'bg-gold-500' },
+}
+
+export function ReservationTypeBadge({ type }: { type: ReservationType }) {
+  const { t } = useTranslation()
+  return <StatusChip label={t(`reservations.types.${type}`)} tone={typeTones[type]} />
+}
+
 export function InsuranceStatusBadge({
   status,
 }: {
   status: ReservationMemberInsuranceStatus
 }) {
   const { t } = useTranslation()
+  const display = status === 'PAID' ? 'APPROVED' : status
   const labels: Record<ReservationMemberInsuranceStatus, string> = {
     PENDING: t('reservations.insurancePending'),
-    PAID: t('reservations.insurancePaid'),
+    PAID: t('reservations.insuranceApproved'),
     APPROVED: t('reservations.insuranceApproved'),
     REJECTED: t('reservations.insuranceRejected'),
   }
-  return <StatusChip label={labels[status]} tone={insuranceTones[status]} />
+  return <StatusChip label={labels[display]} tone={insuranceTones[display]} />
 }

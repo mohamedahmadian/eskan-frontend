@@ -32,6 +32,7 @@ import {
   UserRoundCog,
   UserRoundCheck,
   Users,
+  UsersRound,
   UtensilsCrossed,
   type LucideIcon,
 } from 'lucide-react'
@@ -40,6 +41,7 @@ const icons: Record<string, LucideIcon> = {
   'layout-dashboard': LayoutDashboard,
   home: Home,
   users: Users,
+  'users-round': UsersRound,
   footprints: Footprints,
   tent: Tent,
   'user-cog': UserCog,

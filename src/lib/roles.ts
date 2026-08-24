@@ -20,12 +20,28 @@ export function isCaravanManager(user: AuthUser | null | undefined) {
   return hasRole(user, 'CARAVAN_MANAGER')
 }
 
+export function isGroupManager(user: AuthUser | null | undefined) {
+  return hasRole(user, 'GROUP_MANAGER')
+}
+
 export function canAccessMyCaravans(user: AuthUser | null | undefined) {
   return isAdmin(user) || isCaravanManager(user)
 }
 
+export function canAccessMyGroups(user: AuthUser | null | undefined) {
+  return (
+    isAdmin(user) ||
+    isGroupManager(user) ||
+    isCaravanManager(user) ||
+    isPilgrim(user)
+  )
+}
+
 export function usesDedicatedHomeDashboard(user: AuthUser | null | undefined) {
-  return !isAdmin(user) && (isPilgrim(user) || isCaravanManager(user))
+  return (
+    !isAdmin(user) &&
+    (isPilgrim(user) || isCaravanManager(user) || isGroupManager(user))
+  )
 }
 
 export function formatRoles(
