@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { localizeDigits } from '../../lib/datetime'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   Button,
@@ -15,7 +16,8 @@ import { DetailRow } from '../geo/GeoShared'
 import { Package } from 'lucide-react'
 
 export function SupplierDetailPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const { id } = useParams()
   const navigate = useNavigate()
   const { confirmDelete } = useConfirmDelete()
@@ -41,7 +43,7 @@ export function SupplierDetailPage() {
           <DetailRow label={t('suppliers.name')} value={item.name} />
           <DetailRow label={t('suppliers.type')} value={t(`supplierTypes.${item.type}`)} />
           <DetailRow label={t('suppliers.address')} value={item.address || '—'} />
-          <DetailRow label={t('suppliers.phone')} value={item.phone || '—'} />
+          <DetailRow label={t('suppliers.phone')} value={item.phone ? localizeDigits(item.phone, locale) : '—'} />
           <DetailRow label={t('suppliers.contactPerson')} value={item.contactPerson || '—'} />
           <DetailRow label={t('suppliers.description')} value={item.description || '—'} />
         </dl>

@@ -2,7 +2,8 @@ import { AlignLeft, Compass, HandHeart, MapPin, MapPinned, Navigation, Phone } f
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
@@ -86,7 +87,12 @@ export function BenefactorForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={HandHeart}
+      title={initial ? initial.name || t('benefactors.edit') : t('benefactors.create')}
+      subtitle={initial ? undefined : t('benefactors.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={MapPinned} label={t('geo.province')} htmlFor="provinceId">
         <SearchSelect
           id="provinceId"
@@ -197,5 +203,6 @@ export function BenefactorForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

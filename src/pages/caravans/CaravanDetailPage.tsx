@@ -13,6 +13,7 @@ import {
   Mars,
   MessageCircle,
   Phone,
+  Route,
   Share2,
   Shield,
   Tent,
@@ -206,6 +207,15 @@ export function CaravanDetailPage() {
                 value={city || empty}
                 empty={!city}
                 tone="ink"
+              />
+            </div>
+            <div className="mt-2 sm:mt-3">
+              <FactTile
+                icon={Route}
+                label={t('caravans.walkingRoute')}
+                value={caravan.walkingRoute?.name || empty}
+                empty={!caravan.walkingRoute}
+                tone="teal"
               />
             </div>
           </section>

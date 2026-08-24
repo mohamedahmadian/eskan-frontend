@@ -8,10 +8,10 @@ import {
   FormActions,
   FormField,
   PageHeader,
-  cardClassName,
   fieldClassName,
   formShellClassName,
 } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatGroupedNumber, parseDigitString } from '../../lib/datetime'
@@ -75,12 +75,12 @@ export function LogisticsSettingsPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader title={t('menus.logisticsSettings')} subtitle={t('logisticsSettings.subtitle')} />
-      <section className={`space-y-4 p-6 ${cardClassName}`}>
-        <div>
-          <h2 className="text-base font-medium text-ink-900">{t('logisticsSettings.iceSection')}</h2>
-          <p className="mt-1 text-sm text-ink-500">{t('logisticsSettings.iceSectionHint')}</p>
-        </div>
-        <AppForm onSubmit={onSubmit} className="space-y-4">
+      <FormCard
+        icon={Snowflake}
+        title={t('logisticsSettings.iceSection')}
+        subtitle={t('logisticsSettings.iceSectionHint')}
+      >
+        <AppForm onSubmit={onSubmit} className={formCardBodyClassName}>
           <FormField
             icon={Snowflake}
             label={t('logisticsSettings.moldsPer50Pilgrims')}
@@ -145,7 +145,7 @@ export function LogisticsSettingsPage() {
             submitting={save.isPending || query.isLoading}
           />
         </AppForm>
-      </section>
+      </FormCard>
     </div>
   )
 }

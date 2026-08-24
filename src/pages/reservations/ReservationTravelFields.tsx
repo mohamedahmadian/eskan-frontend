@@ -3,24 +3,24 @@ import {
   Bus,
   Calendar,
   Footprints,
-  HeartHandshake,
   MapPin,
   MoonStar,
   Route,
-} from 'lucide-react'
-import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
-import { useAuth } from '../../auth/AuthProvider'
-import { CheckboxField } from '../../components/ui/CheckboxField'
-import { DateText, HijriDateText } from '../../components/ui/DateText'
-import { FormField } from '../../components/ui/Form'
-import { PersianDateField } from '../../components/ui/PersianDateField'
-import { SearchSelect } from '../../components/ui/SearchSelect'
-import { api, getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear } from '../../lib/datetime'
-import { useGeoName } from '../../lib/geo'
+  Shield,
+} from "lucide-react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { useAuth } from "../../auth/AuthProvider";
+import { CheckboxField } from "../../components/ui/CheckboxField";
+import { DateText, HijriDateText } from "../../components/ui/DateText";
+import { FormField } from "../../components/ui/Form";
+import { PersianDateField } from "../../components/ui/PersianDateField";
+import { SearchSelect } from "../../components/ui/SearchSelect";
+import { api, getApiErrorMessage } from "../../lib/api";
+import { currentPersianYear } from "../../lib/datetime";
+import { useGeoName } from "../../lib/geo";
 import type {
   City,
   Paginated,
@@ -28,50 +28,65 @@ import type {
   ReceptionSettings,
   ReservationType,
   WalkingRoute,
-} from '../../types/app'
-import { ReservationCountFields } from './ReservationCountFields'
+} from "../../types/app";
+import { ReservationCountFields } from "./ReservationCountFields";
 import {
   createReservationParty,
   emptyPartyDraft,
   partyDraftError,
   ReservationPartyFields,
   type PartyDraft,
+  type PartyItemSnapshot,
   type PartyKind,
-} from './ReservationPartyFields'
+} from "./ReservationPartyFields";
+import type { TravelSubStep } from "./travel-sub-steps";
 
 export function travelDatesError(
-  values: Pick<TravelValues, 'walkingStartDate' | 'stayStartDate' | 'stayEndDate'>,
+  values: Pick<
+    TravelValues,
+    "walkingStartDate" | "stayStartDate" | "stayEndDate"
+  >,
   t: (key: string) => string,
 ) {
   if (!values.stayStartDate) {
-    return t('reservations.stayStartRequired')
+    return t("reservations.stayStartRequired");
   }
   if (!values.stayEndDate) {
-    return t('reservations.stayEndRequired')
+    return t("reservations.stayEndRequired");
   }
-  if (values.stayStartDate && values.walkingStartDate && values.stayStartDate <= values.walkingStartDate) {
-    return t('reservations.walkingRangeInvalid')
+  if (
+    values.stayStartDate &&
+    values.walkingStartDate &&
+    values.stayStartDate <= values.walkingStartDate
+  ) {
+    return t("reservations.walkingRangeInvalid");
   }
-  if (values.stayEndDate && values.stayStartDate && values.stayEndDate <= values.stayStartDate) {
-    return t('reservations.stayRangeInvalid')
+  if (
+    values.stayEndDate &&
+    values.stayStartDate &&
+    values.stayEndDate <= values.stayStartDate
+  ) {
+    return t("reservations.stayRangeInvalid");
   }
-  return null
+  return null;
 }
 
 export type TravelValues = {
-  provinceId: string
-  originCityId: string
-  walkingRouteId: string
-  stayStartDate: string
-  stayEndDate: string
-  walkingStartDate: string
-  maleCount: string
-  femaleCount: string
-  caravanId: string
-  groupId: string
-  requestsAccommodation: boolean
-  requestsBus: boolean
-}
+  provinceId: string;
+  originCityId: string;
+  walkingRouteId: string;
+  stayStartDate: string;
+  stayEndDate: string;
+  walkingStartDate: string;
+  maleCount: string;
+  femaleCount: string;
+  requestedMaleCount: string;
+  requestedFemaleCount: string;
+  caravanId: string;
+  groupId: string;
+  requestsAccommodation: boolean;
+  requestsBus: boolean;
+};
 
 export function ReservationTravelFields({
   values,
@@ -79,45 +94,82 @@ export function ReservationTravelFields({
   type,
   locked,
   iranId,
+  activeSubStep,
+  dualCounts,
+  selectedParty,
+  subjectUser,
 }: {
-  values: TravelValues
-  onChange: (patch: Partial<TravelValues>) => void
-  type: ReservationType
-  locked?: boolean
-  iranId: string
+  values: TravelValues;
+  onChange: (patch: Partial<TravelValues>) => void;
+  type: ReservationType;
+  locked?: boolean;
+  iranId: string;
+  activeSubStep: TravelSubStep;
+  dualCounts?: boolean;
+  selectedParty?: PartyItemSnapshot | null;
+  subjectUser?: {
+    id?: string;
+    fullName?: string;
+    nationalId?: string | null;
+    phone?: string | null;
+    countryId?: string | null;
+    provinceId?: string | null;
+    cityId?: string | null;
+    roles?: { code: string }[];
+  } | null;
 }) {
-  const { t } = useTranslation()
-  return (
-    <div className="space-y-6">
-      <section className="space-y-4">
-        <h3 className="text-sm font-semibold text-ink-800">{t('reservations.createSteps.count')}</h3>
-        <ReservationCountFields values={values} onChange={onChange} type={type} locked={locked} />
-      </section>
-      {type === 'GROUP' || type === 'CARAVAN' ? (
-        <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-ink-800">
-            {t(type === 'CARAVAN' ? 'reservations.createSteps.caravan' : 'reservations.createSteps.group')}
-          </h3>
-          <ReservationTravelPartyField values={values} onChange={onChange} type={type} locked={locked} />
-        </section>
-      ) : null}
-      <section className="space-y-4">
-        <h3 className="text-sm font-semibold text-ink-800">{t('reservations.createSteps.dates')}</h3>
-        <ReservationDateFields values={values} onChange={onChange} locked={locked} />
-      </section>
-      <section className="space-y-4">
-        <h3 className="text-sm font-semibold text-ink-800">{t('reservations.createSteps.optional')}</h3>
-        <ReservationApplicantFields values={values} onChange={onChange} locked={locked} />
-        <OptionalInfoHint />
-        <ReservationOptionalGeoFields
-          values={values}
-          onChange={onChange}
-          locked={locked}
-          iranId={iranId}
-        />
-      </section>
-    </div>
-  )
+  if (activeSubStep === "count") {
+    return (
+      <ReservationCountFields
+        values={values}
+        onChange={onChange}
+        type={type}
+        locked={locked}
+        dual={dualCounts && type !== "INDIVIDUAL"}
+      />
+    );
+  }
+  if (activeSubStep === "party" && (type === "GROUP" || type === "CARAVAN")) {
+    return (
+      <ReservationTravelPartyField
+        values={values}
+        onChange={onChange}
+        type={type}
+        locked={locked}
+        selectedParty={selectedParty}
+        subjectUser={subjectUser}
+      />
+    );
+  }
+  if (activeSubStep === "dates") {
+    return (
+      <ReservationDateFields
+        values={values}
+        onChange={onChange}
+        locked={locked}
+      />
+    );
+  }
+  if (activeSubStep === "services") {
+    return (
+      <ReservationApplicantFields
+        values={values}
+        onChange={onChange}
+        locked={locked}
+      />
+    );
+  }
+  if (activeSubStep === "optional" && type === "INDIVIDUAL") {
+    return (
+      <ReservationOptionalGeoFields
+        values={values}
+        onChange={onChange}
+        locked={locked}
+        iranId={iranId}
+      />
+    );
+  }
+  return null;
 }
 
 export function ReservationApplicantFields({
@@ -125,22 +177,23 @@ export function ReservationApplicantFields({
   onChange,
   locked,
 }: {
-  values: Pick<TravelValues, 'requestsAccommodation' | 'requestsBus'>
-  onChange: (patch: Partial<TravelValues>) => void
-  locked?: boolean
+  values: Pick<TravelValues, "requestsAccommodation" | "requestsBus">;
+  onChange: (patch: Partial<TravelValues>) => void;
+  locked?: boolean;
 }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
+  const insuranceOnly = !values.requestsAccommodation && !values.requestsBus;
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-3">
       <CheckboxField
         id="requestsAccommodation"
         checked={values.requestsAccommodation}
         disabled={locked}
-        onChange={(requestsAccommodation) => onChange({ requestsAccommodation })}
+        onChange={(checked) => onChange({ requestsAccommodation: checked })}
         label={
           <span className="flex items-center gap-2">
             <Building2 className="size-4 shrink-0 text-teal-600" aria-hidden />
-            {t('reservations.requestsAccommodation')}
+            {t("reservations.requestsAccommodation")}
           </span>
         }
       />
@@ -148,43 +201,48 @@ export function ReservationApplicantFields({
         id="requestsBus"
         checked={values.requestsBus}
         disabled={locked}
-        onChange={(requestsBus) => onChange({ requestsBus })}
+        onChange={(checked) => onChange({ requestsBus: checked })}
         label={
           <span className="flex items-center gap-2">
             <Bus className="size-4 shrink-0 text-teal-600" aria-hidden />
-            {t('reservations.requestsBus')}
+            {t("reservations.requestsBus")}
+          </span>
+        }
+      />
+      <CheckboxField
+        id="requestsInsuranceOnly"
+        checked={insuranceOnly}
+        disabled={locked}
+        onChange={(checked) => {
+          if (checked)
+            onChange({ requestsAccommodation: false, requestsBus: false });
+        }}
+        label={
+          <span className="flex items-center gap-2">
+            <Shield className="size-4 shrink-0 text-teal-600" aria-hidden />
+            {t("reservations.requestsInsuranceOnly")}
           </span>
         }
       />
     </div>
-  )
-}
-
-export function OptionalInfoHint() {
-  const { t } = useTranslation()
-  return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-teal-100 bg-gradient-to-l from-mint-50 via-white to-teal-50 px-3 py-2.5 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white">
-        <HeartHandshake className="size-3.5" aria-hidden />
-      </span>
-      <p className="text-[11px] leading-5 text-ink-600">{t('reservations.optionalHint')}</p>
-    </div>
-  )
+  );
 }
 
 export function OccasionStayHint() {
-  const { t } = useTranslation()
-  const year = currentPersianYear()
+  const { t } = useTranslation();
+  const year = currentPersianYear();
   const settings = useQuery({
-    queryKey: ['reception-settings', year],
+    queryKey: ["reception-settings", year],
     queryFn: async () => {
-      const { data } = await api.get<ReceptionSettings>(`/reception-settings/${year}`)
-      return data
+      const { data } = await api.get<ReceptionSettings>(
+        `/reception-settings/${year}`,
+      );
+      return data;
     },
-  })
-  const prophetDate = settings.data?.prophetDemiseDate
-  const imamDate = settings.data?.imamRezaMartyrdomDate
-  if (!prophetDate && !imamDate) return null
+  });
+  const prophetDate = settings.data?.prophetDemiseDate;
+  const imamDate = settings.data?.imamRezaMartyrdomDate;
+  if (!prophetDate && !imamDate) return null;
 
   return (
     <aside
@@ -200,17 +258,19 @@ export function OccasionStayHint() {
           <MoonStar className="size-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1 space-y-3">
-          <p className="text-sm font-semibold text-ink-900">{t('reservations.occasionStayTitle')}</p>
+          <p className="text-sm font-semibold text-ink-900">
+            {t("reservations.occasionStayTitle")}
+          </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {prophetDate ? (
               <OccasionDateChip
-                label={t('reservations.occasionProphetLabel')}
+                label={t("reservations.occasionProphetLabel")}
                 value={prophetDate}
               />
             ) : null}
             {imamDate ? (
               <OccasionDateChip
-                label={t('reservations.occasionImamRezaLabel')}
+                label={t("reservations.occasionImamRezaLabel")}
                 value={imamDate}
               />
             ) : null}
@@ -218,7 +278,7 @@ export function OccasionStayHint() {
         </div>
       </div>
     </aside>
-  )
+  );
 }
 
 function OccasionDateChip({ label, value }: { label: string; value: string }) {
@@ -230,7 +290,7 @@ function OccasionDateChip({ label, value }: { label: string; value: string }) {
       </p>
       <HijriDateText value={value} />
     </div>
-  )
+  );
 }
 
 export function ReservationDateFields({
@@ -239,19 +299,19 @@ export function ReservationDateFields({
   locked,
   showOccasionHint = true,
 }: {
-  values: TravelValues
-  onChange: (patch: Partial<TravelValues>) => void
-  locked?: boolean
-  showOccasionHint?: boolean
+  values: TravelValues;
+  onChange: (patch: Partial<TravelValues>) => void;
+  locked?: boolean;
+  showOccasionHint?: boolean;
 }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-4">
       <DateValueField
         id="walkingStartDate"
         icon={Footprints}
-        label={t('reservations.walkingStartDate')}
+        label={t("reservations.walkingStartDate")}
         value={values.walkingStartDate}
         locked={locked}
         onChange={(walkingStartDate) => onChange({ walkingStartDate })}
@@ -260,7 +320,7 @@ export function ReservationDateFields({
         <DateValueField
           id="stayStartDate"
           icon={Calendar}
-          label={t('reservations.stayStartDate')}
+          label={t("reservations.stayStartDate")}
           value={values.stayStartDate}
           locked={locked}
           required
@@ -269,7 +329,7 @@ export function ReservationDateFields({
         <DateValueField
           id="stayEndDate"
           icon={Calendar}
-          label={t('reservations.stayEndDate')}
+          label={t("reservations.stayEndDate")}
           value={values.stayEndDate}
           locked={locked}
           required
@@ -278,7 +338,7 @@ export function ReservationDateFields({
       </div>
       {showOccasionHint ? <OccasionStayHint /> : null}
     </div>
-  )
+  );
 }
 
 export function ReservationOptionalGeoFields({
@@ -287,97 +347,102 @@ export function ReservationOptionalGeoFields({
   locked,
   iranId,
 }: {
-  values: TravelValues
-  onChange: (patch: Partial<TravelValues>) => void
-  locked?: boolean
-  iranId: string
+  values: TravelValues;
+  onChange: (patch: Partial<TravelValues>) => void;
+  locked?: boolean;
+  iranId: string;
 }) {
-  const { t } = useTranslation()
-  const nameOf = useGeoName()
+  const { t } = useTranslation();
+  const nameOf = useGeoName();
 
   const provinces = useQuery({
-    queryKey: ['provinces', 'lookup', iranId],
+    queryKey: ["provinces", "lookup", iranId],
     enabled: Boolean(iranId),
     queryFn: async () => {
-      const { data } = await api.get<Province[]>('/provinces', {
+      const { data } = await api.get<Province[]>("/provinces", {
         params: { countryId: iranId, activeOnly: true },
-      })
-      return data
+      });
+      return data;
     },
-  })
+  });
 
   const cities = useQuery({
-    queryKey: ['cities', 'lookup', values.provinceId],
+    queryKey: ["cities", "lookup", values.provinceId],
     enabled: Boolean(values.provinceId),
     queryFn: async () => {
-      const { data } = await api.get<City[]>('/cities', {
+      const { data } = await api.get<City[]>("/cities", {
         params: { provinceId: values.provinceId, activeOnly: true },
-      })
-      return data
+      });
+      return data;
     },
-  })
+  });
 
   const routes = useQuery({
-    queryKey: ['walking-routes', 'lookup'],
+    queryKey: ["walking-routes", "lookup"],
     queryFn: async () => {
-      const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
-        params: { pageSize: 100 },
-      })
-      return data.items
+      const { data } = await api.get<Paginated<WalkingRoute>>(
+        "/walking-routes",
+        {
+          params: { pageSize: 100 },
+        },
+      );
+      return data.items;
     },
-  })
+  });
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField icon={Building2} label={t('reservations.province')}>
+        <FormField icon={Building2} label={t("reservations.province")}>
           <SearchSelect
             value={values.provinceId}
-            onChange={(provinceId) => onChange({ provinceId, originCityId: '' })}
+            onChange={(provinceId) =>
+              onChange({ provinceId, originCityId: "" })
+            }
             options={[
-              { value: '', label: t('reservations.optionalUnspecified') },
+              { value: "", label: t("reservations.optionalUnspecified") },
               ...(provinces.data ?? []).map((item) => ({
                 value: item.id,
                 label: nameOf(item),
               })),
             ]}
-            placeholder={t('reservations.province')}
+            placeholder={t("reservations.province")}
             disabled={locked}
           />
         </FormField>
-        <FormField icon={MapPin} label={t('reservations.originCity')}>
+        <FormField icon={MapPin} label={t("reservations.originCity")}>
           <SearchSelect
             value={values.originCityId}
             onChange={(originCityId) => onChange({ originCityId })}
             options={[
-              { value: '', label: t('reservations.optionalUnspecified') },
+              { value: "", label: t("reservations.optionalUnspecified") },
               ...(cities.data ?? []).map((item) => ({
                 value: item.id,
                 label: nameOf(item),
               })),
             ]}
-            placeholder={t('reservations.originCity')}
+            placeholder={t("reservations.originCity")}
             disabled={locked || !values.provinceId}
           />
         </FormField>
       </div>
-      <FormField icon={Route} label={t('reservations.walkingRoute')}>
+      <FormField icon={Route} label={t("reservations.walkingRoute")}>
         <SearchSelect
           value={values.walkingRouteId}
           onChange={(walkingRouteId) => onChange({ walkingRouteId })}
           options={[
-            { value: '', label: t('reservations.walkingRouteNone') },
+            { value: "", label: t("reservations.walkingRouteNone") },
             ...(routes.data ?? []).map((item) => ({
               value: item.id,
               label: item.name,
             })),
           ]}
-          placeholder={t('reservations.walkingRoute')}
+          placeholder={t("reservations.walkingRoute")}
           disabled={locked}
         />
       </FormField>
     </div>
-  )
+  );
 }
 
 export function ReservationTravelPartyField({
@@ -385,45 +450,64 @@ export function ReservationTravelPartyField({
   onChange,
   type,
   locked,
+  selectedParty,
+  subjectUser,
 }: {
-  values: TravelValues
-  onChange: (patch: Partial<TravelValues>) => void
-  type: PartyKind
-  locked?: boolean
+  values: TravelValues;
+  onChange: (patch: Partial<TravelValues>) => void;
+  type: PartyKind;
+  locked?: boolean;
+  selectedParty?: PartyItemSnapshot | null;
+  subjectUser?: {
+    id?: string;
+    fullName?: string;
+    nationalId?: string | null;
+    phone?: string | null;
+    countryId?: string | null;
+    provinceId?: string | null;
+    cityId?: string | null;
+    roles?: { code: string }[];
+  } | null;
 }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language.split('-')[0] ?? 'fa'
-  const { user } = useAuth()
-  const [draft, setDraft] = useState<PartyDraft>(() => emptyPartyDraft(user))
-  const [creating, setCreating] = useState(false)
-  const queryClient = useQueryClient()
-  const selectedId = type === 'CARAVAN' ? values.caravanId : values.groupId
-  const needsCity = !user?.cityId
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const draftUser = subjectUser ?? user;
+  const [draft, setDraft] = useState<PartyDraft>(() =>
+    emptyPartyDraft(draftUser),
+  );
+  const [creating, setCreating] = useState(false);
+  const queryClient = useQueryClient();
+  const selectedId = type === "CARAVAN" ? values.caravanId : values.groupId;
+  const needsCity = !draftUser?.cityId;
 
   async function createParty() {
-    const error = partyDraftError(draft, type, t, locale, needsCity)
+    const error = partyDraftError(draft, type, t, needsCity);
     if (error) {
-      toast.error(error)
-      return
+      toast.error(error);
+      return;
     }
-    setCreating(true)
+    setCreating(true);
     try {
-      const created = await createReservationParty(type, draft)
+      const created = await createReservationParty(type, draft);
       onChange({
-        caravanId: type === 'CARAVAN' ? created.id : '',
-        groupId: type === 'GROUP' ? created.id : '',
-        maleCount: String(created.maleCount),
-        femaleCount: String(created.femaleCount),
-      })
-      setDraft(emptyPartyDraft(user))
+        caravanId: type === "CARAVAN" ? created.id : "",
+        groupId: type === "GROUP" ? created.id : "",
+        walkingRouteId: draft.walkingRouteId || "",
+      });
+      setDraft(emptyPartyDraft(draftUser));
       await queryClient.invalidateQueries({
-        queryKey: type === 'CARAVAN' ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
-      })
-      toast.success(t(type === 'CARAVAN' ? 'caravans.created' : 'groups.created'))
+        queryKey:
+          type === "CARAVAN"
+            ? ["caravans", "mine", "lookup"]
+            : ["groups", "mine", "lookup"],
+      });
+      toast.success(
+        t(type === "CARAVAN" ? "caravans.created" : "groups.created"),
+      );
     } catch (error) {
-      toast.error(getApiErrorMessage(error, t('common.error')))
+      toast.error(getApiErrorMessage(error, t("common.error")));
     } finally {
-      setCreating(false)
+      setCreating(false);
     }
   }
 
@@ -431,24 +515,26 @@ export function ReservationTravelPartyField({
     <ReservationPartyFields
       type={type}
       selectedId={selectedId}
+      knownSelected={selectedParty}
       locked={locked}
       draft={draft}
-      onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+      subjectUser={subjectUser}
+      onDraftChange={(patch) =>
+        setDraft((current) => ({ ...current, ...patch }))
+      }
       onSelect={(item) =>
         onChange({
-          caravanId: type === 'CARAVAN' ? item.id : '',
-          groupId: type === 'GROUP' ? item.id : '',
-          maleCount: String(item.maleCount),
-          femaleCount: String(item.femaleCount),
+          caravanId: type === "CARAVAN" ? item.id : "",
+          groupId: type === "GROUP" ? item.id : "",
         })
       }
       showCreateAction={!locked}
       creating={creating}
       onCreate={() => {
-        void createParty()
+        void createParty();
       }}
     />
-  )
+  );
 }
 
 function DateValueField({
@@ -462,21 +548,23 @@ function DateValueField({
   maxDate,
   onChange,
 }: {
-  id: string
-  icon: typeof Calendar
-  label: string
-  value: string
-  locked?: boolean
-  required?: boolean
-  minDate?: string
-  maxDate?: string
-  onChange: (value: string) => void
+  id: string;
+  icon: typeof Calendar;
+  label: string;
+  value: string;
+  locked?: boolean;
+  required?: boolean;
+  minDate?: string;
+  maxDate?: string;
+  onChange: (value: string) => void;
 }) {
   return (
     <FormField icon={Icon} label={required ? `${label} *` : label} htmlFor={id}>
       {locked ? (
         <div className="space-y-1.5">
-          <p className="text-sm text-ink-800">{value ? <DateText value={value} /> : '—'}</p>
+          <p className="text-sm text-ink-800">
+            {value ? <DateText value={value} /> : "—"}
+          </p>
           <HijriDateText value={value} />
         </div>
       ) : (
@@ -486,9 +574,9 @@ function DateValueField({
           minDate={minDate}
           maxDate={maxDate}
           showHijri
-          onChange={(next) => onChange(next ?? '')}
+          onChange={(next) => onChange(next ?? "")}
         />
       )}
     </FormField>
-  )
+  );
 }

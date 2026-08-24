@@ -1,9 +1,16 @@
-import { Globe, UserRound } from 'lucide-react'
+import { Globe } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthProvider'
-import { AppForm, FormField, FormActions, PageHeader, cardClassName, fieldClassName, formShellClassName } from '../components/ui/Form'
+import {
+  AppForm,
+  FormField,
+  FormActions,
+  PageHeader,
+  formShellClassName,
+} from '../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
 import { SearchSelect } from '../components/ui/SearchSelect'
 import { languages, type AppLanguage } from '../i18n'
 import { api } from '../lib/api'
@@ -11,7 +18,6 @@ import { api } from '../lib/api'
 export function SettingsPage() {
   const { t } = useTranslation()
   const { user, refresh } = useAuth()
-  const [fullName, setFullName] = useState(user?.fullName ?? '')
   const [locale, setLocale] = useState(user?.locale ?? 'fa')
   const [saving, setSaving] = useState(false)
 
@@ -19,7 +25,7 @@ export function SettingsPage() {
     event.preventDefault()
     setSaving(true)
     try {
-      await api.patch('/auth/settings', { fullName, locale })
+      await api.patch('/auth/settings', { locale })
       await refresh()
       toast.success(t('settings.saved'))
     } catch {
@@ -32,35 +38,25 @@ export function SettingsPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
-      <AppForm
-        onSubmit={onSubmit}
-        className={`space-y-4 p-6 ${cardClassName}`}
-      >
-        <FormField icon={UserRound} label={t('settings.fullName')} htmlFor="fullName">
-          <input
-            id="fullName"
-            className={fieldClassName}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-          />
-        </FormField>
-        <FormField icon={Globe} label={t('settings.locale')} htmlFor="locale">
-          <SearchSelect
-            id="locale"
-            value={locale}
-            onChange={setLocale}
-            options={(Object.keys(languages) as AppLanguage[]).map((code) => ({
-              value: code,
-              label: languages[code].enabled
-                ? t(`languages.${code}`)
-                : `${t(`languages.${code}`)} (${t('settings.comingSoon')})`,
-              disabled: !languages[code].enabled,
-            }))}
-          />
-        </FormField>
-        <FormActions submitLabel={t('settings.save')} submitting={saving} />
-      </AppForm>
+      <FormCard icon={Globe} title={t('settings.title')} subtitle={t('settings.subtitle')}>
+        <AppForm onSubmit={onSubmit} className={formCardBodyClassName}>
+          <FormField icon={Globe} label={t('settings.locale')} htmlFor="locale">
+            <SearchSelect
+              id="locale"
+              value={locale}
+              onChange={setLocale}
+              options={(Object.keys(languages) as AppLanguage[]).map((code) => ({
+                value: code,
+                label: languages[code].enabled
+                  ? t(`languages.${code}`)
+                  : `${t(`languages.${code}`)} (${t('settings.comingSoon')})`,
+                disabled: !languages[code].enabled,
+              }))}
+            />
+          </FormField>
+          <FormActions submitLabel={t('settings.save')} submitting={saving} />
+        </AppForm>
+      </FormCard>
     </div>
   )
 }

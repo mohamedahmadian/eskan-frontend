@@ -2,7 +2,8 @@ import { AlignLeft, CalendarDays, Hash, Package, Ruler } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
@@ -102,7 +103,12 @@ export function SupplierItemForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={Package}
+      title={initial ? initial.name || t('supplierItems.edit') : t('supplierItems.create')}
+      subtitle={initial ? undefined : t('supplierItems.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={CalendarDays} label={t('supplierItems.year')} htmlFor="year">
         <SearchSelect
           id="year"
@@ -199,5 +205,6 @@ export function SupplierItemForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

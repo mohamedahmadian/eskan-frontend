@@ -1,17 +1,33 @@
-import { Boxes, Menu, PackageOpen, Search, Snowflake, X } from 'lucide-react'
+import { Boxes, Menu, PackageOpen, Search, Snowflake, UsersRound, X } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
+import { api } from '../../lib/api'
 import { getNavIcon } from '../../lib/icons'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { getPageMeta } from '../../lib/page-meta'
-import { canAccessMyCaravans, canAccessMyGroups, usesDedicatedHomeDashboard } from '../../lib/roles'
-import type { NavMenu, NavModule } from '../../types/app'
+import {
+  canAccessMyCaravans,
+  canAccessMyGroups,
+  isPilgrim,
+  usesDedicatedHomeDashboard,
+} from '../../lib/roles'
+import type { NavMenu, NavModule, Paginated, ReservationListItem } from '../../types/app'
 import { PageTransition } from '../ui/PageTransition'
 import { UserMenu } from './UserMenu'
 
+type SidebarNavMenu = NavMenu & { label?: string }
+
 const menuSections: Record<string, { titleKey: string; icon?: typeof Snowflake; codes: string[] }[]> = {
+  caravans: [
+    {
+      titleKey: 'menus.groupsSection',
+      icon: UsersRound,
+      codes: ['groups.mine'],
+    },
+  ],
   logistics: [
     {
       titleKey: 'menus.loanItemsSection',
@@ -42,6 +58,28 @@ const menuSections: Record<string, { titleKey: string; icon?: typeof Snowflake; 
   ],
 }
 
+function pickReservationPerYear(items: ReservationListItem[]) {
+  const byYear = new Map<number, ReservationListItem>()
+  for (const item of items) {
+    const prev = byYear.get(item.year)
+    if (!prev || item.updatedAt > prev.updatedAt) {
+      byYear.set(item.year, item)
+    }
+  }
+  return [...byYear.values()].sort((a, b) => b.year - a.year)
+}
+
+function insertAfterMenu(
+  menus: SidebarNavMenu[],
+  afterCode: string,
+  extra: SidebarNavMenu[],
+): SidebarNavMenu[] {
+  if (!extra.length) return menus
+  const index = menus.findIndex((item) => item.code === afterCode)
+  if (index < 0) return [...menus, ...extra]
+  return [...menus.slice(0, index + 1), ...extra, ...menus.slice(index + 1)]
+}
+
 function splitMenus(mod: NavModule) {
   const sections = menuSections[mod.code] ?? []
   const groupedCodes = new Set(sections.flatMap((section) => section.codes))
@@ -58,7 +96,13 @@ function splitMenus(mod: NavModule) {
   }
 }
 
-function menuMatchesSearch(mod: NavModule, item: NavMenu, needle: string, label: (key: string) => string) {
+function menuMatchesSearch(
+  mod: NavModule,
+  item: SidebarNavMenu,
+  needle: string,
+  label: (key: string) => string,
+) {
+  if (item.label?.includes(needle)) return true
   if (label(item.nameKey).includes(needle) || label(mod.nameKey).includes(needle)) {
     return true
   }
@@ -85,18 +129,48 @@ export function DashboardLayout() {
     mainRef.current?.scrollTo(0, 0)
   }, [location.pathname])
 
+  const showPilgrimageYears = isPilgrim(user)
+  const mineNavQuery = useQuery({
+    queryKey: ['reservations', 'mine', 'nav'],
+    enabled: showPilgrimageYears,
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<ReservationListItem>>('/reservations/mine', {
+        params: { page: 1, pageSize: 100, sortBy: 'year', sortDir: 'desc' },
+      })
+      return data
+    },
+  })
+
+  const pilgrimageYearMenus = useMemo((): SidebarNavMenu[] => {
+    if (!showPilgrimageYears) return []
+    return pickReservationPerYear(mineNavQuery.data?.items ?? []).map((item, index) => ({
+      code: `reservations.year.${item.id}`,
+      nameKey: 'menus.pilgrimageYear',
+      label: t('menus.pilgrimageYear', { year: formatNumber(item.year, locale) }),
+      path: `/my-reservations/${item.id}`,
+      icon: 'calendar-range',
+      sortOrder: 1.5 + index * 0.01,
+    }))
+  }, [locale, mineNavQuery.data?.items, showPilgrimageYears, t])
+
   const modules = useMemo(() => {
     const showMyCaravans = canAccessMyCaravans(user)
     const showMyGroups = canAccessMyGroups(user)
     const visible = (user?.modules ?? [])
-      .map((mod) => ({
-        ...mod,
-        menus: mod.menus.filter(
+      .map((mod) => {
+        const menus = mod.menus.filter(
           (item) =>
             (item.code !== 'caravans.mine' || showMyCaravans) &&
             (item.code !== 'groups.mine' || showMyGroups),
-        ),
-      }))
+        )
+        if (mod.code !== 'caravans' || !pilgrimageYearMenus.length) {
+          return { ...mod, menus }
+        }
+        return {
+          ...mod,
+          menus: insertAfterMenu(menus, 'reservations.mine', pilgrimageYearMenus),
+        }
+      })
       .filter((mod) => mod.menus.length > 0)
     const needle = query.trim()
     if (!needle) return visible
@@ -106,7 +180,7 @@ export function DashboardLayout() {
         menus: mod.menus.filter((item) => menuMatchesSearch(mod, item, needle, t)),
       }))
       .filter((mod) => mod.menus.length > 0)
-  }, [query, t, user])
+  }, [pilgrimageYearMenus, query, t, user])
 
   return (
     <div className="h-svh overflow-hidden bg-cream-50">
@@ -233,15 +307,17 @@ function SidebarMenuLink({
   item,
   onNavigate,
 }: {
-  item: NavMenu
+  item: SidebarNavMenu
   onNavigate: () => void
 }) {
   const { t } = useTranslation()
   const Icon = getNavIcon(item.icon)
+  const exact =
+    item.path === '/' || item.path === '/my-reservations' || item.code.startsWith('reservations.year.')
   return (
     <NavLink
       to={item.path}
-      end={item.path === '/'}
+      end={exact}
       onClick={onNavigate}
       className={({ isActive }) =>
         `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${
@@ -252,7 +328,7 @@ function SidebarMenuLink({
       {({ isActive }) => (
         <>
           <Icon className={`size-4 ${isActive ? 'text-white' : 'text-ink-400'}`} aria-hidden />
-          {t(item.nameKey)}
+          {item.label ?? t(item.nameKey)}
         </>
       )}
     </NavLink>

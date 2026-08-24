@@ -5,7 +5,8 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
@@ -173,7 +174,16 @@ export function IceVoucherRequestForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={Building2}
+      title={
+        initial
+          ? initial.code || t('iceVouchers.edit')
+          : t('iceVouchers.create')
+      }
+      subtitle={initial ? undefined : t('iceVouchers.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={Building2} label={t('iceVouchers.accommodation')} htmlFor="accommodationId">
         <SearchSelect
           id="accommodationId"
@@ -244,5 +254,6 @@ export function IceVoucherRequestForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

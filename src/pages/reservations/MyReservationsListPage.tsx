@@ -23,7 +23,12 @@ import {
   type ReservationType,
 } from '../../types/app'
 import { HeadcountPills } from './HeadcountPills'
-import { listStepProgress } from './reservation-steps'
+import {
+  createWizardPath,
+  isOwnerCreateDraft,
+  listHeadcount,
+  listStepProgress,
+} from './reservation-steps'
 import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { StepProgressChart } from './StepProgressChart'
 
@@ -169,6 +174,7 @@ export function MyReservationsListPage() {
           <tbody>
             {rows.map((row) => {
               const step = listStepProgress(row.status, row.type)
+              const headcount = listHeadcount(row)
               return (
                 <tr key={row.id}>
                   <td className="px-4 py-3">{n(row.year)}</td>
@@ -179,9 +185,9 @@ export function MyReservationsListPage() {
                   <td className="px-4 py-3">
                     <HeadcountPills
                       type={row.type}
-                      male={row.maleCount}
-                      female={row.femaleCount}
-                      total={row.totalCount}
+                      male={headcount.male}
+                      female={headcount.female}
+                      total={headcount.total}
                       format={n}
                       maleLabel={t('reservations.countMale')}
                       femaleLabel={t('reservations.countFemale')}
@@ -219,7 +225,13 @@ export function MyReservationsListPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-center">
-                      <EntityRowActions viewTo={`/my-reservations/${row.id}`} />
+                      <EntityRowActions
+                        viewTo={
+                          isOwnerCreateDraft(row)
+                            ? createWizardPath(row.id)
+                            : `/my-reservations/${row.id}`
+                        }
+                      />
                     </div>
                   </td>
                 </tr>

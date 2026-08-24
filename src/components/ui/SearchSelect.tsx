@@ -96,7 +96,7 @@ export function SearchSelect({
   }
 
   return (
-    <div ref={rootRef} className="relative z-20">
+    <div ref={rootRef} className={`relative ${open ? 'z-50' : 'z-20'}`}>
       <button
         id={fieldId}
         type="button"

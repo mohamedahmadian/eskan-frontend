@@ -43,6 +43,7 @@ export function AccommodationManagersCard({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['accommodation', accommodation.id] }),
       queryClient.invalidateQueries({ queryKey: ['accommodations'] }),
+      queryClient.invalidateQueries({ queryKey: ['accommodations', 'mine'] }),
       queryClient.invalidateQueries({ queryKey: ['accommodation-managers'] }),
     ])
   }

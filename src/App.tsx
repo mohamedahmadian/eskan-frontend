@@ -26,6 +26,7 @@ import { ReservationCreatePage } from "./pages/reservations/ReservationCreatePag
 import { ReservationsAdminListPage } from "./pages/reservations/ReservationsAdminListPage";
 import { ReservationStatsPage } from "./pages/reservations/ReservationStatsPage";
 import { ReservationWizardPage } from "./pages/reservations/ReservationWizardPage";
+import { AccountPage } from "./pages/AccountPage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { CitiesListPage } from "./pages/geo/CitiesListPage";
 import { CityCreatePage } from "./pages/geo/CityCreatePage";
@@ -47,6 +48,13 @@ import { MedicalCenterCreatePage } from "./pages/medical-centers/MedicalCenterCr
 import { MedicalCenterDetailPage } from "./pages/medical-centers/MedicalCenterDetailPage";
 import { MedicalCenterEditPage } from "./pages/medical-centers/MedicalCenterEditPage";
 import { MedicalCentersListPage } from "./pages/medical-centers/MedicalCentersListPage";
+import { GovernmentOrganizationCreatePage } from "./pages/government-organizations/GovernmentOrganizationCreatePage";
+import { GovernmentOrganizationDetailPage } from "./pages/government-organizations/GovernmentOrganizationDetailPage";
+import { GovernmentOrganizationEditPage } from "./pages/government-organizations/GovernmentOrganizationEditPage";
+import { GovernmentOrganizationsListPage } from "./pages/government-organizations/GovernmentOrganizationsListPage";
+import { IssueLicensePage } from "./pages/licenses/IssueLicensePage";
+import { IssuedLicenseDetailPage } from "./pages/licenses/IssuedLicenseDetailPage";
+import { IssuedLicensesPage } from "./pages/licenses/IssuedLicensesPage";
 import { BenefactorCreatePage } from "./pages/benefactors/BenefactorCreatePage";
 import { BenefactorDetailPage } from "./pages/benefactors/BenefactorDetailPage";
 import { BenefactorEditPage } from "./pages/benefactors/BenefactorEditPage";
@@ -80,6 +88,8 @@ import { AccommodationEditPage } from "./pages/accommodations/AccommodationEditP
 import { AccommodationYearManagementPage } from "./pages/accommodations/AccommodationYearManagementPage";
 import { AccommodationReportPage } from "./pages/accommodations/AccommodationReportPage";
 import { AccommodationsListPage } from "./pages/accommodations/AccommodationsListPage";
+import { MyAccommodationCreatePage } from "./pages/accommodations/MyAccommodationCreatePage";
+import { MyAccommodationsListPage } from "./pages/accommodations/MyAccommodationsListPage";
 import { AccommodationManagerCreatePage } from "./pages/accommodation-managers/AccommodationManagerCreatePage";
 import { AccommodationManagerDetailPage } from "./pages/accommodation-managers/AccommodationManagerDetailPage";
 import { AccommodationManagerEditPage } from "./pages/accommodation-managers/AccommodationManagerEditPage";
@@ -92,6 +102,15 @@ import { HeadquartersRepresentativeCreatePage } from "./pages/headquarters-repre
 import { HeadquartersRepresentativeDetailPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeDetailPage";
 import { HeadquartersRepresentativeEditPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeEditPage";
 import { HeadquartersRepresentativesListPage } from "./pages/headquarters-representatives/HeadquartersRepresentativesListPage";
+import { OrgUnitCreatePage } from "./pages/org-units/OrgUnitCreatePage";
+import { OrgUnitDetailPage } from "./pages/org-units/OrgUnitDetailPage";
+import { OrgUnitEditPage } from "./pages/org-units/OrgUnitEditPage";
+import { OrgUnitLiaisonsPage } from "./pages/org-units/OrgUnitLiaisonsPage";
+import { OrgUnitsListPage } from "./pages/org-units/OrgUnitsListPage";
+import {
+  UnitAccommodationLiaisonsPage,
+  UnitCaravanLiaisonsPage,
+} from "./pages/org-units/UnitLiaisonsListPages";
 import { WalkingRouteCreatePage } from "./pages/walking-routes/WalkingRouteCreatePage";
 import { WalkingRouteDetailPage } from "./pages/walking-routes/WalkingRouteDetailPage";
 import { WalkingRouteEditPage } from "./pages/walking-routes/WalkingRouteEditPage";
@@ -171,6 +190,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<OverviewPage />} />
+                <Route path="/account" element={<AccountPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route
                   path="/settings/password"
@@ -281,6 +301,10 @@ export default function App() {
                   <Route
                     path="/reservations"
                     element={<ReservationsAdminListPage />}
+                  />
+                  <Route
+                    path="/reservations/new"
+                    element={<ReservationCreatePage />}
                   />
                   <Route
                     path="/reservations/:id"
@@ -461,6 +485,44 @@ export default function App() {
                     element={<BenefactorEditPage />}
                   />
                 </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/base-info/government-organizations" />
+                  }
+                >
+                  <Route
+                    path="/base-info/government-organizations"
+                    element={<GovernmentOrganizationsListPage />}
+                  />
+                  <Route
+                    path="/base-info/government-organizations/new"
+                    element={<GovernmentOrganizationCreatePage />}
+                  />
+                  <Route
+                    path="/base-info/government-organizations/:id"
+                    element={<GovernmentOrganizationDetailPage />}
+                  />
+                  <Route
+                    path="/base-info/government-organizations/:id/edit"
+                    element={<GovernmentOrganizationEditPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/licenses/new" />}>
+                  <Route
+                    path="/licenses/new"
+                    element={<IssueLicensePage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/licenses/issued" />}>
+                  <Route
+                    path="/licenses/issued"
+                    element={<IssuedLicensesPage />}
+                  />
+                  <Route
+                    path="/licenses/issued/:id"
+                    element={<IssuedLicenseDetailPage />}
+                  />
+                </Route>
                 <Route element={<RequireMenuAccess path="/sms/settings" />}>
                   <Route path="/sms/settings" element={<SmsSettingsPage />} />
                 </Route>
@@ -534,6 +596,68 @@ export default function App() {
                   <Route
                     path="/headquarters/representatives/:id/edit"
                     element={<HeadquartersRepresentativeEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/headquarters/units" />}
+                >
+                  <Route
+                    path="/headquarters/units"
+                    element={<OrgUnitsListPage />}
+                  />
+                  <Route
+                    path="/headquarters/units/new"
+                    element={<OrgUnitCreatePage />}
+                  />
+                  <Route
+                    path="/headquarters/units/:id/liaisons"
+                    element={<OrgUnitLiaisonsPage />}
+                  />
+                  <Route
+                    path="/headquarters/units/:id"
+                    element={<OrgUnitDetailPage />}
+                  />
+                  <Route
+                    path="/headquarters/units/:id/edit"
+                    element={<OrgUnitEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/headquarters/accommodation-liaisons" />
+                  }
+                >
+                  <Route
+                    path="/headquarters/accommodation-liaisons"
+                    element={<UnitAccommodationLiaisonsPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/headquarters/caravan-liaisons" />
+                  }
+                >
+                  <Route
+                    path="/headquarters/caravan-liaisons"
+                    element={<UnitCaravanLiaisonsPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/my-accommodations" />}>
+                  <Route
+                    path="/my-accommodations"
+                    element={<MyAccommodationsListPage />}
+                  />
+                  <Route
+                    path="/my-accommodations/new"
+                    element={<MyAccommodationCreatePage />}
+                  />
+                  <Route
+                    path="/my-accommodations/:id"
+                    element={<AccommodationDetailPage />}
+                  />
+                  <Route
+                    path="/my-accommodations/:id/edit"
+                    element={<AccommodationEditPage />}
                   />
                 </Route>
                 <Route element={<RequireMenuAccess path="/accommodations" />}>

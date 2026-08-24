@@ -87,6 +87,14 @@ export function reservationPartyName(
   return ''
 }
 
+function reservationPartyKindLabel(
+  type: ReservationListItem['type'],
+  t: (key: string) => string,
+) {
+  if (type === 'CARAVAN') return t('reservations.caravan')
+  return ''
+}
+
 export function ReservationTitleMeta({
   reservation,
   extra,
@@ -96,13 +104,16 @@ export function ReservationTitleMeta({
 }) {
   const { t } = useTranslation()
   const partyName = reservationPartyName(reservation)
+  const partyKind = reservationPartyKindLabel(reservation.type, t)
   const PartyIcon = reservation.type === 'CARAVAN' ? Footprints : Users
   return (
     <div className="flex flex-wrap items-center gap-2">
       {partyName ? (
         <span className="inline-flex max-w-full items-center gap-2 rounded-2xl border-2 border-teal-500 bg-teal-50 px-3 py-1.5 text-sm font-bold text-teal-900">
           <PartyIcon className="size-4 shrink-0" aria-hidden />
-          <span className="truncate">{partyName}</span>
+          <span className="truncate">
+            {partyKind ? `${partyKind} ${partyName}` : partyName}
+          </span>
         </span>
       ) : null}
       <EntityNameSubtitle
@@ -124,13 +135,14 @@ export function ReservationIdentityChips({
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const partyName = reservationPartyName(reservation)
+  const partyKind = reservationPartyKindLabel(reservation.type, t)
   const PartyIcon = reservation.type === 'CARAVAN' ? Footprints : Users
   return (
     <>
       {partyName ? (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-ink-900 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-2 ring-teal-500">
           <PartyIcon className="size-3 text-teal-600" aria-hidden />
-          {partyName}
+          {partyKind ? `${partyKind} ${partyName}` : partyName}
         </span>
       ) : null}
       <ReservationMetaChip

@@ -4,8 +4,10 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  FileBadge,
   Gauge,
-  MapPin,
+  HeartHandshake,
+  IdCard,
   Mars,
   User,
   Users,
@@ -16,40 +18,46 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
-import { confirmToast } from '../../components/ui/confirmToast'
 import {
   AppForm,
   Button,
+  LoadingState,
   PageHeader,
   cardClassName,
   userFormShellClassName,
 } from '../../components/ui/Form'
+import { FormMetaChip } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { addDaysIso, currentPersianYear, formatNumber } from '../../lib/datetime'
+import { addDaysIso, currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
 import { isCaravanManager } from '../../lib/roles'
 import type {
-  Country,
+  ManagedUser,
   ReceptionCapacity,
   ReceptionCapacitySlice,
   ReceptionSettings,
   Reservation,
+  ReservationPermitOptions,
   ReservationType,
 } from '../../types/app'
 import {
   CAPACITY_WARNING_RATIO,
   GROUP_MAX_SIZE,
   capacityKey,
+  createWizardPath,
+  isOwnerCreateDraft,
   settingsEnabledKey,
 } from './reservation-steps'
+import { ReceptionRulesModal, ReceptionTypeIntro } from './ReceptionTypeContent'
 import { ReservationCountFields } from './ReservationCountFields'
 import {
   createReservationParty,
   emptyPartyDraft,
   partyDraftError,
   ReservationPartyFields,
+  shouldPickCaravanManager,
   type PartyDraft,
   type PartyKind,
 } from './ReservationPartyFields'
@@ -57,11 +65,10 @@ import {
   travelDatesError,
   OccasionStayHint,
   ReservationDateFields,
-  ReservationOptionalGeoFields,
-  OptionalInfoHint,
   ReservationApplicantFields,
   type TravelValues,
 } from './ReservationTravelFields'
+import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
 import { StepProgressChart } from './StepProgressChart'
 
 const defaultTypes: ReservationType[] = ['INDIVIDUAL', 'GROUP', 'CARAVAN']
@@ -69,18 +76,16 @@ const caravanManagerTypes: ReservationType[] = ['CARAVAN', 'INDIVIDUAL', 'GROUP'
 const typeCardHoverClass =
   'hover:-translate-y-0.5 hover:border-teal-400 hover:shadow-[0_18px_40px_rgba(46,189,182,0.28),0_0_0_4px_rgba(255,255,255,0.95),0_0_0_7px_rgba(46,189,182,0.35)]'
 const typeIcons = { INDIVIDUAL: User, GROUP: Users, CARAVAN: Footprints }
-const typeHintCounts: Record<ReservationType, number> = {
-  INDIVIDUAL: 2,
-  GROUP: 3,
-  CARAVAN: 3,
-}
 
-type CreateStep = 'type' | 'party' | 'count' | 'dates' | 'optional'
-const defaultCreateSteps: CreateStep[] = ['type', 'count', 'dates', 'optional']
-const partyCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'optional']
+type CreateStep = 'type' | 'party' | 'count' | 'dates' | 'services' | 'license'
+const defaultCreateSteps: CreateStep[] = ['type', 'count', 'dates', 'services']
+const groupCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'services']
+const caravanCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'services', 'license']
 
 function stepsForCreateType(type: ReservationType | ''): CreateStep[] {
-  return type === 'GROUP' || type === 'CARAVAN' ? partyCreateSteps : defaultCreateSteps
+  if (type === 'CARAVAN') return caravanCreateSteps
+  if (type === 'GROUP') return groupCreateSteps
+  return defaultCreateSteps
 }
 
 const createStepIcons: Record<CreateStep, LucideIcon> = {
@@ -88,7 +93,8 @@ const createStepIcons: Record<CreateStep, LucideIcon> = {
   party: Users,
   count: User,
   dates: Calendar,
-  optional: MapPin,
+  services: HeartHandshake,
+  license: FileBadge,
 }
 
 function stayDatesFromOccasions(
@@ -115,6 +121,8 @@ const emptyTravel = (): TravelValues => ({
   walkingStartDate: '',
   maleCount: '0',
   femaleCount: '0',
+  requestedMaleCount: '0',
+  requestedFemaleCount: '0',
   caravanId: '',
   groupId: '',
   requestsAccommodation: true,
@@ -127,29 +135,219 @@ function countsForIndividualGender(gender: 'MALE' | 'FEMALE' | null | undefined)
   return { maleCount: '0', femaleCount: '0' }
 }
 
+function permitFromReservation(reservation: Reservation): CaravanPermitDraft {
+  if (reservation.permitSource === 'ISSUED_LICENSE' && reservation.issuedLicenseId) {
+    return {
+      source: 'ISSUED_LICENSE',
+      issuedLicenseId: reservation.issuedLicenseId,
+      permitImageId: '',
+    }
+  }
+  if (reservation.permitSource === 'UPLOAD' && reservation.permitImageId) {
+    return {
+      source: 'UPLOAD',
+      issuedLicenseId: '',
+      permitImageId: reservation.permitImageId,
+    }
+  }
+  return { source: '', issuedLicenseId: '', permitImageId: '' }
+}
+
+function valuesFromReservation(reservation: Reservation, userProvinceId?: string | null): TravelValues {
+  const male = String(reservation.requestedMaleCount || reservation.maleCount || 0)
+  const female = String(reservation.requestedFemaleCount || reservation.femaleCount || 0)
+  return {
+    provinceId: reservation.originCity?.provinceId || userProvinceId || '',
+    originCityId: reservation.originCity?.id ?? '',
+    walkingRouteId: reservation.walkingRoute?.id ?? '',
+    stayStartDate: reservation.stayStartDate ?? '',
+    stayEndDate: reservation.stayEndDate ?? '',
+    walkingStartDate: reservation.walkingStartDate ?? '',
+    maleCount: male,
+    femaleCount: female,
+    requestedMaleCount: male,
+    requestedFemaleCount: female,
+    caravanId: reservation.caravan?.id ?? reservation.caravanId ?? '',
+    groupId: reservation.group?.id ?? reservation.groupId ?? '',
+    requestsAccommodation: reservation.requestsAccommodation ?? true,
+    requestsBus: reservation.requestsBus ?? true,
+  }
+}
+
+function inferCreateStep(
+  type: ReservationType,
+  values: TravelValues,
+  permit: CaravanPermitDraft,
+  savedStep?: string | null,
+): CreateStep {
+  const steps = stepsForCreateType(type)
+  if (savedStep && steps.includes(savedStep as CreateStep)) {
+    return savedStep as CreateStep
+  }
+  for (const item of steps) {
+    if (item === 'type') continue
+    if (item === 'party') {
+      const partyId = type === 'CARAVAN' ? values.caravanId : values.groupId
+      if (!partyId) return 'party'
+      continue
+    }
+    if (item === 'count') {
+      const male = Number(values.maleCount) || 0
+      const female = Number(values.femaleCount) || 0
+      if (male + female <= 0) return 'count'
+      continue
+    }
+    if (item === 'dates') {
+      if (!values.stayStartDate || !values.stayEndDate) return 'dates'
+      continue
+    }
+    if (item === 'services') continue
+    if (item === 'license' && !permit.source) return 'license'
+  }
+  return steps[steps.length - 1]
+}
+
+function furtherCreateStep(
+  type: ReservationType | '',
+  a: CreateStep,
+  b: CreateStep,
+): CreateStep {
+  if (!type) return a
+  const list = stepsForCreateType(type)
+  return list.indexOf(a) >= list.indexOf(b) ? a : b
+}
+
 export function ReservationCreatePage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const draftParam = searchParams.get('draft') ?? ''
+  const forUserParam = searchParams.get('forUser') ?? ''
+  const createBase = location.pathname.startsWith('/reservations')
+    ? '/reservations'
+    : '/my-reservations'
+  const isAdminCreate = createBase === '/reservations'
   const { user } = useAuth()
   const year = currentPersianYear()
   const yearLabel = formatNumber(year, locale)
-  const types = isCaravanManager(user) ? caravanManagerTypes : defaultTypes
+  const types = isAdminCreate
+    ? defaultTypes
+    : isCaravanManager(user)
+      ? caravanManagerTypes
+      : defaultTypes
   const [step, setStep] = useState<CreateStep>('type')
+  const [maxReachedStep, setMaxReachedStep] = useState<CreateStep>('type')
   const [type, setType] = useState<ReservationType | ''>('')
-  const [values, setValues] = useState<TravelValues>(() => ({
-    ...emptyTravel(),
-    provinceId: user?.provinceId ?? '',
-    originCityId: user?.cityId ?? '',
-  }))
-  const [partyDraft, setPartyDraft] = useState<PartyDraft>(() => emptyPartyDraft(user))
+  const [draftId, setDraftId] = useState(draftParam)
+  const [draftYear, setDraftYear] = useState(year)
+  const [values, setValues] = useState<TravelValues>(() => emptyTravel())
+  const [partyDraft, setPartyDraft] = useState<PartyDraft>(() => emptyPartyDraft(null))
+  const [permitDraft, setPermitDraft] = useState<CaravanPermitDraft>({
+    source: '',
+    issuedLicenseId: '',
+    permitImageId: '',
+  })
   const [submitting, setSubmitting] = useState(false)
+  const [rulesModalOpen, setRulesModalOpen] = useState(false)
+  const [draftHydrated, setDraftHydrated] = useState(!draftParam)
   const queryClient = useQueryClient()
+  const reservationYear = draftId ? draftYear : year
   const steps = stepsForCreateType(type)
   const stepIndex = steps.indexOf(step)
-  const lastStep = step === 'optional'
+  const maxReachedIndex = Math.max(stepIndex, steps.indexOf(maxReachedStep))
+  const lastStep = stepIndex === steps.length - 1
   const partyKind: PartyKind | null = type === 'GROUP' || type === 'CARAVAN' ? type : null
-  const needsPartyCity = !user?.cityId
+
+  function isIssuedLicenseAwaitingHqApproval(licenseId: string) {
+    if (!values.caravanId || !licenseId) return false
+    const options = queryClient.getQueryData<ReservationPermitOptions>([
+      'reservations',
+      'permit-options',
+      values.caravanId,
+      reservationYear,
+    ])
+    const selected = options?.items.find((item) => item.id === licenseId)
+    return selected?.status === 'ISSUED'
+  }
+
+  const draftQuery = useQuery({
+    queryKey: ['reservations', draftParam, 'create-draft'],
+    enabled: Boolean(draftParam),
+    queryFn: async () => {
+      const { data } = await api.get<Reservation>(`/reservations/${draftParam}`)
+      return data
+    },
+  })
+
+  const forUserId =
+    forUserParam ||
+    (isAdminCreate ? draftQuery.data?.createdBy?.id ?? '' : '') ||
+    ''
+
+  useEffect(() => {
+    if (!isAdminCreate) return
+    if (draftParam || forUserParam) return
+    navigate('/reservations', { replace: true })
+  }, [isAdminCreate, draftParam, forUserParam, navigate])
+
+  const forUserQuery = useQuery({
+    queryKey: ['users', forUserId, 'create-on-behalf'],
+    enabled: Boolean(forUserId) && isAdminCreate,
+    queryFn: async () => {
+      const { data } = await api.get<ManagedUser>(`/users/${forUserId}`)
+      return data
+    },
+  })
+
+  const subject =
+    isAdminCreate && forUserQuery.data
+      ? forUserQuery.data
+      : !isAdminCreate
+        ? user
+        : null
+  const needsPartyCity = !subject?.cityId
+  const subjectReady = !isAdminCreate || Boolean(subject) || Boolean(draftParam && draftHydrated)
+
+  useEffect(() => {
+    if (!draftParam) {
+      setDraftHydrated(true)
+      return
+    }
+    if (draftHydrated) return
+    if (!draftQuery.isSuccess || !draftQuery.data) return
+    const reservation = draftQuery.data
+    if (!isOwnerCreateDraft(reservation)) {
+      navigate(`${createBase}/${reservation.id}`, { replace: true })
+      return
+    }
+    const nextType = reservation.type
+    const nextValues = valuesFromReservation(
+      reservation,
+      reservation.createdBy ? undefined : user?.provinceId,
+    )
+    const nextPermit = permitFromReservation(reservation)
+    setDraftId(reservation.id)
+    setDraftYear(reservation.year)
+    setType(nextType)
+    setValues(nextValues)
+    setPermitDraft(nextPermit)
+    setPartyDraft(emptyPartyDraft(subject ?? user))
+    const reached = inferCreateStep(nextType, nextValues, nextPermit, reservation.createWizardStep)
+    setStep(reached)
+    setMaxReachedStep(reached)
+    setDraftHydrated(true)
+  }, [
+    draftParam,
+    draftHydrated,
+    draftQuery.isSuccess,
+    draftQuery.data,
+    navigate,
+    user,
+    createBase,
+    subject,
+  ])
 
   useEffect(() => {
     const main = document.querySelector('main')
@@ -161,27 +359,21 @@ export function ReservationCreatePage() {
   }, [step])
 
   useEffect(() => {
-    if (!user) return
+    if (!subject || draftParam) return
     setValues((current) => ({
       ...current,
-      provinceId: current.provinceId || user.provinceId || '',
-      originCityId: current.originCityId || user.cityId || '',
+      provinceId: current.provinceId || subject.provinceId || '',
+      originCityId: current.originCityId || subject.cityId || '',
     }))
     setPartyDraft((current) => ({
       ...current,
-      provinceId: current.provinceId || user.provinceId || '',
-      cityId: current.cityId || user.cityId || '',
+      provinceId: current.provinceId || subject.provinceId || '',
+      cityId: current.cityId || subject.cityId || '',
+      managerUserId:
+        current.managerUserId ||
+        (shouldPickCaravanManager(subject) ? '' : subject.id),
     }))
-  }, [user])
-
-  const countries = useQuery({
-    queryKey: ['countries', 'lookup'],
-    queryFn: async () => {
-      const { data } = await api.get<Country[]>('/countries', { params: { activeOnly: true } })
-      return data
-    },
-  })
-  const iranId = countries.data?.find((item) => item.iso2 === 'IR')?.id ?? ''
+  }, [subject, draftParam])
 
   const settings = useQuery({
     queryKey: ['reception-settings', year],
@@ -192,6 +384,7 @@ export function ReservationCreatePage() {
   })
 
   useEffect(() => {
+    if (draftParam) return
     const defaults = stayDatesFromOccasions(settings.data)
     if (!defaults.stayStartDate && !defaults.stayEndDate) return
     setValues((current) => {
@@ -207,7 +400,7 @@ export function ReservationCreatePage() {
       }
       return { ...current, stayStartDate, stayEndDate, walkingStartDate }
     })
-  }, [settings.data])
+  }, [settings.data, draftParam])
 
   const capacity = useQuery({
     queryKey: ['reception-settings', year, 'capacity'],
@@ -224,7 +417,7 @@ export function ReservationCreatePage() {
 
   function selectType(next: ReservationType) {
     setType(next)
-    setPartyDraft(emptyPartyDraft(user))
+    setPartyDraft(emptyPartyDraft(subject))
     setValues((current) => {
       const patch: Partial<TravelValues> = {
         caravanId: next === 'CARAVAN' ? current.caravanId : '',
@@ -236,18 +429,8 @@ export function ReservationCreatePage() {
       if ((male === 1 && female === 0) || (male === 0 && female === 1)) {
         return { ...current, ...patch }
       }
-      return { ...current, ...patch, ...countsForIndividualGender(user?.gender) }
+      return { ...current, ...patch, ...countsForIndividualGender(subject?.gender) }
     })
-  }
-
-  function goAfterType(next: ReservationType) {
-    selectType(next)
-    setStep(next === 'GROUP' || next === 'CARAVAN' ? 'party' : 'count')
-  }
-
-  function goBack() {
-    if (stepIndex <= 0) return
-    setStep(steps[stepIndex - 1])
   }
 
   function selectedPartyId() {
@@ -256,36 +439,166 @@ export function ReservationCreatePage() {
     return ''
   }
 
-  function applyParty(item: { id: string; maleCount: number; femaleCount: number }) {
+  function applyParty(item: { id: string }, walkingRouteId?: string) {
     setValues((current) => ({
       ...current,
       caravanId: type === 'CARAVAN' ? item.id : '',
       groupId: type === 'GROUP' ? item.id : '',
-      maleCount: String(item.maleCount),
-      femaleCount: String(item.femaleCount),
+      ...(walkingRouteId ? { walkingRouteId } : {}),
     }))
   }
 
-  async function ensurePartySelected(): Promise<boolean> {
-    if (!partyKind) return true
-    if (selectedPartyId()) return true
-    const error = partyDraftError(partyDraft, partyKind, t, locale, needsPartyCity)
+  function draftPayload(
+    nextType: ReservationType,
+    nextValues: TravelValues,
+    nextPermit: CaravanPermitDraft,
+    wizardStep?: CreateStep,
+  ) {
+    const male = Number(nextValues.maleCount) || 0
+    const female = Number(nextValues.femaleCount) || 0
+    return {
+      type: nextType,
+      year: reservationYear,
+      asDraft: true as const,
+      createWizardStep: wizardStep ?? step,
+      originCityId: nextValues.originCityId || null,
+      walkingRouteId: nextValues.walkingRouteId || null,
+      stayStartDate: nextValues.stayStartDate || null,
+      stayEndDate: nextValues.stayEndDate || null,
+      walkingStartDate: nextValues.walkingStartDate || null,
+      requestsAccommodation: nextValues.requestsAccommodation,
+      requestsBus: nextValues.requestsBus,
+      maleCount: male,
+      femaleCount: female,
+      caravanId: nextType === 'CARAVAN' ? nextValues.caravanId || null : null,
+      groupId: nextType === 'GROUP' ? nextValues.groupId || null : null,
+      ...(nextType === 'CARAVAN'
+        ? {
+            issuedLicenseId:
+              nextPermit.source === 'ISSUED_LICENSE' ? nextPermit.issuedLicenseId || null : null,
+            permitImageId:
+              nextPermit.source === 'UPLOAD' ? nextPermit.permitImageId || null : null,
+          }
+        : {}),
+    }
+  }
+
+  async function persistDraft(options?: {
+    nextType?: ReservationType
+    nextValues?: TravelValues
+    nextPermit?: CaravanPermitDraft
+    wizardStep?: CreateStep
+    silent?: boolean
+  }): Promise<string | null> {
+    const nextType = options?.nextType ?? (type || null)
+    if (!nextType) return draftId || null
+    const nextValues = options?.nextValues ?? values
+    const nextPermit = options?.nextPermit ?? permitDraft
+    const reached = furtherCreateStep(
+      nextType,
+      options?.wizardStep ?? step,
+      nextType === type ? maxReachedStep : (options?.wizardStep ?? 'type'),
+    )
+    if (nextType === type || options?.wizardStep) {
+      setMaxReachedStep((current) =>
+        nextType === type
+          ? furtherCreateStep(nextType, reached, current)
+          : reached,
+      )
+    }
+    const payload = {
+      ...draftPayload(nextType, nextValues, nextPermit, reached),
+      ...(isAdminCreate && forUserId && !draftId ? { createdById: forUserId } : {}),
+    }
+    try {
+      if (draftId) {
+        const { asDraft: _asDraft, createdById: _createdById, ...patch } = payload
+        const { data } = await api.patch<Reservation>(`/reservations/${draftId}`, patch)
+        return data.id
+      }
+      const { data } = await api.post<Reservation>('/reservations', payload)
+      setDraftId(data.id)
+      navigate(createWizardPath(data.id, createBase, forUserId || undefined), { replace: true })
+      if (!options?.silent) {
+        toast.success(t('reservations.draftSaved'))
+      }
+      await queryClient.invalidateQueries({ queryKey: ['reservations'] })
+      return data.id
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+      return null
+    }
+  }
+
+  async function goAfterType(next: ReservationType) {
+    selectType(next)
+    const nextStep: CreateStep = next === 'GROUP' || next === 'CARAVAN' ? 'party' : 'count'
+    const nextValues =
+      next === 'INDIVIDUAL'
+        ? {
+            ...values,
+            caravanId: '',
+            groupId: '',
+            ...((Number(values.maleCount) === 1 && Number(values.femaleCount) === 0) ||
+            (Number(values.maleCount) === 0 && Number(values.femaleCount) === 1)
+              ? {}
+              : countsForIndividualGender(subject?.gender)),
+          }
+        : {
+            ...values,
+            caravanId: next === 'CARAVAN' ? values.caravanId : '',
+            groupId: next === 'GROUP' ? values.groupId : '',
+          }
+    setSubmitting(true)
+    try {
+      const id = await persistDraft({
+        nextType: next,
+        nextValues,
+        nextPermit: { source: '', issuedLicenseId: '', permitImageId: '' },
+        wizardStep: nextStep,
+      })
+      if (id) {
+        setMaxReachedStep(nextStep)
+        setStep(nextStep)
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function goBack() {
+    if (stepIndex <= 0) return
+    setStep(steps[stepIndex - 1])
+  }
+
+  async function ensurePartySelected(
+    nextValues: TravelValues = values,
+  ): Promise<TravelValues | null> {
+    if (!partyKind) return nextValues
+    if (type === 'CARAVAN' ? nextValues.caravanId : nextValues.groupId) return nextValues
+    const error = partyDraftError(partyDraft, partyKind, t, needsPartyCity)
     if (error) {
       toast.error(error)
-      return false
+      return null
     }
     try {
       const created = await createReservationParty(partyKind, partyDraft)
-      applyParty(created)
-      setPartyDraft(emptyPartyDraft(user))
+      const patched: TravelValues = {
+        ...nextValues,
+        caravanId: type === 'CARAVAN' ? created.id : '',
+        groupId: type === 'GROUP' ? created.id : '',
+        ...(partyDraft.walkingRouteId ? { walkingRouteId: partyDraft.walkingRouteId } : {}),
+      }
+      applyParty(created, partyDraft.walkingRouteId)
+      setPartyDraft(emptyPartyDraft(subject))
       await queryClient.invalidateQueries({
         queryKey: partyKind === 'CARAVAN' ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
       })
       toast.success(t(partyKind === 'CARAVAN' ? 'caravans.created' : 'groups.created'))
-      return true
+      return patched
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
-      return false
+      return null
     }
   }
 
@@ -303,7 +616,7 @@ export function ReservationCreatePage() {
         toast.error(t('reservations.groupRequired'))
         return false
       }
-      const error = partyDraftError(partyDraft, partyKind, t, locale, needsPartyCity)
+      const error = partyDraftError(partyDraft, partyKind, t, needsPartyCity)
       if (error) {
         toast.error(error)
         return false
@@ -330,6 +643,35 @@ export function ReservationCreatePage() {
         return false
       }
     }
+    if (step === 'license') {
+      if (permitDraft.source === 'ISSUED_LICENSE' && !permitDraft.issuedLicenseId) {
+        toast.error(t('reservations.permitIssuedRequired'))
+        return false
+      }
+      if (permitDraft.source === 'UPLOAD' && !permitDraft.permitImageId) {
+        toast.error(t('reservations.permitImageRequired'))
+        return false
+      }
+      if (!permitDraft.source) {
+        toast.error(t('reservations.permitRequired'))
+        return false
+      }
+    }
+    return true
+  }
+
+  async function advanceAfterSave(nextValues = values, nextPermit = permitDraft) {
+    if (!type) return false
+    const nextStep = lastStep ? step : steps[stepIndex + 1]
+    const id = await persistDraft({
+      nextType: type,
+      nextValues,
+      nextPermit,
+      wizardStep: nextStep,
+      silent: Boolean(draftId),
+    })
+    if (!id) return false
+    if (!lastStep) setStep(nextStep)
     return true
   }
 
@@ -339,15 +681,28 @@ export function ReservationCreatePage() {
     if (step === 'party') {
       setSubmitting(true)
       try {
-        const ok = await ensurePartySelected()
-        if (ok) setStep(steps[stepIndex + 1])
+        const patched = await ensurePartySelected()
+        if (!patched || !type) return
+        const nextStep = steps[stepIndex + 1]
+        const id = await persistDraft({
+          nextType: type,
+          nextValues: patched,
+          wizardStep: nextStep,
+          silent: Boolean(draftId),
+        })
+        if (id) setStep(nextStep)
       } finally {
         setSubmitting(false)
       }
       return
     }
     if (!lastStep) {
-      setStep(steps[stepIndex + 1])
+      setSubmitting(true)
+      try {
+        await advanceAfterSave()
+      } finally {
+        setSubmitting(false)
+      }
       return
     }
     if (!type) return
@@ -361,49 +716,74 @@ export function ReservationCreatePage() {
       setStep('party')
       return
     }
+    if (type === 'CARAVAN') {
+      if (permitDraft.source === 'ISSUED_LICENSE' && !permitDraft.issuedLicenseId) {
+        toast.error(t('reservations.permitIssuedRequired'))
+        setStep('license')
+        return
+      }
+      if (permitDraft.source === 'UPLOAD' && !permitDraft.permitImageId) {
+        toast.error(t('reservations.permitImageRequired'))
+        setStep('license')
+        return
+      }
+      if (!permitDraft.source) {
+        toast.error(t('reservations.permitRequired'))
+        setStep('license')
+        return
+      }
+    }
     const dateError = travelDatesError(values, t)
     if (dateError) {
       toast.error(dateError)
       setStep('dates')
       return
     }
-    confirmToast({
-      title: t('reservations.confirmSubmitForReview'),
-      confirmLabel: t('reservations.createAndSubmit'),
-      cancelLabel: t('common.cancel'),
-      onConfirm: () => {
-        void createReservation()
-      },
-    })
-  }
-
-  async function createReservation() {
-    if (!type) return
-    const male = Number(values.maleCount) || 0
-    const female = Number(values.femaleCount) || 0
     setSubmitting(true)
     try {
-      const { data } = await api.post<Reservation>('/reservations', {
-        type,
-        year,
-        originCityId: values.originCityId || null,
-        walkingRouteId: values.walkingRouteId || null,
-        stayStartDate: values.stayStartDate || null,
-        stayEndDate: values.stayEndDate || null,
-        walkingStartDate: values.walkingStartDate || null,
-        requestsAccommodation: values.requestsAccommodation,
-        requestsBus: values.requestsBus,
-        maleCount: male,
-        femaleCount: female,
-        caravanId: type === 'CARAVAN' ? values.caravanId || null : null,
-        groupId: type === 'GROUP' ? values.groupId || null : null,
-      })
+      const id = await persistDraft({ silent: true, wizardStep: step })
+      if (!id) return
+      if (
+        type === 'CARAVAN' &&
+        permitDraft.source === 'ISSUED_LICENSE' &&
+        permitDraft.issuedLicenseId &&
+        isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
+      ) {
+        toast.error(t('reservations.permitAwaitingHqApproval'))
+        return
+      }
+      setRulesModalOpen(true)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function finalizeReservation() {
+    if (!type) return
+    if (
+      type === 'CARAVAN' &&
+      permitDraft.source === 'ISSUED_LICENSE' &&
+      permitDraft.issuedLicenseId &&
+      isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
+    ) {
+      setRulesModalOpen(false)
+      toast.error(t('reservations.permitAwaitingHqApproval'))
+      setStep('license')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const id = await persistDraft({ silent: true, wizardStep: step })
+      if (!id) return
+      const { data } = await api.post<Reservation>(`/reservations/${id}/submit`)
+      setRulesModalOpen(false)
       toast.success(
         data.status === 'PENDING_MANAGEMENT_REVIEW'
           ? t('reservations.submitted')
           : t('reservations.created'),
       )
-      navigate(`/my-reservations/${data.id}`)
+      await queryClient.invalidateQueries({ queryKey: ['reservations'] })
+      navigate(`${createBase}/${data.id}`)
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
@@ -414,17 +794,123 @@ export function ReservationCreatePage() {
   const patchValues = (patch: Partial<TravelValues>) =>
     setValues((current) => ({ ...current, ...patch }))
 
+  async function onIndividualCountChosen(patch: Partial<TravelValues>) {
+    const nextValues = { ...values, ...patch }
+    patchValues(patch)
+    if (type !== 'INDIVIDUAL') return
+    const male = Number(nextValues.maleCount) || 0
+    const female = Number(nextValues.femaleCount) || 0
+    if (male + female <= 0) return
+    setSubmitting(true)
+    try {
+      const id = await persistDraft({
+        nextType: 'INDIVIDUAL',
+        nextValues,
+        wizardStep: 'dates',
+        silent: Boolean(draftId),
+      })
+      if (id) setStep('dates')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function selectPartyAndAdvance(item: { id: string }) {
+    if (!type || (type !== 'CARAVAN' && type !== 'GROUP')) return
+    const nextValues: TravelValues = {
+      ...values,
+      caravanId: type === 'CARAVAN' ? item.id : '',
+      groupId: type === 'GROUP' ? item.id : '',
+    }
+    applyParty(item)
+    setPartyDraft(emptyPartyDraft(subject))
+    setSubmitting(true)
+    try {
+      const id = await persistDraft({
+        nextType: type,
+        nextValues,
+        wizardStep: 'count',
+        silent: Boolean(draftId),
+      })
+      if (id) setStep('count')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (draftParam && (!draftHydrated || draftQuery.isLoading)) {
+    return (
+      <div className={userFormShellClassName}>
+        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+        <LoadingState />
+        <p className="mt-3 text-center text-sm text-ink-500">{t('reservations.draftLoading')}</p>
+      </div>
+    )
+  }
+
+  if (draftParam && draftQuery.isError) {
+    return (
+      <div className={userFormShellClassName}>
+        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+        <p className="text-sm text-red-700">{t('reservations.notFound')}</p>
+      </div>
+    )
+  }
+
+  if (isAdminCreate && forUserId && forUserQuery.isLoading) {
+    return (
+      <div className={userFormShellClassName}>
+        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+        <LoadingState />
+      </div>
+    )
+  }
+
+  if (isAdminCreate && forUserId && forUserQuery.isError) {
+    return (
+      <div className={userFormShellClassName}>
+        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+        <p className="text-sm text-red-700">{t('reservations.pickApplicantNotFound')}</p>
+      </div>
+    )
+  }
+
+  if (!subjectReady) {
+    return null
+  }
+
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+      <PageHeader
+        title={t('reservations.createPageTitle', { year: yearLabel })}
+        subtitle={
+          subject && isAdminCreate ? (
+            <span className="flex flex-wrap items-center gap-2">
+              <FormMetaChip
+                icon={User}
+                label={t('reservations.createOnBehalfOf', { name: subject.fullName })}
+              />
+              {subject.nationalId ? (
+                <FormMetaChip
+                  icon={IdCard}
+                  label={localizeDigits(subject.nationalId, locale)}
+                />
+              ) : null}
+            </span>
+          ) : draftId ? (
+            t('reservations.draftResume')
+          ) : undefined
+        }
+      />
 
       <CreateStepBar
         current={step}
+        maxReached={maxReachedStep}
         steps={steps}
         type={type}
         onSelect={(next) => {
           const target = steps.indexOf(next)
-          if (target >= 0 && target <= stepIndex) setStep(next)
+          if (target >= 0 && target <= maxReachedIndex) setStep(next)
         }}
       />
 
@@ -432,7 +918,9 @@ export function ReservationCreatePage() {
         key={step}
         autoFocusFirst={step !== 'type'}
         onSubmit={submit}
-        className={step === 'type' || step === 'party' ? 'space-y-4' : `space-y-4 p-6 ${cardClassName}`}
+        className={`animate-page-fade-in ${
+          step === 'type' || step === 'party' ? 'space-y-4' : `space-y-4 p-6 ${cardClassName}`
+        }`}
       >
         {step === 'type' ? (
           <>
@@ -441,23 +929,18 @@ export function ReservationCreatePage() {
                 const Icon = typeIcons[item]
                 const enabled = Boolean(settings.data?.[settingsEnabledKey(item)])
                 const selected = type === item
-                const hints = Array.from({ length: typeHintCounts[item] }, (_, index) =>
-                  t(`reservations.typeHints.${item}.${index}`, {
-                    count: formatNumber(GROUP_MAX_SIZE, locale),
-                  }),
-                )
                 return (
                   <button
                     key={item}
                     type="button"
-                    disabled={!enabled}
+                    disabled={!enabled || submitting}
                     data-enter-ignore=""
-                    onClick={() => goAfterType(item)}
+                    onClick={() => void goAfterType(item)}
                     className={`w-full rounded-[22px] border p-5 text-start transition-[box-shadow,transform,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:p-6 ${
                       selected
                         ? 'border-teal-500 bg-teal-50 shadow-[0_16px_36px_rgba(46,189,182,0.24),0_0_0_4px_rgba(255,255,255,0.95),0_0_0_7px_rgba(46,189,182,0.32)]'
                         : 'border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]'
-                    } ${!enabled ? 'cursor-not-allowed' : `cursor-pointer ${typeCardHoverClass}`}`}
+                    } ${!enabled || submitting ? 'cursor-not-allowed' : `cursor-pointer ${typeCardHoverClass}`}`}
                   >
                     {settings.isSuccess && !enabled ? (
                       <CreateUnavailableNotice className="mb-4" />
@@ -473,14 +956,11 @@ export function ReservationCreatePage() {
                         </span>
                         <p className="text-lg font-semibold text-ink-900">{t(`reservations.types.${item}`)}</p>
                       </div>
-                      <ul className="mt-4 space-y-2">
-                        {hints.map((hint) => (
-                          <li key={hint} className="flex items-start gap-2.5 text-sm leading-6 text-ink-600">
-                            <Check className="mt-0.5 size-4 shrink-0 text-teal-600" aria-hidden />
-                            <span>{hint}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <ReceptionTypeIntro
+                        type={item}
+                        settings={settings.data}
+                        className="mt-4"
+                      />
                     </div>
                   </button>
                 )
@@ -495,6 +975,29 @@ export function ReservationCreatePage() {
             type={partyKind}
             selectedId={selectedPartyId()}
             draft={partyDraft}
+            subjectUser={subject}
+            hideExistingParties={isAdminCreate}
+            knownSelected={
+              draftQuery.data?.caravan && partyKind === 'CARAVAN'
+                ? {
+                    id: draftQuery.data.caravan.id,
+                    name: draftQuery.data.caravan.name,
+                    maleCount: draftQuery.data.caravan.maleCount ?? 0,
+                    femaleCount: draftQuery.data.caravan.femaleCount ?? 0,
+                    totalCount: draftQuery.data.caravan.totalCount ?? 0,
+                    city: draftQuery.data.caravan.city,
+                  }
+                : draftQuery.data?.group && partyKind === 'GROUP'
+                  ? {
+                      id: draftQuery.data.group.id,
+                      name: draftQuery.data.group.name,
+                      maleCount: draftQuery.data.group.maleCount ?? 0,
+                      femaleCount: draftQuery.data.group.femaleCount ?? 0,
+                      totalCount: draftQuery.data.group.totalCount ?? 0,
+                      city: draftQuery.data.group.city,
+                    }
+                  : null
+            }
             onDraftChange={(patch) => {
               setPartyDraft((current) => ({ ...current, ...patch }))
               if (selectedPartyId()) {
@@ -502,10 +1005,9 @@ export function ReservationCreatePage() {
               }
             }}
             onSelect={(item) => {
-              applyParty(item)
-              setPartyDraft(emptyPartyDraft(user))
+              void selectPartyAndAdvance(item)
             }}
-            onAdvance={() => setStep('count')}
+            onAdvance={undefined}
           />
         ) : null}
 
@@ -517,8 +1019,11 @@ export function ReservationCreatePage() {
             <ReservationCountFields
               values={values}
               onChange={(patch) => {
+                if (type === 'INDIVIDUAL') {
+                  void onIndividualCountChosen(patch)
+                  return
+                }
                 patchValues(patch)
-                if (type === 'INDIVIDUAL') setStep('dates')
               }}
               type={type}
             />
@@ -529,17 +1034,22 @@ export function ReservationCreatePage() {
           <ReservationDateFields values={values} onChange={patchValues} showOccasionHint={false} />
         ) : null}
 
-        {step === 'optional' ? (
-          <>
-            <ReservationApplicantFields values={values} onChange={patchValues} />
-            <OptionalInfoHint />
-            <ReservationOptionalGeoFields values={values} onChange={patchValues} iranId={iranId} />
-          </>
+        {step === 'services' ? (
+          <ReservationApplicantFields values={values} onChange={patchValues} />
+        ) : null}
+
+        {step === 'license' ? (
+          <ReservationCaravanLicenseStep
+            caravanId={values.caravanId}
+            year={reservationYear}
+            value={permitDraft}
+            onChange={(patch) => setPermitDraft((current) => ({ ...current, ...patch }))}
+          />
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3 pt-6">
           {stepIndex > 0 ? (
-            <Button type="button" onClick={goBack}>
+            <Button type="button" onClick={goBack} disabled={submitting}>
               <ChevronRight className="size-4" aria-hidden />
               {t('reservations.prevStep')}
             </Button>
@@ -549,23 +1059,38 @@ export function ReservationCreatePage() {
             className="ms-auto"
             disabled={submitting || (step === 'type' && !type)}
           >
-            {lastStep ? t('reservations.createAndSubmit') : t('reservations.nextStep')}
+            {lastStep ? t('reservations.finalSubmit') : t('reservations.nextStep')}
             {lastStep ? <Check className="size-4" aria-hidden /> : <ChevronLeft className="size-4" aria-hidden />}
           </Button>
         </div>
         {step === 'dates' ? <OccasionStayHint /> : null}
       </AppForm>
+      {rulesModalOpen && type ? (
+        <ReceptionRulesModal
+          type={type}
+          settings={settings.data}
+          submitting={submitting}
+          onClose={() => {
+            if (!submitting) setRulesModalOpen(false)
+          }}
+          onConfirm={() => {
+            void finalizeReservation()
+          }}
+        />
+      ) : null}
     </div>
   )
 }
 
 function CreateStepBar({
   current,
+  maxReached,
   steps,
   type,
   onSelect,
 }: {
   current: CreateStep
+  maxReached: CreateStep
   steps: CreateStep[]
   type: ReservationType | ''
   onSelect: (step: CreateStep) => void
@@ -573,6 +1098,7 @@ function CreateStepBar({
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const currentIndex = steps.indexOf(current)
+  const maxReachedIndex = Math.max(currentIndex, steps.indexOf(maxReached))
   const total = steps.length
   return (
     <div className={`${cardClassName} mb-4 p-4`}>
@@ -588,20 +1114,21 @@ function CreateStepBar({
         />
         <div
           className={`grid min-w-0 w-full flex-1 gap-2 sm:order-first ${
-            total === 5 ? 'grid-cols-5' : 'grid-cols-4'
+            total >= 6 ? 'grid-cols-3 sm:grid-cols-6' : total === 5 ? 'grid-cols-5' : 'grid-cols-4'
           }`}
         >
           {steps.map((item, index) => {
             const Icon =
               item === 'party' ? (type === 'CARAVAN' ? Footprints : Users) : createStepIcons[item]
-            const state = index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'pending'
+            const state =
+              index === currentIndex ? 'current' : index <= maxReachedIndex ? 'done' : 'pending'
             const styles = {
               done: 'border-teal-200 bg-teal-50 text-teal-800',
               current:
                 'border-teal-500 bg-teal-500 text-white shadow-[0_10px_24px_rgba(46,189,182,0.28)]',
               pending: 'border-line bg-cream-50 text-ink-400',
             }
-            const clickable = index <= currentIndex
+            const clickable = index <= maxReachedIndex
             const className = `flex h-full w-full flex-col items-center gap-1 rounded-2xl border px-1.5 py-3 text-center transition-[box-shadow,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${styles[state]} ${
               clickable ? 'cursor-pointer' : 'cursor-not-allowed'
             }`

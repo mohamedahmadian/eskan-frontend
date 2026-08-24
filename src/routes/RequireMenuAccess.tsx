@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
-import { canAccessMyCaravans, canAccessMyGroups } from '../lib/roles'
+import { canAccessMyAccommodations, canAccessMyCaravans, canAccessMyGroups } from '../lib/roles'
 
 export function hasMenuAccess(path: string, modules: { menus: { path: string }[] }[]) {
   return modules.some((mod) =>
@@ -23,6 +23,10 @@ export function RequireMenuAccess({ path }: { path: string }) {
   }
 
   if (path === '/my-groups' && !canAccessMyGroups(user)) {
+    return <Navigate to="/" replace />
+  }
+
+  if (path === '/my-accommodations' && !canAccessMyAccommodations(user)) {
     return <Navigate to="/" replace />
   }
 

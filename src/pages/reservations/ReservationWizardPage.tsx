@@ -1,9 +1,16 @@
-import { ArrowRight, Ban, Hourglass, RotateCcw } from "lucide-react";
+import {
+  ArrowRight,
+  Ban,
+  CalendarClock,
+  Hourglass,
+  RotateCcw,
+  Timer,
+} from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useTranslation, Trans } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Button,
@@ -15,10 +22,12 @@ import {
 import { DateText } from "../../components/ui/DateText";
 import { confirmToast } from "../../components/ui/confirmToast";
 import { api, getApiErrorMessage } from "../../lib/api";
-import { formatNumber } from "../../lib/datetime";
+import { elapsedDurationParts, formatNumber } from "../../lib/datetime";
 import type { Reservation } from "../../types/app";
 import {
+  createWizardPath,
   currentStepFromStatus,
+  isOwnerCreateDraft,
   ownerCanEditStep,
   ownerFlowSteps,
   type ReservationStepCode,
@@ -33,6 +42,7 @@ import { ReservationTravelSummary } from "./ReservationTravelSummary";
 import { ReservationTimeline } from "./ReservationTimeline";
 import { ReservationWizardShell } from "./ReservationWizardShell";
 import { InsuranceStep } from "./ReservationInsuranceStep";
+import { ReservationPermitPanel } from "./ReservationPermitPanel";
 import { ReservationTitleMeta } from "./ReservationSectionHeader";
 
 export function ReservationWizardPage() {
@@ -76,6 +86,10 @@ export function ReservationWizardPage() {
     return <p className="text-sm text-red-700">{message}</p>;
   }
 
+  if (isOwnerCreateDraft(reservation)) {
+    return <Navigate to={createWizardPath(reservation.id)} replace />;
+  }
+
   const blocked =
     reservation.status === "REJECTED" || reservation.status === "CANCELLED";
 
@@ -114,7 +128,9 @@ export function ReservationWizardPage() {
         <CancelledBanner cancelledAt={reservation.cancelledAt} />
       ) : null}
       {reservation.status === "PENDING_MANAGEMENT_REVIEW" ? (
-        <ReviewWaitingBanner />
+        <ReviewWaitingBanner
+          submittedAt={reservation.basicInfoCompletedAt ?? reservation.createdAt}
+        />
       ) : null}
       {reservation.returnedToStatus === reservation.status &&
       reservation.status !== "REJECTED" ? (
@@ -236,7 +252,7 @@ function ActiveStep({
     active === "travel" ? (
       <ReservationTravelStep reservation={reservation} onChanged={onChanged} />
     ) : active === "review" ? (
-      <ReviewStep reservation={reservation} />
+      <ReviewStep reservation={reservation} onChanged={onChanged} />
     ) : active === "companions" ? (
       <CompanionsStep
         reservation={reservation}
@@ -268,18 +284,33 @@ function ActiveStep({
   );
 }
 
-function ReviewStep({ reservation }: { reservation: Reservation }) {
+function ReviewStep({
+  reservation,
+  onChanged,
+}: {
+  reservation: Reservation;
+  onChanged: () => void;
+}) {
   const { t } = useTranslation();
   return (
-    <ReservationTravelSummary
-      reservation={reservation}
-      variant="review"
-      hint={
-        reservation.managementReviewedAt
-          ? t("reservations.reviewAuto")
-          : t("reservations.reviewSummaryHint")
-      }
-    />
+    <div className="space-y-4">
+      <ReservationTravelSummary
+        reservation={reservation}
+        variant="review"
+        hint={
+          reservation.managementReviewedAt
+            ? t("reservations.reviewAuto")
+            : t("reservations.reviewSummaryHint")
+        }
+      />
+      {reservation.type === "CARAVAN" ? (
+        <ReservationPermitPanel
+          reservation={reservation}
+          mode="user"
+          onChanged={onChanged}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -327,26 +358,72 @@ function ReturnedBanner() {
   );
 }
 
-function ReviewWaitingBanner() {
-  const { t } = useTranslation();
+function reviewWaitElapsedLabel(
+  submittedAt: string,
+  locale: string,
+  t: (key: string, options?: { count?: string }) => string,
+) {
+  const parts = elapsedDurationParts(submittedAt);
+  if (!parts) return null;
+  const n = (value: number) => formatNumber(value, locale);
+  const totalHours = parts.days * 24 + parts.hours;
+  const chunks: string[] = [];
+  if (totalHours > 0) {
+    chunks.push(t("reservations.elapsedHour", { count: n(totalHours) }));
+  }
+  chunks.push(t("reservations.elapsedMinute", { count: n(parts.minutes) }));
+  return chunks.join(t("reservations.elapsedJoin"));
+}
+
+function ReviewWaitingBanner({ submittedAt }: { submittedAt: string }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
+  const elapsed = reviewWaitElapsedLabel(submittedAt, locale, t);
+
   return (
     <aside
-      className="mb-4 flex flex-col items-center gap-3 rounded-[28px] border-2 border-gold-400 bg-gradient-to-b from-gold-100 via-gold-50 to-white px-5 py-7 text-center shadow-[0_16px_36px_rgba(232,184,58,0.2)]"
+      className="mb-4 rounded-2xl border border-gold-300 bg-gradient-to-l from-gold-50 via-white to-white px-3.5 py-3 shadow-[0_6px_16px_rgba(232,184,58,0.12)]"
       role="status"
-      aria-live="polite"
     >
-      <span className="flex size-16 items-center justify-center rounded-3xl bg-gold-500 text-white shadow-[0_10px_22px_rgba(196,146,26,0.35)]">
-        <Hourglass className="size-8" aria-hidden />
-      </span>
-      <p className="text-xl font-bold leading-8 text-gold-600 sm:text-2xl">
-        {t("reservations.statuses.PENDING_MANAGEMENT_REVIEW")}
-      </p>
-      <p className="max-w-lg text-sm leading-7 text-ink-700">
-        {t("reservations.reviewWaiting")}
-      </p>
-      <p className="text-base font-semibold text-ink-900">
-        {t("reservations.reviewPleaseWait")}
-      </p>
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold-500 text-white shadow-[0_6px_14px_rgba(196,146,26,0.28)]">
+          <Hourglass className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-gold-700">
+            {t("reservations.statuses.PENDING_MANAGEMENT_REVIEW")}
+          </p>
+          <p className="mt-0.5 text-xs leading-5 text-ink-600">
+            {t("reservations.reviewWaiting")}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+            <span className="inline-flex items-center gap-1.5 text-xs text-ink-800">
+              <CalendarClock
+                className="size-3.5 shrink-0 text-gold-600"
+                aria-hidden
+              />
+              <span className="text-ink-500">
+                {t("reservations.reviewSubmittedAt")}
+              </span>
+              <span className="font-semibold">
+                <DateText value={submittedAt} withTime />
+              </span>
+            </span>
+            {elapsed ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-ink-800">
+                <Timer
+                  className="size-3.5 shrink-0 text-gold-600"
+                  aria-hidden
+                />
+                <span className="text-ink-500">
+                  {t("reservations.reviewElapsed")}
+                </span>
+                <span className="font-semibold">{elapsed}</span>
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }

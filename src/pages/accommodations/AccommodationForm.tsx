@@ -28,7 +28,8 @@ import {
 import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, ToggleField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, ToggleField, fieldClassName } from '../../components/ui/Form'
+import { FormCard } from '../../components/ui/FormLayout'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
@@ -52,6 +53,17 @@ import {
 import { AccommodationManagersCard } from './AccommodationManagersCard'
 import { AccommodationTabNav, type AccommodationTab } from './AccommodationTabs'
 import { AccommodationYearAlert } from './AccommodationYearAlert'
+import { AccommodationYearContactsCard } from './AccommodationYearContactsCard'
+import {
+  AccommodationContactsPanel,
+  firstIncompleteContactRole,
+} from './AccommodationContactsPanel'
+import {
+  accommodationContactDraftsFromInitial,
+  toAccommodationContactPayloads,
+  type AccommodationContactDraft,
+  type AccommodationContactRole,
+} from './accommodationContacts'
 
 export type AccommodationPayload = {
   name: string
@@ -89,6 +101,8 @@ export type AccommodationPayload = {
   managerUserIds?: string[]
   primaryManagerUserId?: string | null
   isPrimary?: boolean
+  contacts?: ReturnType<typeof toAccommodationContactPayloads>
+  yearContactMode?: 'manager' | 'fromAccommodation' | 'manual'
 }
 
 function emptyToNull(value: string) {
@@ -187,16 +201,33 @@ export function AccommodationForm({
       : true,
   })
 
+  const [drafts, setDrafts] = useState<
+    Record<AccommodationContactRole, AccommodationContactDraft>
+  >(() => accommodationContactDraftsFromInitial(initial?.contacts))
+  const [activeContactRole, setActiveContactRole] = useState<AccommodationContactRole>(
+    () => firstIncompleteContactRole(drafts),
+  )
+  const [yearContactMode, setYearContactMode] = useState<
+    'manager' | 'fromAccommodation' | 'manual'
+  >('manager')
+
   const tabs = useMemo(
     () =>
       (
-        ['general', 'location', 'capacity', 'amenities', 'social'] as AccommodationTab[]
-      ).concat(isAdmin ? ['managers'] : []),
-    [isAdmin],
+        [
+          'general',
+          'location',
+          'capacity',
+          'amenities',
+          'social',
+          'contacts',
+        ] as AccommodationTab[]
+      ).concat(isAdmin || initial?.id ? ['managers'] : []),
+    [isAdmin, initial?.id],
   )
 
   function panelClass(id: AccommodationTab) {
-    return `space-y-4 p-6 ${cardClassName} ${tab === id ? '' : 'hidden'}`
+    return `space-y-4 ${tab === id ? '' : 'hidden'}`
   }
 
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
@@ -252,6 +283,8 @@ export function AccommodationForm({
         parkingCapacity: toOptionalNumber(values.parkingCapacity),
         bathroomCount: toOptionalNumber(values.bathroomCount),
         toiletCount: toOptionalNumber(values.toiletCount),
+        contacts: toAccommodationContactPayloads(drafts),
+        ...(!isAdmin && !initial?.id ? { yearContactMode } : {}),
         ...(isAdmin && !initial?.id
           ? {
               managerUserIds: values.managerUserIds,
@@ -273,10 +306,21 @@ export function AccommodationForm({
   return (
     <div className="space-y-4">
       {initial ? <AccommodationYearAlert accommodation={initial} /> : null}
+      <FormCard
+        icon={Building2}
+        title={initial ? initial.name || t('accommodations.edit') : t('accommodations.create')}
+        subtitle={initial ? undefined : t('accommodations.createSubtitle')}
+      >
+      <div className="space-y-4 p-5 sm:p-6">
       <AccommodationTabNav tab={tab} tabs={tabs} onChange={setTab} />
 
       {tab === 'managers' && editManagers && initial ? (
-        <AccommodationManagersCard accommodation={initial} users={users} />
+        <div className="space-y-4">
+          <AccommodationManagersCard accommodation={initial} users={users} />
+          <AccommodationYearContactsCard accommodation={initial} />
+        </div>
+      ) : tab === 'managers' && initial && !isAdmin ? (
+        <AccommodationYearContactsCard accommodation={initial} />
       ) : (
         <AppForm
           onSubmit={submit}
@@ -665,6 +709,36 @@ export function AccommodationForm({
         </FormField>
       </div>
 
+      <div data-tab="contacts" className={panelClass('contacts')}>
+        <AccommodationContactsPanel
+          drafts={drafts}
+          activeRole={activeContactRole}
+          onActiveRoleChange={setActiveContactRole}
+          onDraftChange={(role, draft) =>
+            setDrafts((current) => ({ ...current, [role]: draft }))
+          }
+        />
+        {!isAdmin && !initial?.id ? (
+          <FormField icon={Users} label={t('accommodations.yearContactMode')} htmlFor="yearContactMode">
+            <SearchSelect
+              id="yearContactMode"
+              value={yearContactMode}
+              onChange={(next) =>
+                setYearContactMode(next as 'manager' | 'fromAccommodation' | 'manual')
+              }
+              options={[
+                { value: 'manager', label: t('accommodations.yearContactsFromManager') },
+                {
+                  value: 'fromAccommodation',
+                  label: t('accommodations.yearContactsFromAccommodation'),
+                },
+                { value: 'manual', label: t('accommodations.yearContactsManual') },
+              ]}
+            />
+          </FormField>
+        ) : null}
+      </div>
+
       {isAdmin && !initial?.id ? (
         <div data-tab="managers" className={panelClass('managers')}>
           <div className="space-y-2">
@@ -710,7 +784,7 @@ export function AccommodationForm({
         </div>
       ) : null}
 
-      <div className={`p-6 ${cardClassName}`}>
+      <div>
         <FormActions
           submitLabel={t('accommodations.save')}
           cancelLabel={t('accommodations.cancel')}
@@ -720,6 +794,8 @@ export function AccommodationForm({
       </div>
         </AppForm>
       )}
+      </div>
+      </FormCard>
     </div>
   )
 }

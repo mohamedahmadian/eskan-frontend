@@ -4,7 +4,8 @@ import { DateObject } from 'react-multi-date-picker'
 import gregorian from 'react-date-object/calendars/gregorian'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
@@ -121,7 +122,16 @@ export function AccommodationLoanForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={Package}
+      title={
+        initial
+          ? initial.supplierItem?.name || t('accommodationLoans.edit')
+          : t('accommodationLoans.create')
+      }
+      subtitle={initial ? undefined : t('accommodationLoans.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={UserRound} label={t('accommodationLoans.manager')} htmlFor="accommodationManagerId">
         <SearchSelect
           id="accommodationManagerId"
@@ -241,5 +251,6 @@ export function AccommodationLoanForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

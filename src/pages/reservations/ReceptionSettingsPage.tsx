@@ -1,10 +1,24 @@
-import { Banknote, Building2, Calendar, CalendarDays, FileText, Info, Users } from 'lucide-react'
+import {
+  Banknote,
+  BadgeCheck,
+  Building2,
+  Calendar,
+  CalendarDays,
+  FileText,
+  Info,
+  Plus,
+  ScrollText,
+  Shield,
+  Trash2,
+  Users,
+} from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
   AppForm,
+  Button,
   FormActions,
   FormField,
   PageHeader,
@@ -18,26 +32,58 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { addDaysIso, currentPersianYear, persianYearOptions } from '../../lib/datetime'
 import type { ReceptionSettings, ReservationType } from '../../types/app'
+import { ReceptionMultilineItems } from './ReceptionTypeContent'
 
-type Draft = Omit<ReceptionSettings, 'year' | 'exists'>
+type DraftPlan = {
+  key: string
+  id?: string
+  coverageAmount: number
+  premiumAmount: number
+  description: string
+}
+
+type Draft = Omit<ReceptionSettings, 'year' | 'exists' | 'insurancePlans'> & {
+  insurancePlans: DraftPlan[]
+}
 type ReceptionTab = ReservationType | 'INSURANCE' | 'OCCASIONS'
+
+let planKeySeq = 0
+function nextPlanKey() {
+  planKeySeq += 1
+  return `plan-${planKeySeq}`
+}
+
+function emptyPlan(): DraftPlan {
+  return {
+    key: nextPlanKey(),
+    coverageAmount: 0,
+    premiumAmount: 0,
+    description: '',
+  }
+}
 
 const emptyDraft = (): Draft => ({
   individualEnabled: false,
   individualMaleCapacity: 0,
   individualFemaleCapacity: 0,
   individualAutoApprove: false,
+  individualIntro: '',
+  individualRules: '',
   groupEnabled: false,
   groupMaleCapacity: 0,
   groupFemaleCapacity: 0,
   groupAutoApprove: false,
+  groupIntro: '',
+  groupRules: '',
   caravanEnabled: false,
   caravanMaleCapacity: 0,
   caravanFemaleCapacity: 0,
   caravanAutoApprove: false,
+  caravanAutoApproveLicenses: false,
+  caravanIntro: '',
+  caravanRules: '',
   insuranceOrganization: '',
-  insurancePremiumAmount: 0,
-  insuranceCoverage: '',
+  insurancePlans: [],
   imamRezaMartyrdomDate: null,
   prophetDemiseDate: null,
 })
@@ -48,19 +94,44 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     individualMaleCapacity: data.individualMaleCapacity,
     individualFemaleCapacity: data.individualFemaleCapacity,
     individualAutoApprove: data.individualAutoApprove,
+    individualIntro: data.individualIntro ?? '',
+    individualRules: data.individualRules ?? '',
     groupEnabled: data.groupEnabled,
     groupMaleCapacity: data.groupMaleCapacity,
     groupFemaleCapacity: data.groupFemaleCapacity,
     groupAutoApprove: data.groupAutoApprove,
+    groupIntro: data.groupIntro ?? '',
+    groupRules: data.groupRules ?? '',
     caravanEnabled: data.caravanEnabled,
     caravanMaleCapacity: data.caravanMaleCapacity,
     caravanFemaleCapacity: data.caravanFemaleCapacity,
     caravanAutoApprove: data.caravanAutoApprove,
+    caravanAutoApproveLicenses: data.caravanAutoApproveLicenses ?? false,
+    caravanIntro: data.caravanIntro ?? '',
+    caravanRules: data.caravanRules ?? '',
     insuranceOrganization: data.insuranceOrganization ?? '',
-    insurancePremiumAmount: data.insurancePremiumAmount ?? 0,
-    insuranceCoverage: data.insuranceCoverage ?? '',
+    insurancePlans: (data.insurancePlans ?? []).map((plan) => ({
+      key: 'id' in plan && plan.id ? plan.id : nextPlanKey(),
+      id: 'id' in plan && plan.id ? plan.id : undefined,
+      coverageAmount: plan.coverageAmount ?? 0,
+      premiumAmount: plan.premiumAmount ?? 0,
+      description: plan.description ?? '',
+    })),
     imamRezaMartyrdomDate: data.imamRezaMartyrdomDate ?? null,
     prophetDemiseDate: data.prophetDemiseDate ?? null,
+  }
+}
+
+function toPayload(draft: Draft) {
+  const { insurancePlans, ...rest } = draft
+  return {
+    ...rest,
+    insurancePlans: insurancePlans.map((plan) => ({
+      ...(plan.id ? { id: plan.id } : {}),
+      coverageAmount: plan.coverageAmount,
+      premiumAmount: plan.premiumAmount,
+      description: plan.description,
+    })),
   }
 }
 
@@ -74,6 +145,8 @@ function typeKeys(type: ReservationType) {
       male: 'individualMaleCapacity',
       female: 'individualFemaleCapacity',
       auto: 'individualAutoApprove',
+      intro: 'individualIntro',
+      rules: 'individualRules',
       hint: 'autoApproveHintIndividual',
       title: 'individual',
     } as const
@@ -84,6 +157,8 @@ function typeKeys(type: ReservationType) {
       male: 'groupMaleCapacity',
       female: 'groupFemaleCapacity',
       auto: 'groupAutoApprove',
+      intro: 'groupIntro',
+      rules: 'groupRules',
       hint: 'autoApproveHintGroup',
       title: 'group',
     } as const
@@ -93,6 +168,8 @@ function typeKeys(type: ReservationType) {
     male: 'caravanMaleCapacity',
     female: 'caravanFemaleCapacity',
     auto: 'caravanAutoApprove',
+    intro: 'caravanIntro',
+    rules: 'caravanRules',
     hint: 'autoApproveHintCaravan',
     title: 'caravan',
   } as const
@@ -154,10 +231,10 @@ export function ReceptionSettingsPage() {
   }, [settings.data])
 
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (payload: Draft) => {
       const { data } = await api.put<ReceptionSettings>(
         `/reception-settings/${year}`,
-        toDraft(draft),
+        toPayload(payload),
       )
       return data
     },
@@ -173,6 +250,17 @@ export function ReceptionSettingsPage() {
     setDraft((current) => ({ ...current, [key]: value }))
   }
 
+  function patchEnabled(key: keyof Draft, checked: boolean) {
+    const next = { ...draft, [key]: checked }
+    setDraft(next)
+    if (occasionsSequenceError(next)) {
+      setTab('OCCASIONS')
+      toast.error(t('receptionSettings.occasionsSequenceInvalid'))
+      return
+    }
+    save.mutate(next)
+  }
+
   function patchProphetDemiseDate(iso?: string) {
     const prophetDemiseDate = iso ?? null
     setDraft((current) => ({
@@ -182,9 +270,9 @@ export function ReceptionSettingsPage() {
     }))
   }
 
-  function occasionsSequenceError() {
-    const prophet = draft.prophetDemiseDate
-    const imam = draft.imamRezaMartyrdomDate
+  function occasionsSequenceError(source: Draft = draft) {
+    const prophet = source.prophetDemiseDate
+    const imam = source.imamRezaMartyrdomDate
     if (!prophet && !imam) return null
     if (!prophet || !imam || imam !== addDaysIso(prophet, 1)) {
       return t('receptionSettings.occasionsSequenceInvalid')
@@ -194,6 +282,29 @@ export function ReceptionSettingsPage() {
 
   const occasionError = occasionsSequenceError()
 
+  function patchPlan<K extends keyof DraftPlan>(key: string, field: K, value: DraftPlan[K]) {
+    setDraft((current) => ({
+      ...current,
+      insurancePlans: current.insurancePlans.map((plan) =>
+        plan.key === key ? { ...plan, [field]: value } : plan,
+      ),
+    }))
+  }
+
+  function addPlan() {
+    setDraft((current) => ({
+      ...current,
+      insurancePlans: [...current.insurancePlans, emptyPlan()],
+    }))
+  }
+
+  function removePlan(key: string) {
+    setDraft((current) => ({
+      ...current,
+      insurancePlans: current.insurancePlans.filter((plan) => plan.key !== key),
+    }))
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault()
     if (occasionError) {
@@ -201,7 +312,7 @@ export function ReceptionSettingsPage() {
       toast.error(occasionError)
       return
     }
-    save.mutate()
+    save.mutate(draft)
   }
 
   function panelClass(item: ReceptionTab) {
@@ -254,7 +365,7 @@ export function ReceptionSettingsPage() {
               <FormField icon={Users} label={t('receptionSettings.enabled')}>
                 <ToggleField
                   checked={draft[keys.enabled]}
-                  onChange={(checked) => patch(keys.enabled, checked)}
+                  onChange={(checked) => patchEnabled(keys.enabled, checked)}
                   onLabel={t('geo.active')}
                   offLabel={t('geo.inactive')}
                 />
@@ -292,6 +403,66 @@ export function ReceptionSettingsPage() {
                 />
               </FormField>
               <p className="text-sm leading-7 text-ink-500">{t(`receptionSettings.${keys.hint}`)}</p>
+              {type === 'CARAVAN' ? (
+                <>
+                  <FormField
+                    icon={BadgeCheck}
+                    label={t('receptionSettings.autoApproveLicenses')}
+                  >
+                    <ToggleField
+                      checked={draft.caravanAutoApproveLicenses}
+                      onChange={(checked) => patch('caravanAutoApproveLicenses', checked)}
+                      onLabel={t('geo.active')}
+                      offLabel={t('geo.inactive')}
+                    />
+                  </FormField>
+                  <p className="text-sm leading-7 text-ink-500">
+                    {t('receptionSettings.autoApproveLicensesHint')}
+                  </p>
+                </>
+              ) : null}
+              <FormField
+                icon={Info}
+                label={t('receptionSettings.intro')}
+                htmlFor={keys.intro}
+              >
+                <textarea
+                  id={keys.intro}
+                  className={`${fieldClassName} min-h-28`}
+                  value={draft[keys.intro]}
+                  onChange={(event) => patch(keys.intro, event.target.value)}
+                  maxLength={4000}
+                  placeholder={t('receptionSettings.multilineHint')}
+                />
+              </FormField>
+              {draft[keys.intro].trim() ? (
+                <ReceptionMultilineItems
+                  text={draft[keys.intro]}
+                  variant="intro"
+                  title={t('receptionSettings.preview')}
+                />
+              ) : null}
+              <FormField
+                icon={ScrollText}
+                label={t('receptionSettings.rules')}
+                htmlFor={keys.rules}
+              >
+                <textarea
+                  id={keys.rules}
+                  className={`${fieldClassName} min-h-32`}
+                  value={draft[keys.rules]}
+                  onChange={(event) => patch(keys.rules, event.target.value)}
+                  maxLength={4000}
+                  placeholder={t('receptionSettings.multilineHint')}
+                />
+              </FormField>
+              {draft[keys.rules].trim() ? (
+                <ReceptionMultilineItems
+                  text={draft[keys.rules]}
+                  variant="rules"
+                  title={t('receptionSettings.preview')}
+                />
+              ) : null}
             </section>
           )
         })}
@@ -310,34 +481,98 @@ export function ReceptionSettingsPage() {
               maxLength={200}
             />
           </FormField>
-          <FormField
-            icon={Banknote}
-            label={t('receptionSettings.insurancePremium')}
-            htmlFor="insurancePremiumAmount"
-          >
-            <input
-              id="insurancePremiumAmount"
-              type="number"
-              min={0}
-              className={fieldClassName}
-              value={draft.insurancePremiumAmount}
-              onChange={(event) => patch('insurancePremiumAmount', Number(event.target.value) || 0)}
-              required
-            />
-          </FormField>
-          <FormField
-            icon={FileText}
-            label={t('receptionSettings.insuranceCoverage')}
-            htmlFor="insuranceCoverage"
-          >
-            <textarea
-              id="insuranceCoverage"
-              className={`${fieldClassName} min-h-32`}
-              value={draft.insuranceCoverage}
-              onChange={(event) => patch('insuranceCoverage', event.target.value)}
-              maxLength={4000}
-            />
-          </FormField>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-ink-800">
+                <Shield className="size-4 text-teal-600" aria-hidden />
+                {t('receptionSettings.insurancePlans')}
+              </h3>
+              <Button type="button" variant="soft" onClick={addPlan}>
+                <Plus className="size-4" aria-hidden />
+                {t('receptionSettings.addInsurancePlan')}
+              </Button>
+            </div>
+            {draft.insurancePlans.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-line bg-cream-50 px-4 py-5 text-sm leading-7 text-ink-500">
+                {t('receptionSettings.insurancePlansEmpty')}
+              </p>
+            ) : (
+              draft.insurancePlans.map((plan, index) => (
+                <article
+                  key={plan.key}
+                  className="space-y-4 rounded-2xl border border-line bg-cream-50/60 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-ink-800">
+                      {t('receptionSettings.insurancePlanTitle', {
+                        n: index + 1,
+                      })}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      icon
+                      aria-label={t('receptionSettings.removeInsurancePlan')}
+                      onClick={() => removePlan(plan.key)}
+                    >
+                      <Trash2 className="size-4 text-red-600" aria-hidden />
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      icon={Shield}
+                      label={t('receptionSettings.insuranceCoverageAmount')}
+                      htmlFor={`coverage-${plan.key}`}
+                    >
+                      <input
+                        id={`coverage-${plan.key}`}
+                        type="number"
+                        min={0}
+                        className={fieldClassName}
+                        value={plan.coverageAmount}
+                        onChange={(event) =>
+                          patchPlan(plan.key, 'coverageAmount', Number(event.target.value) || 0)
+                        }
+                        required
+                      />
+                    </FormField>
+                    <FormField
+                      icon={Banknote}
+                      label={t('receptionSettings.insurancePremiumPerPerson')}
+                      htmlFor={`premium-${plan.key}`}
+                    >
+                      <input
+                        id={`premium-${plan.key}`}
+                        type="number"
+                        min={0}
+                        className={fieldClassName}
+                        value={plan.premiumAmount}
+                        onChange={(event) =>
+                          patchPlan(plan.key, 'premiumAmount', Number(event.target.value) || 0)
+                        }
+                        required
+                      />
+                    </FormField>
+                  </div>
+                  <FormField
+                    icon={FileText}
+                    label={t('receptionSettings.insurancePlanDescription')}
+                    htmlFor={`desc-${plan.key}`}
+                  >
+                    <textarea
+                      id={`desc-${plan.key}`}
+                      className={`${fieldClassName} min-h-24`}
+                      value={plan.description}
+                      onChange={(event) =>
+                        patchPlan(plan.key, 'description', event.target.value)
+                      }
+                      maxLength={2000}
+                    />
+                  </FormField>
+                </article>
+              ))
+            )}
+          </div>
         </section>
         <section data-tab="OCCASIONS" className={panelClass('OCCASIONS')}>
           <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.occasionsHint')}</p>

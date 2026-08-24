@@ -3,12 +3,17 @@ import {
   Filter,
   Footprints,
   MapPin,
+  Plus,
   Tent,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { toast } from "sonner";
+import { useAuth } from "../../auth/AuthProvider";
 import {
   FilterPair,
   PaginationBar,
@@ -17,15 +22,18 @@ import {
   TableCard,
 } from "../../components/ui/ListControls";
 import {
+  Button,
   FormField,
   PageHeader,
   listShellClassName,
 } from "../../components/ui/Form";
+import { confirmToast } from "../../components/ui/confirmToast";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
 import { useListParams } from "../../hooks/useListParams";
 import { useListSort } from "../../hooks/useListSort";
-import { api } from "../../lib/api";
+import { api, getApiErrorMessage } from "../../lib/api";
+import { isAdmin } from "../../lib/roles";
 import {
   addDaysIso,
   currentPersianYear,
@@ -51,7 +59,8 @@ import {
   type WalkingRoute,
 } from "../../types/app";
 import { HeadcountPills } from "./HeadcountPills";
-import { inProgressFilter, listStepProgress } from "./reservation-steps";
+import { inProgressFilter, listHeadcount, listStepProgress } from "./reservation-steps";
+import { ReservationApplicantPickerModal } from "./ReservationApplicantPickerModal";
 import { ReservationDashboardStats } from "./ReservationDashboardStats";
 import { ReservationReviewActions } from "./ReservationReviewModal";
 import { ReservationStatusBadge, ReservationTypeBadge } from "./ReservationStatusBadge";
@@ -65,6 +74,11 @@ const typeOrder: ReservationType[] = [
 export function ReservationsAdminListPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [purging, setPurging] = useState(false);
   const n = (value: number) => formatNumber(value, locale);
   const nameOf = useGeoName();
   const {
@@ -81,6 +95,34 @@ export function ReservationsAdminListPage() {
     searchParams,
     setParams,
   );
+
+  // TEMP: remove this helper (and DELETE /reservations/purge-all) when no longer needed.
+  function purgeAllReservations() {
+    confirmToast({
+      title: t("reservations.confirmPurgeAll"),
+      confirmLabel: t("common.yesDelete"),
+      cancelLabel: t("common.cancel"),
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        setPurging(true);
+        try {
+          const { data } = await api.delete<{ deleted: number }>(
+            "/reservations/purge-all",
+          );
+          toast.success(
+            t("reservations.purgedAll", {
+              count: formatNumber(data.deleted, locale),
+            }),
+          );
+          void queryClient.invalidateQueries({ queryKey: ["reservations"] });
+        } catch (error) {
+          toast.error(getApiErrorMessage(error, t("common.error")));
+        } finally {
+          setPurging(false);
+        }
+      },
+    });
+  }
 
   const currentYear = String(currentPersianYear());
   const year = searchParams.get("year") || currentYear;
@@ -220,7 +262,37 @@ export function ReservationsAdminListPage() {
         title={t("menus.reservationsAdmin")}
         subtitle={t("reservations.adminSubtitle")}
         className="mb-3 sm:gap-2"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" onClick={() => setPickerOpen(true)}>
+              <Plus className="size-4" aria-hidden />
+              {t("reservations.createYear", {
+                year: formatNumber(currentPersianYear(), locale),
+              })}
+            </Button>
+            {isAdmin(user) ? (
+              <Button
+                type="button"
+                variant="danger"
+                disabled={purging}
+                onClick={purgeAllReservations}
+              >
+                <Trash2 className="size-4" aria-hidden />
+                {t("reservations.purgeAllTemp")}
+              </Button>
+            ) : null}
+          </div>
+        }
       />
+      {pickerOpen ? (
+        <ReservationApplicantPickerModal
+          onClose={() => setPickerOpen(false)}
+          onSelect={(user: ManagedUser) => {
+            setPickerOpen(false);
+            navigate(`/reservations/new?forUser=${encodeURIComponent(user.id)}`);
+          }}
+        />
+      ) : null}
       {dashboard.data ? (
         <div className="mb-4">
           <ReservationDashboardStats
@@ -530,6 +602,7 @@ export function ReservationsAdminListPage() {
           <tbody>
             {rows.map((row) => {
               const step = listStepProgress(row.status, row.type);
+              const headcount = listHeadcount(row);
               return (
                 <tr key={row.id}>
                   <td className="px-4 py-3">{n(row.year)}</td>
@@ -545,9 +618,9 @@ export function ReservationsAdminListPage() {
                       <ReservationTypeBadge type={row.type} />
                       <HeadcountPills
                         type={row.type}
-                        male={row.maleCount}
-                        female={row.femaleCount}
-                        total={row.totalCount}
+                        male={headcount.male}
+                        female={headcount.female}
+                        total={headcount.total}
                         format={n}
                         maleLabel={t("reservations.countMale")}
                         femaleLabel={t("reservations.countFemale")}

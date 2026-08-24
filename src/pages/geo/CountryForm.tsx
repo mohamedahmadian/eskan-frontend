@@ -2,7 +2,8 @@ import { Flag, Globe2, Hash, Languages, Phone, ToggleRight, Type } from 'lucide-
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormField, FormActions, ToggleField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormField, FormActions, ToggleField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { getApiErrorMessage } from '../../lib/api'
 
 export type CountryPayload = {
@@ -53,7 +54,12 @@ export function CountryForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={Flag}
+      title={initial ? initial.nameFa || t('countries.edit') : t('countries.create')}
+      subtitle={initial ? undefined : t('countries.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={Type} label={t('geo.nameFa')} htmlFor="nameFa">
         <input
           id="nameFa"
@@ -129,5 +135,6 @@ export function CountryForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

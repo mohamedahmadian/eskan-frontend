@@ -147,7 +147,7 @@ export function ReservationReviewActions({
         {rejectOnly ? null : (
           <Button type="button" className={buttonClass} disabled={busy} onClick={askApprove}>
             <Check className={compact ? 'size-3.5' : 'size-4'} aria-hidden />
-            {stacked ? t('reservations.approveFile') : t('reservations.approve')}
+            {t('reservations.approveFile')}
           </Button>
         )}
         <Button
@@ -158,7 +158,7 @@ export function ReservationReviewActions({
           onClick={askReject}
         >
           <X className={compact ? 'size-3.5' : 'size-4'} aria-hidden />
-          {stacked ? t('reservations.rejectFile') : t('reservations.reject')}
+          {t('reservations.rejectFile')}
         </Button>
       </div>
       {mode ? (
@@ -215,10 +215,8 @@ export function ReservationReviewModal({
   const n = (value: number) => formatNumber(value, locale)
   const requestedMale = reservation.requestedMaleCount ?? reservation.maleCount
   const requestedFemale = reservation.requestedFemaleCount ?? reservation.femaleCount
-  const [maleCount, setMaleCount] = useState(String(reservation.maleCount || requestedMale))
-  const [femaleCount, setFemaleCount] = useState(
-    String(reservation.femaleCount || requestedFemale),
-  )
+  const [maleCount, setMaleCount] = useState(String(requestedMale))
+  const [femaleCount, setFemaleCount] = useState(String(requestedFemale))
   const [note, setNote] = useState(initialNote ?? '')
   const rejecting = mode === 'reject'
   const partyName = reservation.caravan?.name?.trim() || reservation.group?.name?.trim() || '—'

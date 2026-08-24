@@ -88,6 +88,18 @@ export function formatDateTime(value: string, locale: string) {
   return `${formatDateTimeDate(value, locale)} ${formatTime(value, locale)}`
 }
 
+export function elapsedDurationParts(fromIso: string, nowMs = Date.now()) {
+  const start = Date.parse(fromIso)
+  if (!Number.isFinite(start)) return null
+  const totalSeconds = Math.max(0, Math.floor((nowMs - start) / 1000))
+  return {
+    days: Math.floor(totalSeconds / 86_400),
+    hours: Math.floor((totalSeconds % 86_400) / 3_600),
+    minutes: Math.floor((totalSeconds % 3_600) / 60),
+    seconds: totalSeconds % 60,
+  }
+}
+
 export function formatNumber(value: number, locale: string) {
   return localizeDigits(String(value), locale)
 }

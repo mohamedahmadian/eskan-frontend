@@ -19,9 +19,9 @@ import {
   Button,
   FormActions,
   FormField,
-  cardClassName,
   fieldClassName,
 } from '../../components/ui/Form'
+import { FormCard } from '../../components/ui/FormLayout'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { formatNumber } from '../../lib/datetime'
@@ -92,7 +92,7 @@ function FormSection({
   children: ReactNode
 }) {
   return (
-    <section className={`space-y-4 p-6 ${cardClassName}`}>
+    <section className="space-y-4">
       <h2 className="text-base font-semibold text-ink-900">{title}</h2>
       {children}
     </section>
@@ -203,7 +203,12 @@ export function WalkingRouteForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className="space-y-4">
+    <FormCard
+      icon={Route}
+      title={initial ? initial.name || t('walkingRoutes.edit') : t('walkingRoutes.create')}
+      subtitle={initial ? undefined : t('walkingRoutes.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className="space-y-6 p-5 sm:p-6">
       <FormSection title={t('walkingRoutes.sectionGeneral')}>
         <FormField icon={Type} label={t('walkingRoutes.name')} htmlFor="route-name">
           <input
@@ -422,14 +427,13 @@ export function WalkingRouteForm({
         </div>
       </FormSection>
 
-      <div className={`p-6 ${cardClassName}`}>
         <FormActions
           submitLabel={t('walkingRoutes.save')}
           cancelLabel={t('walkingRoutes.cancel')}
           submitting={saving}
           onCancel={() => history.back()}
         />
-      </div>
     </AppForm>
+    </FormCard>
   )
 }

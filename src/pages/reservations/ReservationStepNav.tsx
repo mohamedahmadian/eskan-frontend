@@ -17,15 +17,20 @@ export function ReservationStepNav({
   onNext,
   nextLabel,
   nextPending,
+  nextDisabled,
+  nextTitle,
   nextIcon = 'next',
 }: {
   onPrev?: () => void
   onNext: () => void
   nextLabel?: string
   nextPending?: boolean
+  nextDisabled?: boolean
+  nextTitle?: string
   nextIcon?: 'next' | 'complete'
 }) {
   const { t } = useTranslation()
+  const disabled = Boolean(nextPending || nextDisabled)
 
   return (
     <div className="flex flex-wrap items-center gap-3 border-t border-line px-5 py-4 sm:px-6">
@@ -44,8 +49,10 @@ export function ReservationStepNav({
       <Button
         type="button"
         className="ms-auto"
-        disabled={nextPending}
+        disabled={disabled}
+        title={nextDisabled ? nextTitle : undefined}
         onClick={() => {
+          if (disabled) return
           scrollPageToTop()
           onNext()
         }}

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { localizeDigits } from '../../lib/datetime'
 import { DateText } from '../../components/ui/DateText'
 import { PaginationBar, SearchBar, TableCard } from '../../components/ui/ListControls'
 import { PageHeader, listShellClassName } from '../../components/ui/Form'
@@ -9,7 +10,8 @@ import type { SmsMessage } from '../../lib/sms'
 import type { Paginated } from '../../types/app'
 
 export function SmsReportPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const { q, page, term, setTerm, applySearch, setPage } = useListParams()
 
   const query = useQuery({
@@ -59,7 +61,7 @@ export function SmsReportPage() {
                     {item.recipientName || '—'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap" dir="ltr">
-                    {item.phone}
+                    {localizeDigits(item.phone, locale)}
                   </td>
                   <td className="max-w-md px-4 py-3 break-words">{item.body}</td>
                   <td className="px-4 py-3">

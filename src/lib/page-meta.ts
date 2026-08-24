@@ -8,6 +8,9 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "auth.changePasswordSubtitle",
     };
   }
+  if (pathname.startsWith("/account")) {
+    return { titleKey: "account.title", subtitleKey: "account.subtitle" };
+  }
   if (pathname.startsWith("/settings")) {
     return { titleKey: "settings.title", subtitleKey: "settings.subtitle" };
   }
@@ -172,6 +175,9 @@ export function getPageMeta(pathname: string): {
       titleKey: "menus.reservationsReport",
       subtitleKey: "reservations.statsSubtitle",
     };
+  }
+  if (pathname.startsWith("/reservations/new")) {
+    return { titleKey: "reservations.createPageTitle" };
   }
   if (pathname.startsWith("/reservations/") && pathname !== "/reservations") {
     return {
@@ -407,6 +413,57 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "benefactors.subtitle",
     };
   }
+  if (pathname.startsWith("/base-info/government-organizations/new")) {
+    return {
+      titleKey: "governmentOrganizations.create",
+      subtitleKey: "governmentOrganizations.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/base-info/government-organizations/")
+  ) {
+    return {
+      titleKey: "governmentOrganizations.edit",
+      subtitleKey: "governmentOrganizations.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/base-info/government-organizations/") &&
+    pathname !== "/base-info/government-organizations"
+  ) {
+    return {
+      titleKey: "governmentOrganizations.details",
+      subtitleKey: "governmentOrganizations.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/base-info/government-organizations")) {
+    return {
+      titleKey: "menus.governmentOrganizations",
+      subtitleKey: "governmentOrganizations.subtitle",
+    };
+  }
+  if (pathname.startsWith("/licenses/new")) {
+    return {
+      titleKey: "menus.issueLicense",
+      subtitleKey: "licenses.issueSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/licenses/issued/") &&
+    pathname !== "/licenses/issued"
+  ) {
+    return {
+      titleKey: "licenses.details",
+      subtitleKey: "licenses.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/licenses/issued")) {
+    return {
+      titleKey: "menus.issuedLicenses",
+      subtitleKey: "licenses.issuedSubtitle",
+    };
+  }
   if (pathname.startsWith("/headquarters/representatives/new")) {
     return {
       titleKey: "headquartersRepresentatives.create",
@@ -435,6 +492,57 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.headquartersRepresentatives",
       subtitleKey: "headquartersRepresentatives.subtitle",
+    };
+  }
+  if (pathname.startsWith("/headquarters/units/new")) {
+    return {
+      titleKey: "orgUnits.create",
+      subtitleKey: "orgUnits.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/liaisons") &&
+    pathname.startsWith("/headquarters/units/")
+  ) {
+    return {
+      titleKey: "orgUnits.manageLiaisons",
+      subtitleKey: "orgUnits.manageLiaisonsSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/headquarters/units/")
+  ) {
+    return {
+      titleKey: "orgUnits.edit",
+      subtitleKey: "orgUnits.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/headquarters/units/") &&
+    pathname !== "/headquarters/units"
+  ) {
+    return {
+      titleKey: "orgUnits.details",
+      subtitleKey: "orgUnits.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/headquarters/units")) {
+    return {
+      titleKey: "menus.orgUnits",
+      subtitleKey: "orgUnits.subtitle",
+    };
+  }
+  if (pathname.startsWith("/headquarters/accommodation-liaisons")) {
+    return {
+      titleKey: "menus.unitAccommodationLiaisons",
+      subtitleKey: "unitAccommodationLiaisons.subtitle",
+    };
+  }
+  if (pathname.startsWith("/headquarters/caravan-liaisons")) {
+    return {
+      titleKey: "menus.unitCaravanLiaisons",
+      subtitleKey: "unitCaravanLiaisons.subtitle",
     };
   }
   if (pathname.startsWith("/sms/settings")) {
@@ -528,6 +636,33 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.accommodationReport",
       subtitleKey: "accommodations.reportSubtitle",
+    };
+  }
+  if (pathname.startsWith("/my-accommodations/new")) {
+    return {
+      titleKey: "accommodations.create",
+      subtitleKey: "myAccommodations.createSubtitle",
+    };
+  }
+  if (pathname.includes("/edit") && pathname.startsWith("/my-accommodations/")) {
+    return {
+      titleKey: "accommodations.edit",
+      subtitleKey: "accommodations.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/my-accommodations/") &&
+    pathname !== "/my-accommodations"
+  ) {
+    return {
+      titleKey: "accommodations.details",
+      subtitleKey: "accommodations.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/my-accommodations")) {
+    return {
+      titleKey: "menus.myAccommodations",
+      subtitleKey: "myAccommodations.subtitle",
     };
   }
   if (pathname.startsWith("/accommodations/new")) {

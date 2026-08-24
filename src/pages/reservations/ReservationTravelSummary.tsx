@@ -5,9 +5,13 @@ import {
   CalendarX,
   ClipboardCheck,
   Footprints,
+  HeartHandshake,
   MapPin,
   Mars,
+  Phone,
   Route,
+  Shield,
+  UserRound,
   Users,
   Venus,
   type LucideIcon,
@@ -16,11 +20,12 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
 import { cardClassName } from '../../components/ui/Form'
-import { formatNumber } from '../../lib/datetime'
+import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
 import { ReservationCountMetrics } from './ReservationCountMetrics'
 import { ReservationIdentityChips, ReservationSectionHeader } from './ReservationSectionHeader'
+import { workingHeadcount } from './reservation-steps'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -68,8 +73,9 @@ export function ReservationTravelSummary({
   const nameOf = useGeoName()
   const empty = t('reservations.notEntered')
   const individual = reservation.type === 'INDIVIDUAL'
-  const individualMale = individual && reservation.maleCount >= 1
-  const individualFemale = individual && reservation.femaleCount >= 1
+  const headcount = workingHeadcount(reservation)
+  const individualMale = individual && headcount.male >= 1
+  const individualFemale = individual && headcount.female >= 1
   const nights = stayNightCount(reservation.stayStartDate, reservation.stayEndDate)
   const HeaderIcon = variant === 'review' ? ClipboardCheck : MapPin
   const origin = reservation.originCity ? nameOf(reservation.originCity) : ''
@@ -170,42 +176,41 @@ export function ReservationTravelSummary({
         </section>
 
         <section>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <SectionTitle icon={HeartHandshake}>{t('reservations.createSteps.services')}</SectionTitle>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
             <FactTile
               icon={Building2}
-              label={t('reservations.requestsAccommodation')}
+              label={t('reservations.requestsAccommodationShort')}
               value={reservation.requestsAccommodation ? t('common.yes') : t('common.no')}
               tone="teal"
             />
             <FactTile
               icon={Bus}
-              label={t('reservations.requestsBus')}
+              label={t('reservations.requestsBusShort')}
               value={reservation.requestsBus ? t('common.yes') : t('common.no')}
               tone="mint"
+            />
+            <FactTile
+              icon={Shield}
+              label={t('reservations.requestsInsuranceOnlyShort')}
+              value={
+                !reservation.requestsAccommodation && !reservation.requestsBus
+                  ? t('common.yes')
+                  : t('common.no')
+              }
+              tone="ink"
             />
           </div>
         </section>
 
-        {origin || route || reservation.caravan || reservation.group ? (
+        {origin ||
+        route ||
+        reservation.caravan ||
+        reservation.group ||
+        reservation.caravanManager ? (
           <section>
             <SectionTitle icon={MapPin}>{t('reservations.createSteps.optional')}</SectionTitle>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-              {origin ? (
-                <FactTile
-                  icon={MapPin}
-                  label={t('reservations.originCity')}
-                  value={origin}
-                  tone="teal"
-                />
-              ) : null}
-              {route ? (
-                <FactTile
-                  icon={Route}
-                  label={t('reservations.walkingRoute')}
-                  value={route}
-                  tone="mint"
-                />
-              ) : null}
               {reservation.caravan ? (
                 <FactTile
                   icon={Building2}
@@ -220,6 +225,44 @@ export function ReservationTravelSummary({
                   label={t('reservations.groupName')}
                   value={reservation.group.name}
                   tone="ink"
+                />
+              ) : null}
+              {reservation.caravan || reservation.group || origin ? (
+                <FactTile
+                  icon={MapPin}
+                  label={t('reservations.originCity')}
+                  value={origin || empty}
+                  empty={!origin}
+                  tone="teal"
+                />
+              ) : null}
+              {reservation.caravanManager ? (
+                <FactTile
+                  icon={UserRound}
+                  label={t('reservations.caravanManager')}
+                  value={reservation.caravanManager.fullName}
+                  tone="mint"
+                />
+              ) : null}
+              {reservation.caravanManager ? (
+                <FactTile
+                  icon={Phone}
+                  label={t('users.phone')}
+                  value={
+                    reservation.caravanManager.phone
+                      ? localizeDigits(reservation.caravanManager.phone, locale)
+                      : empty
+                  }
+                  empty={!reservation.caravanManager.phone}
+                  tone="teal"
+                />
+              ) : null}
+              {route ? (
+                <FactTile
+                  icon={Route}
+                  label={t('reservations.walkingRoute')}
+                  value={route}
+                  tone="mint"
                 />
               ) : null}
             </div>

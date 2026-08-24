@@ -15,7 +15,8 @@ import { useAuth } from '../auth/AuthProvider'
 import { api } from '../lib/api'
 import { cardClassName, listShellClassName } from '../components/ui/Form'
 import { formatNumber } from '../lib/datetime'
-import { usesDedicatedHomeDashboard } from '../lib/roles'
+import { usesDedicatedHomeDashboard, isAdmin, isLicenseIssuer } from '../lib/roles'
+import { LicenseIssuerDashboard } from './dashboard/LicenseIssuerDashboard'
 import { UserHomeDashboard } from './dashboard/UserHomeDashboard'
 
 const quickTone = {
@@ -151,6 +152,9 @@ function AdminOverview() {
 
 export function OverviewPage() {
   const { user } = useAuth()
+  if (!isAdmin(user) && isLicenseIssuer(user)) {
+    return <LicenseIssuerDashboard />
+  }
   if (usesDedicatedHomeDashboard(user)) {
     return <UserHomeDashboard />
   }

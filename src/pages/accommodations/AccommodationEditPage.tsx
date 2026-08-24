@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LoadingState, PageHeader, EntityNameSubtitle, userFormShellClassName } from '../../components/ui/Form'
 import { useAuth } from '../../auth/AuthProvider'
@@ -15,6 +15,8 @@ export function AccommodationEditPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
+  const fromMine = useLocation().pathname.startsWith('/my-accommodations')
+  const listPath = fromMine ? '/my-accommodations' : '/accommodations'
   const { user } = useAuth()
   const admin = isAdmin(user)
   const item = useQuery({
@@ -91,7 +93,7 @@ export function AccommodationEditPage() {
         onSubmit={async (payload) => {
           await api.patch(`/accommodations/${id}`, payload)
           toast.success(t('accommodations.updated'))
-          navigate(`/accommodations/${id}`)
+          navigate(`${listPath}/${id}`)
         }}
       />
     </div>

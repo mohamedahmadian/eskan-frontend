@@ -8,6 +8,7 @@ import {
   MapPinned,
   MessageCircle,
   Phone,
+  Route,
   Share2,
   Tent,
   ToggleRight,
@@ -16,6 +17,7 @@ import {
   Users,
 } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
@@ -23,14 +25,14 @@ import {
   FormActions,
   FormField,
   ToggleField,
-  cardClassName,
   fieldClassName,
 } from '../../components/ui/Form'
+import { FormCard } from '../../components/ui/FormLayout'
 import { FileDropField } from '../../components/ui/FileDropField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
-import type { Caravan, City, Country, Province } from '../../types/app'
+import type { Caravan, City, Country, Paginated, Province, WalkingRoute } from '../../types/app'
 import { CaravanContactsPanel, firstIncompleteContactRole } from './CaravanContactsPanel'
 import {
   CaravanManagerPicker,
@@ -54,6 +56,7 @@ export type CaravanPayload = {
   officePhone: string | null
   foundedYear: number | null
   cityId: string
+  walkingRouteId: string | null
   licenseNumber: string | null
   licenseImageId: string | null
   managerUserId?: string
@@ -172,6 +175,7 @@ export function CaravanForm({
     initial?.city?.provinceId ?? initialProvinceId,
   )
   const [cityId, setCityId] = useState(initial?.cityId ?? '')
+  const [walkingRouteId, setWalkingRouteId] = useState(initial?.walkingRouteId ?? '')
   const [licenseNumber, setLicenseNumber] = useState(initial?.licenseNumber ?? '')
   const [licenseImageId, setLicenseImageId] = useState(initial?.licenseImageId ?? '')
   const [managerUserId, setManagerUserId] = useState(
@@ -196,6 +200,19 @@ export function CaravanForm({
   const geoTouchedRef = useRef(Boolean(initial?.cityId))
 
   const totalCountValue = toCount(maleCount) + toCount(femaleCount)
+
+  const walkingRoutes = useQuery({
+    queryKey: ['walking-routes', 'lookup', countryId],
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
+        params: {
+          pageSize: 100,
+          originCountryId: countryId || undefined,
+        },
+      })
+      return data.items
+    },
+  })
 
   function applyGeoFromProfile(
     nextCountryId?: string | null,
@@ -232,7 +249,7 @@ export function CaravanForm({
   }, [initial, selectManager, defaultCountryId, defaultProvinceId, defaultCityId])
 
   function panelClass(id: CaravanTab) {
-    return `space-y-4 p-6 ${cardClassName} ${tab === id ? '' : 'hidden'}`
+    return `space-y-4 ${tab === id ? '' : 'hidden'}`
   }
 
   async function uploadLicense(file: File) {
@@ -280,6 +297,7 @@ export function CaravanForm({
         officePhone: emptyToNull(officePhone),
         foundedYear: toOptionalYear(foundedYear),
         cityId,
+        walkingRouteId: emptyToNull(walkingRouteId),
         licenseNumber: emptyToNull(licenseNumber),
         licenseImageId: emptyToNull(licenseImageId),
         managerUserId: resolvedManagerId || undefined,
@@ -301,7 +319,12 @@ export function CaravanForm({
   }
 
   return (
-    <div className="space-y-4">
+    <FormCard
+      icon={Tent}
+      title={initial ? initial.name || t('caravans.edit') : t('caravans.create')}
+      subtitle={initial ? undefined : t('caravans.createSubtitle')}
+    >
+    <div className="space-y-4 p-5 sm:p-6">
       <CaravanTabNav tab={tab} onChange={setTab} />
       <AppForm
         onSubmit={submit}
@@ -347,6 +370,7 @@ export function CaravanForm({
                   setCountryId(next)
                   setProvinceId('')
                   setCityId('')
+                  setWalkingRouteId('')
                   geoTouchedRef.current = true
                   onCountryChange(next)
                   onProvinceChange('')
@@ -406,6 +430,33 @@ export function CaravanForm({
               />
             </FormField>
           </div>
+
+          <FormField icon={Route} label={t('caravans.walkingRoute')} htmlFor="walkingRouteId">
+            <SearchSelect
+              id="walkingRouteId"
+              value={walkingRouteId}
+              onChange={setWalkingRouteId}
+              placeholder={t('caravans.walkingRoute')}
+              options={[
+                { value: '', label: t('caravans.walkingRouteNone') },
+                ...(walkingRoutes.data ?? []).map((route) => ({
+                  value: route.id,
+                  label: route.name,
+                })),
+                ...(walkingRouteId &&
+                initial?.walkingRoute &&
+                initial.walkingRoute.id === walkingRouteId &&
+                !(walkingRoutes.data ?? []).some((route) => route.id === walkingRouteId)
+                  ? [
+                      {
+                        value: initial.walkingRoute.id,
+                        label: initial.walkingRoute.name,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </FormField>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField icon={UserRound} label={t('caravans.maleCount')} htmlFor="maleCount">
@@ -564,7 +615,7 @@ export function CaravanForm({
           </FormField>
         </div>
 
-        <div className={`p-6 ${cardClassName}`}>
+        <div>
           <FormActions
             submitLabel={t('caravans.save')}
             cancelLabel={t('caravans.cancel')}
@@ -574,5 +625,6 @@ export function CaravanForm({
         </div>
       </AppForm>
     </div>
+    </FormCard>
   )
 }

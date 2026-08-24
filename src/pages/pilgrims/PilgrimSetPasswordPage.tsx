@@ -12,10 +12,10 @@ import {
   FormField,
   LoadingState,
   PageHeader,
-  cardClassName,
   fieldClassName,
   formShellClassName,
 } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
 import type { ManagedUser } from '../../types/app'
 
@@ -78,40 +78,46 @@ export function PilgrimSetPasswordPage() {
         title={t('pilgrims.setPassword')}
         subtitle={<EntityNameSubtitle name={pilgrim.fullName} icon={UserRound} />}
       />
-      <AppForm onSubmit={onSubmit} className={`space-y-4 p-6 ${cardClassName}`}>
-        <FormField icon={KeyRound} label={t('auth.newPassword')} htmlFor="newPassword">
-          <input
-            id="newPassword"
-            type="password"
-            className={fieldClassName}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            autoComplete="new-password"
-            autoFocus
+      <FormCard
+        icon={KeyRound}
+        title={t('pilgrims.setPassword')}
+        subtitle={t('pilgrims.setPasswordSubtitle')}
+      >
+        <AppForm onSubmit={onSubmit} className={formCardBodyClassName}>
+          <FormField icon={KeyRound} label={t('auth.newPassword')} htmlFor="newPassword">
+            <input
+              id="newPassword"
+              type="password"
+              className={fieldClassName}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              autoFocus
+            />
+          </FormField>
+          <FormField icon={MessageSquare} label={t('sms.send')}>
+            <CheckboxField
+              id="sendSms"
+              checked={sendSms}
+              disabled={!hasPhone}
+              onChange={setSendSms}
+              label={
+                hasPhone
+                  ? t('pilgrims.sendPasswordSms')
+                  : t('pilgrims.phoneRequiredForSms')
+              }
+            />
+          </FormField>
+          <FormActions
+            submitLabel={t('pilgrims.setPassword')}
+            cancelLabel={t('pilgrims.cancel')}
+            submitting={saving}
+            onCancel={() => navigate(`/pilgrims/${pilgrim.id}`)}
           />
-        </FormField>
-        <FormField icon={MessageSquare} label={t('sms.send')}>
-          <CheckboxField
-            id="sendSms"
-            checked={sendSms}
-            disabled={!hasPhone}
-            onChange={setSendSms}
-            label={
-              hasPhone
-                ? t('pilgrims.sendPasswordSms')
-                : t('pilgrims.phoneRequiredForSms')
-            }
-          />
-        </FormField>
-        <FormActions
-          submitLabel={t('pilgrims.setPassword')}
-          cancelLabel={t('pilgrims.cancel')}
-          submitting={saving}
-          onCancel={() => navigate(`/pilgrims/${pilgrim.id}`)}
-        />
-      </AppForm>
+        </AppForm>
+      </FormCard>
     </div>
   )
 }

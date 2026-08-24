@@ -81,6 +81,13 @@ export function GroupsListPage() {
                 onSort={onSort}
               />
               <SortableTh
+                column="walkingRoute"
+                label={t('groups.walkingRoute')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
                 column="manager"
                 label={t('groups.manager')}
                 sortBy={sortBy}
@@ -116,6 +123,7 @@ export function GroupsListPage() {
               <tr key={group.id} className="border-t border-line">
                 <td className="px-4 py-3">{group.name}</td>
                 <td className="px-4 py-3">{group.city ? nameOf(group.city) : '—'}</td>
+                <td className="px-4 py-3">{group.walkingRoute?.name ?? '—'}</td>
                 <td className="px-4 py-3">{group.manager?.fullName ?? '—'}</td>
                 <td className="px-4 py-3">{formatNumber(group.maleCount, locale)}</td>
                 <td className="px-4 py-3">{formatNumber(group.femaleCount, locale)}</td>

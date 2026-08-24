@@ -1,6 +1,7 @@
 import { Filter, Package, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { localizeDigits } from '../../lib/datetime'
 import { Link } from 'react-router-dom'
 import {
   EntityRowActions,
@@ -18,7 +19,8 @@ import { api } from '../../lib/api'
 import { supplierTypes, type Paginated, type Supplier } from '../../types/app'
 
 export function SuppliersListPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
@@ -111,7 +113,7 @@ export function SuppliersListPage() {
                 <td className="px-4 py-3">{item.name}</td>
                 <td className="px-4 py-3">{t(`supplierTypes.${item.type}`)}</td>
                 <td className="px-4 py-3">{item.contactPerson || '—'}</td>
-                <td className="px-4 py-3">{item.phone || '—'}</td>
+                <td className="px-4 py-3">{item.phone ? localizeDigits(item.phone, locale) : '—'}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <EntityRowActions

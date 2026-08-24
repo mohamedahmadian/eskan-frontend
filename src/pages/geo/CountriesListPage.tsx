@@ -14,7 +14,7 @@ import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
-import { formatNumber } from '../../lib/datetime'
+import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Country, Paginated } from '../../types/app'
 import { GeoStatus } from './GeoShared'
@@ -86,7 +86,11 @@ export function CountriesListPage() {
               <tr key={country.id} className="border-t border-line">
                 <td className="px-4 py-3">{name(country)}</td>
                 <td className="px-4 py-3">{country.iso2}</td>
-                <td className="px-4 py-3">{country.phoneCode ?? '—'}</td>
+                <td className="px-4 py-3">
+                  {country.phoneCode
+                    ? localizeDigits(country.phoneCode, locale)
+                    : '—'}
+                </td>
                 <td className="px-4 py-3">
                   {formatNumber(country._count?.provinces ?? 0, locale)}
                 </td>

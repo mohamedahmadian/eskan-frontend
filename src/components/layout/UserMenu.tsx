@@ -1,4 +1,4 @@
-import { ChevronDown, CircleHelp, KeyRound, LogOut, Settings } from 'lucide-react'
+import { ChevronDown, CircleHelp, KeyRound, LogOut, Settings, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -47,12 +47,12 @@ export function UserMenu() {
       {open ? (
         <div className="absolute end-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-white shadow-lg">
           <Link
-            to="/settings"
+            to="/account"
             className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
             onClick={() => setOpen(false)}
           >
-            <Settings className="size-4 text-teal-600" />
-            {t('nav.settings')}
+            <UserRound className="size-4 text-teal-600" />
+            {t('nav.account')}
           </Link>
           <Link
             to="/settings/password"
@@ -75,6 +75,14 @@ export function UserMenu() {
               {t('nav.forgotPassword')}
             </button>
           ) : null}
+          <Link
+            to="/settings"
+            className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
+            onClick={() => setOpen(false)}
+          >
+            <Settings className="size-4 text-teal-600" />
+            {t('nav.settings')}
+          </Link>
           <button
             type="button"
             className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"

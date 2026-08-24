@@ -11,10 +11,10 @@ import {
   FormField,
   LoadingState,
   PageHeader,
-  cardClassName,
   fieldClassName,
   formShellClassName,
 } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { useSendSms } from '../../hooks/useSendSms'
 import { api, getApiErrorMessage } from '../../lib/api'
 import type { ManagedUser } from '../../types/app'
@@ -78,36 +78,42 @@ export function PilgrimSendSmsPage() {
         title={t('pilgrims.sendSms')}
         subtitle={<EntityNameSubtitle name={pilgrim.fullName} icon={UserRound} />}
       />
-      <AppForm onSubmit={onSubmit} className={`space-y-4 p-6 ${cardClassName}`}>
-        <FormField icon={Phone} label={t('sms.phone')} htmlFor="pilgrim-sms-phone">
-          <input
-            id="pilgrim-sms-phone"
-            className={fieldClassName}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            inputMode="tel"
-            dir="ltr"
-            required
+      <FormCard
+        icon={Phone}
+        title={t('pilgrims.sendSms')}
+        subtitle={t('pilgrims.sendSmsSubtitle')}
+      >
+        <AppForm onSubmit={onSubmit} className={formCardBodyClassName}>
+          <FormField icon={Phone} label={t('sms.phone')} htmlFor="pilgrim-sms-phone">
+            <input
+              id="pilgrim-sms-phone"
+              className={fieldClassName}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              inputMode="tel"
+              dir="ltr"
+              required
+            />
+          </FormField>
+          <FormField icon={FileText} label={t('sms.body')} htmlFor="pilgrim-sms-body">
+            <textarea
+              id="pilgrim-sms-body"
+              className={fieldClassName}
+              rows={6}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              required
+              autoFocus
+            />
+          </FormField>
+          <FormActions
+            submitLabel={t('sms.send')}
+            cancelLabel={t('pilgrims.cancel')}
+            submitting={sending}
+            onCancel={() => navigate(`/pilgrims/${pilgrim.id}`)}
           />
-        </FormField>
-        <FormField icon={FileText} label={t('sms.body')} htmlFor="pilgrim-sms-body">
-          <textarea
-            id="pilgrim-sms-body"
-            className={fieldClassName}
-            rows={6}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            required
-            autoFocus
-          />
-        </FormField>
-        <FormActions
-          submitLabel={t('sms.send')}
-          cancelLabel={t('pilgrims.cancel')}
-          submitting={sending}
-          onCancel={() => navigate(`/pilgrims/${pilgrim.id}`)}
-        />
-      </AppForm>
+        </AppForm>
+      </FormCard>
     </div>
   )
 }

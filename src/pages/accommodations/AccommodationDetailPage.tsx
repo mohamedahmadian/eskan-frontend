@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { LoadingState, DetailActions, PageHeader, EntityNameSubtitle, cardClassName, userFormShellClassName } from '../../components/ui/Form'
 import { TableCard } from '../../components/ui/ListControls'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
-import { formatNumber } from '../../lib/datetime'
+import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Accommodation } from '../../types/app'
 import { DetailRow } from '../geo/GeoShared'
@@ -20,6 +20,8 @@ export function AccommodationDetailPage() {
   const name = useGeoName()
   const { id } = useParams()
   const navigate = useNavigate()
+  const fromMine = useLocation().pathname.startsWith('/my-accommodations')
+  const listPath = fromMine ? '/my-accommodations' : '/accommodations'
   const { confirmDelete } = useConfirmDelete()
   const [tab, setTab] = useState<AccommodationTab>('general')
   const query = useQuery({
@@ -63,7 +65,7 @@ export function AccommodationDetailPage() {
               label={t('accommodations.managementType')}
               value={t(`managementTypes.${item.managementType}`)}
             />
-            <DetailRow label={t('accommodations.phone')} value={item.phone || '—'} />
+            <DetailRow label={t('accommodations.phone')} value={item.phone ? localizeDigits(item.phone, locale) : '—'} />
             <DetailRow label={t('accommodations.description')} value={item.description || '—'} />
           </dl>
         </article>
@@ -133,6 +135,65 @@ export function AccommodationDetailPage() {
           </dl>
         </article>
 
+        <article className={panelClass('contacts')}>
+          <TableCard
+            empty={t('accommodations.noContacts')}
+            hasRows={(item.contacts?.length ?? 0) > 0}
+          >
+            <table className="w-full text-sm">
+              <thead className="bg-cream-50 text-ink-700">
+                <tr>
+                  <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactRole')}</th>
+                  <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactPerson')}</th>
+                  <th className="px-4 py-3 text-start font-medium">{t('users.phone')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(item.contacts ?? []).map((contact) => (
+                  <tr key={contact.id} className="border-t border-line">
+                    <td className="px-4 py-3">{t(`accommodations.contactRoles.${contact.role}`)}</td>
+                    <td className="px-4 py-3">{contact.user.fullName}</td>
+                    <td className="px-4 py-3">{contact.user.phone ? localizeDigits(contact.user.phone, locale) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableCard>
+          {(item.yearContacts?.length ?? 0) > 0 ? (
+            <div className="mt-4">
+              <h3 className="mb-2 text-sm font-semibold text-ink-700">
+                {t('accommodations.sectionYearContacts')}
+              </h3>
+              <TableCard empty={t('accommodations.noYearContacts')} hasRows>
+                <table className="w-full text-sm">
+                  <thead className="bg-cream-50 text-ink-700">
+                    <tr>
+                      <th className="px-4 py-3 text-start font-medium">{t('accommodations.year')}</th>
+                      <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactRole')}</th>
+                      <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactPerson')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...(item.yearContacts ?? [])]
+                      .sort((a, b) =>
+                        b.year !== a.year ? b.year - a.year : a.role.localeCompare(b.role),
+                      )
+                      .map((contact) => (
+                        <tr key={contact.id} className="border-t border-line">
+                          <td className="px-4 py-3">{formatNumber(contact.year, locale)}</td>
+                          <td className="px-4 py-3">
+                            {t(`accommodations.contactRoles.${contact.role}`)}
+                          </td>
+                          <td className="px-4 py-3">{contact.user.fullName}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </TableCard>
+            </div>
+          ) : null}
+        </article>
+
         <div className={tab === 'managers' ? '' : 'hidden'}>
           <TableCard empty={t('accommodations.noManagers')} hasRows={item.managers.length > 0}>
             <table className="w-full text-sm">
@@ -161,7 +222,7 @@ export function AccommodationDetailPage() {
         <div className={`p-6 ${cardClassName}`}>
           <DetailActions
             className=""
-            editTo={`/accommodations/${item.id}/edit`}
+            editTo={`${listPath}/${item.id}/edit`}
             editLabel={t('common.edit')}
             deleteLabel={t('accommodations.delete')}
             onDelete={() =>
@@ -169,8 +230,8 @@ export function AccommodationDetailPage() {
                 message: t('accommodations.confirmDelete'),
                 successMessage: t('accommodations.deleted'),
                 path: `/accommodations/${item.id}`,
-                queryKey: ['accommodations'],
-                onDeleted: () => navigate('/accommodations'),
+                queryKey: fromMine ? ['accommodations', 'mine'] : ['accommodations'],
+                onDeleted: () => navigate(listPath),
               })
             }
           />

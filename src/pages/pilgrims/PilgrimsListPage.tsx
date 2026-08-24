@@ -35,6 +35,7 @@ import { useConfirmDelete } from "../../hooks/useConfirmDelete";
 import { useListParams } from "../../hooks/useListParams";
 import { useListSort } from "../../hooks/useListSort";
 import { api, getApiErrorMessage } from "../../lib/api";
+import { localizeDigits } from "../../lib/datetime";
 import { useGeoName } from "../../lib/geo";
 import {
   userGenders,
@@ -47,7 +48,8 @@ import {
 } from "../../types/app";
 
 export function PilgrimsListPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
   const { user: actor } = useAuth();
   const { confirmDelete } = useConfirmDelete();
   const geoName = useGeoName();
@@ -396,8 +398,14 @@ export function PilgrimsListPage() {
               <tr key={user.id} className="border-t border-line">
                 <td className="px-4 py-3">{user.fullName}</td>
                 <td className="px-4 py-3">{user.username}</td>
-                <td className="px-4 py-3">{user.nationalId ?? "—"}</td>
-                <td className="px-4 py-3">{user.phone ?? "—"}</td>
+                <td className="px-4 py-3">
+                  {user.nationalId
+                    ? localizeDigits(user.nationalId, locale)
+                    : "—"}
+                </td>
+                <td className="px-4 py-3">
+                  {user.phone ? localizeDigits(user.phone, locale) : "—"}
+                </td>
                 <td className="px-4 py-3">
                   {user.city ? geoName(user.city) : "—"}
                 </td>

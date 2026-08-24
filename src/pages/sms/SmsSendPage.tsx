@@ -11,10 +11,10 @@ import {
   FormActions,
   FormField,
   PageHeader,
-  cardClassName,
   fieldClassName,
   listShellClassName,
 } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { useSendSms } from '../../hooks/useSendSms'
 import { getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
@@ -61,35 +61,37 @@ export function SmsSendPage() {
       <PageHeader title={t('sms.sendTitle')} subtitle={t('sms.sendSubtitle')} />
       <SmsRecipientPicker selected={selected} onChange={setSelected} />
 
-      <AppForm onSubmit={onSubmit} className={`space-y-4 p-6 ${cardClassName}`}>
-        {phones.length > 1 ? (
-          <p className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-800">
-            {t('sms.recipientCount', { count: formatNumber(phones.length, locale) })}
-          </p>
-        ) : null}
-        <FormField icon={Phone} label={t('sms.manualPhone')} htmlFor="sms-phone">
-          <input
-            id="sms-phone"
-            className={fieldClassName}
-            value={manualPhone}
-            onChange={(e) => setManualPhone(e.target.value)}
-            inputMode="tel"
-            dir="ltr"
-            placeholder={t('sms.manualPhoneHint')}
-          />
-        </FormField>
-        <FormField icon={FileText} label={t('sms.body')} htmlFor="sms-body">
-          <textarea
-            id="sms-body"
-            className={fieldClassName}
-            rows={5}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            required
-          />
-        </FormField>
-        <FormActions submitLabel={t('sms.send')} submitting={sending} />
-      </AppForm>
+      <FormCard icon={Phone} title={t('sms.sendTitle')} subtitle={t('sms.sendSubtitle')}>
+        <AppForm onSubmit={onSubmit} className={formCardBodyClassName}>
+          {phones.length > 1 ? (
+            <p className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-800">
+              {t('sms.recipientCount', { count: formatNumber(phones.length, locale) })}
+            </p>
+          ) : null}
+          <FormField icon={Phone} label={t('sms.manualPhone')} htmlFor="sms-phone">
+            <input
+              id="sms-phone"
+              className={fieldClassName}
+              value={manualPhone}
+              onChange={(e) => setManualPhone(e.target.value)}
+              inputMode="tel"
+              dir="ltr"
+              placeholder={t('sms.manualPhoneHint')}
+            />
+          </FormField>
+          <FormField icon={FileText} label={t('sms.body')} htmlFor="sms-body">
+            <textarea
+              id="sms-body"
+              className={fieldClassName}
+              rows={5}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormActions submitLabel={t('sms.send')} submitting={sending} />
+        </AppForm>
+      </FormCard>
     </div>
   )
 }

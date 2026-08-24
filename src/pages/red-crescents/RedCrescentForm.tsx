@@ -2,7 +2,8 @@ import { AlignLeft, Compass, HeartHandshake, MapPin, MapPinned, Navigation, Phon
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
@@ -86,7 +87,12 @@ export function RedCrescentForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={HeartHandshake}
+      title={initial ? initial.name || t('redCrescents.edit') : t('redCrescents.create')}
+      subtitle={initial ? undefined : t('redCrescents.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={MapPinned} label={t('geo.province')} htmlFor="provinceId">
         <SearchSelect
           id="provinceId"
@@ -197,5 +203,6 @@ export function RedCrescentForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

@@ -47,6 +47,7 @@ import { CompanionsStep } from './ReservationCompanionsStep'
 import { ReservationStepReadonly } from './ReservationStepReadonly'
 import { ReservationCompleteSummary } from './ReservationCompleteSummary'
 import { InsuranceStep } from './ReservationInsuranceStep'
+import { ReservationPermitPanel } from './ReservationPermitPanel'
 
 function personName(person?: ReservationPerson | null) {
   return person?.fullName || '—'
@@ -128,7 +129,15 @@ export function ReservationAdminDetailPage() {
         }
       />
 
-      <ApplicantCard person={reservation.createdBy} locale={locale} />
+      <ApplicantCard
+        person={
+          reservation.type === 'CARAVAN' && reservation.caravanManager
+            ? reservation.caravanManager
+            : reservation.createdBy
+        }
+        locale={locale}
+        caravanApplicant={reservation.type === 'CARAVAN' && Boolean(reservation.caravanManager)}
+      />
 
       {rejected && reservation.rejectionReason ? (
         <div className={`${cardClassName} mb-4 flex items-start gap-3 border-red-100 p-4`}>
@@ -222,21 +231,33 @@ export function ReservationAdminDetailPage() {
   )
 }
 
-function ApplicantCard({ person, locale }: { person: ReservationPerson; locale: string }) {
+function ApplicantCard({
+  person,
+  locale,
+  caravanApplicant,
+}: {
+  person: ReservationPerson
+  locale: string
+  caravanApplicant?: boolean
+}) {
   const { t } = useTranslation()
   return (
     <section className={`${cardClassName} mb-4 overflow-hidden`}>
       <ReservationSectionHeader
         icon={UserRound}
         title={t('reservations.applicantSection')}
-        hint={t('reservations.applicantHint')}
+        hint={t(
+          caravanApplicant
+            ? 'reservations.applicantHintCaravan'
+            : 'reservations.applicantHint',
+        )}
       />
       <dl className="grid gap-2 p-5 sm:grid-cols-3 sm:gap-3 sm:p-6">
         <ApplicantTile icon={UserRound} label={t('users.fullName')} value={personName(person)} />
         <ApplicantTile
           icon={Phone}
           label={t('users.phone')}
-          value={person.phone ?? '—'}
+          value={person.phone ? localizeDigits(person.phone, locale) : '—'}
           ltr={Boolean(person.phone)}
         />
         <ApplicantTile
@@ -305,17 +326,20 @@ function AdminEditableStep({
   }
   if (step === 'review') {
     return (
-      <ReservationTravelSummary
-        reservation={reservation}
-        variant="review"
-        hint={t('reservations.reviewDecisionHint')}
-        footer={
-          <>
-            <ReviewDecisionForm reservation={reservation} onChanged={onChanged} />
-            {footer}
-          </>
-        }
-      />
+      <div className="space-y-4">
+        <ReservationTravelSummary
+          reservation={reservation}
+          variant="review"
+          hint={t('reservations.reviewDecisionHint')}
+          footer={
+            <>
+              <ReviewDecisionForm reservation={reservation} onChanged={onChanged} />
+              {footer}
+            </>
+          }
+        />
+        <ReservationPermitPanel reservation={reservation} mode="admin" onChanged={onChanged} />
+      </div>
     )
   }
   if (step === 'companions') {

@@ -1,4 +1,4 @@
-import { Filter, Plus } from 'lucide-react'
+import { Filter, Plus, Shield } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -17,16 +17,29 @@ import {
   PageHeader,
   listShellClassName,
 } from '../../components/ui/Form'
+import { CheckboxField } from '../../components/ui/CheckboxField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
-import { formatNumber } from '../../lib/datetime'
+import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { formatRoles } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import type { City, ManagedUser, Paginated, Province, RoleOption } from '../../types/app'
 import type { RoleUserScope } from './user-scopes'
+
+function parseRoleCodes(searchParams: URLSearchParams) {
+  const fromList = (searchParams.get('roleCodes') ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  if (fromList.length) {
+    return [...new Set(fromList)]
+  }
+  const legacy = searchParams.get('roleCode')?.trim()
+  return legacy ? [legacy] : []
+}
 
 export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   const { t, i18n } = useTranslation()
@@ -36,7 +49,7 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   const geoName = useGeoName()
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
-  const roleCode = scope.showRoleFilter ? (searchParams.get('roleCode') ?? '') : ''
+  const roleCodes = scope.showRoleFilter ? parseRoleCodes(searchParams) : []
   const provinceId = scope.showHeadquartersAreas ? (searchParams.get('provinceId') ?? '') : ''
   const cityId = scope.showHeadquartersAreas ? (searchParams.get('cityId') ?? '') : ''
   const keys = scope.i18nPrefix
@@ -64,14 +77,15 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
       return data
     },
   })
+  const roleCodesKey = roleCodes.join(',')
   const query = useQuery({
-    queryKey: [scope.queryKey, q, page, roleCode, provinceId, cityId, sortBy, sortDir],
+    queryKey: [scope.queryKey, q, page, roleCodesKey, provinceId, cityId, sortBy, sortDir],
     queryFn: async () => {
       const { data } = await api.get<Paginated<ManagedUser>>(scope.apiBase, {
         params: {
           q: q || undefined,
           page,
-          roleCode: roleCode || undefined,
+          roleCodes: roleCodesKey || undefined,
           provinceId: provinceId || undefined,
           cityId: cityId || undefined,
           ...sortParams,
@@ -82,8 +96,21 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   })
 
   const rows = query.data?.items ?? []
-  const filtered = Boolean(q || roleCode || provinceId || cityId)
+  const filtered = Boolean(q || roleCodes.length || provinceId || cityId)
   const hasExtraFilters = Boolean(scope.showHeadquartersAreas || scope.showRoleFilter)
+
+  function toggleRole(code: string, on: boolean) {
+    const next = on
+      ? [...new Set([...roleCodes, code])]
+      : roleCodes.filter((item) => item !== code)
+    setParams(
+      {
+        roleCodes: next.length ? next.join(',') : undefined,
+        roleCode: undefined,
+      },
+      { resetPage: true },
+    )
+  }
 
   function joinNames(items?: { nameFa: string; nameEn: string }[]) {
     if (!items?.length) return '—'
@@ -111,7 +138,12 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
         onSubmit={() => applySearch()}
         label={t('common.search')}
         placeholder={t(`${keys}.searchPlaceholder`)}
-        filtersActive={Boolean(roleCode || provinceId || cityId)}
+        filtersActive={Boolean(roleCodes.length || provinceId || cityId)}
+        extraClassName={
+          scope.showRoleFilter && !scope.showHeadquartersAreas
+            ? 'sm:grid-cols-1'
+            : 'sm:grid-cols-2'
+        }
         extra={
           hasExtraFilters ? (
             <>
@@ -156,22 +188,17 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
                 </FilterPair>
               ) : null}
               {scope.showRoleFilter ? (
-                <FormField icon={Filter} label={t('users.filterRoles')} htmlFor="user-role-filter">
-                  <SearchSelect
-                    id="user-role-filter"
-                    value={roleCode}
-                    placeholder={t('users.allRoles')}
-                    onChange={(next) =>
-                      setParams({ roleCode: next || undefined }, { resetPage: true })
-                    }
-                    options={[
-                      { value: '', label: t('users.allRoles') },
-                      ...(roles.data ?? []).map((role) => ({
-                        value: role.code,
-                        label: t(role.nameKey),
-                      })),
-                    ]}
-                  />
+                <FormField icon={Shield} label={t('users.filterRoles')}>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {(roles.data ?? []).map((role) => (
+                      <CheckboxField
+                        key={role.code}
+                        checked={roleCodes.includes(role.code)}
+                        onChange={(on) => toggleRole(role.code, on)}
+                        label={t(role.nameKey)}
+                      />
+                    ))}
+                  </div>
                 </FormField>
               ) : null}
             </>
@@ -250,7 +277,9 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
               <tr key={user.id} className="border-t border-line">
                 <td className="px-4 py-3">{user.fullName}</td>
                 <td className="px-4 py-3">{user.username}</td>
-                <td className="px-4 py-3">{user.phone ?? '—'}</td>
+                <td className="px-4 py-3">
+                  {user.phone ? localizeDigits(user.phone, locale) : '—'}
+                </td>
                 {scope.showHeadquartersAreas ? (
                   <>
                     <td className="px-4 py-3">{joinNames(user.representedProvinces)}</td>

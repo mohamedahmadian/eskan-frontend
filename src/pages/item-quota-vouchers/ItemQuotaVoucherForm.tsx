@@ -7,9 +7,9 @@ import {
   FormActions,
   FormField,
   ToggleField,
-  cardClassName,
   fieldClassName,
 } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
@@ -195,7 +195,16 @@ export function ItemQuotaVoucherForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={Package}
+      title={
+        initial
+          ? initial.code || t('itemQuotaVouchers.edit')
+          : t('itemQuotaVouchers.create')
+      }
+      subtitle={initial ? undefined : t('itemQuotaVouchers.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       {allowSelect ? (
         <FormField icon={Package} label={t('itemQuotaVouchers.item')} htmlFor="quotaId">
           <SearchSelect
@@ -316,5 +325,6 @@ export function ItemQuotaVoucherForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

@@ -2,7 +2,8 @@ import { AlignLeft, MapPin, Phone, Store, Tags, UserRound } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { supplierTypes, type Supplier, type SupplierType } from '../../types/app'
@@ -63,7 +64,12 @@ export function SupplierForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={Store}
+      title={initial ? initial.name || t('suppliers.edit') : t('suppliers.create')}
+      subtitle={initial ? undefined : t('suppliers.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={Store} label={t('suppliers.name')} htmlFor="name">
         <input
           id="name"
@@ -131,5 +137,6 @@ export function SupplierForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

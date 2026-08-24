@@ -1,6 +1,7 @@
 import { Check, Search, UserCheck, UserRound } from 'lucide-react'
-import { useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { localizeDigits } from '../../lib/datetime'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button, FormField, fieldClassName } from '../../components/ui/Form'
@@ -33,14 +34,30 @@ function toChoice(user: ManagedUser): CaravanManagerChoice {
 export function CaravanManagerPicker({
   value,
   onChange,
+  defaultNationalId,
 }: {
   value: CaravanManagerChoice | null
   onChange: (next: CaravanManagerChoice) => void
+  /** Prefill search, run it, and auto-select the matching pilgrim (e.g. file applicant). */
+  defaultNationalId?: string | null
 }) {
-  const { t } = useTranslation()
-  const [term, setTerm] = useState('')
-  const [q, setQ] = useState('')
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const preset = defaultNationalId?.trim() || ''
+  const [term, setTerm] = useState(preset)
+  const [q, setQ] = useState(preset)
   const [page, setPage] = useState(1)
+  const autoSelectedForQ = useRef<string | null>(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
+  useEffect(() => {
+    if (!preset) return
+    setTerm(preset)
+    setQ(preset)
+    setPage(1)
+    autoSelectedForQ.current = null
+  }, [preset])
 
   const query = useQuery({
     queryKey: ['pilgrims', 'manager-picker', q, page],
@@ -53,6 +70,23 @@ export function CaravanManagerPicker({
       return data
     },
   })
+
+  useEffect(() => {
+    if (!value) autoSelectedForQ.current = null
+  }, [value])
+
+  useEffect(() => {
+    if (!q || value) return
+    if (autoSelectedForQ.current === q) return
+    if (!query.isSuccess || !query.data) return
+    const items = query.data.items
+    const match =
+      items.find((user) => user.nationalId === q) ??
+      (query.data.total === 1 ? items[0] : undefined)
+    if (!match) return
+    autoSelectedForQ.current = q
+    onChangeRef.current(toChoice(match))
+  }, [q, value, query.isSuccess, query.data])
 
   const rows = query.data?.items ?? []
 
@@ -94,7 +128,10 @@ export function CaravanManagerPicker({
           </p>
           {value.nationalId || value.phone ? (
             <p className="mt-1 text-teal-800" dir="ltr">
-              {[value.nationalId, value.phone].filter(Boolean).join(' — ')}
+              {[value.nationalId, value.phone]
+                .filter(Boolean)
+                .map((item) => localizeDigits(item as string, locale))
+                .join(' — ')}
             </p>
           ) : (
             <p className="mt-1 text-teal-800">{t('caravans.managerNoIdentity')}</p>
@@ -152,10 +189,10 @@ export function CaravanManagerPicker({
                         >
                           <td className="px-4 py-3">{user.fullName}</td>
                           <td className="px-4 py-3 whitespace-nowrap" dir="ltr">
-                            {user.nationalId ?? '—'}
+                            {user.nationalId ? localizeDigits(user.nationalId, locale) : '—'}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap" dir="ltr">
-                            {user.phone ?? '—'}
+                            {user.phone ? localizeDigits(user.phone, locale) : '—'}
                           </td>
                           <td className="px-4 py-3">
                             <Button

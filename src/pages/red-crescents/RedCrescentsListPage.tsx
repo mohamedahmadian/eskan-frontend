@@ -1,6 +1,7 @@
 import { Filter, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { localizeDigits } from '../../lib/datetime'
 import { Link } from 'react-router-dom'
 import {
   PaginationBar,
@@ -20,7 +21,8 @@ import { useGeoName } from '../../lib/geo'
 import type { City, Paginated, Province, RedCrescent } from '../../types/app'
 
 export function RedCrescentsListPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
@@ -159,7 +161,7 @@ export function RedCrescentsListPage() {
                 <td className="px-4 py-3">{item.name}</td>
                 <td className="px-4 py-3">{name(item.province)}</td>
                 <td className="px-4 py-3">{name(item.city)}</td>
-                <td className="px-4 py-3">{item.phone || '—'}</td>
+                <td className="px-4 py-3">{item.phone ? localizeDigits(item.phone, locale) : '—'}</td>
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/base-info/red-crescents/${item.id}`}

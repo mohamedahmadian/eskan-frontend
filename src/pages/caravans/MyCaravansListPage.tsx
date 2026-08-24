@@ -77,6 +77,13 @@ export function MyCaravansListPage() {
                 onSort={onSort}
               />
               <SortableTh
+                column="walkingRoute"
+                label={t('caravans.walkingRoute')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
                 column="isActive"
                 label={t('caravans.status')}
                 sortBy={sortBy}
@@ -91,6 +98,7 @@ export function MyCaravansListPage() {
               <tr key={caravan.id} className="border-t border-line">
                 <td className="px-4 py-3">{caravan.name}</td>
                 <td className="px-4 py-3">{caravan.city ? nameOf(caravan.city) : '—'}</td>
+                <td className="px-4 py-3">{caravan.walkingRoute?.name ?? '—'}</td>
                 <td className="px-4 py-3">
                   {caravan.isActive ? t('geo.active') : t('geo.inactive')}
                 </td>

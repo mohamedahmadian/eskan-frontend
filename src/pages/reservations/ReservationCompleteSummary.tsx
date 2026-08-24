@@ -5,10 +5,12 @@ import {
   CalendarX,
   Check,
   Footprints,
+  HeartHandshake,
   MapPin,
   Mars,
   Route,
   ScrollText,
+  Shield,
   UserRoundCog,
   Users,
   UserRound,
@@ -22,7 +24,7 @@ import { cardClassName } from '../../components/ui/Form'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
-import { contactRoles, stepLabelKey } from './reservation-steps'
+import { contactRoles, stepLabelKey, workingHeadcount } from './reservation-steps'
 import { ReservationMembersGrid } from './ReservationMembersGrid'
 import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { ReservationCountMetrics } from './ReservationCountMetrics'
@@ -72,8 +74,9 @@ export function ReservationCompleteSummary({
   const nameOf = useGeoName()
   const empty = t('reservations.notEntered')
   const individual = reservation.type === 'INDIVIDUAL'
-  const individualMale = individual && reservation.maleCount >= 1
-  const individualFemale = individual && reservation.femaleCount >= 1
+  const headcount = workingHeadcount(reservation)
+  const individualMale = individual && headcount.male >= 1
+  const individualFemale = individual && headcount.female >= 1
   const nights = stayNightCount(reservation.stayStartDate, reservation.stayEndDate)
   const origin = reservation.originCity ? nameOf(reservation.originCity) : ''
   const route = reservation.walkingRoute?.name ?? ''
@@ -204,18 +207,29 @@ export function ReservationCompleteSummary({
         </section>
 
         <section>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <SectionTitle icon={HeartHandshake}>{t('reservations.createSteps.services')}</SectionTitle>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
             <FactTile
               icon={Building2}
-              label={t('reservations.requestsAccommodation')}
+              label={t('reservations.requestsAccommodationShort')}
               value={reservation.requestsAccommodation ? t('common.yes') : t('common.no')}
               tone="teal"
             />
             <FactTile
               icon={Bus}
-              label={t('reservations.requestsBus')}
+              label={t('reservations.requestsBusShort')}
               value={reservation.requestsBus ? t('common.yes') : t('common.no')}
               tone="mint"
+            />
+            <FactTile
+              icon={Shield}
+              label={t('reservations.requestsInsuranceOnlyShort')}
+              value={
+                !reservation.requestsAccommodation && !reservation.requestsBus
+                  ? t('common.yes')
+                  : t('common.no')
+              }
+              tone="ink"
             />
           </div>
         </section>

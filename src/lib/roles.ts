@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import type { AuthUser, RoleOption } from '../types/app'
+import type { RoleOption } from '../types/app'
 
 export function hasRole(
   user: { roles?: { code: string }[] } | null | undefined,
@@ -8,27 +8,35 @@ export function hasRole(
   return user?.roles?.some((role) => role.code === code) ?? false
 }
 
-export function isAdmin(user: AuthUser | null | undefined) {
+export function isAdmin(user: { roles?: { code: string }[] } | null | undefined) {
   return hasRole(user, 'ADMIN')
 }
 
-export function isPilgrim(user: AuthUser | null | undefined) {
+export function isPilgrim(user: { roles?: { code: string }[] } | null | undefined) {
   return hasRole(user, 'PILGRIM')
 }
 
-export function isCaravanManager(user: AuthUser | null | undefined) {
+export function isCaravanManager(user: { roles?: { code: string }[] } | null | undefined) {
   return hasRole(user, 'CARAVAN_MANAGER')
 }
 
-export function isGroupManager(user: AuthUser | null | undefined) {
+export function isGroupManager(user: { roles?: { code: string }[] } | null | undefined) {
   return hasRole(user, 'GROUP_MANAGER')
 }
 
-export function canAccessMyCaravans(user: AuthUser | null | undefined) {
+export function isLicenseIssuer(user: { roles?: { code: string }[] } | null | undefined) {
+  return hasRole(user, 'LICENSE_ISSUER')
+}
+
+export function isUnitManager(user: { roles?: { code: string }[] } | null | undefined) {
+  return hasRole(user, 'UNIT_MANAGER')
+}
+
+export function canAccessMyCaravans(user: { roles?: { code: string }[] } | null | undefined) {
   return isAdmin(user) || isCaravanManager(user)
 }
 
-export function canAccessMyGroups(user: AuthUser | null | undefined) {
+export function canAccessMyGroups(user: { roles?: { code: string }[] } | null | undefined) {
   return (
     isAdmin(user) ||
     isGroupManager(user) ||
@@ -37,10 +45,18 @@ export function canAccessMyGroups(user: AuthUser | null | undefined) {
   )
 }
 
-export function usesDedicatedHomeDashboard(user: AuthUser | null | undefined) {
+export function canAccessMyAccommodations(
+  user: { roles?: { code: string }[] } | null | undefined,
+) {
+  return Boolean(user)
+}
+
+export function usesDedicatedHomeDashboard(
+  user: { roles?: { code: string }[] } | null | undefined,
+) {
   return (
     !isAdmin(user) &&
-    (isPilgrim(user) || isCaravanManager(user) || isGroupManager(user))
+    (isPilgrim(user) || isCaravanManager(user) || isGroupManager(user) || isLicenseIssuer(user))
   )
 }
 

@@ -14,7 +14,7 @@ import {
   listShellClassName,
 } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { formatNumber } from '../../lib/datetime'
+import { formatNumber, localizeDigits } from '../../lib/datetime'
 
 type IssueImportRow = {
   rowNumber: number
@@ -46,8 +46,10 @@ type ImportResult = {
   adjustedRows: IssueImportRow[]
 }
 
-function cellValue(value: string) {
-  return value.trim() ? value : '—'
+function cellValue(value: string, locale?: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return '—'
+  return locale ? localizeDigits(trimmed, locale) : trimmed
 }
 
 function IssueTable({
@@ -58,6 +60,7 @@ function IssueTable({
   formatRow,
   reasonLabel,
   headers,
+  locale,
 }: {
   title: string
   hint: string
@@ -65,6 +68,7 @@ function IssueTable({
   reasonClassName: string
   formatRow: (value: number) => string
   reasonLabel: (code: string) => string
+  locale: string
   headers: {
     rowNumber: string
     firstName: string
@@ -106,8 +110,8 @@ function IssueTable({
                 <td className="px-4 py-3">{cellValue(row.firstName)}</td>
                 <td className="px-4 py-3">{cellValue(row.lastName)}</td>
                 <td className="px-4 py-3">{cellValue(row.gender)}</td>
-                <td className="px-4 py-3">{cellValue(row.phone)}</td>
-                <td className="px-4 py-3">{cellValue(row.nationalId)}</td>
+                <td className="px-4 py-3">{cellValue(row.phone, locale)}</td>
+                <td className="px-4 py-3">{cellValue(row.nationalId, locale)}</td>
                 <td className="px-4 py-3">{cellValue(row.birthDate)}</td>
                 <td className="px-4 py-3">{cellValue(row.city)}</td>
                 <td className={`px-4 py-3 ${reasonClassName}`}>
@@ -124,6 +128,7 @@ function IssueTable({
 
 export function PilgrimsImportPage() {
   const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
@@ -307,6 +312,7 @@ export function PilgrimsImportPage() {
         reasonClassName="text-amber-800"
         formatRow={n}
         reasonLabel={reasonLabel}
+        locale={locale}
         headers={{ ...tableHeaders, problem: t('pilgrims.importAdjustment') }}
       />
 
@@ -317,6 +323,7 @@ export function PilgrimsImportPage() {
         reasonClassName="text-red-700"
         formatRow={n}
         reasonLabel={reasonLabel}
+        locale={locale}
         headers={tableHeaders}
       />
     </div>

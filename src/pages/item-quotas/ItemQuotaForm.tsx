@@ -2,7 +2,8 @@ import { AlignLeft, CalendarDays, Hash, Package, Ruler, Store } from 'lucide-rea
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, persianYearOptions } from '../../lib/datetime'
@@ -87,7 +88,12 @@ export function ItemQuotaForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={Package}
+      title={initial ? initial.name || t('itemQuotas.edit') : t('itemQuotas.create')}
+      subtitle={initial ? undefined : t('itemQuotas.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={CalendarDays} label={t('itemQuotas.year')} htmlFor="year">
         <SearchSelect
           id="year"
@@ -185,5 +191,6 @@ export function ItemQuotaForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

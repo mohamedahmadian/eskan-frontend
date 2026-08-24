@@ -2,7 +2,8 @@ import { Compass, Flag, Hash, Landmark, Languages, MapPinned, MapPin, Navigation
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormField, FormActions, ToggleField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormField, FormActions, ToggleField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { slugifyCode, useGeoName } from '../../lib/geo'
@@ -81,7 +82,12 @@ export function CityForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={MapPin}
+      title={initial ? initial.nameFa || t('cities.edit') : t('cities.create')}
+      subtitle={initial ? undefined : t('cities.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={Flag} label={t('geo.country')} htmlFor="countryId">
         <SearchSelect
           id="countryId"
@@ -238,6 +244,7 @@ export function CityForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }
 

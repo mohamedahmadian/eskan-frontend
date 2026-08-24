@@ -3,6 +3,7 @@ import {
   MapPin,
   MapPinned,
   MessageCircle,
+  Route,
   Share2,
   UserPlus,
   UserRound,
@@ -10,23 +11,25 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
   AppForm,
   FormActions,
   FormField,
-  cardClassName,
   fieldClassName,
 } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
-import { getApiErrorMessage } from '../../lib/api'
+import { api, getApiErrorMessage } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
-import type { City, Country, Group, Province } from '../../types/app'
+import type { City, Country, Group, Paginated, Province, WalkingRoute } from '../../types/app'
 
 export type GroupPayload = {
   name: string
   cityId?: string
+  walkingRouteId: string | null
   maleCount: number
   femaleCount: number
   eitaa: string | null
@@ -84,6 +87,7 @@ export function GroupForm({
     initial?.city?.provinceId ?? initialProvinceId,
   )
   const [cityId, setCityId] = useState(initial?.cityId ?? '')
+  const [walkingRouteId, setWalkingRouteId] = useState(initial?.walkingRouteId ?? '')
   const [maleCount, setMaleCount] = useState(String(initial?.maleCount ?? 0))
   const [femaleCount, setFemaleCount] = useState(String(initial?.femaleCount ?? 0))
   const [eitaa, setEitaa] = useState(initial?.eitaa ?? '')
@@ -93,6 +97,19 @@ export function GroupForm({
   const geoTouchedRef = useRef(Boolean(initial?.cityId))
 
   const totalCountValue = toCount(maleCount) + toCount(femaleCount)
+
+  const walkingRoutes = useQuery({
+    queryKey: ['walking-routes', 'lookup', countryId],
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
+        params: {
+          pageSize: 100,
+          originCountryId: countryId || undefined,
+        },
+      })
+      return data.items
+    },
+  })
 
   function applyGeoFromProfile(
     nextCountryId?: string | null,
@@ -130,6 +147,7 @@ export function GroupForm({
       await onSubmit({
         name: name.trim(),
         cityId: resolvedCityId,
+        walkingRouteId: emptyToNull(walkingRouteId),
         maleCount: toCount(maleCount),
         femaleCount: toCount(femaleCount),
         eitaa: emptyToNull(eitaa),
@@ -145,8 +163,12 @@ export function GroupForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className="space-y-4">
-      <div className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={UsersRound}
+      title={initial ? initial.name || t('groups.edit') : t('groups.create')}
+      subtitle={initial ? undefined : t('groups.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
         <FormField icon={UsersRound} label={t('groups.name')} htmlFor="name">
           <input
             id="name"
@@ -167,6 +189,7 @@ export function GroupForm({
                 setCountryId(next)
                 setProvinceId('')
                 setCityId('')
+                setWalkingRouteId('')
                 geoTouchedRef.current = true
                 onCountryChange(next)
                 onProvinceChange('')
@@ -226,6 +249,33 @@ export function GroupForm({
             />
           </FormField>
         </div>
+
+        <FormField icon={Route} label={t('groups.walkingRoute')} htmlFor="walkingRouteId">
+          <SearchSelect
+            id="walkingRouteId"
+            value={walkingRouteId}
+            onChange={setWalkingRouteId}
+            placeholder={t('groups.walkingRoute')}
+            options={[
+              { value: '', label: t('groups.walkingRouteNone') },
+              ...(walkingRoutes.data ?? []).map((route) => ({
+                value: route.id,
+                label: route.name,
+              })),
+              ...(walkingRouteId &&
+              initial?.walkingRoute &&
+              initial.walkingRoute.id === walkingRouteId &&
+              !(walkingRoutes.data ?? []).some((route) => route.id === walkingRouteId)
+                ? [
+                    {
+                      value: initial.walkingRoute.id,
+                      label: initial.walkingRoute.name,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </FormField>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField icon={UserRound} label={t('groups.maleCount')} htmlFor="maleCount">
@@ -296,16 +346,14 @@ export function GroupForm({
             dir="ltr"
           />
         </FormField>
-      </div>
 
-      <div className={`p-6 ${cardClassName}`}>
         <FormActions
           submitLabel={t('groups.save')}
           cancelLabel={t('groups.cancel')}
           submitting={saving}
           onCancel={() => history.back()}
         />
-      </div>
     </AppForm>
+    </FormCard>
   )
 }

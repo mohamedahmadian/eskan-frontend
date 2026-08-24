@@ -34,6 +34,48 @@ type ReservationStepDates = {
 
 export const GROUP_MAX_SIZE = 20
 
+export function requestedHeadcount(row: {
+  requestedMaleCount?: number
+  requestedFemaleCount?: number
+  maleCount: number
+  femaleCount: number
+}) {
+  return {
+    male: row.requestedMaleCount ?? row.maleCount,
+    female: row.requestedFemaleCount ?? row.femaleCount,
+  }
+}
+
+/** Lists show requested size while the file is waiting for management. */
+export function listHeadcount(row: {
+  status: ReservationStatus
+  requestedMaleCount?: number
+  requestedFemaleCount?: number
+  maleCount: number
+  femaleCount: number
+  totalCount: number
+}) {
+  if (row.status === reservationStatuses.PENDING_MANAGEMENT_REVIEW) {
+    const { male, female } = requestedHeadcount(row)
+    return { male, female, total: male + female }
+  }
+  return { male: row.maleCount, female: row.femaleCount, total: row.totalCount }
+}
+
+/** Travel form / gender before management has set approved counts. */
+export function workingHeadcount(row: {
+  managementReviewedAt?: string | null
+  requestedMaleCount?: number
+  requestedFemaleCount?: number
+  maleCount: number
+  femaleCount: number
+}) {
+  if (row.managementReviewedAt) {
+    return { male: row.maleCount, female: row.femaleCount }
+  }
+  return requestedHeadcount(row)
+}
+
 export const reservationStepCodes = [
   'travel',
   'review',
@@ -300,4 +342,22 @@ export function summarizeInsurance(
     lastPaidAt,
     completed: members.length > 0 && pending === 0 && rejected === 0,
   }
+}
+
+/** Owner create-wizard draft (never submitted / not admin-returned). */
+export function isOwnerCreateDraft(reservation: {
+  status: ReservationStatus
+  returnedToStatus?: ReservationStatus | null
+}) {
+  return reservation.status === 'DRAFT' && !reservation.returnedToStatus
+}
+
+export function createWizardPath(
+  draftId: string,
+  base: '/my-reservations' | '/reservations' = '/my-reservations',
+  forUserId?: string,
+) {
+  const params = new URLSearchParams({ draft: draftId })
+  if (forUserId) params.set('forUser', forUserId)
+  return `${base}/new?${params.toString()}`
 }

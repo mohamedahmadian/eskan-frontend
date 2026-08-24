@@ -9,7 +9,7 @@ import {
 import { forwardRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getImageUrl } from '../../lib/api'
-import { formatDate } from '../../lib/datetime'
+import { formatDate, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { ManagedUser } from '../../types/app'
 
@@ -75,7 +75,14 @@ export const PilgrimCard = forwardRef<
           </div>
         </div>
         <div className="pilgrim-id-card__facts">
-          <CardFact icon={IdCard} label={t('users.nationalId')} value={pilgrim.nationalId || '—'} dir="ltr" />
+          <CardFact
+            icon={IdCard}
+            label={t('users.nationalId')}
+            value={
+              pilgrim.nationalId ? localizeDigits(pilgrim.nationalId, locale) : '—'
+            }
+            dir="ltr"
+          />
           {pilgrim.birthDate ? (
             <CardFact
               icon={CalendarDays}
@@ -85,7 +92,12 @@ export const PilgrimCard = forwardRef<
             />
           ) : null}
           {pilgrim.phone ? (
-            <CardFact icon={Phone} label={t('users.phone')} value={pilgrim.phone} dir="ltr" />
+            <CardFact
+              icon={Phone}
+              label={t('users.phone')}
+              value={localizeDigits(pilgrim.phone, locale)}
+              dir="ltr"
+            />
           ) : null}
           {place ? <CardFact icon={MapPin} label={t('geo.city')} value={place} wide /> : null}
         </div>

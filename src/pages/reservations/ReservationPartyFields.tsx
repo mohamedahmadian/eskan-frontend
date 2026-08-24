@@ -6,6 +6,7 @@ import {
   MapPin,
   Mars,
   Plus,
+  Route,
   Users,
   Venus,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
+import { isCaravanManager, isPilgrim } from '../../lib/roles'
 import type {
   Caravan,
   City,
@@ -26,9 +28,12 @@ import type {
   Group,
   Paginated,
   Province,
+  WalkingRoute,
 } from '../../types/app'
-import { ReservationCountFields } from './ReservationCountFields'
-import { GROUP_MAX_SIZE } from './reservation-steps'
+import {
+  CaravanManagerPicker,
+  type CaravanManagerChoice,
+} from '../caravans/CaravanManagerPicker'
 
 const partyCardHoverClass =
   'hover:-translate-y-0.5 hover:border-teal-400 hover:shadow-[0_18px_40px_rgba(46,189,182,0.28),0_0_0_4px_rgba(255,255,255,0.95),0_0_0_7px_rgba(46,189,182,0.35)]'
@@ -37,28 +42,36 @@ export type PartyKind = 'GROUP' | 'CARAVAN'
 
 export type PartyDraft = {
   name: string
-  maleCount: string
-  femaleCount: string
   provinceId: string
   cityId: string
+  walkingRouteId: string
+  managerUserId: string
 }
 
 export type SelectedParty = {
   id: string
-  maleCount: number
-  femaleCount: number
+}
+
+/** زائر یا مدیر کاروان: خودش مدیر است؛ در غیر این صورت باید مدیر انتخاب شود. */
+export function shouldPickCaravanManager(
+  user: { roles?: { code: string }[] } | null | undefined,
+) {
+  return !(isPilgrim(user) || isCaravanManager(user))
 }
 
 export function emptyPartyDraft(user?: {
+  id?: string
   provinceId?: string | null
   cityId?: string | null
+  roles?: { code: string }[]
 } | null): PartyDraft {
+  const pickManager = shouldPickCaravanManager(user)
   return {
     name: '',
-    maleCount: '0',
-    femaleCount: '0',
     provinceId: user?.provinceId ?? '',
     cityId: user?.cityId ?? '',
+    walkingRouteId: '',
+    managerUserId: pickManager ? '' : (user?.id ?? ''),
   }
 }
 
@@ -66,42 +79,41 @@ export function partyDraftError(
   draft: PartyDraft,
   type: PartyKind,
   t: TFunction,
-  locale: string,
   needsCity: boolean,
 ) {
   if (draft.name.trim().length < 2) {
     return t('reservations.partyNameRequired')
   }
-  const male = Number(draft.maleCount) || 0
-  const female = Number(draft.femaleCount) || 0
-  if (male + female <= 0) {
-    return t('reservations.countInvalid')
-  }
-  if (type === 'GROUP' && male + female > GROUP_MAX_SIZE) {
-    return t('reservations.groupMaxExceeded', {
-      count: formatNumber(GROUP_MAX_SIZE, locale),
-    })
-  }
   if (needsCity && !draft.cityId) {
     return t('reservations.partyCityRequired')
+  }
+  if (type === 'CARAVAN' && !draft.managerUserId) {
+    return t('caravans.managerRequired')
   }
   return null
 }
 
 export async function createReservationParty(type: PartyKind, draft: PartyDraft) {
-  const payload = {
+  const payload: {
+    name: string
+    maleCount: number
+    femaleCount: number
+    cityId?: string
+    walkingRouteId?: string | null
+    managerUserId?: string
+  } = {
     name: draft.name.trim(),
-    maleCount: Number(draft.maleCount) || 0,
-    femaleCount: Number(draft.femaleCount) || 0,
+    maleCount: 0,
+    femaleCount: 0,
     cityId: draft.cityId || undefined,
+    walkingRouteId: draft.walkingRouteId || null,
+  }
+  if (draft.managerUserId) {
+    payload.managerUserId = draft.managerUserId
   }
   const url = type === 'CARAVAN' ? '/caravans' : '/groups'
   const { data } = await api.post<Group | Caravan>(url, payload)
-  return {
-    id: data.id,
-    maleCount: data.maleCount,
-    femaleCount: data.femaleCount,
-  }
+  return { id: data.id }
 }
 
 type PartyItem = {
@@ -112,6 +124,8 @@ type PartyItem = {
   totalCount: number
   city?: Group['city']
 }
+
+export type PartyItemSnapshot = PartyItem
 
 export function ReservationPartyFields({
   type,
@@ -124,6 +138,9 @@ export function ReservationPartyFields({
   showCreateAction,
   creating,
   onCreate,
+  subjectUser,
+  hideExistingParties,
+  knownSelected,
 }: {
   type: PartyKind
   selectedId: string
@@ -135,16 +152,34 @@ export function ReservationPartyFields({
   showCreateAction?: boolean
   creating?: boolean
   onCreate?: () => void
+  /** When creating on behalf of someone, use their roles / identity for manager defaults. */
+  subjectUser?: {
+    id?: string
+    fullName?: string
+    nationalId?: string | null
+    phone?: string | null
+    countryId?: string | null
+    provinceId?: string | null
+    cityId?: string | null
+    roles?: { code: string }[]
+  } | null
+  /** Skip «my caravans/groups» list (admin on-behalf flow). */
+  hideExistingParties?: boolean
+  /** Snapshot from reservation when the party is not in «mine» list. */
+  knownSelected?: PartyItemSnapshot | null
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const nameOf = useGeoName()
   const { user } = useAuth()
+  const partySubject = subjectUser ?? user
   const isCaravan = type === 'CARAVAN'
-  const needsCity = !user?.cityId
+  const pickManager = isCaravan && shouldPickCaravanManager(partySubject)
+  const [managerChoice, setManagerChoice] = useState<CaravanManagerChoice | null>(null)
 
   const mine = useQuery({
     queryKey: isCaravan ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
+    enabled: !hideExistingParties,
     queryFn: async () => {
       const path = isCaravan ? '/caravans/mine' : '/groups/mine'
       const { data } = await api.get<Paginated<PartyItem>>(path, {
@@ -154,28 +189,72 @@ export function ReservationPartyFields({
     },
   })
 
-  const items = mine.data ?? []
-  const selected = items.find((item) => item.id === selectedId)
-  const [createOpen, setCreateOpen] = useState(false)
+  const items = hideExistingParties ? [] : (mine.data ?? [])
+  const fromList = items.find((item) => item.id === selectedId)
+  const known =
+    knownSelected && knownSelected.id === selectedId ? knownSelected : null
+
+  const selectedLookup = useQuery({
+    queryKey: [isCaravan ? 'caravans' : 'groups', selectedId, 'party-card'],
+    enabled: Boolean(selectedId) && !fromList && !known,
+    queryFn: async () => {
+      const path = isCaravan ? `/caravans/${selectedId}` : `/groups/${selectedId}`
+      const { data } = await api.get<PartyItem>(path)
+      return {
+        id: data.id,
+        name: data.name,
+        maleCount: data.maleCount ?? 0,
+        femaleCount: data.femaleCount ?? 0,
+        totalCount: data.totalCount ?? (data.maleCount ?? 0) + (data.femaleCount ?? 0),
+        city: data.city,
+      } satisfies PartyItem
+    },
+  })
+
+  const selected = fromList ?? known ?? selectedLookup.data ?? null
+  const [createOpen, setCreateOpen] = useState(Boolean(hideExistingParties))
   const createPanelId = useId()
   const PartyIcon = isCaravan ? Footprints : Users
 
   useEffect(() => {
+    if (hideExistingParties) {
+      setCreateOpen(true)
+      return
+    }
     if (mine.isSuccess && items.length === 0) setCreateOpen(true)
-  }, [mine.isSuccess, items.length])
+  }, [hideExistingParties, mine.isSuccess, items.length])
+
+  useEffect(() => {
+    if (!draft.managerUserId) setManagerChoice(null)
+  }, [draft.managerUserId])
 
   function choose(item: PartyItem) {
     setCreateOpen(false)
-    onSelect({
-      id: item.id,
-      maleCount: item.maleCount,
-      femaleCount: item.femaleCount,
-    })
+    onSelect({ id: item.id })
     onAdvance?.()
   }
 
   return (
     <div className="space-y-5">
+      {selected && !fromList ? (
+        <section className="space-y-3">
+          <p className="text-sm font-semibold text-ink-800">
+            {t(isCaravan ? 'reservations.selectedCaravan' : 'reservations.selectedGroup')}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <PartyChoiceCard
+              item={selected}
+              selected
+              disabled={locked}
+              isCaravan={isCaravan}
+              cityLabel={selected.city ? nameOf(selected.city) : ''}
+              locale={locale}
+              onSelect={() => choose(selected)}
+            />
+          </div>
+        </section>
+      ) : null}
+
       {items.length ? (
         <section className="space-y-3">
           <p className="text-sm font-semibold text-ink-800">
@@ -207,18 +286,24 @@ export function ReservationPartyFields({
       ) : null}
 
       {locked ? (
-        selected ? null : selectedId ? (
+        selected || !selectedId ? null : (
           <p className="text-sm text-ink-600">{t('reservations.partySelectedReadonly')}</p>
-        ) : null
+        )
       ) : (
-        <section className="overflow-hidden rounded-[22px] border border-dashed border-teal-200 bg-gradient-to-b from-teal-50/70 to-white">
+        <section
+          className={`rounded-[22px] border border-dashed border-teal-200 bg-gradient-to-b from-teal-50/70 to-white ${
+            createOpen ? '' : 'overflow-hidden'
+          }`}
+        >
           <button
             type="button"
             aria-expanded={createOpen}
             aria-controls={createPanelId}
             data-enter-ignore=""
             onClick={() => setCreateOpen((open) => !open)}
-            className="flex w-full items-center gap-2.5 p-4 text-start transition hover:bg-teal-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:px-5 sm:py-4"
+            className={`flex w-full items-center gap-2.5 p-4 text-start transition hover:bg-teal-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:px-5 sm:py-4 ${
+              createOpen ? 'rounded-t-[21px]' : ''
+            }`}
           >
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white">
               <Plus className="size-4" aria-hidden />
@@ -249,15 +334,17 @@ export function ReservationPartyFields({
                 placeholder={t(isCaravan ? 'caravans.name' : 'groups.name')}
               />
             </FormField>
-            {needsCity ? (
-              <PartyCityFields draft={draft} onDraftChange={onDraftChange} />
+            <PartyCityFields draft={draft} onDraftChange={onDraftChange} />
+            {pickManager ? (
+              <CaravanManagerPicker
+                value={managerChoice}
+                defaultNationalId={partySubject?.nationalId}
+                onChange={(next) => {
+                  setManagerChoice(next)
+                  onDraftChange({ managerUserId: next.id })
+                }}
+              />
             ) : null}
-            <ReservationCountFields
-              values={draft}
-              onChange={onDraftChange}
-              type={type}
-              idPrefix="party"
-            />
             {showCreateAction ? (
               <Button type="button" variant="soft" disabled={creating} onClick={onCreate}>
                 <Plus className="size-4" aria-hidden />
@@ -402,29 +489,55 @@ function PartyCityFields({
     },
   })
 
+  const routes = useQuery({
+    queryKey: ['walking-routes', 'lookup'],
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
+        params: { pageSize: 100 },
+      })
+      return data.items
+    },
+  })
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <FormField icon={Building2} label={t('reservations.province')}>
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField icon={Building2} label={t('reservations.province')}>
+          <SearchSelect
+            value={draft.provinceId}
+            onChange={(provinceId) => onDraftChange({ provinceId, cityId: '' })}
+            options={(provinces.data ?? []).map((item) => ({
+              value: item.id,
+              label: nameOf(item),
+            }))}
+            placeholder={t('reservations.province')}
+          />
+        </FormField>
+        <FormField icon={MapPin} label={t('geo.city')}>
+          <SearchSelect
+            value={draft.cityId}
+            onChange={(cityId) => onDraftChange({ cityId })}
+            options={(cities.data ?? []).map((item) => ({
+              value: item.id,
+              label: nameOf(item),
+            }))}
+            placeholder={t('geo.city')}
+            disabled={!draft.provinceId}
+          />
+        </FormField>
+      </div>
+      <FormField icon={Route} label={t('reservations.walkingRoute')}>
         <SearchSelect
-          value={draft.provinceId}
-          onChange={(provinceId) => onDraftChange({ provinceId, cityId: '' })}
-          options={(provinces.data ?? []).map((item) => ({
-            value: item.id,
-            label: nameOf(item),
-          }))}
-          placeholder={t('reservations.province')}
-        />
-      </FormField>
-      <FormField icon={MapPin} label={t('geo.city')}>
-        <SearchSelect
-          value={draft.cityId}
-          onChange={(cityId) => onDraftChange({ cityId })}
-          options={(cities.data ?? []).map((item) => ({
-            value: item.id,
-            label: nameOf(item),
-          }))}
-          placeholder={t('geo.city')}
-          disabled={!draft.provinceId}
+          value={draft.walkingRouteId}
+          onChange={(walkingRouteId) => onDraftChange({ walkingRouteId })}
+          options={[
+            { value: '', label: t('reservations.walkingRouteNone') },
+            ...(routes.data ?? []).map((item) => ({
+              value: item.id,
+              label: item.name,
+            })),
+          ]}
+          placeholder={t('reservations.walkingRoute')}
         />
       </FormField>
     </div>

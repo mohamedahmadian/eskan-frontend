@@ -2,7 +2,8 @@ import { AlignLeft, MapPin, MapPinned, Phone, UtensilsCrossed } from 'lucide-rea
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
@@ -75,7 +76,12 @@ export function FoodSupplierForm({
   }
 
   return (
-    <AppForm onSubmit={submit} className={`space-y-4 p-6 ${cardClassName}`}>
+    <FormCard
+      icon={UtensilsCrossed}
+      title={initial ? initial.name || t('foodSuppliers.edit') : t('foodSuppliers.create')}
+      subtitle={initial ? undefined : t('foodSuppliers.createSubtitle')}
+    >
+    <AppForm onSubmit={submit} className={formCardBodyClassName}>
       <FormField icon={MapPinned} label={t('geo.province')} htmlFor="provinceId">
         <SearchSelect
           id="provinceId"
@@ -156,5 +162,6 @@ export function FoodSupplierForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    </FormCard>
   )
 }

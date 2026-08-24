@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthProvider'
 import { AppForm, Button, FormField, cardClassName, fieldClassName } from '../components/ui/Form'
+import { toLatinDigits } from '../lib/datetime'
 
 export function LoginPage() {
   const { t } = useTranslation()
@@ -22,7 +23,7 @@ export function LoginPage() {
     event.preventDefault()
     setSubmitting(true)
     try {
-      await login(username, password)
+      await login(toLatinDigits(username), toLatinDigits(password))
       navigate('/')
     } catch {
       toast.error(t('auth.loginFailed'))
@@ -47,7 +48,7 @@ export function LoginPage() {
               id="username"
               className={fieldClassName}
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setUsername(toLatinDigits(e.target.value))}
               autoComplete="username"
               required
             />
@@ -58,7 +59,7 @@ export function LoginPage() {
               type="password"
               className={fieldClassName}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => setPassword(toLatinDigits(e.target.value))}
               autoComplete="current-password"
               required
             />

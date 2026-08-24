@@ -14,6 +14,7 @@ import {
   Share2,
   Shield,
   ToggleRight,
+  Building,
   UserRound,
   UserRoundPlus,
 } from 'lucide-react'
@@ -31,10 +32,10 @@ import {
   FormActions,
   ToggleField,
   Button,
-  cardClassName,
   fieldClassName,
   inputClassName,
 } from '../../components/ui/Form'
+import { FormCard } from '../../components/ui/FormLayout'
 import { LoadingSpinner } from '../../components/ui/LoadingState'
 import { languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
@@ -47,6 +48,7 @@ import {
   userStatuses,
   type City,
   type Country,
+  type GovernmentOrganization,
   type ManagedUser,
   type Province,
   type Religion,
@@ -99,6 +101,7 @@ export type UserPayload = {
   countryId: string | null
   provinceId: string | null
   cityId: string | null
+  issuingOrganizationId: string | null
   photoId: string | null
   nationalCardPhotoId: string | null
   passportPhotoId: string | null
@@ -109,20 +112,28 @@ export function UserForm({
   roles,
   lockedRoleCodes = [],
   hideRoles = false,
+  hidePassword = false,
+  hideStatus = false,
   requirePassword,
   defaultPassword = '',
   extraTabs,
   identityCheckPath = '/users/identity-check',
+  i18nPrefix = 'users',
+  onCancel,
   onSubmit,
 }: {
   initial?: Partial<ManagedUser> & { roleIds?: string[] }
   roles: RoleOption[]
   lockedRoleCodes?: string[]
   hideRoles?: boolean
+  hidePassword?: boolean
+  hideStatus?: boolean
   requirePassword: boolean
   defaultPassword?: string
   extraTabs?: UserFormExtraTab[]
   identityCheckPath?: string
+  i18nPrefix?: 'users' | 'pilgrims' | 'accommodationManagers' | 'caravanManagers' | 'headquartersRepresentatives'
+  onCancel?: () => void
   onSubmit: (payload: UserPayload) => Promise<void>
 }) {
   const { t } = useTranslation()
@@ -158,12 +169,20 @@ export function UserForm({
   const [countryId, setCountryId] = useState(initial?.countryId ?? '')
   const [provinceId, setProvinceId] = useState(initial?.provinceId ?? '')
   const [cityId, setCityId] = useState(initial?.cityId ?? '')
+  const [issuingOrganizationId, setIssuingOrganizationId] = useState(
+    initial?.issuingOrganizationId ?? '',
+  )
   const [photoId, setPhotoId] = useState(initial?.photoId ?? '')
   const [nationalCardPhotoId, setNationalCardPhotoId] = useState(initial?.nationalCardPhotoId ?? '')
   const [passportPhotoId, setPassportPhotoId] = useState(initial?.passportPhotoId ?? '')
   const [uploading, setUploading] = useState<string>()
   const [roleIds, setRoleIds] = useState<string[]>(
     [...new Set([...(initial?.roleIds ?? initial?.roles?.map((role) => role.id) ?? []), ...lockedIds])],
+  )
+  const licenseIssuerRoleId = roles.find((role) => role.code === 'LICENSE_ISSUER')?.id
+  const showIssuingOrganization = Boolean(
+    licenseIssuerRoleId &&
+      (roleIds.includes(licenseIssuerRoleId) || lockedIds.includes(licenseIssuerRoleId)),
   )
   const [saving, setSaving] = useState(false)
   const [checkingNationalId, setCheckingNationalId] = useState(false)
@@ -174,8 +193,10 @@ export function UserForm({
   const pendingFocusId = useRef<string | null>(null)
   const lastNationalIdCheck = useRef<string | null>(null)
   const lastPhoneCheck = useRef<string | null>(null)
+  const lastUsernameCheck = useRef<string | null>(null)
   const nationalIdCheckSeq = useRef(0)
   const phoneCheckSeq = useRef(0)
+  const usernameCheckSeq = useRef(0)
   const personalFieldsLocked = !nationalIdReady
   const isCreate = !initial
 
@@ -233,6 +254,14 @@ export function UserForm({
       return data
     },
   })
+  const organizations = useQuery({
+    queryKey: ['government-organizations', 'lookup'],
+    enabled: showIssuingOrganization || Boolean(initial?.issuingOrganizationId),
+    queryFn: async () => {
+      const { data } = await api.get<GovernmentOrganization[]>('/government-organizations')
+      return data
+    },
+  })
 
   function toggleRole(id: string) {
     if (lockedIds.includes(id)) return
@@ -257,28 +286,30 @@ export function UserForm({
     }
   }
 
-  async function checkNationalIdTaken(raw?: string) {
+  async function checkNationalIdTaken(raw?: string): Promise<boolean> {
     const value = normalizeNationalId(raw ?? nationalId)
     if (!value) {
       lastNationalIdCheck.current = null
       setNationalIdReady(false)
       clearError('nationalId')
-      return
+      return false
     }
-    if (lastNationalIdCheck.current === value) return
     if (!isValidIranianNationalId(value)) {
       lastNationalIdCheck.current = value
       setNationalIdReady(false)
       const message = t('users.nationalIdInvalid')
       setFieldError('nationalId', message)
       toast.error(message)
-      return
+      return false
     }
     if (initial?.nationalId && normalizeNationalId(initial.nationalId) === value) {
       lastNationalIdCheck.current = value
       setNationalIdReady(true)
       clearError('nationalId')
-      return
+      return true
+    }
+    if (lastNationalIdCheck.current === value && nationalIdReady && !fieldErrors.nationalId) {
+      return true
     }
     lastNationalIdCheck.current = value
     const seq = ++nationalIdCheckSeq.current
@@ -292,22 +323,24 @@ export function UserForm({
           ...(initial?.id ? { excludeId: initial.id } : {}),
         },
       )
-      if (seq !== nationalIdCheckSeq.current) return
+      if (seq !== nationalIdCheckSeq.current) return false
       if (data.nationalIdTaken ?? data.taken) {
         setNationalIdReady(false)
         const message = t('users.nationalIdTaken')
         setFieldError('nationalId', message)
         toast.error(message)
-      } else {
-        setNationalIdReady(true)
-        clearError('nationalId')
+        return false
       }
+      setNationalIdReady(true)
+      clearError('nationalId')
+      return true
     } catch (error) {
       if (seq === nationalIdCheckSeq.current) {
         lastNationalIdCheck.current = null
         setNationalIdReady(false)
       }
-      if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return
+      if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return false
+      return false
     } finally {
       if (seq === nationalIdCheckSeq.current) setCheckingNationalId(false)
     }
@@ -354,6 +387,48 @@ export function UserForm({
     }
   }
 
+  async function checkUsernameTaken(): Promise<boolean> {
+    const value = username.trim()
+    if (!value || value.length < 3) {
+      lastUsernameCheck.current = null
+      clearError('username')
+      return false
+    }
+    if (initial?.username && initial.username === value) {
+      lastUsernameCheck.current = value
+      clearError('username')
+      return true
+    }
+    if (lastUsernameCheck.current === value && !fieldErrors.username) {
+      return true
+    }
+    lastUsernameCheck.current = value
+    const seq = ++usernameCheckSeq.current
+    try {
+      const { data } = await api.post<{ taken: boolean; usernameTaken?: boolean }>(
+        identityCheckPath,
+        {
+          username: value,
+          ...(initial?.id ? { excludeId: initial.id } : {}),
+        },
+      )
+      if (seq !== usernameCheckSeq.current) return false
+      if (data.usernameTaken ?? data.taken) {
+        const message = t('users.usernameTaken')
+        setFieldError('username', message)
+        toast.error(message)
+        return false
+      }
+      clearError('username')
+      return true
+    } catch (error) {
+      if (seq === usernameCheckSeq.current) lastUsernameCheck.current = null
+      if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return false
+      toast.error(getApiErrorMessage(error, t('common.error')))
+      return false
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     const nextRoleIds = [...new Set([...roleIds, ...lockedIds])]
@@ -363,10 +438,6 @@ export function UserForm({
     }
     if (!isValidIranianNationalId(nationalId)) {
       failField('personal', 'nationalId', t('users.nationalIdInvalid'))
-      return
-    }
-    if (fieldErrors.nationalId) {
-      failField('personal', 'nationalId', fieldErrors.nationalId)
       return
     }
     if (!firstName.trim()) {
@@ -381,18 +452,12 @@ export function UserForm({
       failField('personal', 'phone', t('users.phoneRequired'))
       return
     }
-    if (fieldErrors.phone) {
-      failField('personal', 'phone', fieldErrors.phone)
-      return
-    }
-    const phoneAvailable = await checkPhoneTaken()
-    if (!phoneAvailable) {
-      pendingFocusId.current = 'phone'
-      if (tab !== 'personal') setTab('personal')
-      return
-    }
     if (!nextRoleIds.length) {
       failField('account', 'roles', t('users.rolesRequired'))
+      return
+    }
+    if (showIssuingOrganization && !issuingOrganizationId) {
+      failField('account', 'issuingOrganizationId', t('users.issuingOrganizationRequired'))
       return
     }
     if (!username.trim() || username.trim().length < 3) {
@@ -404,6 +469,25 @@ export function UserForm({
         failField('account', 'password', t('users.passwordMin'))
         return
       }
+    }
+
+    const nationalIdAvailable = await checkNationalIdTaken()
+    if (!nationalIdAvailable) {
+      pendingFocusId.current = 'nationalId'
+      if (tab !== 'personal') setTab('personal')
+      return
+    }
+    const phoneAvailable = await checkPhoneTaken()
+    if (!phoneAvailable) {
+      pendingFocusId.current = 'phone'
+      if (tab !== 'personal') setTab('personal')
+      return
+    }
+    const usernameAvailable = await checkUsernameTaken()
+    if (!usernameAvailable) {
+      pendingFocusId.current = 'username'
+      if (tab !== 'account') setTab('account')
+      return
     }
 
     setSaving(true)
@@ -432,6 +516,7 @@ export function UserForm({
         countryId: emptyToNull(selectedCountryId),
         provinceId: emptyToNull(provinceId),
         cityId: emptyToNull(cityId),
+        issuingOrganizationId: emptyToNull(issuingOrganizationId),
         photoId: emptyToNull(photoId),
         nationalCardPhotoId: emptyToNull(nationalCardPhotoId),
         passportPhotoId: emptyToNull(passportPhotoId),
@@ -444,6 +529,8 @@ export function UserForm({
           failField('personal', 'nationalId', t('users.nationalIdTaken'))
         } else if (message.includes('تلفن') || message.includes('شماره')) {
           failField('personal', 'phone', t('users.phoneTaken'))
+        } else if (message.includes('نام کاربری')) {
+          failField('account', 'username', t('users.usernameTaken'))
         } else {
           failField('account', 'username', message)
         }
@@ -462,10 +549,19 @@ export function UserForm({
 
   const extraTab = extraTabs?.find((item) => item.id === tab)
   const allTabs = [...tabs, ...(extraTabs?.map((item) => item.id) ?? [])]
+  const isEdit = Boolean(initial?.id)
+  const displayName =
+    initial?.fullName?.trim() ||
+    [initial?.firstName, initial?.lastName].filter(Boolean).join(' ').trim()
 
   return (
-    <div className="space-y-4">
-      <nav className={`flex flex-wrap gap-2 p-3 ${cardClassName}`}>
+    <FormCard
+      icon={UserRound}
+      title={isEdit ? displayName || t(`${i18nPrefix}.edit`) : t(`${i18nPrefix}.create`)}
+      subtitle={isEdit ? undefined : t(`${i18nPrefix}.createSubtitle`)}
+    >
+    <div className="space-y-4 p-5 sm:p-6">
+      <nav className="flex flex-wrap gap-2 rounded-2xl border border-line bg-cream-50/80 p-3">
         {allTabs.map((item) => {
           const extra = extraTabs?.find((tabItem) => tabItem.id === item)
           return (
@@ -476,7 +572,7 @@ export function UserForm({
               className={`rounded-2xl px-3 py-2 text-sm font-medium transition ${
                 tab === item
                   ? 'bg-teal-500 text-white shadow-sm'
-                  : 'bg-cream-50 text-ink-700 hover:bg-cream-100'
+                  : 'bg-white text-ink-700 hover:bg-cream-100'
               }`}
             >
               {extra ? t(extra.labelKey) : t(`users.tabs.${item}`)}
@@ -490,7 +586,7 @@ export function UserForm({
       ) : (
         <AppForm noValidate onSubmit={submit} className="space-y-4">
 
-      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'personal' ? '' : 'hidden'}`}>
+      <div className={`space-y-4 ${tab === 'personal' ? '' : 'hidden'}`}>
         <FormField
           icon={IdCard}
           label={t('users.nationalId')}
@@ -657,7 +753,7 @@ export function UserForm({
         </div>
       </div>
 
-      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'account' ? '' : 'hidden'}`}>
+      <div className={`space-y-4 ${tab === 'account' ? '' : 'hidden'}`}>
         <FormField
           icon={UserRoundPlus}
           label={t('users.username')}
@@ -673,8 +769,12 @@ export function UserForm({
             aria-invalid={Boolean(fieldErrors.username)}
             onChange={(e) => {
               usernameTouched.current = true
+              lastUsernameCheck.current = null
               setUsername(e.target.value)
               clearError('username')
+            }}
+            onBlur={() => {
+              if (username.trim().length >= 3) void checkUsernameTaken()
             }}
             autoComplete="off"
           />
@@ -703,6 +803,32 @@ export function UserForm({
             </div>
           </FormField>
         )}
+        {showIssuingOrganization ? (
+          <FormField
+            icon={Building}
+            label={t('users.issuingOrganization')}
+            htmlFor="issuingOrganizationId"
+            error={fieldErrors.issuingOrganizationId}
+          >
+            <SearchSelect
+              id="issuingOrganizationId"
+              value={issuingOrganizationId}
+              required
+              onChange={(next) => {
+                setIssuingOrganizationId(next)
+                clearError('issuingOrganizationId')
+              }}
+              placeholder={t('users.selectIssuingOrganization')}
+              options={[
+                { value: '', label: t('users.selectIssuingOrganization') },
+                ...(organizations.data ?? []).map((organization) => ({
+                  value: organization.id,
+                  label: organization.name,
+                })),
+              ]}
+            />
+          </FormField>
+        ) : null}
         <FormField icon={Languages} label={t('users.locale')} htmlFor="locale">
           <SearchSelect
             id="locale"
@@ -717,33 +843,35 @@ export function UserForm({
             }))}
           />
         </FormField>
-        <FormField
-          icon={KeyRound}
-          label={t('users.password')}
-          htmlFor="password"
-          error={fieldErrors.password}
-        >
-          <input
-            id="password"
-            type="password"
-            className={inputClassName(Boolean(fieldErrors.password))}
-            value={password}
-            required={requirePassword}
-            minLength={requirePassword ? 8 : undefined}
-            aria-invalid={Boolean(fieldErrors.password)}
-            onChange={(e) => {
-              setPassword(e.target.value)
-              clearError('password')
-            }}
-            autoComplete="new-password"
-          />
-          {!requirePassword ? (
-            <p className="text-xs text-ink-500">{t('users.passwordOptional')}</p>
-          ) : null}
-        </FormField>
+        {hidePassword ? null : (
+          <FormField
+            icon={KeyRound}
+            label={t('users.password')}
+            htmlFor="password"
+            error={fieldErrors.password}
+          >
+            <input
+              id="password"
+              type="password"
+              className={inputClassName(Boolean(fieldErrors.password))}
+              value={password}
+              required={requirePassword}
+              minLength={requirePassword ? 8 : undefined}
+              aria-invalid={Boolean(fieldErrors.password)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                clearError('password')
+              }}
+              autoComplete="new-password"
+            />
+            {!requirePassword ? (
+              <p className="text-xs text-ink-500">{t('users.passwordOptional')}</p>
+            ) : null}
+          </FormField>
+        )}
       </div>
 
-      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'location' ? '' : 'hidden'}`}>
+      <div className={`space-y-4 ${tab === 'location' ? '' : 'hidden'}`}>
         <FormField icon={Flag} label={t('geo.country')} htmlFor="countryId">
           <SearchSelect
             id="countryId"
@@ -809,7 +937,7 @@ export function UserForm({
         </FormField>
       </div>
 
-      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'documents' ? '' : 'hidden'}`}>
+      <div className={`space-y-4 ${tab === 'documents' ? '' : 'hidden'}`}>
         <FormField icon={ImagePlus} label={t('users.photo')} htmlFor="photo">
           <FileDropField
             id="photo"
@@ -845,7 +973,7 @@ export function UserForm({
         </FormField>
       </div>
 
-      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'social' ? '' : 'hidden'}`}>
+      <div className={`space-y-4 ${tab === 'social' ? '' : 'hidden'}`}>
         <FormField icon={MessageCircle} label={t('users.telegram')} htmlFor="telegram">
           <input
             id="telegram"
@@ -888,7 +1016,7 @@ export function UserForm({
         </FormField>
       </div>
 
-      <div className={`space-y-4 p-6 ${cardClassName} ${tab === 'other' ? '' : 'hidden'}`}>
+      <div className={`space-y-4 ${tab === 'other' ? '' : 'hidden'}`}>
         <FormField icon={Mail} label={t('users.email')} htmlFor="email">
           <input
             id="email"
@@ -940,27 +1068,30 @@ export function UserForm({
             onChange={(e) => setNotes(e.target.value)}
           />
         </FormField>
-        <FormField icon={ToggleRight} label={t('users.status')} htmlFor="status">
-          <ToggleField
-            id="status"
-            checked={status === userStatuses.ACTIVE}
-            onChange={(active) => setStatus(active ? userStatuses.ACTIVE : userStatuses.INACTIVE)}
-            onLabel={t('userStatuses.ACTIVE')}
-            offLabel={t('userStatuses.INACTIVE')}
-          />
-        </FormField>
+        {hideStatus ? null : (
+          <FormField icon={ToggleRight} label={t('users.status')} htmlFor="status">
+            <ToggleField
+              id="status"
+              checked={status === userStatuses.ACTIVE}
+              onChange={(active) => setStatus(active ? userStatuses.ACTIVE : userStatuses.INACTIVE)}
+              onLabel={t('userStatuses.ACTIVE')}
+              offLabel={t('userStatuses.INACTIVE')}
+            />
+          </FormField>
+        )}
       </div>
 
-      <div className={`p-6 ${cardClassName}`}>
+      <div>
         <FormActions
           submitLabel={t('users.save')}
           cancelLabel={t('users.cancel')}
           submitting={saving}
-          onCancel={() => history.back()}
+          onCancel={onCancel ?? (() => history.back())}
         />
       </div>
         </AppForm>
       )}
     </div>
+    </FormCard>
   )
 }

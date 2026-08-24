@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { localizeDigits } from '../../lib/datetime'
 import { useNavigate, useParams } from 'react-router-dom'
 import { LoadingState, DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
@@ -9,7 +10,8 @@ import type { RedCrescent } from '../../types/app'
 import { DetailRow, GeoLocationRows } from '../geo/GeoShared'
 
 export function RedCrescentDetailPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
   const { id } = useParams()
   const navigate = useNavigate()
@@ -36,7 +38,7 @@ export function RedCrescentDetailPage() {
           <DetailRow label={t('redCrescents.name')} value={item.name} />
           <DetailRow label={t('geo.province')} value={name(item.province)} />
           <DetailRow label={t('geo.city')} value={name(item.city)} />
-          <DetailRow label={t('redCrescents.phone')} value={item.phone || '—'} />
+          <DetailRow label={t('redCrescents.phone')} value={item.phone ? localizeDigits(item.phone, locale) : '—'} />
           <DetailRow label={t('redCrescents.address')} value={item.address || '—'} />
           <GeoLocationRows
             neshanAddress={item.neshanAddress}

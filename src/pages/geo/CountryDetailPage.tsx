@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { LoadingState, Button, DetailActions, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
-import { formatNumber } from '../../lib/datetime'
+import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { api } from '../../lib/api'
 import type { Country } from '../../types/app'
 import { DetailRow, GeoStatus } from './GeoShared'
@@ -37,7 +37,12 @@ export function CountryDetailPage() {
           <DetailRow label={t('geo.nameEn')} value={country.nameEn} />
           <DetailRow label={t('geo.iso2')} value={country.iso2} />
           <DetailRow label={t('geo.iso3')} value={country.iso3 ?? '—'} />
-          <DetailRow label={t('geo.phoneCode')} value={country.phoneCode ?? '—'} />
+          <DetailRow
+            label={t('geo.phoneCode')}
+            value={
+              country.phoneCode ? localizeDigits(country.phoneCode, locale) : '—'
+            }
+          />
           <DetailRow label={t('geo.provinceCount')} value={formatNumber(country._count?.provinces ?? 0, locale)} />
           <DetailRow label={t('geo.isActive')} value={<GeoStatus active={country.isActive} />} />
         </dl>

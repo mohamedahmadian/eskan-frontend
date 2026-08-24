@@ -2,10 +2,10 @@ import {
   Banknote,
   Building2,
   CalendarDays,
+  Check,
   CheckCheck,
   Clock3,
   CreditCard,
-  FileText,
   Shield,
   ShieldCheck,
   UserRound,
@@ -14,7 +14,7 @@ import {
   XCircle,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
@@ -30,8 +30,8 @@ import { DateText } from '../../components/ui/DateText'
 import { Button, LoadingState, cardClassName } from '../../components/ui/Form'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { formatGroupedNumber, formatNumber } from '../../lib/datetime'
-import type { ReceptionSettings, Reservation, ReservationMember } from '../../types/app'
+import { formatGroupedNumber, formatNumber, localizeDigits } from '../../lib/datetime'
+import type { ReceptionInsurancePlan, ReceptionSettings, Reservation, ReservationMember } from '../../types/app'
 import {
   canPayInsurance,
   insurancePaidMethodLabel,
@@ -99,7 +99,12 @@ export function InsuranceStep({
   const groupSelect = reservation.type !== 'INDIVIDUAL'
   const allAccepted =
     members.length > 0 && members.every((item) => isInsuranceAccepted(item.insuranceStatus))
+  const permitReady =
+    reservation.type !== 'CARAVAN' ||
+    (reservation.hasPermit && reservation.permitStatus === 'APPROVED')
+  const canCompleteFile = allAccepted && permitReady
   const [selected, setSelected] = useState<string[]>([])
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('')
   const showNav =
     reservation.status !== 'COMPLETED' &&
     reservation.status !== 'CANCELLED' &&
@@ -113,14 +118,30 @@ export function InsuranceStep({
       return data
     },
   })
-  const premium = settings.data?.insurancePremiumAmount ?? 0
+  const plans = settings.data?.insurancePlans ?? []
+  const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null
+  const premium = selectedPlan?.premiumAmount ?? 0
   const summary = summarizeInsurance(members, premium)
+
+  useEffect(() => {
+    const list = settings.data?.insurancePlans ?? []
+    if (!list.length) {
+      setSelectedPlanId('')
+      return
+    }
+    setSelectedPlanId((current) =>
+      current && list.some((plan) => plan.id === current) ? current : list[0].id,
+    )
+  }, [settings.data?.insurancePlans])
 
   const pay = useMutation({
     mutationFn: async (memberIds: string[]) => {
+      if (!selectedPlanId) {
+        throw new Error('NO_PLAN')
+      }
       const { data } = await api.post<Reservation>(
         `/reservations/${reservation.id}/insurance/pay`,
-        { memberIds },
+        { memberIds, insurancePlanId: selectedPlanId },
       )
       return data
     },
@@ -133,7 +154,13 @@ export function InsuranceStep({
       setSelected([])
       onChanged()
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
+    onError: (error) => {
+      if (error instanceof Error && error.message === 'NO_PLAN') {
+        toast.error(t('reservations.insuranceSelectPlan'))
+        return
+      }
+      toast.error(getApiErrorMessage(error, t('common.error')))
+    },
   })
 
   const complete = useMutation({
@@ -165,10 +192,18 @@ export function InsuranceStep({
   }
 
   function payOne(id: string) {
+    if (!selectedPlanId) {
+      toast.error(t('reservations.insuranceSelectPlan'))
+      return
+    }
     pay.mutate([id])
   }
 
   function paySelected() {
+    if (!selectedPlanId) {
+      toast.error(t('reservations.insuranceSelectPlan'))
+      return
+    }
     if (!selected.length) {
       toast.error(t('reservations.insuranceNoneSelected'))
       return
@@ -209,6 +244,13 @@ export function InsuranceStep({
       />
 
       <div className="space-y-5 p-5 sm:p-6">
+        <InsuranceInfoSection
+          settings={settings.data}
+          locale={locale}
+          selectedPlanId={selectedPlanId}
+          onSelectPlan={setSelectedPlanId}
+          canSelect={!allAccepted}
+        />
         {groupSelect ? (
           <GroupInsuranceBody
             members={members}
@@ -217,7 +259,7 @@ export function InsuranceStep({
             amountText={moneyText(summary.paidAmount, locale, t)}
             selected={selected}
             allSelected={allSelected}
-            canSelect={payableIds.length > 0}
+            canSelect={payableIds.length > 0 && Boolean(selectedPlanId)}
             paying={pay.isPending}
             mode={mode}
             onToggle={toggle}
@@ -232,6 +274,8 @@ export function InsuranceStep({
             paidAmount={moneyText(members[0]?.insurancePaidAmount ?? premium, locale, t)}
             paying={pay.isPending}
             mode={mode}
+            locale={locale}
+            canPayPlan={Boolean(selectedPlanId)}
             onPay={() => members[0] && payOne(members[0].id)}
           />
         )}
@@ -245,15 +289,24 @@ export function InsuranceStep({
             onPay={paySelected}
           />
         ) : null}
-        <InsuranceInfoSection settings={settings.data} locale={locale} />
       </div>
       {showNav ? (
         <ReservationStepNav
           nextPending={complete.isPending}
+          nextDisabled={!canCompleteFile}
+          nextTitle={
+            !permitReady
+              ? t('reservations.permitNotReady')
+              : t('reservations.insuranceNotReady')
+          }
           nextLabel={t('reservations.completeInsurance')}
           nextIcon="complete"
           onPrev={prevStep && onGoToStep ? () => onGoToStep(prevStep) : undefined}
           onNext={() => {
+            if (!permitReady) {
+              toast.error(t('reservations.permitNotReady'))
+              return
+            }
             if (!allAccepted) {
               toast.error(t('reservations.insuranceNotReady'))
               return
@@ -272,6 +325,8 @@ function IndividualInsuranceBody({
   paidAmount,
   paying,
   mode,
+  locale,
+  canPayPlan,
   onPay,
 }: {
   member?: ReservationMember
@@ -279,12 +334,13 @@ function IndividualInsuranceBody({
   paidAmount: string
   paying: boolean
   mode: 'user' | 'admin'
+  locale: string
+  canPayPlan: boolean
   onPay: () => void
 }) {
   const { t } = useTranslation()
   if (!member) return null
   const accepted = isInsuranceAccepted(member.insuranceStatus)
-  const canPay = canPayInsurance(member.insuranceStatus)
 
   return (
     <>
@@ -292,6 +348,14 @@ function IndividualInsuranceBody({
         <SectionTitle icon={Wallet}>{t('reservations.insurancePremium')}</SectionTitle>
         {accepted ? (
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+            {member.insuranceCoverageAmount != null ? (
+              <FactTile
+                icon={Shield}
+                label={t('reservations.insuranceCoverageAmount')}
+                value={moneyText(member.insuranceCoverageAmount, locale, t)}
+                tone="mint"
+              />
+            ) : null}
             <FactTile
               icon={Banknote}
               label={t('reservations.insurancePaidAmount')}
@@ -346,8 +410,8 @@ function IndividualInsuranceBody({
           </p>
         ) : null}
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          {canPay ? (
-            <Button type="button" disabled={paying} onClick={onPay}>
+          {canPayInsurance(member.insuranceStatus) ? (
+            <Button type="button" disabled={paying || !canPayPlan} onClick={onPay}>
               {mode === 'admin' ? (
                 <Banknote className="size-4" aria-hidden />
               ) : (
@@ -575,7 +639,9 @@ function GroupInsuranceBody({
                     </td>
                     <td className="px-3 py-2">{n(index + 1)}</td>
                     <td className="px-3 py-2" dir="ltr">
-                      {item.user.nationalId ?? '—'}
+                      {item.user.nationalId
+                        ? localizeDigits(item.user.nationalId, locale)
+                        : '—'}
                     </td>
                     <td className="px-3 py-2">{item.user.firstName}</td>
                     <td className="px-3 py-2">{item.user.lastName}</td>
@@ -633,7 +699,9 @@ function GroupInsuranceBody({
                   ) : null}
                 </div>
                 <p className="text-ink-600" dir="ltr">
-                  {item.user.nationalId ?? '—'}
+                  {item.user.nationalId
+                    ? localizeDigits(item.user.nationalId, locale)
+                    : '—'}
                 </p>
                 <p className="mt-1 text-ink-600">
                   {item.user.gender ? t(`userGenders.${item.user.gender}`) : '—'}
@@ -736,37 +804,137 @@ function InsuranceSelectionBar({
 function InsuranceInfoSection({
   settings,
   locale,
+  selectedPlanId,
+  onSelectPlan,
+  canSelect,
 }: {
   settings?: ReceptionSettings
   locale: string
+  selectedPlanId: string
+  onSelectPlan: (id: string) => void
+  canSelect: boolean
 }) {
   const { t } = useTranslation()
   const organization = settings?.insuranceOrganization?.trim() || '—'
-  const coverage = settings?.insuranceCoverage?.trim() || '—'
-  const premium = moneyText(settings?.insurancePremiumAmount ?? 0, locale, t)
+  const plans = settings?.insurancePlans ?? []
 
   return (
-    <section>
-      <SectionTitle icon={Building2}>{t('reservations.insuranceInfoTitle')}</SectionTitle>
-      <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-        <FactTile icon={Building2} label={t('reservations.insuranceOrg')} value={organization} tone="teal" />
-        <FactTile
-          icon={Banknote}
-          label={`${t('reservations.insurancePremium')} · ${t('reservations.insurancePerPerson')}`}
-          value={premium}
-          tone="mint"
-        />
-      </div>
-      <article className="mt-3 flex items-start gap-3 rounded-2xl border border-line bg-gradient-to-l from-white to-teal-50/60 px-3 py-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
-          <FileText className="size-4" aria-hidden />
+    <section className="space-y-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-line bg-cream-50/80 px-3 py-2">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-white">
+          <Building2 className="size-3.5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[11px] font-medium text-ink-500">{t('reservations.insuranceCoverage')}</p>
-          <p className="mt-0.5 whitespace-pre-wrap text-sm leading-7 text-ink-800">{coverage}</p>
+          <p className="text-[10px] font-medium text-ink-500">{t('reservations.insuranceOrg')}</p>
+          <p className="truncate text-sm font-semibold text-ink-900">{organization}</p>
         </div>
-      </article>
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-600">
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-mint-100 text-mint-700">
+              <Shield className="size-3" aria-hidden />
+            </span>
+            {t('reservations.insuranceSelectPlan')}
+          </h3>
+          {canSelect && plans.length > 0 ? (
+            <p className="text-[11px] text-ink-400">{t('reservations.insuranceSelectPlanHint')}</p>
+          ) : null}
+        </div>
+        {plans.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-line bg-cream-50 px-3 py-2.5 text-sm text-ink-500">
+            {t('reservations.insuranceNoPlans')}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {plans.map((plan) => (
+              <InsurancePlanCard
+                key={plan.id}
+                plan={plan}
+                locale={locale}
+                selected={selectedPlanId === plan.id}
+                disabled={!canSelect}
+                onSelect={() => onSelectPlan(plan.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </section>
+  )
+}
+
+function InsurancePlanCard({
+  plan,
+  locale,
+  selected,
+  disabled,
+  onSelect,
+}: {
+  plan: ReceptionInsurancePlan
+  locale: string
+  selected: boolean
+  disabled: boolean
+  onSelect: () => void
+}) {
+  const { t } = useTranslation()
+  const desc = plan.description.trim()
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onSelect}
+      aria-pressed={selected}
+      title={desc || undefined}
+      className={`group flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-start transition ${
+        selected
+          ? 'border-teal-400 bg-teal-50/90 ring-1 ring-teal-300/60'
+          : 'border-line bg-white hover:border-teal-200 hover:bg-cream-50/60'
+      } ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
+    >
+      <span
+        className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+          selected
+            ? 'bg-teal-500 text-white shadow-sm'
+            : 'bg-cream-100 text-teal-700 group-hover:bg-teal-100'
+        }`}
+        aria-hidden
+      >
+        {selected ? <Check className="size-4" /> : <Shield className="size-3.5" />}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="inline-flex items-center gap-1 text-xs text-ink-600">
+            <ShieldCheck className="size-3.5 shrink-0 text-mint-600" aria-hidden />
+            <span className="text-ink-400">{t('reservations.insuranceCoverage')}:</span>
+            <span className="font-semibold text-ink-900">
+              {moneyText(plan.coverageAmount, locale, t)}
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs text-ink-600">
+            <Banknote className="size-3.5 shrink-0 text-teal-600" aria-hidden />
+            <span className="text-ink-400">{t('reservations.insurancePremium')}:</span>
+            <span className="font-semibold text-teal-700">
+              {moneyText(plan.premiumAmount, locale, t)}
+            </span>
+            <span className="text-[10px] text-ink-400">({t('reservations.insurancePerPerson')})</span>
+          </span>
+        </div>
+        {desc ? (
+          <p className="mt-0.5 truncate text-[11px] leading-4 text-ink-500">{desc}</p>
+        ) : null}
+      </div>
+
+      <span
+        className={`size-4 shrink-0 rounded-full border-2 ${
+          selected ? 'border-teal-500 bg-teal-500' : 'border-line bg-white'
+        }`}
+        aria-hidden
+      />
+    </button>
   )
 }
 
