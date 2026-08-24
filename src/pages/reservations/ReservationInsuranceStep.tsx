@@ -93,7 +93,6 @@ export function InsuranceStep({
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
-  const n = (value: number) => formatNumber(value, locale)
   const canSeeMembers = reservation.members !== undefined
   const members = reservation.members ?? []
   const payable = members.filter((item) => canPayInsurance(item.insuranceStatus))

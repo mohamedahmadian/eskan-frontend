@@ -52,7 +52,7 @@ import type {
   ReservationMember,
   ReservationPerson,
 } from "../../types/app";
-import { neighborFlowStep, type ReservationStepCode } from "./reservation-steps";
+import { neighborFlowStep, stepLabelKey, type ReservationStepCode } from "./reservation-steps";
 import { ReservationStepNav } from "./ReservationStepNav";
 import { CompanionExcelImport } from "./CompanionExcelImport";
 import { PreviousMembersPanel } from "./PreviousMembersPanel";
@@ -152,7 +152,13 @@ export function CompanionsStep({
       return data;
     },
     onSuccess: (data) => {
-      toast.success(t("reservations.companionsCompleted"));
+      toast.success(
+        t(
+          isCaravan
+            ? "reservations.companionsCompletedCaravan"
+            : "reservations.companionsCompleted",
+        ),
+      );
       onChanged();
       if (nextStep && data.status !== "COMPANIONS") onGoToStep?.(nextStep);
     },
@@ -187,6 +193,7 @@ export function CompanionsStep({
         showCountIssue ? (
           <div ref={countIssueRef}>
             <CompanionsCountIssue
+              isCaravan={isCaravan}
               males={males}
               females={females}
               totalHave={members.length}
@@ -216,6 +223,7 @@ export function CompanionsStep({
       <div className={tab === "manual" ? "" : "hidden"}>
         <MemberLookupForm
           reservationId={reservation.id}
+          isCaravan={isCaravan}
           editing={editingMember}
           onAdded={() => {
             setEditingMember(null);
@@ -227,6 +235,7 @@ export function CompanionsStep({
       <div className={tab === "excel" ? "" : "hidden"}>
         <CompanionExcelImport
           reservationId={reservation.id}
+          isCaravan={isCaravan}
           onImported={onChanged}
         />
       </div>
@@ -241,6 +250,7 @@ export function CompanionsStep({
       <MembersList
         reservationId={reservation.id}
         members={members}
+        isCaravan={isCaravan}
         onChanged={onChanged}
         onEdit={(member) => {
           setTab("manual");
@@ -287,7 +297,7 @@ export function ReservationCompanionsSummary({
         ) : null
       }
     >
-      <MembersList members={members} />
+      <MembersList members={members} isCaravan={reservation.type === "CARAVAN"} />
     </CompanionsFrame>
   );
 }
@@ -324,7 +334,7 @@ function CompanionsFrame({
     <section className={`${cardClassName} overflow-hidden`}>
       <ReservationSectionHeader
         icon={Users}
-        title={t("reservations.steps.companions")}
+        title={t(stepLabelKey("companions", reservation.type))}
         hint={hint}
         readonly={readonly}
         chips={
@@ -409,7 +419,7 @@ function CompanionTabNav({
     <nav
       className="flex flex-wrap gap-2 rounded-2xl border border-teal-100 bg-gradient-to-l from-mint-50 via-white to-teal-50 p-1.5"
       role="tablist"
-      aria-label={t("reservations.steps.companions")}
+      aria-label={t(stepLabelKey("companions", isCaravan ? "CARAVAN" : undefined))}
     >
       {tabs.map((item) => {
         const Icon = item.icon;
@@ -515,11 +525,13 @@ function CompanionFormModal({
 
 function MemberLookupForm({
   reservationId,
+  isCaravan = false,
   onAdded,
   editing,
   onCancelEdit,
 }: {
   reservationId: string;
+  isCaravan?: boolean;
   onAdded: () => void;
   editing?: ReservationMember | null;
   onCancelEdit?: () => void;
@@ -665,8 +677,16 @@ function MemberLookupForm({
     onSuccess: () => {
       toast.success(
         editing
-          ? t("reservations.memberUpdated")
-          : t("reservations.memberAdded"),
+          ? t(
+              isCaravan
+                ? "reservations.memberUpdatedCaravan"
+                : "reservations.memberUpdated",
+            )
+          : t(
+              isCaravan
+                ? "reservations.memberAddedCaravan"
+                : "reservations.memberAdded",
+            ),
       );
       resetForm();
       onAdded();
@@ -692,11 +712,13 @@ function MemberLookupForm({
             person.fullName?.trim() ||
             `${person.firstName ?? ""} ${person.lastName ?? ""}`.trim(),
         })
-      : t(
-          status === "edit"
-            ? "reservations.editMemberTitle"
-            : "reservations.newPilgrimTitle",
-        );
+      : status === "edit"
+        ? t(
+            isCaravan
+              ? "reservations.editMemberTitleCaravan"
+              : "reservations.editMemberTitle",
+          )
+        : t("reservations.newPilgrimTitle");
   const FormIcon =
     status === "edit" ? Pencil : status === "found" ? UserRound : UserPlus;
 
@@ -969,11 +991,13 @@ function NationalIdNotFoundNotice({
 function MembersList({
   reservationId,
   members,
+  isCaravan = false,
   onChanged,
   onEdit,
 }: {
   reservationId?: string;
   members: ReservationMember[];
+  isCaravan?: boolean;
   onChanged?: () => void;
   onEdit?: (member: ReservationMember) => void;
 }) {
@@ -987,7 +1011,11 @@ function MembersList({
   function remove(member: ReservationMember) {
     if (!reservationId || !onChanged) return;
     confirmToast({
-      title: t("reservations.confirmRemoveMember"),
+      title: t(
+        isCaravan
+          ? "reservations.confirmRemoveMemberCaravan"
+          : "reservations.confirmRemoveMember",
+      ),
       confirmLabel: t("common.yesDelete"),
       cancelLabel: t("common.cancel"),
       confirmVariant: "danger",
@@ -996,7 +1024,13 @@ function MembersList({
           await api.delete(
             `/reservations/${reservationId}/members/${member.id}`,
           );
-          toast.success(t("reservations.memberRemoved"));
+          toast.success(
+            t(
+              isCaravan
+                ? "reservations.memberRemovedCaravan"
+                : "reservations.memberRemoved",
+            ),
+          );
           onChanged();
         } catch (error) {
           toast.error(getApiErrorMessage(error, t("common.error")));
@@ -1009,7 +1043,11 @@ function MembersList({
     <section className="rounded-2xl border border-teal-100 bg-gradient-to-b from-cream-50/80 to-white p-4 shadow-[0_8px_20px_rgba(20,40,40,0.05)]">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <SectionTitle icon={Users} className="mb-0">
-          {t("reservations.membersListTitle")}
+          {t(
+            isCaravan
+              ? "reservations.membersListTitleCaravan"
+              : "reservations.membersListTitle",
+          )}
         </SectionTitle>
         <div className="flex items-center gap-1.5">
           <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-800">
@@ -1027,6 +1065,7 @@ function MembersList({
         inputId="companions-member-search"
         showContact
         bareSearch
+        isCaravan={isCaravan}
         renderActions={
           canManage
             ? (member) => (
@@ -1137,6 +1176,7 @@ function MetricTile({
 }
 
 function CompanionsCountIssue({
+  isCaravan = false,
   males,
   females,
   totalHave,
@@ -1144,6 +1184,7 @@ function CompanionsCountIssue({
   femaleNeed,
   totalNeed,
 }: {
+  isCaravan?: boolean;
   males: number;
   females: number;
   totalHave: number;
@@ -1207,7 +1248,11 @@ function CompanionsCountIssue({
         </span>
         <div className="min-w-0 space-y-1 pt-1">
           <p className="text-sm font-bold text-red-800">
-            {t("reservations.companionsCountIssueTitle")}
+            {t(
+              isCaravan
+                ? "reservations.companionsCountIssueTitleCaravan"
+                : "reservations.companionsCountIssueTitle",
+            )}
           </p>
           {lines.map((line) => (
             <p key={line} className="text-sm leading-7 text-ink-800">

@@ -510,7 +510,7 @@ export type PilgrimReportReligion = {
 
 export type PilgrimReportTimeline = {
   year: number | null
-  byYear: { year: number; count: number }[]
+  byYear: { year: number; count: number; changePercent: number | null }[]
   byMonth: { month: number; count: number }[]
 }
 

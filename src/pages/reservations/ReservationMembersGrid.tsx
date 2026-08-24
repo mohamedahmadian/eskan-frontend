@@ -28,6 +28,7 @@ export function ReservationMembersGrid({
   inputId = 'reservation-members-search',
   showInsurance = false,
   showContact = false,
+  isCaravan = false,
   beforeTable,
   bareSearch = false,
   renderActions,
@@ -36,6 +37,7 @@ export function ReservationMembersGrid({
   inputId?: string
   showInsurance?: boolean
   showContact?: boolean
+  isCaravan?: boolean
   beforeTable?: ReactNode
   bareSearch?: boolean
   renderActions?: (member: ReservationMember) => ReactNode
@@ -64,7 +66,15 @@ export function ReservationMembersGrid({
   const safePage = Math.min(page, pageCount)
   const start = (safePage - 1) * PAGE_SIZE
   const pageItems = visible.slice(start, start + PAGE_SIZE)
-  const empty = t(query ? 'reservations.membersSearchEmpty' : 'reservations.membersEmpty')
+  const empty = t(
+    query
+      ? isCaravan
+        ? 'reservations.membersSearchEmptyCaravan'
+        : 'reservations.membersSearchEmpty'
+      : isCaravan
+        ? 'reservations.membersEmptyCaravan'
+        : 'reservations.membersEmpty',
+  )
 
   useEffect(() => {
     setPage(1)
@@ -79,7 +89,11 @@ export function ReservationMembersGrid({
       <div>
         {beforeTable}
         <p className="rounded-2xl border border-line bg-gradient-to-b from-cream-50 to-white px-3 py-4 text-sm text-ink-500">
-          {t('reservations.membersEmpty')}
+          {t(
+            isCaravan
+              ? 'reservations.membersEmptyCaravan'
+              : 'reservations.membersEmpty',
+          )}
         </p>
       </div>
     )
@@ -94,7 +108,11 @@ export function ReservationMembersGrid({
           applySearch(value)
         }}
         onSubmit={() => applySearch(term, true)}
-        label={t('reservations.membersSearch')}
+        label={t(
+          isCaravan
+            ? 'reservations.membersSearchCaravan'
+            : 'reservations.membersSearch',
+        )}
         placeholder={t('reservations.membersSearchPlaceholder')}
         inputId={inputId}
         hideSubmit

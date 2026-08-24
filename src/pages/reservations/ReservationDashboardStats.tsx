@@ -390,8 +390,8 @@ function TypeCapacityCard({
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        {genders.map((item) => (
-          <GenderCapacityTile key={item.key} {...item} locale={locale} />
+        {genders.map(({ key, ...item }) => (
+          <GenderCapacityTile key={key} {...item} locale={locale} />
         ))}
       </div>
     </article>

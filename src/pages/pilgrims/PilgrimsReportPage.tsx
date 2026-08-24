@@ -1,6 +1,8 @@
 import {
   CalendarDays,
   Mars,
+  TrendingDown,
+  TrendingUp,
   Users,
   Venus,
   type LucideIcon,
@@ -74,6 +76,19 @@ function geoDisplayName(id: string, name: string, t: (key: string) => string) {
 function percentOf(count: number, total: number) {
   if (total <= 0) return 0
   return Math.round((count / total) * 100)
+}
+
+function yoyLabel(
+  changePercent: number | null | undefined,
+  t: (key: string, options?: Record<string, string>) => string,
+  locale: string,
+) {
+  if (changePercent == null) return t('pilgrimReports.yoyUnavailable')
+  if (changePercent === 0) return t('pilgrimReports.yoyUnchanged')
+  const value = formatNumber(Math.abs(changePercent), locale)
+  return changePercent > 0
+    ? t('pilgrimReports.yoyIncrease', { value })
+    : t('pilgrimReports.yoyDecrease', { value })
 }
 
 function parseYearParam(raw: string | null, fallback: number): number | null {
@@ -217,24 +232,34 @@ export function PilgrimsReportPage() {
     fill: row.key === UNSPECIFIED_GEO_ID ? UNSPECIFIED_GEO_COLOR : CHART_COLORS[index % CHART_COLORS.length],
   }))
 
-  const registrationRows =
-    year == null
-      ? (timelineQuery.data?.byYear ?? []).map((row) => ({
-          key: String(row.year),
-          name: formatNumber(row.year, locale),
-          value: row.count,
-        }))
-      : (timelineQuery.data?.byMonth ?? []).map((row) => ({
-          key: String(row.month),
-          name: t('pilgrimReports.month', { value: formatNumber(row.month, locale) }),
-          value: row.count,
-        }))
+  const yearRows = (timelineQuery.data?.byYear ?? []).map((row) => ({
+    key: String(row.year),
+    name: formatNumber(row.year, locale),
+    value: row.count,
+    changePercent: row.changePercent,
+  }))
 
-  const registrationBars = registrationRows.map((row) => ({
+  const monthRows = (timelineQuery.data?.byMonth ?? []).map((row) => ({
+    key: String(row.month),
+    name: t('pilgrimReports.month', { value: formatNumber(row.month, locale) }),
+    value: row.count,
+  }))
+
+  const yearBars = yearRows.map((row) => ({
     name: row.name,
     value: row.value,
-    fill: year == null ? '#2ebdb6' : '#148f8a',
+    fill: '#2ebdb6',
+    changePercent: row.changePercent,
   }))
+
+  const monthBars = monthRows.map((row) => ({
+    name: row.name,
+    value: row.value,
+    fill: '#148f8a',
+  }))
+
+  const yearTotal = yearRows.reduce((sum, row) => sum + row.value, 0)
+  const showMonthBreakdown = year != null
 
   const genderKpis = [
     {
@@ -337,27 +362,26 @@ export function PilgrimsReportPage() {
                     </ChartCard>
                   </section>
 
-                  <section className="grid gap-4 lg:grid-cols-2">
-                    <ChartCard title={t('pilgrimReports.byReligion')}>
-                      <SectionBody
-                        loading={religionQuery.isLoading && !religionQuery.data}
-                        error={religionQuery.isError}
-                        empty={chartsReady && religionPieData.length === 0}
-                      >
-                        <DonutChart data={religionPieData} total={total} locale={locale} />
-                      </SectionBody>
-                    </ChartCard>
-                    <ChartCard
-                      title={
-                        year == null ? t('pilgrimReports.byYear') : t('pilgrimReports.byMonth')
-                      }
-                    >
+                  <section className={`grid gap-4 ${showMonthBreakdown ? 'lg:grid-cols-2' : ''}`}>
+                    {showMonthBreakdown ? (
+                      <ChartCard title={t('pilgrimReports.byMonth')}>
+                        <SectionBody
+                          loading={timelineQuery.isLoading && !timelineQuery.data}
+                          error={timelineQuery.isError}
+                          empty={chartsReady && monthBars.length === 0}
+                        >
+                          <VerticalBarChart data={monthBars} locale={locale} />
+                        </SectionBody>
+                      </ChartCard>
+                    ) : null}
+                    <ChartCard title={t('pilgrimReports.byYear')}>
                       <SectionBody
                         loading={timelineQuery.isLoading && !timelineQuery.data}
                         error={timelineQuery.isError}
-                        empty={chartsReady && registrationBars.length === 0}
+                        empty={chartsReady && yearBars.length === 0}
                       >
-                        <VerticalBarChart data={registrationBars} locale={locale} />
+                        <VerticalBarChart data={yearBars} locale={locale} />
+                        <YearChangeLegend items={yearBars} locale={locale} />
                       </SectionBody>
                     </ChartCard>
                   </section>
@@ -389,6 +413,16 @@ export function PilgrimsReportPage() {
                       />
                     </SectionBody>
                   </ChartCard>
+
+                  <ChartCard title={t('pilgrimReports.byReligion')}>
+                    <SectionBody
+                      loading={religionQuery.isLoading && !religionQuery.data}
+                      error={religionQuery.isError}
+                      empty={chartsReady && religionPieData.length === 0}
+                    >
+                      <DonutChart data={religionPieData} total={total} locale={locale} />
+                    </SectionBody>
+                  </ChartCard>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -406,20 +440,20 @@ export function PilgrimsReportPage() {
                     loading={geoQuery.isLoading && !geoQuery.data}
                     error={geoQuery.isError}
                   />
-                  <ReportTableCard
-                    title={t('pilgrimReports.byReligion')}
-                    rows={religionRows}
-                    total={total}
-                    locale={locale}
-                    loading={religionQuery.isLoading && !religionQuery.data}
-                    error={religionQuery.isError}
-                  />
-                  <ReportTableCard
-                    title={
-                      year == null ? t('pilgrimReports.byYear') : t('pilgrimReports.byMonth')
-                    }
-                    rows={registrationRows}
-                    total={total}
+                  {showMonthBreakdown ? (
+                    <ReportTableCard
+                      title={t('pilgrimReports.byMonth')}
+                      rows={monthRows}
+                      total={total}
+                      locale={locale}
+                      loading={timelineQuery.isLoading && !timelineQuery.data}
+                      error={timelineQuery.isError}
+                    />
+                  ) : null}
+                  <YearReportTableCard
+                    title={t('pilgrimReports.byYear')}
+                    rows={yearRows}
+                    total={yearTotal}
                     locale={locale}
                     loading={timelineQuery.isLoading && !timelineQuery.data}
                     error={timelineQuery.isError}
@@ -439,6 +473,14 @@ export function PilgrimsReportPage() {
                     locale={locale}
                     loading={geoQuery.isLoading && !geoQuery.data}
                     error={geoQuery.isError}
+                  />
+                  <ReportTableCard
+                    title={t('pilgrimReports.byReligion')}
+                    rows={religionRows}
+                    total={total}
+                    locale={locale}
+                    loading={religionQuery.isLoading && !religionQuery.data}
+                    error={religionQuery.isError}
                   />
                 </div>
               )}
@@ -534,6 +576,131 @@ function ReportTableCard({
         </TableCard>
       )}
     </section>
+  )
+}
+
+function YearReportTableCard({
+  title,
+  rows,
+  total,
+  locale,
+  loading = false,
+  error = false,
+}: {
+  title: string
+  rows: { key: string; name: string; value: number; changePercent: number | null }[]
+  total: number
+  locale: string
+  loading?: boolean
+  error?: boolean
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-medium text-ink-500">{title}</h2>
+      {error ? (
+        <p className={`${cardClassName} px-5 py-4 text-sm text-red-700`}>{t('common.error')}</p>
+      ) : (
+        <TableCard
+          loading={loading}
+          empty={t('pilgrimReports.noGeoData')}
+          hasRows={!loading && rows.length > 0}
+          rowClick={false}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-cream-50 text-ink-700">
+                <tr>
+                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colName')}</th>
+                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colCount')}</th>
+                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colPercent')}</th>
+                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colYoY')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.key} className="border-t border-line">
+                    <td className="px-4 py-3">{row.name}</td>
+                    <td className="px-4 py-3">{formatNumber(row.value, locale)}</td>
+                    <td className="px-4 py-3">
+                      {t('pilgrimReports.percent', {
+                        value: formatNumber(percentOf(row.value, total), locale),
+                      })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <YoYBadge changePercent={row.changePercent} locale={locale} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </TableCard>
+      )}
+    </section>
+  )
+}
+
+function YoYBadge({
+  changePercent,
+  locale,
+}: {
+  changePercent: number | null | undefined
+  locale: string
+}) {
+  const { t } = useTranslation()
+  const label = yoyLabel(changePercent, t, locale)
+
+  if (changePercent == null) {
+    return <span className="text-ink-400">{label}</span>
+  }
+
+  if (changePercent === 0) {
+    return <span className="text-ink-500">{label}</span>
+  }
+
+  const up = changePercent > 0
+  return (
+    <span
+      className={`inline-flex items-center gap-1 font-medium ${
+        up ? 'text-teal-700' : 'text-red-700'
+      }`}
+    >
+      {up ? (
+        <TrendingUp className="size-3.5 shrink-0" aria-hidden />
+      ) : (
+        <TrendingDown className="size-3.5 shrink-0" aria-hidden />
+      )}
+      {label}
+    </span>
+  )
+}
+
+function YearChangeLegend({
+  items,
+  locale,
+}: {
+  items: { name: string; value: number; changePercent: number | null }[]
+  locale: string
+}) {
+  const { t } = useTranslation()
+  if (items.length === 0) return null
+
+  return (
+    <ul className="mt-4 space-y-2 border-t border-line pt-4">
+      {items.map((item) => (
+        <li key={item.name} className="flex items-center justify-between gap-3 text-sm">
+          <span className="min-w-0 truncate text-ink-700">{item.name}</span>
+          <span className="flex items-center gap-3 whitespace-nowrap">
+            <span className="font-semibold text-ink-900">
+              {formatNumber(item.value, locale)} {t('pilgrimReports.count')}
+            </span>
+            <YoYBadge changePercent={item.changePercent} locale={locale} />
+          </span>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -690,7 +857,7 @@ function VerticalBarChart({
   locale,
   height = 280,
 }: {
-  data: { name: string; value: number; fill: string }[]
+  data: { name: string; value: number; fill: string; changePercent?: number | null }[]
   locale: string
   height?: number
 }) {
@@ -747,7 +914,12 @@ function ReportTooltip({
   label,
 }: {
   active?: boolean
-  payload?: { name?: string; value?: number; color?: string }[]
+  payload?: {
+    name?: string
+    value?: number
+    color?: string
+    payload?: { changePercent?: number | null }
+  }[]
   label?: string | number
 }) {
   const { t, i18n } = useTranslation()
@@ -762,14 +934,21 @@ function ReportTooltip({
       {label ? <p className="mb-1.5 font-medium text-ink-900">{label}</p> : null}
       <ul className="space-y-1">
         {payload.map((item) => (
-          <li key={item.name} className="flex items-center justify-between gap-6">
-            <span className="flex items-center gap-2 text-ink-700">
-              <span className="size-2 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
-              {item.name}
-            </span>
-            <span className="font-semibold text-ink-900">
-              {formatNumber(Number(item.value ?? 0), locale)} {t('pilgrimReports.count')}
-            </span>
+          <li key={item.name} className="space-y-0.5">
+            <div className="flex items-center justify-between gap-6">
+              <span className="flex items-center gap-2 text-ink-700">
+                <span className="size-2 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
+                {item.name}
+              </span>
+              <span className="font-semibold text-ink-900">
+                {formatNumber(Number(item.value ?? 0), locale)} {t('pilgrimReports.count')}
+              </span>
+            </div>
+            {item.payload && 'changePercent' in item.payload ? (
+              <p className="ps-4 text-[11px]">
+                <YoYBadge changePercent={item.payload.changePercent} locale={locale} />
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>

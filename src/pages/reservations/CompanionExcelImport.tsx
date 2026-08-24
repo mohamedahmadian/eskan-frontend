@@ -45,9 +45,11 @@ function isSelectable(row: MemberImportPreviewRow) {
 
 export function CompanionExcelImport({
   reservationId,
+  isCaravan = false,
   onImported,
 }: {
   reservationId: string;
+  isCaravan?: boolean;
   onImported: () => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -157,7 +159,12 @@ export function CompanionExcelImport({
       return;
     }
     confirmToast({
-      title: t("reservations.excelConfirmAdd", { count: n(selected.length) }),
+      title: t(
+        isCaravan
+          ? "reservations.excelConfirmAddCaravan"
+          : "reservations.excelConfirmAdd",
+        { count: n(selected.length) },
+      ),
       confirmLabel: t("common.yes"),
       cancelLabel: t("common.cancel"),
       onConfirm: () => void runImport(),
@@ -172,7 +179,13 @@ export function CompanionExcelImport({
       body.append("file", file);
       body.append("nationalIds", JSON.stringify(selected));
       await api.post(`/reservations/${reservationId}/members/import`, body);
-      toast.success(t("reservations.excelImported"));
+      toast.success(
+        t(
+          isCaravan
+            ? "reservations.excelImportedCaravan"
+            : "reservations.excelImported",
+        ),
+      );
       await queryClient.invalidateQueries({
         queryKey: ["reservations", reservationId, "previous-members"],
       });

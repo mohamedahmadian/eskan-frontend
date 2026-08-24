@@ -80,9 +80,6 @@ export function PreviousMembersPanel({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm leading-7 text-ink-600">
-        {t("reservations.previousCaravanHint")}
-      </p>
       {query.isLoading ? <LoadingState /> : null}
       {!query.isLoading && !items.length ? (
         <article className="flex flex-col items-center gap-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50 to-white px-4 py-8 text-center">

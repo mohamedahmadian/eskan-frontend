@@ -19,6 +19,7 @@ import {
   ownerFlowSteps,
   stepCardDate,
   stepHasProgress,
+  stepLabelKey,
   stepsForType,
   type ReservationStepCode,
 } from './reservation-steps'
@@ -93,7 +94,7 @@ export function ReservationWizardShell({
                 step={step}
                 index={index}
                 locale={locale}
-                label={t(`reservations.steps.${step}`)}
+                label={t(stepLabelKey(step, type))}
                 recordedAt={stepCardDate(step, reservation)}
                 state={chipState(step, reservation, current, viewedStep, audience)}
                 active={viewedStep === step}
@@ -104,7 +105,7 @@ export function ReservationWizardShell({
         </div>
         {audience === 'owner' && viewedStep ? (
           <div className="mt-3">
-            <StepGuideButton step={viewedStep} />
+            <StepGuideButton step={viewedStep} reservationType={type} />
           </div>
         ) : null}
       </div>

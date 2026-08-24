@@ -22,7 +22,7 @@ import { cardClassName } from '../../components/ui/Form'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
-import { contactRoles } from './reservation-steps'
+import { contactRoles, stepLabelKey } from './reservation-steps'
 import { ReservationMembersGrid } from './ReservationMembersGrid'
 import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { ReservationCountMetrics } from './ReservationCountMetrics'
@@ -263,12 +263,15 @@ export function ReservationCompleteSummary({
         {members?.length ? (
           <section>
             <SectionTitle icon={UserRound}>
-              {cancelled ? t('reservations.steps.companions') : t('reservations.insuranceMembers')}
+              {cancelled
+                ? t(stepLabelKey('companions', reservation.type))
+                : t('reservations.insuranceMembers')}
             </SectionTitle>
             <ReservationMembersGrid
               members={members}
               inputId="file-members-search"
               showInsurance
+              isCaravan={reservation.type === 'CARAVAN'}
             />
           </section>
         ) : null}

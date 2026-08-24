@@ -45,6 +45,17 @@ export const reservationStepCodes = [
 
 export type ReservationStepCode = (typeof reservationStepCodes)[number]
 
+/** i18n key for wizard / timeline step titles (caravan companions → زائرین). */
+export function stepLabelKey(
+  step: ReservationStepCode,
+  type?: ReservationType | null,
+) {
+  if (step === 'companions' && type === 'CARAVAN') {
+    return 'reservations.steps.companionsCaravan'
+  }
+  return `reservations.steps.${step}`
+}
+
 export const contactRoles = [
   'DEPUTY',
   'CLERIC',

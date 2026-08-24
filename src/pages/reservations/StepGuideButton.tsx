@@ -4,15 +4,26 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui/Form'
 import { reservationHelpMedia } from './reservation-help'
 import type { ReservationStepCode } from './reservation-steps'
+import type { ReservationType } from '../../types/app'
 
-export function StepGuideButton({ step }: { step: ReservationStepCode }) {
+export function StepGuideButton({
+  step,
+  reservationType,
+}: {
+  step: ReservationStepCode
+  reservationType?: ReservationType
+}) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [imageOpen, setImageOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
-  const title = t(`reservations.helpContent.${step}.title`)
-  const description = t(`reservations.helpContent.${step}.description`)
-  const body = t(`reservations.helpContent.${step}.body`)
+  const helpKey =
+    step === 'companions' && reservationType === 'CARAVAN'
+      ? 'companionsCaravan'
+      : step
+  const title = t(`reservations.helpContent.${helpKey}.title`)
+  const description = t(`reservations.helpContent.${helpKey}.description`)
+  const body = t(`reservations.helpContent.${helpKey}.body`)
   const media = reservationHelpMedia[step]
 
   useEffect(() => {

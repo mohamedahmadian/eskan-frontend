@@ -23,6 +23,7 @@ import {
   isStepDone,
   stepCompletedAt,
   stepCompletedBy,
+  stepLabelKey,
   stepsForType,
   type ReservationStepCode,
 } from './reservation-steps'
@@ -210,7 +211,7 @@ function buildTimelineItems(
     const actor = stepCompletedBy(step, reservation)
     return {
       key: step,
-      label: t(`reservations.steps.${step}`),
+      label: t(stepLabelKey(step, reservation.type)),
       at: at ?? (step === 'travel' ? reservation.createdAt : null),
       actorName: state === 'pending' && step !== 'travel' ? null : personName(actor),
       state,

@@ -152,6 +152,11 @@ export function ReservationCreatePage() {
   const needsPartyCity = !user?.cityId
 
   useEffect(() => {
+    const main = document.querySelector('main')
+    if (main instanceof HTMLElement) {
+      main.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [step])
 
