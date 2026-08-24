@@ -98,6 +98,7 @@ export function ReservationTravelFields({
   dualCounts,
   selectedParty,
   subjectUser,
+  reservationId,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -117,6 +118,7 @@ export function ReservationTravelFields({
     cityId?: string | null;
     roles?: { code: string }[];
   } | null;
+  reservationId?: string;
 }) {
   if (activeSubStep === "count") {
     return (
@@ -126,6 +128,7 @@ export function ReservationTravelFields({
         type={type}
         locked={locked}
         dual={dualCounts && type !== "INDIVIDUAL"}
+        reservationId={dualCounts ? reservationId : undefined}
       />
     );
   }

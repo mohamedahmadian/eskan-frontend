@@ -890,7 +890,7 @@ export function ReservationCreatePage() {
                 icon={User}
                 label={t('reservations.createOnBehalfOf', { name: subject.fullName })}
               />
-              {subject.nationalId ? (
+              {'nationalId' in subject && subject.nationalId ? (
                 <FormMetaChip
                   icon={IdCard}
                   label={localizeDigits(subject.nationalId, locale)}

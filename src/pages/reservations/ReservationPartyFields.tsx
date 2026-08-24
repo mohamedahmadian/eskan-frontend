@@ -212,17 +212,9 @@ export function ReservationPartyFields({
   })
 
   const selected = fromList ?? known ?? selectedLookup.data ?? null
-  const [createOpen, setCreateOpen] = useState(Boolean(hideExistingParties))
+  const [createOpen, setCreateOpen] = useState(false)
   const createPanelId = useId()
   const PartyIcon = isCaravan ? Footprints : Users
-
-  useEffect(() => {
-    if (hideExistingParties) {
-      setCreateOpen(true)
-      return
-    }
-    if (mine.isSuccess && items.length === 0) setCreateOpen(true)
-  }, [hideExistingParties, mine.isSuccess, items.length])
 
   useEffect(() => {
     if (!draft.managerUserId) setManagerChoice(null)
@@ -338,7 +330,11 @@ export function ReservationPartyFields({
             {pickManager ? (
               <CaravanManagerPicker
                 value={managerChoice}
-                defaultNationalId={partySubject?.nationalId}
+                defaultNationalId={
+                  partySubject && 'nationalId' in partySubject
+                    ? partySubject.nationalId ?? undefined
+                    : undefined
+                }
                 onChange={(next) => {
                   setManagerChoice(next)
                   onDraftChange({ managerUserId: next.id })

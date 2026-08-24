@@ -271,6 +271,7 @@ export function ReservationTravelStep({
           activeSubStep={subStep}
           dualCounts={dualCounts}
           selectedParty={selectedParty}
+          reservationId={mode === 'admin' ? reservation.id : undefined}
           subjectUser={
             mode === 'admin'
               ? reservation.type === 'CARAVAN' && reservation.caravanManager

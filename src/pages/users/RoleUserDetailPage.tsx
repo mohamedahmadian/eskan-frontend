@@ -113,10 +113,10 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
     return items
   }, [scope.showAccommodations, scope.showHeadquartersAreas])
 
-  const user = query.data
-  if (!user) {
+  if (!query.data) {
     return <LoadingState />
   }
+  const user = query.data
 
   const isSelf = actor?.id === user.id
   const locale = user.locale as AppLanguage

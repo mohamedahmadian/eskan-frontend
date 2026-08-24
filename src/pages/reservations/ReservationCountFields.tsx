@@ -12,6 +12,7 @@ import { FormField } from "../../components/ui/Form";
 import { formatNumber } from "../../lib/datetime";
 import type { ReservationType } from "../../types/app";
 import { GROUP_MAX_SIZE } from "./reservation-steps";
+import { PreviousApprovedCountsHint } from "./PreviousApprovedCountsHint";
 
 export type CountValues = {
   maleCount: string;
@@ -27,6 +28,7 @@ export function ReservationCountFields({
   locked,
   idPrefix = "",
   dual = false,
+  reservationId,
 }: {
   values: CountValues;
   onChange: (patch: Partial<CountValues>) => void;
@@ -35,6 +37,8 @@ export function ReservationCountFields({
   idPrefix?: string;
   /** Admin: edit suggested + approved headcounts separately. */
   dual?: boolean;
+  /** When dual, show last approved counts for this applicant. */
+  reservationId?: string;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
@@ -119,6 +123,9 @@ export function ReservationCountFields({
           onMaleChange={(maleCount) => onChange({ maleCount })}
           onFemaleChange={(femaleCount) => onChange({ femaleCount })}
         />
+        {reservationId ? (
+          <PreviousApprovedCountsHint reservationId={reservationId} />
+        ) : null}
         {type === "GROUP" ? <GroupMaxHint locale={locale} /> : null}
       </div>
     );

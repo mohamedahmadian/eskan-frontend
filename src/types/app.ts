@@ -1227,6 +1227,21 @@ export type PreviousCaravanReservations = {
   items: PreviousCaravanReservation[];
 };
 
+export type PreviousApprovedCounts = {
+  previous: {
+    id: string;
+    year: number;
+    type: ReservationType;
+    status: ReservationStatus;
+    maleCount: number;
+    femaleCount: number;
+    totalCount: number;
+    requestedMaleCount: number;
+    requestedFemaleCount: number;
+    managementReviewedAt: string | null;
+  } | null;
+};
+
 export type ReservationCaravanContact = {
   id: string;
   role: "DEPUTY" | "CLERIC" | "CULTURAL" | "SECURITY" | "RECEPTION";
