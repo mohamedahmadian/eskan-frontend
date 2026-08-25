@@ -4,6 +4,7 @@ import { localizeDigits } from '../../lib/datetime'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { cardClassName, listShellClassName } from '../../components/ui/Form'
+import { HeadquartersServiceYearsCard } from './HeadquartersServiceYearsCard'
 
 const actionTone = {
   teal: 'bg-teal-50 text-teal-700',
@@ -56,6 +57,8 @@ export function LicenseIssuerDashboard() {
           </div>
         </div>
       </section>
+
+      <HeadquartersServiceYearsCard />
 
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-ink-500">{t('dashboard.licenseOrganization')}</h2>

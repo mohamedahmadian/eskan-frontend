@@ -8,8 +8,10 @@ import {
 } from 'lucide-react'
 import { forwardRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AppLogo } from '../../components/brand/AppLogo'
 import { getImageUrl } from '../../lib/api'
-import { formatDate, localizeDigits } from '../../lib/datetime'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
+import { formatDate } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { ManagedUser } from '../../types/app'
 
@@ -39,8 +41,11 @@ export const PilgrimCard = forwardRef<
       <div className="pilgrim-id-card__header">
         <div className="pilgrim-id-card__header-pattern" aria-hidden />
         <div className="pilgrim-id-card__brand">
-          <p className="pilgrim-id-card__app">{t('app.name')}</p>
-          <h2 className="pilgrim-id-card__title">{t('pilgrims.cardTitle')}</h2>
+          <AppLogo className="pilgrim-id-card__logo" decorative />
+          <div>
+            <p className="pilgrim-id-card__app">{t('app.name')}</p>
+            <h2 className="pilgrim-id-card__title">{t('pilgrims.cardTitle')}</h2>
+          </div>
         </div>
         <div className="pilgrim-id-card__badge-wrap">
           <span className="pilgrim-id-card__seal" aria-hidden />
@@ -78,10 +83,7 @@ export const PilgrimCard = forwardRef<
           <CardFact
             icon={IdCard}
             label={t('users.nationalId')}
-            value={
-              pilgrim.nationalId ? localizeDigits(pilgrim.nationalId, locale) : '—'
-            }
-            dir="ltr"
+            value={<CopyableDigits value={pilgrim.nationalId} />}
           />
           {pilgrim.birthDate ? (
             <CardFact
@@ -95,8 +97,7 @@ export const PilgrimCard = forwardRef<
             <CardFact
               icon={Phone}
               label={t('users.phone')}
-              value={localizeDigits(pilgrim.phone, locale)}
-              dir="ltr"
+              value={<CopyableDigits value={pilgrim.phone} />}
             />
           ) : null}
           {place ? <CardFact icon={MapPin} label={t('geo.city')} value={place} wide /> : null}

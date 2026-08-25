@@ -218,6 +218,40 @@ export type Caravan = {
   isActive: boolean;
   createdAt: string;
   managerReused?: boolean;
+  years?: CaravanYearLink[];
+};
+
+export type CaravanYearLink = {
+  id: string;
+  year: number;
+  managerUserId: string | null;
+  manager?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+  } | null;
+};
+
+export type CaravanYearStats = {
+  year: number;
+  total: number;
+  active: number;
+  inactive: number;
+};
+
+export type CaravanYearRow = Caravan & {
+  activeInYear: boolean;
+};
+
+export type CaravanYearTransferResult = {
+  sourceYear: number;
+  targetYear: number;
+  copyManagers: boolean;
+  requested: number;
+  transferred: number;
+  skipped: number;
+  errors: { caravanId: string; message: string }[];
 };
 
 export type Group = {
@@ -286,6 +320,16 @@ export type ManagedAccommodationLink = {
   };
 };
 
+export type ManagedCaravan = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  licenseNumber?: string | null;
+  totalCount?: number;
+  city?: (GeoName & { id: string; provinceId: string }) | null;
+  walkingRoute?: { id: string; name: string } | null;
+};
+
 export type ManagedUser = {
   id: string;
   username: string;
@@ -328,6 +372,7 @@ export type ManagedUser = {
   updatedAt: string;
   roles: RoleOption[];
   accommodationCount?: number;
+  caravanCount?: number;
   representedProvinceCount?: number;
   representedCityCount?: number;
   representedProvinces?: (GeoName & { id: string })[];
@@ -338,6 +383,7 @@ export type ManagedUser = {
   })[];
   primaryAccommodation?: { id: string; name: string } | null;
   accommodations?: ManagedAccommodationLink[];
+  caravans?: ManagedCaravan[];
 };
 
 export type GeoName = {
@@ -536,6 +582,9 @@ export type PilgrimReportNamedCount = {
   id: string;
   name: string;
   count: number;
+  previousCount: number | null;
+  changePercent: number | null;
+  changeCount: number | null;
 };
 
 export type PilgrimReportSummary = {
@@ -546,10 +595,6 @@ export type PilgrimReportSummary = {
     female: number;
     unspecified: number;
   };
-  byStatus: {
-    active: number;
-    inactive: number;
-  };
 };
 
 export type PilgrimReportGeo = {
@@ -559,21 +604,42 @@ export type PilgrimReportGeo = {
   byCity: PilgrimReportNamedCount[];
 };
 
-export type PilgrimReportReligion = {
-  year: number | null;
-  byReligion: { religion: Religion; count: number }[];
-};
-
 export type PilgrimReportTimeline = {
   year: number | null;
-  byYear: { year: number; count: number; changePercent: number | null }[];
-  byMonth: { month: number; count: number }[];
+  byYear: {
+    year: number;
+    count: number;
+    changePercent: number | null;
+    changeCount: number | null;
+  }[];
+};
+
+export type PilgrimReportPlaceTimeline = {
+  placeId: string;
+  placeName: string;
+  byYear: {
+    year: number;
+    count: number;
+    changePercent: number | null;
+    changeCount: number | null;
+  }[];
+};
+
+export type PilgrimReportProvinceTimeline = {
+  provinceId: string;
+  provinceName: string;
+  byYear: PilgrimReportPlaceTimeline['byYear'];
+};
+
+export type PilgrimReportCityTimeline = {
+  cityId: string;
+  cityName: string;
+  byYear: PilgrimReportPlaceTimeline['byYear'];
 };
 
 export type PilgrimReport = PilgrimReportSummary &
   PilgrimReportGeo &
-  PilgrimReportReligion &
-  Pick<PilgrimReportTimeline, "byYear" | "byMonth">;
+  Pick<PilgrimReportTimeline, "byYear">;
 
 export type WalkingRouteStage = {
   id?: string;
@@ -651,6 +717,57 @@ export type GovernmentOrganization = {
   description: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type HeadquartersPhone = {
+  id: string;
+  headquartersId: string;
+  phone: string;
+  department: string | null;
+  description: string | null;
+  headquarters?: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type HeadquartersInfo = {
+  id: string;
+  name: string;
+  title: string | null;
+  address: string | null;
+  description: string | null;
+  activityStartYear: number | null;
+  website: string | null;
+  eitaa: string | null;
+  bale: string | null;
+  telegram: string | null;
+  instagram: string | null;
+  logoId: string | null;
+  phoneCount: number;
+  phones?: HeadquartersPhone[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type HeadquartersSummaryPhone = {
+  id: string;
+  phone: string;
+  department: string | null;
+};
+
+export type HeadquartersServiceSummary = {
+  name: string | null;
+  title: string | null;
+  activityStartYear: number | null;
+  currentYear: number;
+  yearsOfService: number | null;
+  website: string | null;
+  eitaa: string | null;
+  bale: string | null;
+  telegram: string | null;
+  instagram: string | null;
+  logoId: string | null;
+  phones: HeadquartersSummaryPhone[];
 };
 
 export type OrgUnitManager = {
@@ -1209,6 +1326,84 @@ export type MemberImportPreview = {
   rows: MemberImportPreviewRow[];
 };
 
+export type PilgrimHistoryPerson = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  nationalId: string | null;
+  phone: string | null;
+};
+
+export type PilgrimHistoryParty = {
+  id: string;
+  name: string;
+  maleCount?: number;
+  femaleCount?: number;
+  totalCount?: number;
+  city?: (GeoName & { id: string; provinceId: string }) | null;
+  manager?: PilgrimHistoryPerson | null;
+  officePhone?: string | null;
+  foundedYear?: number | null;
+  licenseNumber?: string | null;
+  isActive?: boolean;
+};
+
+export type PilgrimPilgrimageHistoryItem = {
+  id: string;
+  year: number;
+  type: ReservationType;
+  status: ReservationStatus;
+  originCity: (GeoName & { id: string; provinceId: string }) | null;
+  walkingRoute: { id: string; name: string } | null;
+  stayStartDate: string | null;
+  stayEndDate: string | null;
+  walkingStartDate: string | null;
+  requestsAccommodation: boolean;
+  requestsBus: boolean;
+  requestedMaleCount: number;
+  requestedFemaleCount: number;
+  maleCount: number;
+  femaleCount: number;
+  totalCount: number;
+  hasPermit: boolean;
+  permitStatus: ReservationPermitStatus;
+  createdAt: string;
+  completedAt: string | null;
+  insuranceStatus: ReservationMemberInsuranceStatus | null;
+  isMember: boolean;
+  caravan: PilgrimHistoryParty | null;
+  group: PilgrimHistoryParty | null;
+  caravanManager: PilgrimHistoryPerson | null;
+  createdBy: PilgrimHistoryPerson | null;
+};
+
+export type CaravanPilgrimageHistoryItem = {
+  id: string;
+  year: number;
+  type: ReservationType;
+  status: ReservationStatus;
+  originCity: (GeoName & { id: string; provinceId: string }) | null;
+  walkingRoute: { id: string; name: string } | null;
+  stayStartDate: string | null;
+  stayEndDate: string | null;
+  walkingStartDate: string | null;
+  requestsAccommodation: boolean;
+  requestsBus: boolean;
+  requestedMaleCount: number;
+  requestedFemaleCount: number;
+  maleCount: number;
+  femaleCount: number;
+  totalCount: number;
+  memberCount: number;
+  hasPermit: boolean;
+  permitStatus: ReservationPermitStatus;
+  createdAt: string;
+  completedAt: string | null;
+  caravanManager: PilgrimHistoryPerson | null;
+  createdBy: PilgrimHistoryPerson | null;
+};
+
 export type PreviousCaravanReservation = {
   id: string;
   year: number;
@@ -1448,3 +1643,207 @@ export type UserHomeDashboard = {
   pilgrim: UserHomePilgrim | null;
   caravanManager: UserHomeCaravanManager | null;
 };
+
+export type ReceptionKind =
+  | "pilgrim"
+  | "caravanManager"
+  | "accommodationManager";
+
+export type ReceptionGeo = GeoName & { id: string; provinceId?: string };
+
+export type ReceptionMatch = {
+  id: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  nationalId: string | null;
+  phone: string | null;
+  photoId: string | null;
+  gender: UserGender | null;
+  status: UserStatus;
+  city?: ReceptionGeo | null;
+  roles: Pick<RoleOption, "code" | "nameKey">[];
+  kinds: ReceptionKind[];
+};
+
+export type ReceptionVisit = {
+  id: string;
+  year: number;
+  type: ReservationType;
+  status: ReservationStatus;
+  stayStartDate: string | null;
+  stayEndDate: string | null;
+  walkingStartDate: string | null;
+  originCity: ReceptionGeo | null;
+  walkingRoute: { id: string; name: string } | null;
+  requestedMaleCount: number;
+  requestedFemaleCount: number;
+  maleCount: number;
+  femaleCount: number;
+  totalCount: number;
+  partyName: string | null;
+  partyKind: "caravan" | "group" | null;
+  caravanId: string | null;
+  groupId: string | null;
+};
+
+export type ReceptionCaravanSummary = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  licenseNumber: string | null;
+  officePhone: string | null;
+  maleCount: number;
+  femaleCount: number;
+  totalCount: number;
+  city: ReceptionGeo | null;
+};
+
+export type ReceptionAccommodationSummary = {
+  id: string;
+  name: string;
+  type: AccommodationType;
+  status: AccommodationStatus;
+  genderType: GenderType;
+  phone: string | null;
+  address: string | null;
+  maleCapacity: number;
+  femaleCapacity: number;
+  assignedMaleCapacity: number;
+  assignedFemaleCapacity: number;
+  city: ReceptionGeo | null;
+};
+
+export type ReceptionHousingRow = {
+  assignmentId: string;
+  year: number;
+  isPrimary: boolean;
+  iceVoucherCount: number;
+  iceMoldCount: number;
+  accommodation: ReceptionAccommodationSummary;
+};
+
+export type ReceptionPerson = ReceptionMatch & {
+  birthDate: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  religion: Religion | null;
+  religionOther: string | null;
+  country: ReceptionGeo | null;
+  province: ReceptionGeo | null;
+  city: ReceptionGeo | null;
+};
+
+export type ReceptionProfile = {
+  person: ReceptionPerson;
+  currentYear: number;
+  pilgrim: { visits: ReceptionVisit[] } | null;
+  caravanManager: {
+    caravans: ReceptionCaravanSummary[];
+    visits: ReceptionVisit[];
+  } | null;
+  accommodationManager: {
+    current: ReceptionHousingRow[];
+    history: ReceptionHousingRow[];
+  } | null;
+};
+
+export type ReceptionSearchResult = {
+  q: string;
+  total: number;
+  matches: ReceptionMatch[];
+  profile: ReceptionProfile | null;
+};
+
+export type EvaluationEvaluatorType =
+  | 'UNIT_MANAGER'
+  | 'CARAVAN_MANAGER'
+  | 'ACCOMMODATION_MANAGER'
+  | 'PILGRIM';
+
+export type EvaluationTargetType =
+  | 'CARAVAN_MANAGER'
+  | 'ACCOMMODATION_MANAGER'
+  | 'HEADQUARTERS';
+
+export type EvaluationCampaignStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
+
+export type EvaluationStatus = 'IN_PROGRESS' | 'COMPLETED';
+
+export type EvaluationPerson = {
+  id: string;
+  fullName: string;
+  nationalId: string | null;
+  phone: string | null;
+  username: string;
+};
+
+export type EvaluationCampaign = {
+  id: string;
+  title: string;
+  description: string | null;
+  startAt: string;
+  endAt: string;
+  status: EvaluationCampaignStatus;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { evaluations: number };
+};
+
+export type EvaluationQuestion = {
+  id: string;
+  title: string;
+  description: string | null;
+  evaluatorType: EvaluationEvaluatorType;
+  targetType: EvaluationTargetType;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EvaluationAnswer = {
+  id: string;
+  evaluationId: string;
+  questionId: string;
+  score: number;
+  description: string | null;
+  question?: EvaluationQuestion;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Evaluation = {
+  id: string;
+  campaignId: string;
+  campaign?: EvaluationCampaign;
+  evaluatorId: string;
+  evaluator?: EvaluationPerson;
+  evaluatorType: EvaluationEvaluatorType;
+  targetId: string | null;
+  target?: EvaluationPerson | null;
+  targetType: EvaluationTargetType;
+  targetKey: string;
+  status: EvaluationStatus;
+  startedAt: string;
+  completedAt: string | null;
+  submittedById: string;
+  submittedBy?: EvaluationPerson;
+  submittedAt: string | null;
+  answers?: EvaluationAnswer[];
+  _count?: { answers: number };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MyEvaluationsPayload = {
+  evaluatorTypes: EvaluationEvaluatorType[];
+  allowedPairs: {
+    evaluatorType: EvaluationEvaluatorType;
+    targetTypes: EvaluationTargetType[];
+  }[];
+  activeCampaigns: EvaluationCampaign[];
+  evaluations: Evaluation[];
+};
+

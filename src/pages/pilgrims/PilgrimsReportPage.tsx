@@ -1,15 +1,20 @@
 import {
   CalendarDays,
+  Download,
   Mars,
+  MousePointerClick,
   TrendingDown,
   TrendingUp,
   Users,
   Venus,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import {
   Bar,
   BarChart,
@@ -24,6 +29,7 @@ import {
   YAxis,
 } from 'recharts'
 import {
+  Button,
   cardClassName,
   FormField,
   listShellClassName,
@@ -33,17 +39,20 @@ import {
 import { TableCard } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
-import { api } from '../../lib/api'
-import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
+import { api, getApiErrorMessage } from '../../lib/api'
+import { currentPersianYear, formatGroupedNumber, formatNumber, persianYearOptions } from '../../lib/datetime'
 import type {
+  PilgrimReportCityTimeline,
   PilgrimReportGeo,
-  PilgrimReportReligion,
+  PilgrimReportProvinceTimeline,
   PilgrimReportSummary,
   PilgrimReportTimeline,
 } from '../../types/app'
 
 const reportViews = ['charts', 'table'] as const
 type ReportView = (typeof reportViews)[number]
+type ReportExportSection = 'country' | 'province' | 'city' | 'year'
+type PlaceKind = 'province' | 'city'
 
 const CHART_COLORS = [
   '#148f8a',
@@ -64,7 +73,7 @@ const chartValueLabel = { fill: '#3f3a34', fontSize: 12, fontWeight: 600 }
 
 function chartValueText(value: unknown, locale: string) {
   const n = Number(value ?? 0)
-  return n > 0 ? formatNumber(n, locale) : ''
+  return n > 0 ? formatGroupedNumber(n, locale) : ''
 }
 const ALL_YEARS = 'all'
 
@@ -89,6 +98,19 @@ function yoyLabel(
   return changePercent > 0
     ? t('pilgrimReports.yoyIncrease', { value })
     : t('pilgrimReports.yoyDecrease', { value })
+}
+
+function changeCountLabel(
+  changeCount: number | null | undefined,
+  t: (key: string, options?: Record<string, string>) => string,
+  locale: string,
+) {
+  if (changeCount == null) return t('pilgrimReports.changeCountUnavailable')
+  if (changeCount === 0) return t('pilgrimReports.changeCountUnchanged')
+  const value = formatGroupedNumber(Math.abs(changeCount), locale)
+  return changeCount > 0
+    ? t('pilgrimReports.changeCountIncrease', { value })
+    : t('pilgrimReports.changeCountDecrease', { value })
 }
 
 function parseYearParam(raw: string | null, fallback: number): number | null {
@@ -141,17 +163,6 @@ export function PilgrimsReportPage() {
     placeholderData: keepPreviousData,
   })
 
-  const religionQuery = useQuery({
-    queryKey: ['pilgrims', 'report', 'religion', year],
-    queryFn: async () => {
-      const { data } = await api.get<PilgrimReportReligion>('/pilgrims/report/religion', {
-        params: yearParams,
-      })
-      return data
-    },
-    placeholderData: keepPreviousData,
-  })
-
   const timelineQuery = useQuery({
     queryKey: ['pilgrims', 'report', 'timeline', year],
     queryFn: async () => {
@@ -163,44 +174,99 @@ export function PilgrimsReportPage() {
     placeholderData: keepPreviousData,
   })
 
+  const [exportingSection, setExportingSection] = useState<ReportExportSection | null>(null)
+  const [selectedPlace, setSelectedPlace] = useState<{
+    kind: PlaceKind
+    id: string
+    name: string
+  } | null>(null)
+  const [exportingPlace, setExportingPlace] = useState(false)
+
+  async function downloadExcel(section: ReportExportSection) {
+    setExportingSection(section)
+    try {
+      const { data } = await api.get<Blob>('/pilgrims/report/export', {
+        params: { section, ...yearParams },
+        responseType: 'blob',
+      })
+      const blob = data instanceof Blob ? data : new Blob([data])
+      if (blob.type.includes('json')) {
+        const text = await blob.text()
+        const parsed = JSON.parse(text) as { message?: string }
+        toast.error(parsed.message || t('common.error'))
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `pilgrims-report-${section}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      toast.success(t('pilgrimReports.excelDownloaded'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+    } finally {
+      setExportingSection(null)
+    }
+  }
+
+  async function downloadPlaceExcel(kind: PlaceKind, placeId: string) {
+    setExportingPlace(true)
+    try {
+      const path =
+        kind === 'province'
+          ? '/pilgrims/report/province-timeline/export'
+          : '/pilgrims/report/city-timeline/export'
+      const { data } = await api.get<Blob>(path, {
+        params: kind === 'province' ? { provinceId: placeId } : { cityId: placeId },
+        responseType: 'blob',
+      })
+      const blob = data instanceof Blob ? data : new Blob([data])
+      if (blob.type.includes('json')) {
+        const text = await blob.text()
+        const parsed = JSON.parse(text) as { message?: string }
+        toast.error(parsed.message || t('common.error'))
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download =
+        kind === 'province'
+          ? 'pilgrims-report-province-years.xlsx'
+          : 'pilgrims-report-city-years.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      toast.success(t('pilgrimReports.excelDownloaded'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+    } finally {
+      setExportingPlace(false)
+    }
+  }
+
   const summary = summaryQuery.data
   const total = summary?.total ?? 0
   const male = summary?.byGender.male ?? 0
   const female = summary?.byGender.female ?? 0
   const unspecified = summary?.byGender.unspecified ?? 0
-  const active = summary?.byStatus.active ?? 0
-  const inactive = summary?.byStatus.inactive ?? 0
 
   const yearOptions = [
     { value: ALL_YEARS, label: t('pilgrimReports.allYears') },
     ...persianYearOptions(locale, year ?? currentYear),
   ]
 
-  const statusRows = [
-    { key: 'active', name: t('geo.active'), value: active },
-    { key: 'inactive', name: t('geo.inactive'), value: inactive },
-  ].filter((item) => item.value > 0)
-
-  const statusPieData = statusRows.map((item) => ({
-    ...item,
-    fill: item.key === 'active' ? '#2ebdb6' : '#e8b83a',
-  }))
-
-  const religionRows = (religionQuery.data?.byReligion ?? []).map((row) => ({
-    key: row.religion,
-    name: t(`religions.${row.religion}`),
-    value: row.count,
-  }))
-
-  const religionPieData = religionRows.map((row, index) => ({
-    ...row,
-    fill: CHART_COLORS[index % CHART_COLORS.length],
-  }))
-
   const countryRows = (geoQuery.data?.byCountry ?? []).map((row) => ({
     key: row.id,
     name: geoDisplayName(row.id, row.name, t),
     value: row.count,
+    previousCount: row.previousCount,
+    changePercent: row.changePercent,
+    changeCount: row.changeCount,
   }))
 
   const countryPieData = countryRows.map((row, index) => ({
@@ -212,9 +278,13 @@ export function PilgrimsReportPage() {
     key: row.id,
     name: geoDisplayName(row.id, row.name, t),
     value: row.count,
+    previousCount: row.previousCount,
+    changePercent: row.changePercent,
+    changeCount: row.changeCount,
   }))
 
   const provinceBars = provinceRows.map((row, index) => ({
+    key: row.key,
     name: row.name,
     value: row.value,
     fill: row.key === UNSPECIFIED_GEO_ID ? UNSPECIFIED_GEO_COLOR : CHART_COLORS[index % CHART_COLORS.length],
@@ -224,9 +294,13 @@ export function PilgrimsReportPage() {
     key: row.id,
     name: geoDisplayName(row.id, row.name, t),
     value: row.count,
+    previousCount: row.previousCount,
+    changePercent: row.changePercent,
+    changeCount: row.changeCount,
   }))
 
   const cityBars = cityRows.map((row, index) => ({
+    key: row.key,
     name: row.name,
     value: row.value,
     fill: row.key === UNSPECIFIED_GEO_ID ? UNSPECIFIED_GEO_COLOR : CHART_COLORS[index % CHART_COLORS.length],
@@ -237,12 +311,7 @@ export function PilgrimsReportPage() {
     name: formatNumber(row.year, locale),
     value: row.count,
     changePercent: row.changePercent,
-  }))
-
-  const monthRows = (timelineQuery.data?.byMonth ?? []).map((row) => ({
-    key: String(row.month),
-    name: t('pilgrimReports.month', { value: formatNumber(row.month, locale) }),
-    value: row.count,
+    changeCount: row.changeCount,
   }))
 
   const yearBars = yearRows.map((row) => ({
@@ -250,16 +319,8 @@ export function PilgrimsReportPage() {
     value: row.value,
     fill: '#2ebdb6',
     changePercent: row.changePercent,
+    changeCount: row.changeCount,
   }))
-
-  const monthBars = monthRows.map((row) => ({
-    name: row.name,
-    value: row.value,
-    fill: '#148f8a',
-  }))
-
-  const yearTotal = yearRows.reduce((sum, row) => sum + row.value, 0)
-  const showMonthBreakdown = year != null
 
   const genderKpis = [
     {
@@ -321,7 +382,7 @@ export function PilgrimsReportPage() {
               icon={Users}
               tone="bg-teal-50 text-teal-700"
               label={t('pilgrimReports.total')}
-              value={formatNumber(total, locale)}
+              value={formatGroupedNumber(total, locale)}
             />
             {genderKpis.map((item) => (
               <KpiCard
@@ -329,7 +390,7 @@ export function PilgrimsReportPage() {
                 icon={item.icon}
                 tone={item.tone}
                 label={item.label}
-                value={formatNumber(item.value, locale)}
+                value={formatGroupedNumber(item.value, locale)}
                 hint={t('pilgrimReports.percent', {
                   value: formatNumber(percentOf(item.value, total), locale),
                 })}
@@ -347,46 +408,44 @@ export function PilgrimsReportPage() {
 
               {view === 'charts' ? (
                 <div className="space-y-6">
-                  <section className="grid gap-4 lg:grid-cols-2">
-                    <ChartCard title={t('pilgrimReports.byStatus')}>
-                      <DonutChart data={statusPieData} total={total} locale={locale} />
-                    </ChartCard>
-                    <ChartCard title={t('pilgrimReports.byCountry')}>
-                      <SectionBody
-                        loading={geoQuery.isLoading && !geoQuery.data}
-                        error={geoQuery.isError}
-                        empty={chartsReady && countryPieData.length === 0}
-                      >
-                        <DonutChart data={countryPieData} total={total} locale={locale} />
-                      </SectionBody>
-                    </ChartCard>
-                  </section>
+                  <ChartCard
+                    title={t('pilgrimReports.byCountry')}
+                    onExport={() => void downloadExcel('country')}
+                    exporting={exportingSection === 'country'}
+                    exportDisabled={countryRows.length === 0}
+                  >
+                    <SectionBody
+                      loading={geoQuery.isLoading && !geoQuery.data}
+                      error={geoQuery.isError}
+                      empty={chartsReady && countryPieData.length === 0}
+                    >
+                      <DonutChart data={countryPieData} total={total} locale={locale} />
+                    </SectionBody>
+                  </ChartCard>
 
-                  <section className={`grid gap-4 ${showMonthBreakdown ? 'lg:grid-cols-2' : ''}`}>
-                    {showMonthBreakdown ? (
-                      <ChartCard title={t('pilgrimReports.byMonth')}>
-                        <SectionBody
-                          loading={timelineQuery.isLoading && !timelineQuery.data}
-                          error={timelineQuery.isError}
-                          empty={chartsReady && monthBars.length === 0}
-                        >
-                          <VerticalBarChart data={monthBars} locale={locale} />
-                        </SectionBody>
-                      </ChartCard>
-                    ) : null}
-                    <ChartCard title={t('pilgrimReports.byYear')}>
-                      <SectionBody
-                        loading={timelineQuery.isLoading && !timelineQuery.data}
-                        error={timelineQuery.isError}
-                        empty={chartsReady && yearBars.length === 0}
-                      >
-                        <VerticalBarChart data={yearBars} locale={locale} />
-                        <YearChangeLegend items={yearBars} locale={locale} />
-                      </SectionBody>
-                    </ChartCard>
-                  </section>
+                  <ChartCard
+                    title={t('pilgrimReports.byYear')}
+                    onExport={() => void downloadExcel('year')}
+                    exporting={exportingSection === 'year'}
+                    exportDisabled={yearRows.length === 0}
+                  >
+                    <SectionBody
+                      loading={timelineQuery.isLoading && !timelineQuery.data}
+                      error={timelineQuery.isError}
+                      empty={chartsReady && yearBars.length === 0}
+                    >
+                      <VerticalBarChart data={yearBars} locale={locale} showGrowth />
+                      <YearChangeLegend items={yearBars} locale={locale} />
+                    </SectionBody>
+                  </ChartCard>
 
-                  <ChartCard title={t('pilgrimReports.byProvince')}>
+                  <ChartCard
+                    title={t('pilgrimReports.byProvince')}
+                    subtitle={t('pilgrimReports.provinceYearHint')}
+                    onExport={() => void downloadExcel('province')}
+                    exporting={exportingSection === 'province'}
+                    exportDisabled={provinceRows.length === 0}
+                  >
                     <SectionBody
                       loading={geoQuery.isLoading && !geoQuery.data}
                       error={geoQuery.isError}
@@ -396,11 +455,20 @@ export function PilgrimsReportPage() {
                         data={provinceBars}
                         locale={locale}
                         height={Math.max(280, provinceBars.length * 28)}
+                        onItemClick={(item) =>
+                          setSelectedPlace({ kind: 'province', id: item.key, name: item.name })
+                        }
                       />
                     </SectionBody>
                   </ChartCard>
 
-                  <ChartCard title={t('pilgrimReports.byCity')}>
+                  <ChartCard
+                    title={t('pilgrimReports.byCity')}
+                    subtitle={t('pilgrimReports.cityYearHint')}
+                    onExport={() => void downloadExcel('city')}
+                    exporting={exportingSection === 'city'}
+                    exportDisabled={cityRows.length === 0}
+                  >
                     <SectionBody
                       loading={geoQuery.isLoading && !geoQuery.data}
                       error={geoQuery.isError}
@@ -410,77 +478,68 @@ export function PilgrimsReportPage() {
                         data={cityBars}
                         locale={locale}
                         height={Math.max(280, cityBars.length * 28)}
+                        onItemClick={(item) =>
+                          setSelectedPlace({ kind: 'city', id: item.key, name: item.name })
+                        }
                       />
-                    </SectionBody>
-                  </ChartCard>
-
-                  <ChartCard title={t('pilgrimReports.byReligion')}>
-                    <SectionBody
-                      loading={religionQuery.isLoading && !religionQuery.data}
-                      error={religionQuery.isError}
-                      empty={chartsReady && religionPieData.length === 0}
-                    >
-                      <DonutChart data={religionPieData} total={total} locale={locale} />
                     </SectionBody>
                   </ChartCard>
                 </div>
               ) : (
                 <div className="space-y-6">
                   <ReportTableCard
-                    title={t('pilgrimReports.byStatus')}
-                    rows={statusRows}
-                    total={total}
-                    locale={locale}
-                  />
-                  <ReportTableCard
                     title={t('pilgrimReports.byCountry')}
                     rows={countryRows}
                     total={total}
                     locale={locale}
+                    selectedYear={year}
                     loading={geoQuery.isLoading && !geoQuery.data}
                     error={geoQuery.isError}
+                    onExport={() => void downloadExcel('country')}
+                    exporting={exportingSection === 'country'}
                   />
-                  {showMonthBreakdown ? (
-                    <ReportTableCard
-                      title={t('pilgrimReports.byMonth')}
-                      rows={monthRows}
-                      total={total}
-                      locale={locale}
-                      loading={timelineQuery.isLoading && !timelineQuery.data}
-                      error={timelineQuery.isError}
-                    />
-                  ) : null}
                   <YearReportTableCard
                     title={t('pilgrimReports.byYear')}
                     rows={yearRows}
-                    total={yearTotal}
                     locale={locale}
                     loading={timelineQuery.isLoading && !timelineQuery.data}
                     error={timelineQuery.isError}
+                    onExport={() => void downloadExcel('year')}
+                    exporting={exportingSection === 'year'}
                   />
                   <ReportTableCard
                     title={t('pilgrimReports.byProvince')}
+                    subtitle={t('pilgrimReports.provinceYearHint')}
+                    nameColumn={t('pilgrimReports.colProvince')}
                     rows={provinceRows}
                     total={total}
                     locale={locale}
+                    selectedYear={year}
                     loading={geoQuery.isLoading && !geoQuery.data}
                     error={geoQuery.isError}
+                    onExport={() => void downloadExcel('province')}
+                    exporting={exportingSection === 'province'}
+                    showYoy={year != null}
+                    onRowClick={(row) =>
+                      setSelectedPlace({ kind: 'province', id: row.key, name: row.name })
+                    }
                   />
                   <ReportTableCard
                     title={t('pilgrimReports.byCity')}
+                    subtitle={t('pilgrimReports.cityYearHint')}
+                    nameColumn={t('pilgrimReports.colCity')}
                     rows={cityRows}
                     total={total}
                     locale={locale}
+                    selectedYear={year}
                     loading={geoQuery.isLoading && !geoQuery.data}
                     error={geoQuery.isError}
-                  />
-                  <ReportTableCard
-                    title={t('pilgrimReports.byReligion')}
-                    rows={religionRows}
-                    total={total}
-                    locale={locale}
-                    loading={religionQuery.isLoading && !religionQuery.data}
-                    error={religionQuery.isError}
+                    onExport={() => void downloadExcel('city')}
+                    exporting={exportingSection === 'city'}
+                    showYoy={year != null}
+                    onRowClick={(row) =>
+                      setSelectedPlace({ kind: 'city', id: row.key, name: row.name })
+                    }
                   />
                 </div>
               )}
@@ -488,6 +547,18 @@ export function PilgrimsReportPage() {
           )}
         </div>
       )}
+
+      {selectedPlace ? (
+        <PlaceYearGrowthModal
+          kind={selectedPlace.kind}
+          placeId={selectedPlace.id}
+          placeName={selectedPlace.name}
+          locale={locale}
+          exporting={exportingPlace}
+          onExport={() => void downloadPlaceExcel(selectedPlace.kind, selectedPlace.id)}
+          onClose={() => setSelectedPlace(null)}
+        />
+      ) : null}
     </div>
   )
 }
@@ -520,26 +591,128 @@ function ReportTabNav({
   )
 }
 
+function ExcelExportButton({
+  onClick,
+  exporting,
+  disabled,
+}: {
+  onClick: () => void
+  exporting?: boolean
+  disabled?: boolean
+}) {
+  const { t } = useTranslation()
+  return (
+    <Button type="button" variant="ghost" onClick={onClick} disabled={disabled || exporting}>
+      <Download className="size-4" aria-hidden />
+      {exporting ? t('pilgrimReports.downloadingExcel') : t('pilgrimReports.downloadExcel')}
+    </Button>
+  )
+}
+
+function ClickHintBox({ children }: { children: string }) {
+  return (
+    <p className="mt-2 flex items-start gap-2.5 rounded-2xl border border-teal-200 bg-teal-50 px-3.5 py-3 text-sm font-medium leading-6 text-teal-800">
+      <MousePointerClick className="mt-0.5 size-4 shrink-0 text-teal-600" aria-hidden />
+      <span>{children}</span>
+    </p>
+  )
+}
+
+function SectionTitleRow({
+  title,
+  subtitle,
+  onExport,
+  exporting,
+  exportDisabled,
+}: {
+  title: string
+  subtitle?: string
+  onExport?: () => void
+  exporting?: boolean
+  exportDisabled?: boolean
+}) {
+  return (
+    <div className="space-y-0">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="min-w-0 text-sm font-medium text-ink-500">{title}</h2>
+        {onExport ? (
+          <ExcelExportButton onClick={onExport} exporting={exporting} disabled={exportDisabled} />
+        ) : null}
+      </div>
+      {subtitle ? <ClickHintBox>{subtitle}</ClickHintBox> : null}
+    </div>
+  )
+}
+
+function countColumnLabel(selectedYear: number | null | undefined, t: (key: string, options?: Record<string, string>) => string, locale: string) {
+  if (selectedYear == null) return t('pilgrimReports.colPilgrimCount')
+  return t('pilgrimReports.colCountForYear', { year: formatNumber(selectedYear, locale) })
+}
+
+function TableHeadCell({
+  children,
+  hint,
+}: {
+  children: ReactNode
+  hint?: string
+}) {
+  return (
+    <th className="px-4 py-3 text-start font-medium">
+      <span className="block">{children}</span>
+      {hint ? <span className="mt-0.5 block text-[11px] font-normal text-ink-400">{hint}</span> : null}
+    </th>
+  )
+}
+
 function ReportTableCard({
   title,
+  subtitle,
+  nameColumn,
   rows,
   total,
   locale,
+  selectedYear = null,
   loading = false,
   error = false,
+  onExport,
+  exporting = false,
+  onRowClick,
+  showYoy = false,
 }: {
   title: string
-  rows: { key: string; name: string; value: number }[]
+  subtitle?: string
+  nameColumn?: string
+  rows: {
+    key: string
+    name: string
+    value: number
+    previousCount?: number | null
+    changePercent?: number | null
+    changeCount?: number | null
+  }[]
   total: number
   locale: string
+  selectedYear?: number | null
   loading?: boolean
   error?: boolean
+  onExport?: () => void
+  exporting?: boolean
+  onRowClick?: (row: { key: string; name: string; value: number }) => void
+  showYoy?: boolean
 }) {
   const { t } = useTranslation()
+  const showPrevious = selectedYear != null
+  const yoyHint = t('pilgrimReports.colYoY')
 
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-medium text-ink-500">{title}</h2>
+      <SectionTitleRow
+        title={title}
+        subtitle={subtitle}
+        onExport={onExport}
+        exporting={exporting}
+        exportDisabled={loading || error || rows.length === 0}
+      />
       {error ? (
         <p className={`${cardClassName} px-5 py-4 text-sm text-red-700`}>{t('common.error')}</p>
       ) : (
@@ -553,21 +726,55 @@ function ReportTableCard({
             <table className="w-full text-sm">
               <thead className="bg-cream-50 text-ink-700">
                 <tr>
-                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colName')}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colCount')}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colPercent')}</th>
+                  <TableHeadCell>{nameColumn ?? t('pilgrimReports.colName')}</TableHeadCell>
+                  <TableHeadCell>{countColumnLabel(selectedYear, t, locale)}</TableHeadCell>
+                  {showPrevious ? (
+                    <TableHeadCell>
+                      {t('pilgrimReports.colCountForYear', {
+                        year: formatNumber(selectedYear - 1, locale),
+                      })}
+                    </TableHeadCell>
+                  ) : null}
+                  <TableHeadCell>{t('pilgrimReports.colPercent')}</TableHeadCell>
+                  {showYoy ? (
+                    <>
+                      <TableHeadCell hint={yoyHint}>{t('pilgrimReports.colGrowth')}</TableHeadCell>
+                      <TableHeadCell hint={yoyHint}>{t('pilgrimReports.colChangeCount')}</TableHeadCell>
+                    </>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.key} className="border-t border-line">
+                  <tr
+                    key={row.key}
+                    className={`border-t border-line ${
+                      onRowClick ? 'cursor-pointer hover:bg-cream-50' : ''
+                    }`}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  >
                     <td className="px-4 py-3">{row.name}</td>
-                    <td className="px-4 py-3">{formatNumber(row.value, locale)}</td>
+                    <td className="px-4 py-3">{formatGroupedNumber(row.value, locale)}</td>
+                    {showPrevious ? (
+                      <td className="px-4 py-3">
+                        {formatGroupedNumber(row.previousCount ?? 0, locale)}
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3">
                       {t('pilgrimReports.percent', {
                         value: formatNumber(percentOf(row.value, total), locale),
                       })}
                     </td>
+                    {showYoy ? (
+                      <>
+                        <td className="px-4 py-3">
+                          <YoYBadge changePercent={row.changePercent} locale={locale} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <ChangeCountBadge changeCount={row.changeCount} locale={locale} />
+                        </td>
+                      </>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -582,23 +789,37 @@ function ReportTableCard({
 function YearReportTableCard({
   title,
   rows,
-  total,
   locale,
   loading = false,
   error = false,
+  onExport,
+  exporting = false,
 }: {
   title: string
-  rows: { key: string; name: string; value: number; changePercent: number | null }[]
-  total: number
+  rows: {
+    key: string
+    name: string
+    value: number
+    changePercent: number | null
+    changeCount: number | null
+  }[]
   locale: string
   loading?: boolean
   error?: boolean
+  onExport?: () => void
+  exporting?: boolean
 }) {
   const { t } = useTranslation()
+  const yoyHint = t('pilgrimReports.colYoY')
 
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-medium text-ink-500">{title}</h2>
+      <SectionTitleRow
+        title={title}
+        onExport={onExport}
+        exporting={exporting}
+        exportDisabled={loading || error || rows.length === 0}
+      />
       {error ? (
         <p className={`${cardClassName} px-5 py-4 text-sm text-red-700`}>{t('common.error')}</p>
       ) : (
@@ -612,24 +833,22 @@ function YearReportTableCard({
             <table className="w-full text-sm">
               <thead className="bg-cream-50 text-ink-700">
                 <tr>
-                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colName')}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colCount')}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colPercent')}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t('pilgrimReports.colYoY')}</th>
+                  <TableHeadCell>{t('pilgrimReports.colYear')}</TableHeadCell>
+                  <TableHeadCell>{t('pilgrimReports.colPilgrimCount')}</TableHeadCell>
+                  <TableHeadCell hint={yoyHint}>{t('pilgrimReports.colGrowth')}</TableHeadCell>
+                  <TableHeadCell hint={yoyHint}>{t('pilgrimReports.colChangeCount')}</TableHeadCell>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.key} className="border-t border-line">
                     <td className="px-4 py-3">{row.name}</td>
-                    <td className="px-4 py-3">{formatNumber(row.value, locale)}</td>
-                    <td className="px-4 py-3">
-                      {t('pilgrimReports.percent', {
-                        value: formatNumber(percentOf(row.value, total), locale),
-                      })}
-                    </td>
+                    <td className="px-4 py-3">{formatGroupedNumber(row.value, locale)}</td>
                     <td className="px-4 py-3">
                       <YoYBadge changePercent={row.changePercent} locale={locale} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <ChangeCountBadge changeCount={row.changeCount} locale={locale} />
                     </td>
                   </tr>
                 ))}
@@ -677,11 +896,51 @@ function YoYBadge({
   )
 }
 
+function ChangeCountBadge({
+  changeCount,
+  locale,
+}: {
+  changeCount: number | null | undefined
+  locale: string
+}) {
+  const { t } = useTranslation()
+  const label = changeCountLabel(changeCount, t, locale)
+
+  if (changeCount == null) {
+    return <span className="text-ink-400">{label}</span>
+  }
+
+  if (changeCount === 0) {
+    return <span className="text-ink-500">{label}</span>
+  }
+
+  const up = changeCount > 0
+  return (
+    <span
+      className={`inline-flex items-center gap-1 font-medium ${
+        up ? 'text-teal-700' : 'text-red-700'
+      }`}
+    >
+      {up ? (
+        <TrendingUp className="size-3.5 shrink-0" aria-hidden />
+      ) : (
+        <TrendingDown className="size-3.5 shrink-0" aria-hidden />
+      )}
+      {label}
+    </span>
+  )
+}
+
 function YearChangeLegend({
   items,
   locale,
 }: {
-  items: { name: string; value: number; changePercent: number | null }[]
+  items: {
+    name: string
+    value: number
+    changePercent: number | null
+    changeCount: number | null
+  }[]
   locale: string
 }) {
   const { t } = useTranslation()
@@ -692,11 +951,12 @@ function YearChangeLegend({
       {items.map((item) => (
         <li key={item.name} className="flex items-center justify-between gap-3 text-sm">
           <span className="min-w-0 truncate text-ink-700">{item.name}</span>
-          <span className="flex items-center gap-3 whitespace-nowrap">
+          <span className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 whitespace-nowrap">
             <span className="font-semibold text-ink-900">
-              {formatNumber(item.value, locale)} {t('pilgrimReports.count')}
+              {formatGroupedNumber(item.value, locale)} {t('pilgrimReports.count')}
             </span>
             <YoYBadge changePercent={item.changePercent} locale={locale} />
+            <ChangeCountBadge changeCount={item.changeCount} locale={locale} />
           </span>
         </li>
       ))}
@@ -722,10 +982,32 @@ function SectionBody({
   return children
 }
 
-function ChartCard({ title, children }: { title: string; children: ReactNode }) {
+function ChartCard({
+  title,
+  subtitle,
+  children,
+  onExport,
+  exporting,
+  exportDisabled,
+}: {
+  title: string
+  subtitle?: string
+  children: ReactNode
+  onExport?: () => void
+  exporting?: boolean
+  exportDisabled?: boolean
+}) {
   return (
     <article className={`${cardClassName} p-5`}>
-      <h2 className="mb-4 text-sm font-medium text-ink-500">{title}</h2>
+      <div className="mb-4">
+        <SectionTitleRow
+          title={title}
+          subtitle={subtitle}
+          onExport={onExport}
+          exporting={exporting}
+          exportDisabled={exportDisabled}
+        />
+      </div>
       {children}
     </article>
   )
@@ -786,7 +1068,7 @@ function ChartLegend({
             <span className="truncate">{item.name}</span>
           </span>
           <span className="flex items-center gap-2 whitespace-nowrap text-ink-900">
-            <span className="font-semibold">{formatNumber(item.value, locale)}</span>
+            <span className="font-semibold">{formatGroupedNumber(item.value, locale)}</span>
             <span className="text-[11px] text-ink-400">
               {t('pilgrimReports.percent', {
                 value: formatNumber(percentOf(item.value, total), locale),
@@ -843,7 +1125,7 @@ function DonutChart({
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-semibold text-ink-900">{formatNumber(total, locale)}</span>
+          <span className="text-2xl font-semibold text-ink-900">{formatGroupedNumber(total, locale)}</span>
           <span className="text-[11px] text-ink-400">{t('pilgrimReports.total')}</span>
         </div>
       </div>
@@ -852,23 +1134,111 @@ function DonutChart({
   )
 }
 
+function growthShortLabel(changePercent: number | null | undefined, locale: string) {
+  if (changePercent == null) return ''
+  const value = formatNumber(Math.abs(changePercent), locale)
+  if (changePercent > 0) return `+${value}٪`
+  if (changePercent < 0) return `−${value}٪`
+  return `${value}٪`
+}
+
+function changeCountShortLabel(changeCount: number | null | undefined, locale: string) {
+  if (changeCount == null) return ''
+  const value = formatGroupedNumber(Math.abs(changeCount), locale)
+  if (changeCount > 0) return `+${value}`
+  if (changeCount < 0) return `−${value}`
+  return value
+}
+
+function YearBarLabel({
+  x,
+  y,
+  width,
+  value,
+  index,
+  data,
+  locale,
+}: {
+  x?: number
+  y?: number
+  width?: number
+  value?: number
+  index?: number
+  data: { value: number; changePercent?: number | null; changeCount?: number | null }[]
+  locale: string
+}) {
+  if (x == null || y == null || width == null || index == null) return null
+  const n = Number(value ?? 0)
+  if (n <= 0) return null
+  const row = data[index]
+  const growth = row?.changePercent
+  const delta = row?.changeCount
+  const cx = x + width / 2
+  const growthText = growthShortLabel(growth, locale)
+  const deltaText = changeCountShortLabel(delta, locale)
+  const detailText = [growthText, deltaText].filter(Boolean).join(' · ')
+  const tone =
+    (delta != null && delta !== 0 ? delta : growth) ?? 0
+  return (
+    <g>
+      <text
+        x={cx}
+        y={y - (detailText ? 22 : 8)}
+        textAnchor="middle"
+        fill="#3f3a34"
+        fontSize={12}
+        fontWeight={600}
+      >
+        {formatGroupedNumber(n, locale)}
+      </text>
+      {detailText ? (
+        <text
+          x={cx}
+          y={y - 8}
+          textAnchor="middle"
+          fill={tone > 0 ? '#0f766e' : tone < 0 ? '#b91c1c' : '#7a756c'}
+          fontSize={11}
+          fontWeight={600}
+        >
+          {detailText}
+        </text>
+      ) : null}
+    </g>
+  )
+}
+
 function VerticalBarChart({
   data,
   locale,
   height = 280,
+  showGrowth = false,
+  onItemClick,
 }: {
-  data: { name: string; value: number; fill: string; changePercent?: number | null }[]
+  data: {
+    key?: string
+    name: string
+    value: number
+    fill: string
+    changePercent?: number | null
+    changeCount?: number | null
+  }[]
   locale: string
   height?: number
+  showGrowth?: boolean
+  onItemClick?: (item: { key: string; name: string }) => void
 }) {
   const { t } = useTranslation()
-  const chartWidth = Math.max(360, data.length * 56)
+  const chartWidth = Math.max(360, data.length * (showGrowth ? 84 : 56))
 
   return (
     <div className="overflow-x-auto" dir="ltr">
       <div style={{ width: chartWidth, height }} className="min-w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 28, right: 8, left: 0, bottom: 48 }} barCategoryGap="28%">
+          <BarChart
+            data={data}
+            margin={{ top: showGrowth ? 44 : 28, right: 8, left: 0, bottom: 48 }}
+            barCategoryGap="28%"
+          >
             <CartesianGrid stroke="#eceae3" vertical={false} />
             <XAxis
               dataKey="name"
@@ -886,20 +1256,53 @@ function VerticalBarChart({
               axisLine={false}
               tickLine={false}
               width={36}
-              tickFormatter={(value: number) => formatNumber(value, locale)}
+              tickFormatter={(value: number) => formatGroupedNumber(value, locale)}
             />
             <Tooltip cursor={{ fill: '#eefaf9' }} content={<ReportTooltip />} />
-            <Bar dataKey="value" name={t('pilgrimReports.count')} radius={[10, 10, 0, 0]} maxBarSize={42}>
+            <Bar
+              dataKey="value"
+              name={t('pilgrimReports.count')}
+              radius={[10, 10, 0, 0]}
+              maxBarSize={42}
+              cursor={onItemClick ? 'pointer' : undefined}
+              onClick={(item) => {
+                if (!onItemClick) return
+                const source =
+                  item && typeof item === 'object' && 'payload' in item
+                    ? (item as { payload?: { key?: string; name?: string } }).payload
+                    : item
+                const key = typeof source?.key === 'string' ? source.key : undefined
+                const name = typeof source?.name === 'string' ? source.name : undefined
+                if (key && name) onItemClick({ key, name })
+              }}
+            >
               {data.map((item) => (
                 <Cell key={item.name} fill={item.fill} />
               ))}
-              <LabelList
-                dataKey="value"
-                position="top"
-                offset={6}
-                style={chartValueLabel}
-                formatter={(value) => chartValueText(value, locale)}
-              />
+              {showGrowth ? (
+                <LabelList
+                  dataKey="value"
+                  content={(props) => (
+                    <YearBarLabel
+                      x={typeof props.x === 'number' ? props.x : undefined}
+                      y={typeof props.y === 'number' ? props.y : undefined}
+                      width={typeof props.width === 'number' ? props.width : undefined}
+                      value={typeof props.value === 'number' ? props.value : Number(props.value ?? 0)}
+                      index={props.index}
+                      data={data}
+                      locale={locale}
+                    />
+                  )}
+                />
+              ) : (
+                <LabelList
+                  dataKey="value"
+                  position="top"
+                  offset={6}
+                  style={chartValueLabel}
+                  formatter={(value) => chartValueText(value, locale)}
+                />
+              )}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -918,7 +1321,7 @@ function ReportTooltip({
     name?: string
     value?: number
     color?: string
-    payload?: { changePercent?: number | null }
+    payload?: { changePercent?: number | null; changeCount?: number | null }
   }[]
   label?: string | number
 }) {
@@ -941,17 +1344,146 @@ function ReportTooltip({
                 {item.name}
               </span>
               <span className="font-semibold text-ink-900">
-                {formatNumber(Number(item.value ?? 0), locale)} {t('pilgrimReports.count')}
+                {formatGroupedNumber(Number(item.value ?? 0), locale)} {t('pilgrimReports.count')}
               </span>
             </div>
             {item.payload && 'changePercent' in item.payload ? (
-              <p className="ps-4 text-[11px]">
+              <div className="space-y-0.5 ps-4 text-[11px]">
                 <YoYBadge changePercent={item.payload.changePercent} locale={locale} />
-              </p>
+                <ChangeCountBadge changeCount={item.payload.changeCount} locale={locale} />
+              </div>
             ) : null}
           </li>
         ))}
       </ul>
     </div>
+  )
+}
+
+function PlaceYearGrowthModal({
+  kind,
+  placeId,
+  placeName,
+  locale,
+  exporting,
+  onExport,
+  onClose,
+}: {
+  kind: PlaceKind
+  placeId: string
+  placeName: string
+  locale: string
+  exporting: boolean
+  onExport: () => void
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+  const query = useQuery({
+    queryKey: ['pilgrims', 'report', `${kind}-timeline`, placeId],
+    queryFn: async () => {
+      if (kind === 'province') {
+        const { data } = await api.get<PilgrimReportProvinceTimeline>(
+          '/pilgrims/report/province-timeline',
+          { params: { provinceId: placeId } },
+        )
+        return { byYear: data.byYear }
+      }
+      const { data } = await api.get<PilgrimReportCityTimeline>('/pilgrims/report/city-timeline', {
+        params: { cityId: placeId },
+      })
+      return { byYear: data.byYear }
+    },
+  })
+
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previous
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  const rows = (query.data?.byYear ?? []).map((row) => ({
+    key: String(row.year),
+    name: formatNumber(row.year, locale),
+    value: row.count,
+    changePercent: row.changePercent,
+    changeCount: row.changeCount,
+  }))
+  const bars = rows.map((row) => ({
+    name: row.name,
+    value: row.value,
+    fill: '#2ebdb6',
+    changePercent: row.changePercent,
+    changeCount: row.changeCount,
+  }))
+  const titleKey =
+    kind === 'province' ? 'pilgrimReports.provinceYearTitle' : 'pilgrimReports.cityYearTitle'
+  const subtitleKey =
+    kind === 'province' ? 'pilgrimReports.provinceYearSubtitle' : 'pilgrimReports.cityYearSubtitle'
+  const emptyKey =
+    kind === 'province' ? 'pilgrimReports.provinceYearEmpty' : 'pilgrimReports.cityYearEmpty'
+
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto p-4 sm:p-6">
+      <button
+        type="button"
+        className="fixed inset-0 bg-ink-900/30"
+        aria-label={t('pilgrimReports.closeModal')}
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="place-year-growth-title"
+        className={`relative z-10 mb-4 flex w-full max-w-3xl flex-col overflow-hidden ${cardClassName}`}
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-line p-5 sm:p-6">
+          <div className="min-w-0 space-y-1">
+            <h2
+              id="place-year-growth-title"
+              className="text-lg font-semibold text-ink-900"
+            >
+              {t(titleKey, { name: placeName })}
+            </h2>
+            <p className="text-sm text-ink-500">{t(subtitleKey)}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <ExcelExportButton
+              onClick={onExport}
+              exporting={exporting}
+              disabled={query.isLoading || query.isError || rows.length === 0}
+            />
+            <Button type="button" variant="ghost" icon onClick={onClose}>
+              <X className="size-4" aria-hidden />
+              <span className="sr-only">{t('pilgrimReports.closeModal')}</span>
+            </Button>
+          </div>
+        </div>
+        <div className="min-h-0 p-5 sm:p-6">
+          {query.isLoading ? (
+            <LoadingState />
+          ) : query.isError ? (
+            <p className="py-10 text-center text-sm text-red-700">{t('common.error')}</p>
+          ) : rows.length === 0 ? (
+            <p className="py-10 text-center text-sm text-ink-400">{t(emptyKey)}</p>
+          ) : (
+            <div className="space-y-6">
+              <VerticalBarChart data={bars} locale={locale} showGrowth />
+              <YearReportTableCard title={t('pilgrimReports.byYear')} rows={rows} locale={locale} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }

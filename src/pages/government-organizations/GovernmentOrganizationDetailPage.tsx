@@ -2,6 +2,7 @@ import { Building } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { localizeDigits } from '../../lib/datetime'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   DetailActions,
@@ -52,7 +53,10 @@ export function GovernmentOrganizationDetailPage() {
             label={t('governmentOrganizations.contactPerson')}
             value={item.contactPerson || '—'}
           />
-          <DetailRow label={t('governmentOrganizations.mobile')} value={item.mobile || '—'} />
+          <DetailRow
+            label={t('governmentOrganizations.mobile')}
+            value={<CopyableDigits value={item.mobile} />}
+          />
           <DetailRow
             label={t('governmentOrganizations.description')}
             value={item.description || '—'}

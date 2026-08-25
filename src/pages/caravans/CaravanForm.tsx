@@ -48,6 +48,7 @@ import {
   type CaravanContactRole,
 } from './caravanContacts'
 import { CaravanTabNav, type CaravanTab } from './CaravanTabs'
+import { CaravanYearAlert } from './CaravanYearAlert'
 
 export type CaravanPayload = {
   name: string
@@ -59,7 +60,7 @@ export type CaravanPayload = {
   walkingRouteId: string | null
   licenseNumber: string | null
   licenseImageId: string | null
-  managerUserId?: string
+  managerUserId?: string | null
   totalCount: number
   maleCount: number
   femaleCount: number
@@ -269,11 +270,6 @@ export function CaravanForm({
   async function submit(event: FormEvent) {
     event.preventDefault()
     const resolvedManagerId = selectManager ? managerUserId : (currentUserId ?? managerUserId)
-    if (selectManager && !resolvedManagerId) {
-      toast.error(t('caravans.managerRequired'))
-      setTab('basic')
-      return
-    }
 
     for (const role of caravanContactRoles) {
       if (isContactIncomplete(contactDrafts[role])) {
@@ -300,7 +296,7 @@ export function CaravanForm({
         walkingRouteId: emptyToNull(walkingRouteId),
         licenseNumber: emptyToNull(licenseNumber),
         licenseImageId: emptyToNull(licenseImageId),
-        managerUserId: resolvedManagerId || undefined,
+        managerUserId: resolvedManagerId || null,
         totalCount: totalCountValue,
         maleCount: toCount(maleCount),
         femaleCount: toCount(femaleCount),
@@ -319,6 +315,8 @@ export function CaravanForm({
   }
 
   return (
+    <div className="space-y-4">
+      {initial ? <CaravanYearAlert caravan={initial} /> : null}
     <FormCard
       icon={Tent}
       title={initial ? initial.name || t('caravans.edit') : t('caravans.create')}
@@ -351,8 +349,8 @@ export function CaravanForm({
               value={selectedManager}
               onChange={(next) => {
                 setSelectedManager(next)
-                setManagerUserId(next.id)
-                if (next.provinceId && next.cityId) {
+                setManagerUserId(next?.id ?? '')
+                if (next?.provinceId && next?.cityId) {
                   applyGeoFromProfile(next.countryId, next.provinceId, next.cityId)
                   geoTouchedRef.current = true
                 }
@@ -626,5 +624,6 @@ export function CaravanForm({
       </AppForm>
     </div>
     </FormCard>
+    </div>
   )
 }

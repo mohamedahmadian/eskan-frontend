@@ -29,7 +29,8 @@ import {
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
-import { formatNumber, localizeDigits } from '../../lib/datetime'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
+import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { isAdmin } from '../../lib/roles'
 import type { Group } from '../../types/app'
@@ -203,22 +204,14 @@ export function GroupDetailPage() {
                       <FactTile
                         icon={IdCard}
                         label={t('users.nationalId')}
-                        value={
-                          group.manager.nationalId
-                            ? localizeDigits(group.manager.nationalId, locale)
-                            : empty
-                        }
+                        value={<CopyableDigits value={group.manager.nationalId} empty={empty} />}
                         empty={!group.manager.nationalId}
                         tone="teal"
                       />
                       <FactTile
                         icon={Phone}
                         label={t('users.phone')}
-                        value={
-                          group.manager.phone
-                            ? localizeDigits(group.manager.phone, locale)
-                            : empty
-                        }
+                        value={<CopyableDigits value={group.manager.phone} empty={empty} />}
                         empty={!group.manager.phone}
                         tone="mint"
                       />

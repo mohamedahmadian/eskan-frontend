@@ -254,21 +254,13 @@ export function IssuedLicenseDetailPage() {
               <FormFactTile
                 icon={IdCard}
                 label={t('users.nationalId')}
-                value={
-                  item.manager.nationalId
-                    ? localizeDigits(item.manager.nationalId, locale)
-                    : empty
-                }
-                empty={!item.manager.nationalId}
+                copyValue={item.manager.nationalId}
                 tone="mint"
               />
               <FormFactTile
                 icon={Phone}
                 label={t('users.phone')}
-                value={
-                  item.manager.phone ? localizeDigits(item.manager.phone, locale) : empty
-                }
-                empty={!item.manager.phone}
+                copyValue={item.manager.phone}
                 tone="ink"
                 className="sm:col-span-2"
               />

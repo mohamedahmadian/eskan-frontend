@@ -1,6 +1,3 @@
-@import "@fontsource/vazirmatn/arabic-400.css";
-@import "@fontsource/vazirmatn/arabic-500.css";
-@import "@fontsource/vazirmatn/arabic-700.css";
 @import "@fontsource/vazirmatn/400.css";
 @import "@fontsource/vazirmatn/500.css";
 @import "@fontsource/vazirmatn/700.css";
@@ -81,6 +78,26 @@ th {
 .recharts-wrapper text,
 .recharts-legend-item-text {
   font-family: var(--font-sans);
+}
+
+.eskan-osm-map.leaflet-container {
+  font-family: var(--font-sans);
+  z-index: 0;
+  cursor: pointer;
+}
+
+.eskan-map-pin {
+  background: none;
+  border: none;
+}
+
+.eskan-map-pin-dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--color-teal-500);
+  box-shadow: 0 0 0 4px #fff, 0 2px 8px rgba(20, 40, 40, 0.25);
 }
 
 .rmdp-calendar {
@@ -260,6 +277,24 @@ th {
 .pilgrim-id-card__brand,
 .pilgrim-id-card__badge-wrap {
   position: relative;
+}
+
+.pilgrim-id-card__brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pilgrim-id-card__logo {
+  height: 22px;
+  width: auto;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.pilgrim-id-card--classic .pilgrim-id-card__logo {
+  height: 32px;
 }
 
 .pilgrim-id-card__badge-wrap {

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PaginationBar, SearchBar, TableCard } from '../../components/ui/ListControls'
-import { formatNumber, localizeDigits, toLatinDigits } from '../../lib/datetime'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
+import { formatNumber, toLatinDigits } from '../../lib/datetime'
 import type { ReservationMember } from '../../types/app'
 import { insurancePaidMethodLabel } from './reservation-steps'
 import { InsuranceStatusBadge } from './ReservationStatusBadge'
@@ -159,18 +160,16 @@ export function ReservationMembersGrid({
                       {formatNumber(start + index + 1, locale)}
                     </td>
                     <td className="px-4 py-3 font-medium text-ink-900">{item.user.fullName}</td>
-                    <td className="px-4 py-3" dir="ltr">
-                      {item.user.nationalId
-                        ? localizeDigits(item.user.nationalId, locale)
-                        : '—'}
+                    <td className="px-4 py-3">
+                      <CopyableDigits value={item.user.nationalId} />
                     </td>
                     {showContact ? (
                       <>
                         <td className="px-4 py-3">
                           {item.user.gender ? t(`userGenders.${item.user.gender}`) : '—'}
                         </td>
-                        <td className="px-4 py-3" dir="ltr">
-                          {item.user.phone ? localizeDigits(item.user.phone, locale) : '—'}
+                        <td className="px-4 py-3">
+                          <CopyableDigits value={item.user.phone} />
                         </td>
                       </>
                     ) : null}

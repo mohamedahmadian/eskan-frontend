@@ -1,8 +1,9 @@
 import { Hash, IdCard, MapPin, Package, Store, UserRound } from 'lucide-react'
 import { forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { VoucherFact, VoucherFooter, VoucherTicket } from '../../components/voucher/VoucherTicket'
-import { formatNumber, localizeDigits } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import { formatItemUnit, type ItemQuotaVoucher } from '../../types/app'
 
 export const VoucherCard = forwardRef<HTMLDivElement, { voucher: ItemQuotaVoucher; qrUrl: string | null }>(
@@ -39,8 +40,7 @@ export const VoucherCard = forwardRef<HTMLDivElement, { voucher: ItemQuotaVouche
           <VoucherFact
             icon={IdCard}
             label={t('users.nationalId')}
-            value={localizeDigits(manager.nationalId, locale)}
-            dir="ltr"
+            value={<CopyableDigits value={manager.nationalId} />}
           />
         ) : null}
         <VoucherFact icon={Package} label={t('itemQuotaVouchers.item')} value={voucher.quota.name} />

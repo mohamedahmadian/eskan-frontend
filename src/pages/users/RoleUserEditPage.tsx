@@ -1,9 +1,17 @@
+import { UserRound } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
+import { useAuth } from '../../auth/AuthProvider'
+import {
+  EntityNameSubtitle,
+  LoadingState,
+  PageHeader,
+  userFormShellClassName,
+} from '../../components/ui/Form'
 import { api } from '../../lib/api'
+import { isAdmin } from '../../lib/roles'
 import type { ManagedUser, RoleOption } from '../../types/app'
 import { AccommodationAssignmentsCard } from '../accommodation-managers/AccommodationAssignmentsCard'
 import { UserForm } from './UserForm'
@@ -13,7 +21,9 @@ export function RoleUserEditPage({ scope }: { scope: RoleUserScope }) {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user: actor } = useAuth()
   const keys = scope.i18nPrefix
+  const canAssignRoles = isAdmin(actor)
   const userQuery = useQuery({
     queryKey: [scope.queryKey, id],
     enabled: Boolean(id),
@@ -36,12 +46,15 @@ export function RoleUserEditPage({ scope }: { scope: RoleUserScope }) {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t(`${keys}.edit`)} subtitle={t(`${keys}.editSubtitle`)} />
+      <PageHeader
+        title={t(`${keys}.edit`)}
+        subtitle={<EntityNameSubtitle name={userQuery.data.fullName} icon={UserRound} />}
+      />
       <UserForm
         initial={userQuery.data}
         roles={roles.data}
         lockedRoleCodes={scope.lockedRoleCodes}
-        hideRoles={scope.hideRoles}
+        hideRoles={scope.hideRoles && !canAssignRoles}
         requirePassword={false}
         identityCheckPath={`${scope.apiBase}/identity-check`}
         i18nPrefix={keys}

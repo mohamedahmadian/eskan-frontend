@@ -16,6 +16,7 @@ import { api } from '../lib/api'
 import { cardClassName, listShellClassName } from '../components/ui/Form'
 import { formatNumber } from '../lib/datetime'
 import { usesDedicatedHomeDashboard, isAdmin, isLicenseIssuer } from '../lib/roles'
+import { HeadquartersServiceYearsCard } from './dashboard/HeadquartersServiceYearsCard'
 import { LicenseIssuerDashboard } from './dashboard/LicenseIssuerDashboard'
 import { UserHomeDashboard } from './dashboard/UserHomeDashboard'
 
@@ -61,6 +62,7 @@ function AdminOverview() {
 
   return (
     <div className={`${listShellClassName} space-y-8`}>
+      <HeadquartersServiceYearsCard />
       <section>
         <h2 className="mb-4 text-sm font-medium text-ink-500">{t('dashboard.quickAccess')}</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">

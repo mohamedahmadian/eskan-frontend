@@ -3,6 +3,7 @@ import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
+  SmsGroupSmsButton,
   SmsRecipientPicker,
   type SmsRecipient,
 } from '../../components/sms/SmsRecipientPicker'
@@ -12,7 +13,7 @@ import {
   FormField,
   PageHeader,
   fieldClassName,
-  listShellClassName,
+  formShellClassName,
 } from '../../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { useSendSms } from '../../hooks/useSendSms'
@@ -23,11 +24,13 @@ export function SmsSendPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const [selected, setSelected] = useState<Record<string, SmsRecipient>>({})
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [manualPhone, setManualPhone] = useState('')
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const sms = useSendSms()
 
+  const selectedCount = Object.keys(selected).length
   const phones = useMemo(() => {
     const fromUsers = Object.values(selected).map((item) => item.phone.trim())
     const extra = manualPhone.trim()
@@ -57,15 +60,21 @@ export function SmsSendPage() {
   }
 
   return (
-    <div className={`${listShellClassName} space-y-8`}>
+    <div className={`${formShellClassName} space-y-8`}>
       <PageHeader title={t('sms.sendTitle')} subtitle={t('sms.sendSubtitle')} />
-      <SmsRecipientPicker selected={selected} onChange={setSelected} />
 
-      <FormCard icon={Phone} title={t('sms.sendTitle')} subtitle={t('sms.sendSubtitle')}>
+      <FormCard
+        icon={Phone}
+        title={t('sms.sendTitle')}
+        subtitle={t('sms.sendSubtitle')}
+        action={<SmsGroupSmsButton onClick={() => setPickerOpen(true)} />}
+      >
         <AppForm onSubmit={onSubmit} className={formCardBodyClassName}>
-          {phones.length > 1 ? (
+          {selectedCount > 0 ? (
             <p className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-800">
-              {t('sms.recipientCount', { count: formatNumber(phones.length, locale) })}
+              {selectedCount > 1
+                ? t('sms.recipientCount', { count: formatNumber(selectedCount, locale) })
+                : t('sms.selectedRecipients')}
             </p>
           ) : null}
           <FormField icon={Phone} label={t('sms.manualPhone')} htmlFor="sms-phone">
@@ -92,6 +101,17 @@ export function SmsSendPage() {
           <FormActions submitLabel={t('sms.send')} submitting={sending} />
         </AppForm>
       </FormCard>
+
+      {pickerOpen ? (
+        <SmsRecipientPicker
+          initialSelected={selected}
+          onConfirm={(next) => {
+            setSelected(next)
+            setPickerOpen(false)
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      ) : null}
     </div>
   )
 }

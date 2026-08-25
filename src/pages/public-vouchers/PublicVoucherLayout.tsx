@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AppLogo } from '../../components/brand/AppLogo'
 import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
 
 export function PublicVoucherLayout({
@@ -16,7 +17,10 @@ export function PublicVoucherLayout({
   return (
     <div className="min-h-svh bg-cream-50 px-4 py-8 sm:px-8">
       <div className={userFormShellClassName}>
-        <p className="mb-2 text-xs font-medium text-teal-700">{t('app.name')}</p>
+        <div className="mb-3 flex items-center gap-2">
+          <AppLogo className="h-8 w-auto object-contain" />
+          <p className="text-xs font-medium text-teal-700">{t('app.name')}</p>
+        </div>
         <PageHeader title={title} subtitle={subtitle} backTo={false} />
         {children}
       </div>

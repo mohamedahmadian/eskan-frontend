@@ -41,8 +41,9 @@ import {
 import { confirmToast } from "../../components/ui/confirmToast";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
+import { CopyableDigits } from "../../components/ui/CopyableDigits";
 import { api, getApiErrorMessage } from "../../lib/api";
-import { formatNumber, localizeDigits } from "../../lib/datetime";
+import { formatNumber } from "../../lib/datetime";
 import {
   isValidIranianNationalId,
   normalizeNationalId,
@@ -536,8 +537,7 @@ function MemberLookupForm({
   editing?: ReservationMember | null;
   onCancelEdit?: () => void;
 }) {
-  const { t, i18n } = useTranslation();
-  const locale = i18n.language.split("-")[0] ?? "fa";
+  const { t } = useTranslation();
   const lookupRef = useRef<HTMLInputElement>(null);
   const nationalRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -790,10 +790,7 @@ function MemberLookupForm({
             className="space-y-4"
           >
             {status === "new" && missingNationalId ? (
-              <NationalIdNotFoundNotice
-                nationalId={missingNationalId}
-                locale={locale}
-              />
+              <NationalIdNotFoundNotice nationalId={missingNationalId} />
             ) : null}
             {editingFields ? (
               <div className="grid gap-3 sm:grid-cols-3">
@@ -952,13 +949,7 @@ function MemberLookupForm({
   );
 }
 
-function NationalIdNotFoundNotice({
-  nationalId,
-  locale,
-}: {
-  nationalId: string;
-  locale: string;
-}) {
+function NationalIdNotFoundNotice({ nationalId }: { nationalId: string }) {
   const { t } = useTranslation();
   return (
     <aside
@@ -975,11 +966,8 @@ function NationalIdNotFoundNotice({
         </span>
         <p className="pt-2 text-sm font-semibold leading-7 text-ink-900">
           {t("reservations.nationalIdNotFoundBefore")}
-          <span
-            dir="ltr"
-            className="mx-1.5 inline-flex items-center rounded-lg bg-white px-2 py-0.5 font-bold tracking-wide text-ink-900 shadow-sm ring-1 ring-gold-100"
-          >
-            {localizeDigits(nationalId, locale)}
+          <span className="mx-1.5 inline-flex items-center rounded-lg bg-white px-2 py-0.5 font-bold tracking-wide text-ink-900 shadow-sm ring-1 ring-gold-100">
+            <CopyableDigits value={nationalId} />
           </span>
           {t("reservations.nationalIdNotFoundAfter")}
         </p>

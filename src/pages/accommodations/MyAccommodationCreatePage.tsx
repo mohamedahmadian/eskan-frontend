@@ -69,9 +69,13 @@ export function MyAccommodationCreatePage() {
         onProvinceChange={setProvinceId}
         onSubmit={async (payload) => {
           await api.post('/accommodations', payload)
-          await refresh()
+          try {
+            await refresh()
+          } catch {
+            /* list still opens even if profile refresh fails */
+          }
           toast.success(t('accommodations.created'))
-          navigate('/my-accommodations')
+          navigate('/my-accommodations', { replace: true })
         }}
       />
     </div>

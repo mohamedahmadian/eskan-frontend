@@ -162,6 +162,7 @@ export function SearchBar({
 
   return (
     <AppForm
+      data-enter-immediate=""
       onSubmit={handleSubmit}
       className={bare ? 'mb-4' : `mb-4 p-4 ${cardClassName}`}
     >
@@ -220,12 +221,14 @@ export function SearchBar({
 
 export function EntityRowActions({
   viewTo,
+  showView = true,
   extra,
   editTo,
   onDelete,
   canDelete = true,
 }: {
   viewTo: string
+  showView?: boolean
   extra?: ReactNode
   editTo?: string
   onDelete?: () => void
@@ -234,12 +237,18 @@ export function EntityRowActions({
   const { t } = useTranslation()
   return (
     <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
-      <Link to={viewTo} data-row-view>
-        <Button type="button" variant="ghost">
-          <Eye className="size-4" aria-hidden />
+      {showView ? (
+        <Link to={viewTo} data-row-view>
+          <Button type="button" variant="ghost">
+            <Eye className="size-4" aria-hidden />
+            {t('common.view')}
+          </Button>
+        </Link>
+      ) : (
+        <Link to={viewTo} data-row-view className="sr-only">
           {t('common.view')}
-        </Button>
-      </Link>
+        </Link>
+      )}
       {extra}
       {editTo ? (
         <Link to={editTo} aria-label={t('common.edit')} title={t('common.edit')}>

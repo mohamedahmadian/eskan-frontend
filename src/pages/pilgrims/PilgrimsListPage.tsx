@@ -2,9 +2,12 @@ import {
   Download,
   FileText,
   Flag,
+  IdCard,
+  KeyRound,
   MapPin,
   MapPinned,
   Mars,
+  MessageSquare,
   Plus,
   Upload,
   Venus,
@@ -14,7 +17,6 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { useAuth } from "../../auth/AuthProvider";
 import {
   PaginationBar,
   SearchBar,
@@ -30,8 +32,8 @@ import {
   fieldClassName,
   listShellClassName,
 } from "../../components/ui/Form";
+import { RoleBadges } from "../../components/ui/RoleBadges";
 import { SearchSelect } from "../../components/ui/SearchSelect";
-import { useConfirmDelete } from "../../hooks/useConfirmDelete";
 import { useListParams } from "../../hooks/useListParams";
 import { useListSort } from "../../hooks/useListSort";
 import { api, getApiErrorMessage } from "../../lib/api";
@@ -50,8 +52,6 @@ import {
 export function PilgrimsListPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
-  const { user: actor } = useAuth();
-  const { confirmDelete } = useConfirmDelete();
   const geoName = useGeoName();
   const { q, page, term, setTerm, setPage, searchParams, setParams } =
     useListParams();
@@ -396,8 +396,15 @@ export function PilgrimsListPage() {
           <tbody>
             {rows.map((user) => (
               <tr key={user.id} className="border-t border-line">
-                <td className="px-4 py-3">{user.fullName}</td>
-                <td className="px-4 py-3">{user.username}</td>
+                <td className="px-4 py-3">
+                  <div>
+                    <div>{user.fullName}</div>
+                    <RoleBadges roles={user.roles} />
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  {localizeDigits(user.username, locale)}
+                </td>
                 <td className="px-4 py-3">
                   {user.nationalId
                     ? localizeDigits(user.nationalId, locale)
@@ -412,16 +419,39 @@ export function PilgrimsListPage() {
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/pilgrims/${user.id}`}
-                    editTo={`/pilgrims/${user.id}/edit`}
-                    canDelete={actor?.id !== user.id}
-                    onDelete={() =>
-                      confirmDelete({
-                        message: t("pilgrims.confirmDelete"),
-                        successMessage: t("pilgrims.deleted"),
-                        path: `/pilgrims/${user.id}`,
-                        queryKey: ["pilgrims"],
-                      })
+                    showView={false}
+                    extra={
+                      <>
+                        <Link
+                          to={`/pilgrims/${user.id}/sms`}
+                          aria-label={t("pilgrims.sendSms")}
+                          title={t("pilgrims.sendSms")}
+                        >
+                          <Button type="button" variant="ghost" icon>
+                            <MessageSquare className="size-4" aria-hidden />
+                          </Button>
+                        </Link>
+                        <Link
+                          to={`/pilgrims/${user.id}/card`}
+                          aria-label={t("pilgrims.card")}
+                          title={t("pilgrims.card")}
+                        >
+                          <Button type="button" variant="ghost" icon>
+                            <IdCard className="size-4" aria-hidden />
+                          </Button>
+                        </Link>
+                        <Link
+                          to={`/pilgrims/${user.id}/password`}
+                          aria-label={t("pilgrims.setPassword")}
+                          title={t("pilgrims.setPassword")}
+                        >
+                          <Button type="button" variant="ghost" icon>
+                            <KeyRound className="size-4" aria-hidden />
+                          </Button>
+                        </Link>
+                      </>
                     }
+                    editTo={`/pilgrims/${user.id}/edit`}
                   />
                 </td>
               </tr>

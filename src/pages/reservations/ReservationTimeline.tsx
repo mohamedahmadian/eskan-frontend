@@ -53,36 +53,68 @@ function personName(person?: ReservationPerson | null) {
   return person?.fullName?.trim() || null
 }
 
-export function ReservationTimeline({ reservation }: { reservation: Reservation }) {
+export function ReservationTimeline({
+  reservation,
+  expanded,
+  onClose,
+}: {
+  reservation: Reservation
+  expanded?: boolean
+  onClose?: () => void
+}) {
   const { t } = useTranslation()
   const items = buildTimelineItems(reservation, t)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(Boolean(expanded))
   const panelId = useId()
+  const alwaysOpen = Boolean(expanded)
+  const showContent = alwaysOpen || open
+
+  const heading = (
+    <>
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_18px_rgba(46,189,182,0.28)]">
+        <History className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-semibold text-ink-900">{t('reservations.timeline')}</span>
+        <span className="block text-xs text-ink-500">{t(`reservations.types.${reservation.type}`)}</span>
+      </span>
+    </>
+  )
 
   return (
     <section className={`${cardClassName} overflow-hidden`}>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center gap-3 p-5 text-start transition hover:bg-cream-50 sm:p-6"
-      >
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_18px_rgba(46,189,182,0.28)]">
-          <History className="size-5" aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-base font-semibold text-ink-900">{t('reservations.timeline')}</span>
-          <span className="block text-xs text-ink-500">{t(`reservations.types.${reservation.type}`)}</span>
-        </span>
-        <ChevronDown
-          className={`size-5 shrink-0 text-ink-400 transition ${open ? 'rotate-180' : ''}`}
-          aria-hidden
-        />
-      </button>
+      {alwaysOpen ? (
+        <div className="flex w-full items-center gap-3 p-5 sm:p-6">
+          {heading}
+          {onClose ? (
+            <button
+              type="button"
+              aria-label={t('common.close')}
+              onClick={onClose}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl text-ink-500 transition hover:bg-cream-100 hover:text-ink-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((current) => !current)}
+          className="flex w-full items-center gap-3 p-5 text-start transition hover:bg-cream-50 sm:p-6"
+        >
+          {heading}
+          <ChevronDown
+            className={`size-5 shrink-0 text-ink-400 transition ${open ? 'rotate-180' : ''}`}
+            aria-hidden
+          />
+        </button>
+      )}
       <div
         id={panelId}
-        hidden={!open}
+        hidden={!showContent}
         className="border-t border-line px-5 pb-5 pt-4 sm:px-6 sm:pb-6"
       >
         {items.length ? (

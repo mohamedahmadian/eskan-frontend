@@ -26,6 +26,7 @@ import type {
   UserHomeReservationTotals,
 } from '../../types/app'
 import { ReservationStatusBadge } from '../reservations/ReservationStatusBadge'
+import { HeadquartersServiceYearsCard } from './HeadquartersServiceYearsCard'
 
 const emptyTotals = { all: 0, inProgress: 0, pendingReview: 0, completed: 0 }
 
@@ -315,6 +316,8 @@ export function UserHomeDashboard() {
           </div>
         </div>
       </section>
+
+      <HeadquartersServiceYearsCard />
 
       {query.isLoading ? (
         <p className="text-sm text-ink-500">{t('common.loading')}</p>

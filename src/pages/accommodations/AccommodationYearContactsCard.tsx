@@ -14,6 +14,7 @@ import { TableCard } from '../../components/ui/ListControls'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
 import type { Accommodation } from '../../types/app'
+import { PilgrimNameLink } from './PilgrimNameLink'
 import {
   AccommodationContactsPanel,
   firstIncompleteContactRole,
@@ -148,7 +149,7 @@ export function AccommodationYearContactsCard({
           <thead className="bg-cream-50 text-ink-700">
             <tr>
               <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactRole')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactPerson')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactPilgrim')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('accommodations.year')}</th>
             </tr>
           </thead>
@@ -156,7 +157,12 @@ export function AccommodationYearContactsCard({
             {yearRows.map((item) => (
               <tr key={item.id} className="border-t border-line">
                 <td className="px-4 py-3">{t(`accommodations.contactRoles.${item.role}`)}</td>
-                <td className="px-4 py-3">{item.user.fullName}</td>
+                <td className="px-4 py-3">
+                  <PilgrimNameLink
+                    id={item.user?.id || item.userId}
+                    name={item.user.fullName}
+                  />
+                </td>
                 <td className="px-4 py-3">{formatNumber(item.year, locale)}</td>
               </tr>
             ))}

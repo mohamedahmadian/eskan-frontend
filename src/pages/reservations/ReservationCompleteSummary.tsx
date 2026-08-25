@@ -11,6 +11,7 @@ import {
   Route,
   ScrollText,
   Shield,
+  Timer,
   UserRoundCog,
   Users,
   UserRound,
@@ -21,7 +22,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
 import { cardClassName } from '../../components/ui/Form'
-import { formatNumber } from '../../lib/datetime'
+import { elapsedDurationParts, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
 import { contactRoles, stepLabelKey, workingHeadcount } from './reservation-steps'
@@ -57,6 +58,33 @@ function stayNightCount(start: string | null, end: string | null) {
   return nights > 0 ? nights : 0
 }
 
+function completionDurationLabel(
+  createdAt: string,
+  completedAt: string,
+  locale: string,
+  t: (key: string, options?: { count?: string }) => string,
+) {
+  const endMs = Date.parse(completedAt)
+  if (!Number.isFinite(endMs)) return null
+  const parts = elapsedDurationParts(createdAt, endMs)
+  if (!parts) return null
+  const n = (value: number) => formatNumber(value, locale)
+  const chunks: string[] = []
+  if (parts.days > 0) {
+    chunks.push(t('reservations.elapsedDay', { count: n(parts.days) }))
+  }
+  if (parts.hours > 0) {
+    chunks.push(t('reservations.elapsedHour', { count: n(parts.hours) }))
+  }
+  if (parts.minutes > 0) {
+    chunks.push(t('reservations.elapsedMinute', { count: n(parts.minutes) }))
+  }
+  if (chunks.length === 0) {
+    chunks.push(t('reservations.elapsedSecond', { count: n(parts.seconds) }))
+  }
+  return chunks.join(t('reservations.elapsedJoin'))
+}
+
 export function ReservationCompleteSummary({
   reservation,
   variant = 'complete',
@@ -83,6 +111,9 @@ export function ReservationCompleteSummary({
   const members = reservation.members
   const contacts = reservation.caravanContacts
   const cancelled = variant === 'cancelled'
+  const durationLabel = reservation.completedAt
+    ? completionDurationLabel(reservation.createdAt, reservation.completedAt, locale, t)
+    : null
 
   return (
     <section className={`${cardClassName} overflow-hidden`}>
@@ -122,6 +153,13 @@ export function ReservationCompleteSummary({
                   <CalendarCheck className="size-3 shrink-0 text-teal-600" aria-hidden />
                   <span>{t('reservations.completedAt')}</span>
                   <DateText value={reservation.completedAt} withTime />
+                </span>
+              ) : null}
+              {durationLabel ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-mint-100">
+                  <Timer className="size-3 shrink-0 text-mint-600" aria-hidden />
+                  <span>{t('reservations.completionDuration')}</span>
+                  <span>{durationLabel}</span>
                 </span>
               ) : null}
               {cancelled && reservation.cancelledAt ? (

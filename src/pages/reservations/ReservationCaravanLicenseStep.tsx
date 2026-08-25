@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -21,8 +21,9 @@ import { FileDropField } from '../../components/ui/FileDropField'
 import { Button, FormField, cardClassName } from '../../components/ui/Form'
 import { FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
 import { DateText } from '../../components/ui/DateText'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
-import { formatDate, localizeDigits } from '../../lib/datetime'
+import { formatDate } from '../../lib/datetime'
 import { IssuedLicenseStatusBadge } from '../licenses/license-ui'
 import type {
   Caravan,
@@ -120,8 +121,7 @@ export function ReservationCaravanLicenseStep({
         <LicenseFact
           icon={IdCard}
           label={t('reservations.licenseManagerNationalId')}
-          value={nationalId ? localizeDigits(nationalId, locale) : '—'}
-          ltr={Boolean(nationalId)}
+          value={<CopyableDigits value={nationalId} />}
         />
       </div>
 
@@ -454,12 +454,10 @@ function LicenseFact({
   icon: Icon,
   label,
   value,
-  ltr,
 }: {
   icon: typeof User
   label: string
-  value: string
-  ltr?: boolean
+  value: ReactNode
 }) {
   return (
     <div className="rounded-2xl border border-teal-100 bg-white px-3 py-3 shadow-[0_4px_12px_rgba(20,40,40,0.04)]">
@@ -467,9 +465,7 @@ function LicenseFact({
         <Icon className="size-3.5 text-teal-600" aria-hidden />
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-ink-900" dir={ltr ? 'ltr' : undefined}>
-        {value}
-      </p>
+      <p className="mt-1 text-sm font-semibold text-ink-900">{value}</p>
     </div>
   )
 }

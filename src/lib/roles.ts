@@ -36,6 +36,15 @@ export function canAccessMyCaravans(user: { roles?: { code: string }[] } | null 
   return isAdmin(user) || isCaravanManager(user)
 }
 
+export function canAccessMyReservations(
+  user: { roles?: { code: string }[] } | null | undefined,
+) {
+  return (
+    !isAdmin(user) &&
+    (isPilgrim(user) || isCaravanManager(user) || isGroupManager(user))
+  )
+}
+
 export function canAccessMyGroups(user: { roles?: { code: string }[] } | null | undefined) {
   return (
     isAdmin(user) ||
@@ -48,7 +57,7 @@ export function canAccessMyGroups(user: { roles?: { code: string }[] } | null | 
 export function canAccessMyAccommodations(
   user: { roles?: { code: string }[] } | null | undefined,
 ) {
-  return Boolean(user)
+  return Boolean(user) && !isAdmin(user)
 }
 
 export function usesDedicatedHomeDashboard(

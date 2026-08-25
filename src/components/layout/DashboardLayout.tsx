@@ -1,21 +1,29 @@
 import { Boxes, Menu, PackageOpen, Search, Snowflake, UsersRound, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { api } from '../../lib/api'
+import { api, getImageUrl } from '../../lib/api'
 import { getNavIcon } from '../../lib/icons'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
+import { displayExternalUrl, toExternalHref } from '../../lib/social-links'
 import { getPageMeta } from '../../lib/page-meta'
+import { useHeadquartersSummary } from '../../hooks/useHeadquartersSummary'
 import {
+  canAccessMyAccommodations,
   canAccessMyCaravans,
   canAccessMyGroups,
+  canAccessMyReservations,
   isPilgrim,
   usesDedicatedHomeDashboard,
 } from '../../lib/roles'
 import type { NavMenu, NavModule, Paginated, ReservationListItem } from '../../types/app'
+import { hasMenuAccess } from '../../routes/RequireMenuAccess'
+import { AppLogo } from '../brand/AppLogo'
 import { PageTransition } from '../ui/PageTransition'
+import { AdminFooter } from './AdminFooter'
+import { QuickToolsProvider } from './QuickTools'
 import { UserMenu } from './UserMenu'
 
 type SidebarNavMenu = NavMenu & { label?: string }
@@ -116,9 +124,51 @@ export function DashboardLayout() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const location = useLocation()
+  const showQuickToolsFab =
+    hasMenuAccess('/reception', user?.modules ?? []) &&
+    location.pathname !== '/reception' &&
+    !location.pathname.startsWith('/reception/')
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const mainRef = useRef<HTMLElement>(null)
+  const menuSearchRef = useRef<HTMLInputElement>(null)
+  const menuSearchHintId = 'sidebar-menu-search-hint'
+  const brandingQuery = useHeadquartersSummary()
+  const branding = brandingQuery.data
+  const brandTitle = branding?.title?.trim() || branding?.name?.trim() || t('nav.panel')
+  const brandWebsite = branding?.website?.trim() || ''
+  const brandLogoSrc = branding?.logoId ? getImageUrl(branding.logoId) : undefined
+
+  const focusMenuSearch = useCallback(() => {
+    setOpen(true)
+    const input = menuSearchRef.current
+    if (!input) return
+    input.focus()
+    input.select()
+  }, [])
+
+  useEffect(() => {
+    const DOUBLE_CTRL_MS = 500
+    let lastAt = 0
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.repeat || event.isComposing) return
+      if (event.key !== 'Control') {
+        lastAt = 0
+        return
+      }
+      const now = Date.now()
+      if (now - lastAt >= DOUBLE_CTRL_MS) {
+        lastAt = now
+        return
+      }
+      event.preventDefault()
+      lastAt = 0
+      focusMenuSearch()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [focusMenuSearch])
+
   const meta = getPageMeta(location.pathname)
   const subtitleKey =
     (location.pathname === '/' || location.pathname === '') && usesDedicatedHomeDashboard(user)
@@ -129,7 +179,7 @@ export function DashboardLayout() {
     mainRef.current?.scrollTo(0, 0)
   }, [location.pathname])
 
-  const showPilgrimageYears = isPilgrim(user)
+  const showPilgrimageYears = isPilgrim(user) && canAccessMyReservations(user)
   const mineNavQuery = useQuery({
     queryKey: ['reservations', 'mine', 'nav'],
     enabled: showPilgrimageYears,
@@ -156,12 +206,16 @@ export function DashboardLayout() {
   const modules = useMemo(() => {
     const showMyCaravans = canAccessMyCaravans(user)
     const showMyGroups = canAccessMyGroups(user)
+    const showMyReservations = canAccessMyReservations(user)
+    const showMyAccommodations = canAccessMyAccommodations(user)
     const visible = (user?.modules ?? [])
       .map((mod) => {
         const menus = mod.menus.filter(
           (item) =>
             (item.code !== 'caravans.mine' || showMyCaravans) &&
-            (item.code !== 'groups.mine' || showMyGroups),
+            (item.code !== 'groups.mine' || showMyGroups) &&
+            (item.code !== 'reservations.mine' || showMyReservations) &&
+            (item.code !== 'accommodation.mine' || showMyAccommodations),
         )
         if (mod.code !== 'caravans' || !pilgrimageYearMenus.length) {
           return { ...mod, menus }
@@ -183,8 +237,9 @@ export function DashboardLayout() {
   }, [pilgrimageYearMenus, query, t, user])
 
   return (
-    <div className="h-svh overflow-hidden bg-cream-50">
-      <div className="flex h-full">
+    <QuickToolsProvider>
+      <div className="h-svh overflow-hidden bg-cream-50">
+        <div className="flex h-full">
         {open ? (
           <button
             type="button"
@@ -201,16 +256,43 @@ export function DashboardLayout() {
           }`}
         >
           <div className="flex items-center gap-3 px-5 py-5">
-            <span className="flex size-10 items-center justify-center rounded-full bg-teal-500 text-sm font-bold text-white">
-              ا
-            </span>
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-ink-900">{t('nav.panel')}</p>
-              <p className="truncate text-xs text-ink-400">{t('app.name')}</p>
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <NavLink to="/" onClick={() => setOpen(false)} className="shrink-0">
+                <AppLogo
+                  src={brandLogoSrc}
+                  decorative
+                  className={
+                    brandLogoSrc
+                      ? 'h-10 w-10 shrink-0 rounded-xl object-contain ring-1 ring-teal-100'
+                      : 'h-10 w-auto max-w-10 shrink-0 object-contain'
+                  }
+                />
+              </NavLink>
+              <div className="min-w-0">
+                <NavLink
+                  to="/"
+                  onClick={() => setOpen(false)}
+                  className="block truncate font-semibold text-ink-900"
+                >
+                  {brandTitle}
+                </NavLink>
+                {brandWebsite ? (
+                  <a
+                    href={toExternalHref(brandWebsite, 'website')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-0.5 block truncate text-xs text-ink-400 hover:text-teal-700"
+                    dir="ltr"
+                    title={displayExternalUrl(brandWebsite)}
+                  >
+                    {displayExternalUrl(brandWebsite)}
+                  </a>
+                ) : null}
+              </div>
             </div>
             <button
               type="button"
-              className="ms-auto rounded-lg p-2 text-ink-500 lg:hidden"
+              className="rounded-lg p-2 text-ink-500 lg:hidden"
               onClick={() => setOpen(false)}
               aria-label={t('nav.closeMenu')}
             >
@@ -222,12 +304,20 @@ export function DashboardLayout() {
             <label className="relative block">
               <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" />
               <input
+                ref={menuSearchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('nav.searchMenu')}
+                aria-describedby={menuSearchHintId}
                 className="w-full rounded-2xl border border-line bg-cream-50 py-2.5 ps-10 pe-3 text-sm placeholder:text-ink-400"
               />
             </label>
+            <p
+              id={menuSearchHintId}
+              className="mt-2 px-1 text-[9px] leading-tight text-ink-300"
+            >
+              {t('nav.searchMenuHint')}
+            </p>
           </div>
 
           <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
@@ -291,15 +381,19 @@ export function DashboardLayout() {
           </header>
           <main
             ref={mainRef}
-            className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-8"
+            className={`min-h-0 flex-1 overflow-y-auto px-4 sm:px-8 ${
+              showQuickToolsFab ? 'pb-24' : 'pb-8'
+            }`}
           >
             <PageTransition>
               <Outlet />
             </PageTransition>
           </main>
+          <AdminFooter branding={branding} compactEnd={showQuickToolsFab} />
+        </div>
         </div>
       </div>
-    </div>
+    </QuickToolsProvider>
   )
 }
 

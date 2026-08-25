@@ -20,8 +20,9 @@ import { toast } from 'sonner'
 import { Button, FormField, fieldClassName, inputClassName } from '../../components/ui/Form'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { DateText } from '../../components/ui/DateText'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { parseDigitString, localizeDigits } from '../../lib/datetime'
+import { parseDigitString } from '../../lib/datetime'
 import {
   isValidIranianNationalId,
   normalizeNationalId,
@@ -424,8 +425,7 @@ function AssignedPersonCard({
   fromSystem: boolean
   onClear: () => void
 }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const { t } = useTranslation()
   const fullName = [draft.firstName, draft.lastName].filter(Boolean).join(' ')
 
   return (
@@ -447,14 +447,12 @@ function AssignedPersonCard({
           <FactChip
             icon={IdCard}
             label={t('users.nationalId')}
-            value={localizeDigits(draft.nationalId, locale)}
-            ltr
+            value={<CopyableDigits value={draft.nationalId} />}
           />
           <FactChip
             icon={Phone}
             label={t('users.phone')}
-            value={draft.phone ? localizeDigits(draft.phone, locale) : '—'}
-            ltr
+            value={<CopyableDigits value={draft.phone} />}
           />
           <FactChip icon={UserRound} label={t('users.firstName')} value={draft.firstName} />
           <FactChip icon={UserRound} label={t('users.lastName')} value={draft.lastName} />

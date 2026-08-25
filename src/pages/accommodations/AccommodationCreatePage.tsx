@@ -75,7 +75,7 @@ export function AccommodationCreatePage() {
         onSubmit={async (payload) => {
           await api.post('/accommodations', payload)
           toast.success(t('accommodations.created'))
-          navigate('/accommodations')
+          navigate('/accommodations', { replace: true })
         }}
       />
     </div>

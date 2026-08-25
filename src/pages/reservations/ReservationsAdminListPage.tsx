@@ -39,6 +39,7 @@ import {
   currentPersianYear,
   endOfIranWeekIso,
   formatNumber,
+  localizeDigits,
   persianYearOptions,
   startOfIranWeekIso,
   todayIsoDate,
@@ -459,7 +460,9 @@ export function ReservationsAdminListPage() {
                     { value: "", label: t("reservations.caravanManager") },
                     ...(managers.data ?? []).map((item) => ({
                       value: item.id,
-                      label: item.fullName,
+                      label: item.nationalId
+                        ? `${item.fullName} · ${localizeDigits(item.nationalId, locale)}`
+                        : item.fullName,
                     })),
                   ]}
                   placeholder={t("reservations.caravanManager")}
@@ -607,7 +610,18 @@ export function ReservationsAdminListPage() {
                 <tr key={row.id}>
                   <td className="px-4 py-3">{n(row.year)}</td>
                   <td className="px-4 py-3">
-                    {row.createdBy?.fullName ?? "—"}
+                    {row.createdBy?.fullName ? (
+                      <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span>{row.createdBy.fullName}</span>
+                        {row.createdBy.nationalId ? (
+                          <span className="text-xs text-ink-500" dir="ltr">
+                            {localizeDigits(row.createdBy.nationalId, locale)}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-3">{row.caravan?.name ?? row.group?.name ?? "—"}</td>
                   <td className="px-4 py-3">

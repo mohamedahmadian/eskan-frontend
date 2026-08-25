@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import {
   Button,
   EntityNameSubtitle,
@@ -45,6 +46,7 @@ import { useGeoName } from '../../lib/geo'
 import { isAdmin } from '../../lib/roles'
 import type { Caravan } from '../../types/app'
 import { caravanContactRoles, type CaravanContactRole } from './caravanContacts'
+import { CaravanYearAlert } from './CaravanYearAlert'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -113,6 +115,9 @@ export function CaravanDetailPage() {
         title={t('caravans.details')}
         subtitle={<EntityNameSubtitle name={caravan.name} icon={Tent} />}
       />
+
+      <div className="space-y-4">
+      <CaravanYearAlert caravan={caravan} />
 
       <section className={`${cardClassName} overflow-hidden`}>
         <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
@@ -236,22 +241,14 @@ export function CaravanDetailPage() {
                       <FactTile
                         icon={IdCard}
                         label={t('users.nationalId')}
-                        value={
-                          caravan.manager.nationalId
-                            ? localizeDigits(caravan.manager.nationalId, locale)
-                            : empty
-                        }
+                        value={<CopyableDigits value={caravan.manager.nationalId} empty={empty} />}
                         empty={!caravan.manager.nationalId}
                         tone="teal"
                       />
                       <FactTile
                         icon={Phone}
                         label={t('users.phone')}
-                        value={
-                          caravan.manager.phone
-                            ? localizeDigits(caravan.manager.phone, locale)
-                            : empty
-                        }
+                        value={<CopyableDigits value={caravan.manager.phone} empty={empty} />}
                         empty={!caravan.manager.phone}
                         tone="mint"
                       />
@@ -299,17 +296,13 @@ export function CaravanDetailPage() {
                           {contact.user.fullName ||
                             `${contact.user.firstName} ${contact.user.lastName}`.trim()}
                         </p>
-                        <p className="flex items-center gap-1.5 text-xs text-ink-600" dir="ltr">
+                        <p className="flex items-center gap-1.5 text-xs text-ink-600">
                           <IdCard className="size-3.5 shrink-0 text-teal-600" aria-hidden />
-                          {contact.user.nationalId
-                            ? localizeDigits(contact.user.nationalId, locale)
-                            : empty}
+                          <CopyableDigits value={contact.user.nationalId} empty={empty} />
                         </p>
-                        <p className="flex items-center gap-1.5 text-xs text-ink-600" dir="ltr">
+                        <p className="flex items-center gap-1.5 text-xs text-ink-600">
                           <Phone className="size-3.5 shrink-0 text-teal-600" aria-hidden />
-                          {contact.user.phone
-                            ? localizeDigits(contact.user.phone, locale)
-                            : empty}
+                          <CopyableDigits value={contact.user.phone} empty={empty} />
                         </p>
                         {contact.user.birthDate ? (
                           <p className="flex items-center gap-1.5 text-xs text-ink-600">
@@ -473,6 +466,7 @@ export function CaravanDetailPage() {
           />
         </div>
       </section>
+      </div>
     </div>
   )
 }

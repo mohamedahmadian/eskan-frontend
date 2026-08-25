@@ -30,8 +30,9 @@ import {
   fieldClassName,
 } from '../../components/ui/Form'
 import { confirmToast } from '../../components/ui/confirmToast'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { formatNumber, localizeDigits } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import { isValidIranianNationalId, normalizeNationalId } from '../../lib/national-id'
 import type {
   Reservation,
@@ -412,8 +413,7 @@ function ContactRoleCard({
   onOpen: () => void
   onChanged?: () => void
 }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const { t } = useTranslation()
   const RoleIcon = roleIcons[role]
   const [nationalId, setNationalId] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -531,10 +531,10 @@ function ContactRoleCard({
               <p className="mt-0.5 text-sm font-medium text-ink-800">{current.user.fullName}</p>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-500">
                 {current.user.nationalId ? (
-                  <span dir="ltr">{localizeDigits(current.user.nationalId, locale)}</span>
+                  <CopyableDigits value={current.user.nationalId} />
                 ) : null}
                 {current.user.phone ? (
-                  <span dir="ltr">{localizeDigits(current.user.phone, locale)}</span>
+                  <CopyableDigits value={current.user.phone} />
                 ) : null}
               </div>
             </>
@@ -622,7 +622,7 @@ function ContactRoleCard({
             </div>
           </FormField>
           {status === 'new' && missingNationalId ? (
-            <NationalIdNotFoundNotice nationalId={missingNationalId} locale={locale} />
+            <NationalIdNotFoundNotice nationalId={missingNationalId} />
           ) : null}
           {showDetails ? (
             <div className="space-y-4 rounded-2xl border border-teal-200 bg-gradient-to-b from-teal-50 to-white p-4 shadow-[0_12px_28px_rgba(20,40,40,0.1)]">
@@ -682,13 +682,7 @@ function ContactRoleCard({
   )
 }
 
-function NationalIdNotFoundNotice({
-  nationalId,
-  locale,
-}: {
-  nationalId: string
-  locale: string
-}) {
+function NationalIdNotFoundNotice({ nationalId }: { nationalId: string }) {
   const { t } = useTranslation()
   return (
     <aside
@@ -705,11 +699,8 @@ function NationalIdNotFoundNotice({
         </span>
         <p className="pt-2 text-sm font-semibold leading-7 text-ink-900">
           {t('reservations.nationalIdNotFoundBefore')}
-          <span
-            dir="ltr"
-            className="mx-1.5 inline-flex items-center rounded-lg bg-white px-2 py-0.5 font-bold tracking-wide text-ink-900 shadow-sm ring-1 ring-gold-100"
-          >
-            {localizeDigits(nationalId, locale)}
+          <span className="mx-1.5 inline-flex items-center rounded-lg bg-white px-2 py-0.5 font-bold tracking-wide text-ink-900 shadow-sm ring-1 ring-gold-100">
+            <CopyableDigits value={nationalId} />
           </span>
           {t('reservations.nationalIdNotFoundAfter')}
         </p>

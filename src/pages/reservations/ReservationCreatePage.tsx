@@ -31,7 +31,7 @@ import {
 } from '../../components/ui/Form'
 import { FormMetaChip } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { addDaysIso, currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
+import { addDaysIso, currentPersianYear, formatNumber } from '../../lib/datetime'
 import { isCaravanManager } from '../../lib/roles'
 import type {
   ManagedUser,
@@ -69,6 +69,7 @@ import {
   type TravelValues,
 } from './ReservationTravelFields'
 import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
+import { StepBlockedNotice } from './ReservationStepNav'
 import { StepProgressChart } from './StepProgressChart'
 
 const defaultTypes: ReservationType[] = ['INDIVIDUAL', 'GROUP', 'CARAVAN']
@@ -260,17 +261,29 @@ export function ReservationCreatePage() {
   const lastStep = stepIndex === steps.length - 1
   const partyKind: PartyKind | null = type === 'GROUP' || type === 'CARAVAN' ? type : null
 
+  const permitOptionsQuery = useQuery({
+    queryKey: ['reservations', 'permit-options', values.caravanId, reservationYear],
+    enabled: Boolean(values.caravanId) && type === 'CARAVAN',
+    queryFn: async () => {
+      const { data } = await api.get<ReservationPermitOptions>('/reservations/permit-options', {
+        params: { caravanId: values.caravanId, year: reservationYear },
+      })
+      return data
+    },
+  })
+
   function isIssuedLicenseAwaitingHqApproval(licenseId: string) {
-    if (!values.caravanId || !licenseId) return false
-    const options = queryClient.getQueryData<ReservationPermitOptions>([
-      'reservations',
-      'permit-options',
-      values.caravanId,
-      reservationYear,
-    ])
-    const selected = options?.items.find((item) => item.id === licenseId)
+    if (!licenseId) return false
+    const selected = permitOptionsQuery.data?.items.find((item) => item.id === licenseId)
     return selected?.status === 'ISSUED'
   }
+
+  const finalSubmitBlocked =
+    lastStep &&
+    type === 'CARAVAN' &&
+    permitDraft.source === 'ISSUED_LICENSE' &&
+    Boolean(permitDraft.issuedLicenseId) &&
+    isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
 
   const draftQuery = useQuery({
     queryKey: ['reservations', draftParam, 'create-draft'],
@@ -891,10 +904,7 @@ export function ReservationCreatePage() {
                 label={t('reservations.createOnBehalfOf', { name: subject.fullName })}
               />
               {'nationalId' in subject && subject.nationalId ? (
-                <FormMetaChip
-                  icon={IdCard}
-                  label={localizeDigits(subject.nationalId, locale)}
-                />
+                <FormMetaChip icon={IdCard} copyValue={subject.nationalId} />
               ) : null}
             </span>
           ) : draftId ? (
@@ -1057,12 +1067,20 @@ export function ReservationCreatePage() {
           <Button
             type="submit"
             className="ms-auto"
-            disabled={submitting || (step === 'type' && !type)}
+            disabled={submitting || (step === 'type' && !type) || finalSubmitBlocked}
+            aria-describedby={finalSubmitBlocked ? 'final-submit-blocked-reason' : undefined}
           >
             {lastStep ? t('reservations.finalSubmit') : t('reservations.nextStep')}
             {lastStep ? <Check className="size-4" aria-hidden /> : <ChevronLeft className="size-4" aria-hidden />}
           </Button>
         </div>
+        {finalSubmitBlocked ? (
+          <StepBlockedNotice
+            id="final-submit-blocked-reason"
+            title={t('reservations.finalSubmitBlockedTitle')}
+            message={t('reservations.permitAwaitingHqApproval')}
+          />
+        ) : null}
         {step === 'dates' ? <OccasionStayHint /> : null}
       </AppForm>
       {rulesModalOpen && type ? (

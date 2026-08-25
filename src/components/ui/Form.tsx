@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
+import { useNavigationHistory } from '../../lib/navigation-history'
 
 const variants = {
   primary:
@@ -146,7 +147,7 @@ const PAGE_BACK_LEAVES = new Set([
   'pilgrimage-history',
 ])
 
-const PAGE_BACK_NESTED_LISTS = new Set(['items', 'vouchers'])
+const PAGE_BACK_NESTED_LISTS = new Set(['items', 'vouchers', 'phones'])
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -191,31 +192,34 @@ export function PageHeader({
   title: string
   subtitle?: ReactNode
   action?: ReactNode
-  /** مسیر بازگشت؛ اگر نیاید از URL استنباط می‌شود. `false` آیکون را مخفی می‌کند. */
+  /** مسیر بازگشت اگر تاریخچه خالی باشد. `false` آیکون را مخفی می‌کند. */
   backTo?: string | false
   className?: string
 }) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
-  const resolvedBackTo = backTo === false ? undefined : backTo ?? resolvePageBackTo(pathname)
+  const { goBack } = useNavigationHistory()
+  const fallback = backTo === false ? undefined : backTo ?? resolvePageBackTo(pathname)
+  const showBack = Boolean(fallback)
 
   return (
     <div className={`flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between ${className}`}>
       <div>
         <div className="flex items-center gap-2">
-          {resolvedBackTo ? (
-            <Link
-              to={resolvedBackTo}
+          {showBack ? (
+            <button
+              type="button"
               aria-label={t('common.back')}
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl text-teal-700 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 print:hidden"
+              onClick={() => goBack(fallback)}
             >
               <ArrowRight className="size-5 ltr:rotate-180" aria-hidden />
-            </Link>
+            </button>
           ) : null}
           <h1 className="text-2xl font-semibold text-ink-900">{title}</h1>
         </div>
         {subtitle ? (
-          <div className={`mt-1 max-w-2xl text-sm text-ink-500 ${resolvedBackTo ? 'ps-11' : ''}`}>
+          <div className={`mt-1 max-w-2xl text-sm text-ink-500 ${showBack ? 'ps-11' : ''}`}>
             {subtitle}
           </div>
         ) : null}
@@ -303,6 +307,21 @@ function focusFirstFormField(form: HTMLFormElement) {
   }
 }
 
+const FORM_ENTER_DOUBLE_MS = 500
+let pendingEnterTimer: ReturnType<typeof setTimeout> | null = null
+
+export function cancelPendingFormEnter() {
+  if (pendingEnterTimer != null) {
+    clearTimeout(pendingEnterTimer)
+    pendingEnterTimer = null
+  }
+}
+
+function shouldDelayFormEnter(form: HTMLFormElement) {
+  if (form.dataset.enterImmediate != null) return false
+  return Boolean(document.querySelector('[data-quick-tools]'))
+}
+
 export function handleFormEnter(event: KeyboardEvent<HTMLFormElement>) {
   if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
   const target = event.target as HTMLElement | null
@@ -318,7 +337,17 @@ export function handleFormEnter(event: KeyboardEvent<HTMLFormElement>) {
   }
 
   event.preventDefault()
-  submitIfValid(event.currentTarget)
+  const form = event.currentTarget
+  if (shouldDelayFormEnter(form) && (form.noValidate || form.checkValidity())) {
+    cancelPendingFormEnter()
+    pendingEnterTimer = setTimeout(() => {
+      pendingEnterTimer = null
+      if (!form.isConnected) return
+      submitIfValid(form)
+    }, FORM_ENTER_DOUBLE_MS)
+    return
+  }
+  submitIfValid(form)
 }
 
 export function AppForm({

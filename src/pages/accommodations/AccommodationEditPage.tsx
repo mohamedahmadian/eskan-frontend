@@ -93,7 +93,7 @@ export function AccommodationEditPage() {
         onSubmit={async (payload) => {
           await api.patch(`/accommodations/${id}`, payload)
           toast.success(t('accommodations.updated'))
-          navigate(`${listPath}/${id}`)
+          navigate(listPath)
         }}
       />
     </div>

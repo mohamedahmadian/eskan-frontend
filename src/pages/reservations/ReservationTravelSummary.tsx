@@ -19,8 +19,9 @@ import {
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { cardClassName } from '../../components/ui/Form'
-import { formatNumber, localizeDigits } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
 import { ReservationCountMetrics } from './ReservationCountMetrics'
@@ -248,11 +249,7 @@ export function ReservationTravelSummary({
                 <FactTile
                   icon={Phone}
                   label={t('users.phone')}
-                  value={
-                    reservation.caravanManager.phone
-                      ? localizeDigits(reservation.caravanManager.phone, locale)
-                      : empty
-                  }
+                  value={<CopyableDigits value={reservation.caravanManager.phone} empty={empty} />}
                   empty={!reservation.caravanManager.phone}
                   tone="teal"
                 />

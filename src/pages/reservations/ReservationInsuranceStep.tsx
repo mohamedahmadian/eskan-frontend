@@ -27,10 +27,11 @@ import {
 } from 'recharts'
 import { toast } from 'sonner'
 import { DateText } from '../../components/ui/DateText'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { Button, LoadingState, cardClassName } from '../../components/ui/Form'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { formatGroupedNumber, formatNumber, localizeDigits } from '../../lib/datetime'
+import { formatGroupedNumber, formatNumber } from '../../lib/datetime'
 import type { ReceptionInsurancePlan, ReceptionSettings, Reservation, ReservationMember } from '../../types/app'
 import {
   canPayInsurance,
@@ -638,10 +639,8 @@ function GroupInsuranceBody({
                       ) : null}
                     </td>
                     <td className="px-3 py-2">{n(index + 1)}</td>
-                    <td className="px-3 py-2" dir="ltr">
-                      {item.user.nationalId
-                        ? localizeDigits(item.user.nationalId, locale)
-                        : '—'}
+                    <td className="px-3 py-2">
+                      <CopyableDigits value={item.user.nationalId} />
                     </td>
                     <td className="px-3 py-2">{item.user.firstName}</td>
                     <td className="px-3 py-2">{item.user.lastName}</td>
@@ -698,10 +697,8 @@ function GroupInsuranceBody({
                     />
                   ) : null}
                 </div>
-                <p className="text-ink-600" dir="ltr">
-                  {item.user.nationalId
-                    ? localizeDigits(item.user.nationalId, locale)
-                    : '—'}
+                <p className="text-ink-600">
+                  <CopyableDigits value={item.user.nationalId} />
                 </p>
                 <p className="mt-1 text-ink-600">
                   {item.user.gender ? t(`userGenders.${item.user.gender}`) : '—'}

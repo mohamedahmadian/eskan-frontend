@@ -1,6 +1,7 @@
 import { type LucideIcon } from 'lucide-react'
 import { type ReactNode, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AppLogo } from '../brand/AppLogo'
 import { formatDate, formatDateTimeDate, formatTime } from '../../lib/datetime'
 
 export const VoucherTicket = forwardRef<
@@ -30,9 +31,12 @@ export const VoucherTicket = forwardRef<
       <div className="relative bg-teal-500 px-6 py-5 text-white">
         <div className="pointer-events-none absolute inset-0 opacity-[0.12]" style={headerPattern} />
         <div className="relative flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-medium tracking-wide text-teal-50">{t('app.name')}</p>
-            <h2 className="mt-1 text-xl font-semibold">{title}</h2>
+          <div className="flex min-w-0 items-start gap-3">
+            <AppLogo className="h-10 w-auto shrink-0 object-contain" decorative />
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium tracking-wide text-teal-50">{t('app.name')}</p>
+              <h2 className="mt-1 text-xl font-semibold">{title}</h2>
+            </div>
           </div>
           <div className="rounded-2xl bg-white/15 px-3 py-2 text-center">
             <p className="text-[11px] text-teal-50">{codeLabel}</p>

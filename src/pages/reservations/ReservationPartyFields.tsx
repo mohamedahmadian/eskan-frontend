@@ -337,7 +337,7 @@ export function ReservationPartyFields({
                 }
                 onChange={(next) => {
                   setManagerChoice(next)
-                  onDraftChange({ managerUserId: next.id })
+                  onDraftChange({ managerUserId: next?.id ?? '' })
                 }}
               />
             ) : null}

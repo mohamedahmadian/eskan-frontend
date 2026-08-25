@@ -47,6 +47,15 @@ export function getPageMeta(pathname: string): {
   if (pathname.includes("/card") && pathname.startsWith("/pilgrims/")) {
     return { titleKey: "pilgrims.card", subtitleKey: "pilgrims.cardSubtitle" };
   }
+  if (
+    pathname.includes("/pilgrimage-history") &&
+    pathname.startsWith("/pilgrims/")
+  ) {
+    return {
+      titleKey: "pilgrims.pilgrimageHistory",
+      subtitleKey: "pilgrims.pilgrimageHistorySubtitle",
+    };
+  }
   if (pathname.includes("/edit") && pathname.startsWith("/pilgrims/")) {
     return { titleKey: "pilgrims.edit", subtitleKey: "pilgrims.editSubtitle" };
   }
@@ -92,7 +101,7 @@ export function getPageMeta(pathname: string): {
   ) {
     return {
       titleKey: "caravanPilgrimageHistory.title",
-      subtitleKey: "caravanPilgrimageHistory.listSubtitle",
+      subtitleKey: "caravanPilgrimageHistory.subtitle",
     };
   }
   if (pathname.startsWith("/my-caravans/new")) {
@@ -169,6 +178,9 @@ export function getPageMeta(pathname: string): {
       titleKey: "menus.receptionSettings",
       subtitleKey: "receptionSettings.subtitle",
     };
+  }
+  if (pathname === "/reception" || pathname.startsWith("/reception/")) {
+    return { titleKey: "menus.reception", subtitleKey: "reception.subtitle" };
   }
   if (pathname.startsWith("/reservation-stats")) {
     return {
@@ -464,6 +476,73 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "licenses.issuedSubtitle",
     };
   }
+  if (pathname.startsWith("/headquarters/info/new")) {
+    return {
+      titleKey: "headquartersInfo.create",
+      subtitleKey: "headquartersInfo.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/phones/new") &&
+    pathname.startsWith("/headquarters/info/")
+  ) {
+    return {
+      titleKey: "headquartersPhones.create",
+      subtitleKey: "headquartersPhones.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/phones/") &&
+    pathname.includes("/edit") &&
+    pathname.startsWith("/headquarters/info/")
+  ) {
+    return {
+      titleKey: "headquartersPhones.edit",
+      subtitleKey: "headquartersPhones.editSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/phones/") &&
+    pathname.startsWith("/headquarters/info/")
+  ) {
+    return {
+      titleKey: "headquartersPhones.details",
+      subtitleKey: "headquartersPhones.detailsSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/phones") &&
+    pathname.startsWith("/headquarters/info/")
+  ) {
+    return {
+      titleKey: "headquartersPhones.title",
+      subtitleKey: "headquartersPhones.subtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/headquarters/info/")
+  ) {
+    return {
+      titleKey: "headquartersInfo.edit",
+      subtitleKey: "headquartersInfo.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/headquarters/info/") &&
+    pathname !== "/headquarters/info"
+  ) {
+    return {
+      titleKey: "headquartersInfo.details",
+      subtitleKey: "headquartersInfo.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/headquarters/info")) {
+    return {
+      titleKey: "menus.headquartersInfo",
+      subtitleKey: "headquartersInfo.subtitle",
+    };
+  }
   if (pathname.startsWith("/headquarters/representatives/new")) {
     return {
       titleKey: "headquartersRepresentatives.create",
@@ -568,6 +647,12 @@ export function getPageMeta(pathname: string): {
   }
   if (pathname.startsWith("/users")) {
     return { titleKey: "menus.usersList", subtitleKey: "users.subtitle" };
+  }
+  if (pathname.startsWith("/caravan-year-management")) {
+    return {
+      titleKey: "menus.caravanYearManagement",
+      subtitleKey: "caravanYearManagement.subtitle",
+    };
   }
   if (pathname.startsWith("/caravan-managers/new")) {
     return {
@@ -956,6 +1041,96 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.myIceVouchers",
       subtitleKey: "myIceVouchers.subtitle",
+    };
+  }
+  if (pathname.startsWith("/evaluations/campaigns/new")) {
+    return {
+      titleKey: "evaluations.campaigns.create",
+      subtitleKey: "evaluations.campaigns.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/evaluations/campaigns/")
+  ) {
+    return {
+      titleKey: "evaluations.campaigns.edit",
+      subtitleKey: "evaluations.campaigns.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/evaluations/campaigns/") &&
+    pathname !== "/evaluations/campaigns"
+  ) {
+    return {
+      titleKey: "evaluations.campaigns.details",
+      subtitleKey: "evaluations.campaigns.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/evaluations/campaigns")) {
+    return {
+      titleKey: "menus.evaluationCampaigns",
+      subtitleKey: "evaluations.campaigns.subtitle",
+    };
+  }
+  if (pathname.startsWith("/evaluations/questions/new")) {
+    return {
+      titleKey: "evaluations.questions.create",
+      subtitleKey: "evaluations.questions.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/evaluations/questions/")
+  ) {
+    return {
+      titleKey: "evaluations.questions.edit",
+      subtitleKey: "evaluations.questions.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/evaluations/questions/") &&
+    pathname !== "/evaluations/questions"
+  ) {
+    return {
+      titleKey: "evaluations.questions.details",
+      subtitleKey: "evaluations.questions.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/evaluations/questions")) {
+    return {
+      titleKey: "menus.evaluationQuestions",
+      subtitleKey: "evaluations.questions.subtitle",
+    };
+  }
+  if (pathname.startsWith("/evaluations/submit")) {
+    return {
+      titleKey: "menus.evaluationSubmit",
+      subtitleKey: "evaluations.submit.subtitle",
+    };
+  }
+  if (pathname.startsWith("/evaluations/") && pathname !== "/evaluations") {
+    return {
+      titleKey: "evaluations.details",
+      subtitleKey: "evaluations.list.subtitle",
+    };
+  }
+  if (pathname.startsWith("/evaluations")) {
+    return {
+      titleKey: "menus.evaluationsList",
+      subtitleKey: "evaluations.list.subtitle",
+    };
+  }
+  if (pathname.startsWith("/my-evaluations/") && pathname !== "/my-evaluations") {
+    return {
+      titleKey: "evaluations.details",
+      subtitleKey: "evaluations.mine.subtitle",
+    };
+  }
+  if (pathname.startsWith("/my-evaluations")) {
+    return {
+      titleKey: "menus.myEvaluations",
+      subtitleKey: "evaluations.mine.subtitle",
     };
   }
   return { titleKey: "menus.overview", subtitleKey: "dashboard.subtitle" };

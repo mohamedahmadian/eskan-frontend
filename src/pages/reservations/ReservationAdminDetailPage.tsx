@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   ClipboardCheck,
+  History,
   IdCard,
   Phone,
   RotateCcw,
@@ -25,8 +26,9 @@ import {
 } from '../../components/ui/Form'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { SearchSelect } from '../../components/ui/SearchSelect'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { formatNumber, localizeDigits } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import type { Reservation, ReservationPerson, ReservationStatus } from '../../types/app'
 import {
   currentStepFromStatus,
@@ -76,6 +78,7 @@ export function ReservationAdminDetailPage() {
   const [viewedStep, setViewedStep] = useState<ReservationStepCode | null>(
     cancelled ? null : currentStep,
   )
+  const [toolPanel, setToolPanel] = useState<'timeline' | 'return' | null>(null)
 
   useEffect(() => {
     setViewedStep(cancelled ? null : currentStep)
@@ -98,6 +101,7 @@ export function ReservationAdminDetailPage() {
   const canRejectMidStage =
     !rejected && reservation.status !== 'CANCELLED' && reservation.status !== 'COMPLETED'
   const rewindTargets = validRewindStatuses(reservation.type, reservation.status)
+  const headerBtnClass = 'h-8 gap-1 !rounded-xl !px-2.5 !py-1 text-xs shadow-none'
 
   return (
     <div className={listShellClassName}>
@@ -110,24 +114,70 @@ export function ReservationAdminDetailPage() {
           />
         }
         action={
-          pendingReview ? (
-            <ReservationReviewActions
-              reservation={reservation}
-              onChanged={refresh}
-              compact
-              requireRejectReason
-            />
-          ) : canRejectMidStage ? (
-            <ReservationReviewActions
-              reservation={reservation}
-              onChanged={refresh}
-              compact
-              rejectOnly
-              requireRejectReason
-            />
-          ) : null
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {pendingReview ? (
+              <ReservationReviewActions
+                reservation={reservation}
+                onChanged={refresh}
+                compact
+                requireRejectReason
+              />
+            ) : canRejectMidStage ? (
+              <ReservationReviewActions
+                reservation={reservation}
+                onChanged={refresh}
+                compact
+                rejectOnly
+                requireRejectReason
+              />
+            ) : null}
+            <Button
+              type="button"
+              variant={toolPanel === 'timeline' ? 'primary' : 'ghost'}
+              className={headerBtnClass}
+              aria-pressed={toolPanel === 'timeline'}
+              onClick={() => setToolPanel((current) => (current === 'timeline' ? null : 'timeline'))}
+            >
+              <History className="size-3.5" aria-hidden />
+              {t('reservations.timeline')}
+            </Button>
+            {rewindTargets.length ? (
+              <Button
+                type="button"
+                variant={toolPanel === 'return' ? 'primary' : 'soft'}
+                className={headerBtnClass}
+                aria-pressed={toolPanel === 'return'}
+                onClick={() => setToolPanel((current) => (current === 'return' ? null : 'return'))}
+              >
+                <RotateCcw className="size-3.5" aria-hidden />
+                {t('reservations.returnForCorrection')}
+              </Button>
+            ) : null}
+          </div>
         }
       />
+
+      {toolPanel === 'timeline' ? (
+        <div className="mb-4">
+          <ReservationTimeline
+            reservation={reservation}
+            expanded
+            onClose={() => setToolPanel(null)}
+          />
+        </div>
+      ) : null}
+      {toolPanel === 'return' && rewindTargets.length ? (
+        <ReturnForCorrectionCard
+          key={`${reservation.id}-${reservation.status}`}
+          reservation={reservation}
+          returnOptions={rewindTargets}
+          onChanged={() => {
+            setToolPanel(null)
+            refresh()
+          }}
+          onClose={() => setToolPanel(null)}
+        />
+      ) : null}
 
       <ApplicantCard
         person={
@@ -135,7 +185,6 @@ export function ReservationAdminDetailPage() {
             ? reservation.caravanManager
             : reservation.createdBy
         }
-        locale={locale}
         caravanApplicant={reservation.type === 'CARAVAN' && Boolean(reservation.caravanManager)}
       />
 
@@ -193,15 +242,6 @@ export function ReservationAdminDetailPage() {
         )}
       </ReservationWizardShell>
 
-      {rewindTargets.length ? (
-        <ReturnForCorrectionCard
-          key={`${reservation.id}-${reservation.status}`}
-          reservation={reservation}
-          returnOptions={rewindTargets}
-          onChanged={refresh}
-        />
-      ) : null}
-
       {reservation.managementNotes || reservation.caravanManagerNotes ? (
         <section className={`${cardClassName} mt-4 overflow-hidden`}>
           <ReservationSectionHeader icon={StickyNote} title={t('reservations.notesSection')} />
@@ -223,21 +263,15 @@ export function ReservationAdminDetailPage() {
           </div>
         </section>
       ) : null}
-
-      <div className="mt-4">
-        <ReservationTimeline reservation={reservation} />
-      </div>
     </div>
   )
 }
 
 function ApplicantCard({
   person,
-  locale,
   caravanApplicant,
 }: {
   person: ReservationPerson
-  locale: string
   caravanApplicant?: boolean
 }) {
   const { t } = useTranslation()
@@ -257,14 +291,12 @@ function ApplicantCard({
         <ApplicantTile
           icon={Phone}
           label={t('users.phone')}
-          value={person.phone ? localizeDigits(person.phone, locale) : '—'}
-          ltr={Boolean(person.phone)}
+          value={<CopyableDigits value={person.phone} />}
         />
         <ApplicantTile
           icon={IdCard}
           label={t('users.nationalId')}
-          value={person.nationalId ? localizeDigits(person.nationalId, locale) : '—'}
-          ltr={Boolean(person.nationalId)}
+          value={<CopyableDigits value={person.nationalId} />}
         />
       </dl>
     </section>
@@ -275,12 +307,10 @@ function ApplicantTile({
   icon: Icon,
   label,
   value,
-  ltr,
 }: {
   icon: typeof UserRound
   label: string
-  value: string
-  ltr?: boolean
+  value: ReactNode
 }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50 to-white px-3 py-3">
@@ -289,12 +319,7 @@ function ApplicantTile({
       </span>
       <div className="min-w-0">
         <dt className="text-[11px] font-medium text-ink-500">{label}</dt>
-        <dd
-          className="mt-0.5 break-words text-sm font-semibold text-ink-900"
-          dir={ltr ? 'ltr' : undefined}
-        >
-          {value}
-        </dd>
+        <dd className="mt-0.5 break-words text-sm font-semibold text-ink-900">{value}</dd>
       </div>
     </div>
   )
@@ -338,7 +363,9 @@ function AdminEditableStep({
             </>
           }
         />
-        <ReservationPermitPanel reservation={reservation} mode="admin" onChanged={onChanged} />
+        {reservation.type === 'CARAVAN' ? (
+          <ReservationPermitPanel reservation={reservation} mode="admin" onChanged={onChanged} />
+        ) : null}
       </div>
     )
   }
@@ -428,10 +455,12 @@ function ReturnForCorrectionCard({
   reservation,
   returnOptions,
   onChanged,
+  onClose,
 }: {
   reservation: Reservation
   returnOptions: ReservationStatus[]
   onChanged: () => void
+  onClose?: () => void
 }) {
   const { t } = useTranslation()
   const defaultTarget =
@@ -476,7 +505,17 @@ function ReturnForCorrectionCard({
   }
 
   return (
-    <section className={`${cardClassName} mt-4`}>
+    <section className={`${cardClassName} relative mb-4 overflow-hidden`}>
+      {onClose ? (
+        <button
+          type="button"
+          aria-label={t('common.close')}
+          onClick={onClose}
+          className="absolute end-3 top-3 z-10 inline-flex size-9 items-center justify-center rounded-2xl text-ink-500 transition hover:bg-white/80 hover:text-ink-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+        >
+          <X className="size-4" aria-hidden />
+        </button>
+      ) : null}
       <ReservationSectionHeader
         icon={RotateCcw}
         title={t('reservations.returnForCorrection')}

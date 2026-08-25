@@ -30,10 +30,11 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppForm, FormActions, FormField, ToggleField, fieldClassName } from '../../components/ui/Form'
 import { FormCard } from '../../components/ui/FormLayout'
+import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear } from '../../lib/datetime'
+import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import {
   accommodationStatuses,
@@ -73,8 +74,6 @@ export type AccommodationPayload = {
   managementType: ManagementType
   maleCapacity: number
   femaleCapacity: number
-  assignedMaleCapacity: number
-  assignedFemaleCapacity: number
   phone: string | null
   address: string | null
   neshanAddress: string | null
@@ -145,7 +144,8 @@ export function AccommodationForm({
   onProvinceChange: (provinceId: string) => void
   onSubmit: (payload: AccommodationPayload) => Promise<void>
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState<AccommodationTab>('general')
@@ -157,8 +157,6 @@ export function AccommodationForm({
     managementType: initial?.managementType ?? managementTypes.SELF_SUFFICIENT,
     maleCapacity: String(initial?.maleCapacity ?? 0),
     femaleCapacity: String(initial?.femaleCapacity ?? 0),
-    assignedMaleCapacity: String(initial?.assignedMaleCapacity ?? 0),
-    assignedFemaleCapacity: String(initial?.assignedFemaleCapacity ?? 0),
     phone: initial?.phone ?? '',
     address: initial?.address ?? '',
     neshanAddress: initial?.neshanAddress ?? '',
@@ -230,8 +228,27 @@ export function AccommodationForm({
     return `space-y-4 ${tab === id ? '' : 'hidden'}`
   }
 
+  const maleCapacityDisabled = values.genderType === genderTypes.FEMALE
+  const femaleCapacityDisabled = values.genderType === genderTypes.MALE
+  const capacityFieldClassName = `${fieldClassName} disabled:cursor-not-allowed disabled:opacity-60`
+  const assignedFieldClassName = `${fieldClassName} bg-cream-100 text-ink-700`
+  const assignedMaleCapacity = initial?.assignedMaleCapacity ?? 0
+  const assignedFemaleCapacity = initial?.assignedFemaleCapacity ?? 0
+
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({ ...current, [key]: value }))
+  }
+
+  function setGenderType(next: GenderType) {
+    setValues((current) => ({
+      ...current,
+      genderType: next,
+      ...(next === genderTypes.MALE
+        ? { femaleCapacity: '0' }
+        : next === genderTypes.FEMALE
+          ? { maleCapacity: '0' }
+          : {}),
+    }))
   }
 
   function toggleManager(userId: string) {
@@ -256,10 +273,8 @@ export function AccommodationForm({
         status: values.status,
         genderType: values.genderType,
         managementType: values.managementType,
-        maleCapacity: toNumber(values.maleCapacity),
-        femaleCapacity: toNumber(values.femaleCapacity),
-        assignedMaleCapacity: toNumber(values.assignedMaleCapacity),
-        assignedFemaleCapacity: toNumber(values.assignedFemaleCapacity),
+        maleCapacity: maleCapacityDisabled ? 0 : toNumber(values.maleCapacity),
+        femaleCapacity: femaleCapacityDisabled ? 0 : toNumber(values.femaleCapacity),
         phone: emptyToNull(values.phone),
         address: emptyToNull(values.address),
         neshanAddress: emptyToNull(values.neshanAddress),
@@ -355,29 +370,18 @@ export function AccommodationForm({
               }))}
             />
           </FormField>
-          <FormField icon={ToggleRight} label={t('accommodations.status')} htmlFor="status">
+          <FormField icon={Users} label={t('accommodations.genderType')} htmlFor="genderType">
             <SearchSelect
-              id="status"
-              value={values.status}
-              onChange={(next) => set('status', next as AccommodationStatus)}
-              options={Object.values(accommodationStatuses).map((status) => ({
-                value: status,
-                label: t(`accommodationStatuses.${status}`),
+              id="genderType"
+              value={values.genderType}
+              onChange={(next) => setGenderType(next as GenderType)}
+              options={Object.values(genderTypes).map((gender) => ({
+                value: gender,
+                label: t(`genderTypes.${gender}`),
               }))}
             />
           </FormField>
         </div>
-        <FormField icon={Users} label={t('accommodations.genderType')} htmlFor="genderType">
-          <SearchSelect
-            id="genderType"
-            value={values.genderType}
-            onChange={(next) => set('genderType', next as GenderType)}
-            options={Object.values(genderTypes).map((gender) => ({
-              value: gender,
-              label: t(`genderTypes.${gender}`),
-            }))}
-          />
-        </FormField>
         <FormField icon={BadgeCheck} label={t('accommodations.managementType')} htmlFor="managementType">
           <SearchSelect
             id="managementType"
@@ -389,14 +393,38 @@ export function AccommodationForm({
             }))}
           />
         </FormField>
-        <FormField icon={Phone} label={t('accommodations.phone')} htmlFor="phone">
-          <input
-            id="phone"
-            className={fieldClassName}
-            value={values.phone}
-            onChange={(e) => set('phone', e.target.value)}
-          />
-        </FormField>
+        {initial ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField icon={Phone} label={t('accommodations.phone')} htmlFor="phone">
+              <input
+                id="phone"
+                className={fieldClassName}
+                value={values.phone}
+                onChange={(e) => set('phone', e.target.value)}
+              />
+            </FormField>
+            <FormField icon={ToggleRight} label={t('accommodations.status')} htmlFor="status">
+              <SearchSelect
+                id="status"
+                value={values.status}
+                onChange={(next) => set('status', next as AccommodationStatus)}
+                options={Object.values(accommodationStatuses).map((status) => ({
+                  value: status,
+                  label: t(`accommodationStatuses.${status}`),
+                }))}
+              />
+            </FormField>
+          </div>
+        ) : (
+          <FormField icon={Phone} label={t('accommodations.phone')} htmlFor="phone">
+            <input
+              id="phone"
+              className={fieldClassName}
+              value={values.phone}
+              onChange={(e) => set('phone', e.target.value)}
+            />
+          </FormField>
+        )}
         <FormField icon={AlignLeft} label={t('accommodations.description')} htmlFor="description">
           <textarea
             id="description"
@@ -516,6 +544,14 @@ export function AccommodationForm({
             />
           </FormField>
         </div>
+        <OsmMapPicker
+          latitude={values.latitude}
+          longitude={values.longitude}
+          active={tab === 'location'}
+          onChange={(latitude, longitude) => {
+            setValues((current) => ({ ...current, latitude, longitude }))
+          }}
+        />
       </div>
 
       <div data-tab="capacity" className={panelClass('capacity')}>
@@ -525,7 +561,8 @@ export function AccommodationForm({
               id="maleCapacity"
               type="number"
               min={0}
-              className={fieldClassName}
+              disabled={maleCapacityDisabled}
+              className={capacityFieldClassName}
               value={values.maleCapacity}
               onChange={(e) => set('maleCapacity', e.target.value)}
             />
@@ -535,7 +572,8 @@ export function AccommodationForm({
               id="femaleCapacity"
               type="number"
               min={0}
-              className={fieldClassName}
+              disabled={femaleCapacityDisabled}
+              className={capacityFieldClassName}
               value={values.femaleCapacity}
               onChange={(e) => set('femaleCapacity', e.target.value)}
             />
@@ -547,11 +585,10 @@ export function AccommodationForm({
           >
             <input
               id="assignedMaleCapacity"
-              type="number"
-              min={0}
-              className={fieldClassName}
-              value={values.assignedMaleCapacity}
-              onChange={(e) => set('assignedMaleCapacity', e.target.value)}
+              readOnly
+              tabIndex={-1}
+              className={assignedFieldClassName}
+              value={formatNumber(assignedMaleCapacity, locale)}
             />
           </FormField>
           <FormField
@@ -561,11 +598,10 @@ export function AccommodationForm({
           >
             <input
               id="assignedFemaleCapacity"
-              type="number"
-              min={0}
-              className={fieldClassName}
-              value={values.assignedFemaleCapacity}
-              onChange={(e) => set('assignedFemaleCapacity', e.target.value)}
+              readOnly
+              tabIndex={-1}
+              className={assignedFieldClassName}
+              value={formatNumber(assignedFemaleCapacity, locale)}
             />
           </FormField>
           <FormField icon={Route} label={t('accommodations.distanceToShrineKm')} htmlFor="distanceToShrineKm">

@@ -76,6 +76,14 @@ function omitError(current: Record<string, string>, id: string) {
   return rest
 }
 
+type IdentityCheckResponse = {
+  taken: boolean
+  nationalIdTaken?: boolean
+  nationalIdOwnerName?: string | null
+  phoneTaken?: boolean
+  usernameTaken?: boolean
+}
+
 export type UserPayload = {
   username: string
   password?: string
@@ -197,8 +205,8 @@ export function UserForm({
   const nationalIdCheckSeq = useRef(0)
   const phoneCheckSeq = useRef(0)
   const usernameCheckSeq = useRef(0)
-  const personalFieldsLocked = !nationalIdReady
-  const isCreate = !initial
+  const isCreate = !initial?.id
+  const personalFieldsLocked = isCreate && !nationalIdReady
 
   useEffect(() => {
     const id = pendingFocusId.current
@@ -286,6 +294,13 @@ export function UserForm({
     }
   }
 
+  function nationalIdTakenMessage(name?: string | null) {
+    const trimmed = name?.trim()
+    return trimmed
+      ? t('users.nationalIdTaken', { name: trimmed })
+      : t('users.nationalIdTakenUnknown')
+  }
+
   async function checkNationalIdTaken(raw?: string): Promise<boolean> {
     const value = normalizeNationalId(raw ?? nationalId)
     if (!value) {
@@ -316,7 +331,7 @@ export function UserForm({
     setCheckingNationalId(true)
     setNationalIdReady(false)
     try {
-      const { data } = await api.post<{ taken: boolean; nationalIdTaken?: boolean }>(
+      const { data } = await api.post<IdentityCheckResponse>(
         identityCheckPath,
         {
           nationalId: value,
@@ -326,7 +341,7 @@ export function UserForm({
       if (seq !== nationalIdCheckSeq.current) return false
       if (data.nationalIdTaken ?? data.taken) {
         setNationalIdReady(false)
-        const message = t('users.nationalIdTaken')
+        const message = nationalIdTakenMessage(data.nationalIdOwnerName)
         setFieldError('nationalId', message)
         toast.error(message)
         return false
@@ -526,7 +541,11 @@ export function UserForm({
       if (axios.isAxiosError(error) && error.response?.status === 409) {
         const message = getApiErrorMessage(error, t('users.usernameTaken'))
         if (message.includes('کد ملی')) {
-          failField('personal', 'nationalId', t('users.nationalIdTaken'))
+          failField(
+            'personal',
+            'nationalId',
+            message.includes('متعلق') ? message : t('users.nationalIdTakenUnknown'),
+          )
         } else if (message.includes('تلفن') || message.includes('شماره')) {
           failField('personal', 'phone', t('users.phoneTaken'))
         } else if (message.includes('نام کاربری')) {

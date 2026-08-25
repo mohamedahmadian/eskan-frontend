@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { NavigationHistoryProvider } from "./lib/navigation-history";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./auth/AuthProvider";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
@@ -10,6 +11,7 @@ import { CaravanCreatePage } from "./pages/caravans/CaravanCreatePage";
 import { CaravanDetailPage } from "./pages/caravans/CaravanDetailPage";
 import { CaravanEditPage } from "./pages/caravans/CaravanEditPage";
 import { CaravanPilgrimageHistoryPage } from "./pages/caravans/CaravanPilgrimageHistoryPage";
+import { CaravanYearManagementPage } from "./pages/caravans/CaravanYearManagementPage";
 import { CaravansListPage } from "./pages/caravans/CaravansListPage";
 import { MyCaravanCreatePage } from "./pages/caravans/MyCaravanCreatePage";
 import { MyCaravansListPage } from "./pages/caravans/MyCaravansListPage";
@@ -21,6 +23,7 @@ import { MyGroupCreatePage } from "./pages/groups/MyGroupCreatePage";
 import { MyGroupsListPage } from "./pages/groups/MyGroupsListPage";
 import { MyReservationsListPage } from "./pages/reservations/MyReservationsListPage";
 import { ReceptionSettingsPage } from "./pages/reservations/ReceptionSettingsPage";
+import { ReceptionPage } from "./pages/reception/ReceptionPage";
 import { ReservationAdminDetailPage } from "./pages/reservations/ReservationAdminDetailPage";
 import { ReservationCreatePage } from "./pages/reservations/ReservationCreatePage";
 import { ReservationsAdminListPage } from "./pages/reservations/ReservationsAdminListPage";
@@ -64,11 +67,14 @@ import { RedCrescentDetailPage } from "./pages/red-crescents/RedCrescentDetailPa
 import { RedCrescentEditPage } from "./pages/red-crescents/RedCrescentEditPage";
 import { RedCrescentsListPage } from "./pages/red-crescents/RedCrescentsListPage";
 import { LoginPage } from "./pages/LoginPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { RegisterPage } from "./pages/RegisterPage";
 import { OverviewPage } from "./pages/OverviewPage";
 import { PilgrimCardPage } from "./pages/pilgrims/PilgrimCardPage";
 import { PilgrimCreatePage } from "./pages/pilgrims/PilgrimCreatePage";
 import { PilgrimDetailPage } from "./pages/pilgrims/PilgrimDetailPage";
 import { PilgrimEditPage } from "./pages/pilgrims/PilgrimEditPage";
+import { PilgrimPilgrimageHistoryPage } from "./pages/pilgrims/PilgrimPilgrimageHistoryPage";
 import { PilgrimSendSmsPage } from "./pages/pilgrims/PilgrimSendSmsPage";
 import { PilgrimSetPasswordPage } from "./pages/pilgrims/PilgrimSetPasswordPage";
 import { PilgrimsImportPage } from "./pages/pilgrims/PilgrimsImportPage";
@@ -98,6 +104,14 @@ import { CaravanManagerCreatePage } from "./pages/caravan-managers/CaravanManage
 import { CaravanManagerDetailPage } from "./pages/caravan-managers/CaravanManagerDetailPage";
 import { CaravanManagerEditPage } from "./pages/caravan-managers/CaravanManagerEditPage";
 import { CaravanManagersListPage } from "./pages/caravan-managers/CaravanManagersListPage";
+import { HeadquartersInfoCreatePage } from "./pages/headquarters-info/HeadquartersInfoCreatePage";
+import { HeadquartersInfoDetailPage } from "./pages/headquarters-info/HeadquartersInfoDetailPage";
+import { HeadquartersInfoEditPage } from "./pages/headquarters-info/HeadquartersInfoEditPage";
+import { HeadquartersInfoListPage } from "./pages/headquarters-info/HeadquartersInfoListPage";
+import { HeadquartersPhoneCreatePage } from "./pages/headquarters-phones/HeadquartersPhoneCreatePage";
+import { HeadquartersPhoneDetailPage } from "./pages/headquarters-phones/HeadquartersPhoneDetailPage";
+import { HeadquartersPhoneEditPage } from "./pages/headquarters-phones/HeadquartersPhoneEditPage";
+import { HeadquartersPhonesListPage } from "./pages/headquarters-phones/HeadquartersPhonesListPage";
 import { HeadquartersRepresentativeCreatePage } from "./pages/headquarters-representatives/HeadquartersRepresentativeCreatePage";
 import { HeadquartersRepresentativeDetailPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeDetailPage";
 import { HeadquartersRepresentativeEditPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeEditPage";
@@ -154,6 +168,18 @@ import { IceVouchersListPage } from "./pages/ice-vouchers/IceVouchersListPage";
 import { LogisticsSettingsPage } from "./pages/ice-vouchers/LogisticsSettingsPage";
 import { MyIceVoucherDetailPage } from "./pages/ice-vouchers/MyIceVoucherDetailPage";
 import { MyIceVouchersListPage } from "./pages/ice-vouchers/MyIceVouchersListPage";
+import { EvaluationCampaignCreatePage } from "./pages/evaluations/EvaluationCampaignCreatePage";
+import { EvaluationCampaignDetailPage } from "./pages/evaluations/EvaluationCampaignDetailPage";
+import { EvaluationCampaignEditPage } from "./pages/evaluations/EvaluationCampaignEditPage";
+import { EvaluationCampaignsListPage } from "./pages/evaluations/EvaluationCampaignsListPage";
+import { EvaluationDetailPage } from "./pages/evaluations/EvaluationDetailPage";
+import { EvaluationQuestionCreatePage } from "./pages/evaluations/EvaluationQuestionCreatePage";
+import { EvaluationQuestionDetailPage } from "./pages/evaluations/EvaluationQuestionDetailPage";
+import { EvaluationQuestionEditPage } from "./pages/evaluations/EvaluationQuestionEditPage";
+import { EvaluationQuestionsListPage } from "./pages/evaluations/EvaluationQuestionsListPage";
+import { EvaluationSubmitPage } from "./pages/evaluations/EvaluationSubmitPage";
+import { EvaluationsListPage } from "./pages/evaluations/EvaluationsListPage";
+import { MyEvaluationsPage } from "./pages/evaluations/MyEvaluationsPage";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { RequireMenuAccess } from "./routes/RequireMenuAccess";
 import { PublicIceVoucherPage } from "./pages/public-vouchers/PublicIceVoucherPage";
@@ -182,9 +208,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
+          <NavigationHistoryProvider>
           <AppToaster />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="/v/item/:code" element={<PublicItemVoucherPage />} />
             <Route path="/v/ice/:code" element={<PublicIceVoucherPage />} />
             <Route element={<ProtectedRoute />}>
@@ -206,6 +235,10 @@ export default function App() {
                   <Route
                     path="/pilgrims/:id/card"
                     element={<PilgrimCardPage />}
+                  />
+                  <Route
+                    path="/pilgrims/:id/pilgrimage-history"
+                    element={<PilgrimPilgrimageHistoryPage />}
                   />
                   <Route
                     path="/pilgrims/:id/sms"
@@ -239,6 +272,16 @@ export default function App() {
                     element={<CaravanEditPage />}
                   />
                   <Route path="/caravans/:id" element={<CaravanDetailPage />} />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/caravan-year-management" />
+                  }
+                >
+                  <Route
+                    path="/caravan-year-management"
+                    element={<CaravanYearManagementPage />}
+                  />
                 </Route>
                 <Route element={<RequireMenuAccess path="/my-caravans" />}>
                   <Route path="/my-caravans" element={<MyCaravansListPage />} />
@@ -310,6 +353,9 @@ export default function App() {
                     path="/reservations/:id"
                     element={<ReservationAdminDetailPage />}
                   />
+                </Route>
+                <Route element={<RequireMenuAccess path="/reception" />}>
+                  <Route path="/reception" element={<ReceptionPage />} />
                 </Route>
                 <Route
                   element={<RequireMenuAccess path="/reception-settings" />}
@@ -574,6 +620,42 @@ export default function App() {
                   <Route
                     path="/accommodation-managers/:id/edit"
                     element={<AccommodationManagerEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/headquarters/info" />}
+                >
+                  <Route
+                    path="/headquarters/info"
+                    element={<HeadquartersInfoListPage />}
+                  />
+                  <Route
+                    path="/headquarters/info/new"
+                    element={<HeadquartersInfoCreatePage />}
+                  />
+                  <Route
+                    path="/headquarters/info/:id/phones"
+                    element={<HeadquartersPhonesListPage />}
+                  />
+                  <Route
+                    path="/headquarters/info/:id/phones/new"
+                    element={<HeadquartersPhoneCreatePage />}
+                  />
+                  <Route
+                    path="/headquarters/info/:id/phones/:phoneId"
+                    element={<HeadquartersPhoneDetailPage />}
+                  />
+                  <Route
+                    path="/headquarters/info/:id/phones/:phoneId/edit"
+                    element={<HeadquartersPhoneEditPage />}
+                  />
+                  <Route
+                    path="/headquarters/info/:id"
+                    element={<HeadquartersInfoDetailPage />}
+                  />
+                  <Route
+                    path="/headquarters/info/:id/edit"
+                    element={<HeadquartersInfoEditPage />}
                   />
                 </Route>
                 <Route
@@ -921,10 +1003,74 @@ export default function App() {
                     element={<IceVoucherReportPage />}
                   />
                 </Route>
+                <Route
+                  element={<RequireMenuAccess path="/evaluations/campaigns" />}
+                >
+                  <Route
+                    path="/evaluations/campaigns"
+                    element={<EvaluationCampaignsListPage />}
+                  />
+                  <Route
+                    path="/evaluations/campaigns/new"
+                    element={<EvaluationCampaignCreatePage />}
+                  />
+                  <Route
+                    path="/evaluations/campaigns/:id"
+                    element={<EvaluationCampaignDetailPage />}
+                  />
+                  <Route
+                    path="/evaluations/campaigns/:id/edit"
+                    element={<EvaluationCampaignEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/evaluations/questions" />}
+                >
+                  <Route
+                    path="/evaluations/questions"
+                    element={<EvaluationQuestionsListPage />}
+                  />
+                  <Route
+                    path="/evaluations/questions/new"
+                    element={<EvaluationQuestionCreatePage />}
+                  />
+                  <Route
+                    path="/evaluations/questions/:id"
+                    element={<EvaluationQuestionDetailPage />}
+                  />
+                  <Route
+                    path="/evaluations/questions/:id/edit"
+                    element={<EvaluationQuestionEditPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/evaluations/submit" />}>
+                  <Route
+                    path="/evaluations/submit"
+                    element={<EvaluationSubmitPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/evaluations" />}>
+                  <Route path="/evaluations" element={<EvaluationsListPage />} />
+                  <Route
+                    path="/evaluations/:id"
+                    element={<EvaluationDetailPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/my-evaluations" />}>
+                  <Route
+                    path="/my-evaluations"
+                    element={<MyEvaluationsPage />}
+                  />
+                  <Route
+                    path="/my-evaluations/:id"
+                    element={<EvaluationDetailPage />}
+                  />
+                </Route>
               </Route>
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </NavigationHistoryProvider>
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>

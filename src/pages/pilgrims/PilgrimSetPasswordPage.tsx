@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { KeyRound, MessageSquare, UserRound } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { KeyRound, MessageSquare, Sparkles, UserRound } from 'lucide-react'
+import { type FormEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import {
   AppForm,
+  Button,
   EntityNameSubtitle,
   FormActions,
   FormField,
@@ -17,6 +18,7 @@ import {
 } from '../../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
+import { generateRepeatingDigitPassword } from '../../lib/password'
 import type { ManagedUser } from '../../types/app'
 
 export function PilgrimSetPasswordPage() {
@@ -26,6 +28,18 @@ export function PilgrimSetPasswordPage() {
   const [password, setPassword] = useState('')
   const [sendSms, setSendSms] = useState(false)
   const [saving, setSaving] = useState(false)
+  const passwordInputRef = useRef<HTMLInputElement>(null)
+
+  function fillGeneratedPassword() {
+    const next = generateRepeatingDigitPassword()
+    setPassword(next)
+    requestAnimationFrame(() => {
+      const input = passwordInputRef.current
+      if (!input) return
+      input.focus()
+      input.select()
+    })
+  }
 
   const query = useQuery({
     queryKey: ['pilgrims', id],
@@ -85,17 +99,25 @@ export function PilgrimSetPasswordPage() {
       >
         <AppForm onSubmit={onSubmit} className={formCardBodyClassName}>
           <FormField icon={KeyRound} label={t('auth.newPassword')} htmlFor="newPassword">
-            <input
-              id="newPassword"
-              type="password"
-              className={fieldClassName}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete="new-password"
-              autoFocus
-            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                ref={passwordInputRef}
+                id="newPassword"
+                type="text"
+                className={`${fieldClassName} min-w-0 flex-1`}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                autoFocus
+                dir="ltr"
+              />
+              <Button type="button" variant="soft" className="shrink-0" onClick={fillGeneratedPassword}>
+                <Sparkles className="size-4" aria-hidden />
+                {t('pilgrims.generatePassword')}
+              </Button>
+            </div>
           </FormField>
           <FormField icon={MessageSquare} label={t('sms.send')}>
             <CheckboxField

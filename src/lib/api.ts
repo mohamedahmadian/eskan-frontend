@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { isPublicVoucherPath } from './voucher-links'
+import { isPublicSessionPath } from './public-paths'
 
 const envApiUrl = import.meta.env.VITE_API_URL?.trim()
 
@@ -45,7 +45,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('eskan_token')
       const path = window.location.pathname
-      if (!path.startsWith('/login') && !isPublicVoucherPath(path)) {
+      if (!isPublicSessionPath(path)) {
         window.location.assign('/login')
       }
     }

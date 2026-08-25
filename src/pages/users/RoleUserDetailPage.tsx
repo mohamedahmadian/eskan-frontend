@@ -6,6 +6,7 @@ import {
   FileImage,
   FileText,
   Flag,
+  History,
   IdCard,
   ImagePlus,
   KeyRound,
@@ -20,6 +21,7 @@ import {
   Send,
   Share2,
   Shield,
+  Tent,
   ToggleRight,
   UserRound,
   type LucideIcon,
@@ -40,22 +42,23 @@ import {
   userFormShellClassName,
 } from '../../components/ui/Form'
 import { DateText } from '../../components/ui/DateText'
-import { TableCard } from '../../components/ui/ListControls'
-import { confirmToast } from '../../components/ui/confirmToast'
+import { EntityRowActions, TableCard } from '../../components/ui/ListControls'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { toast } from 'sonner'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
-import { formatRoles } from '../../lib/roles'
+import { formatRoles, isAdmin } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import type { ManagedUser } from '../../types/app'
 import { HeadquartersAreasCard } from '../headquarters-representatives/HeadquartersAreasCard'
 import type { RoleUserScope } from './user-scopes'
+import { RoleUserProfileHeader } from './RoleUserProfileHeader'
 import { SetUserPasswordModal } from './SetUserPasswordModal'
 
 const baseTabs = ['personal', 'account', 'location', 'documents', 'social', 'other'] as const
-type UserDetailTab = (typeof baseTabs)[number] | 'accommodations' | 'areas'
+type UserDetailTab = (typeof baseTabs)[number] | 'accommodations' | 'caravans' | 'areas'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -82,6 +85,7 @@ const tabIcons: Record<UserDetailTab, LucideIcon> = {
   social: Share2,
   other: FileText,
   accommodations: Building2,
+  caravans: Tent,
   areas: Map,
 }
 
@@ -108,10 +112,11 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
 
   const tabs = useMemo(() => {
     const items: UserDetailTab[] = [...baseTabs]
+    if (scope.showCaravans) items.splice(1, 0, 'caravans')
     if (scope.showAccommodations) items.push('accommodations')
     if (scope.showHeadquartersAreas) items.push('areas')
     return items
-  }, [scope.showAccommodations, scope.showHeadquartersAreas])
+  }, [scope.showCaravans, scope.showAccommodations, scope.showHeadquartersAreas])
 
   if (!query.data) {
     return <LoadingState />
@@ -119,6 +124,7 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
   const user = query.data
 
   const isSelf = actor?.id === user.id
+  const hideRoles = Boolean(scope.hideRoles) && !isAdmin(actor)
   const locale = user.locale as AppLanguage
   const empty = '—'
   const religionLabel = user.religion
@@ -128,7 +134,6 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
     : empty
   const cityLabel = user.city ? geoName(user.city) : ''
   const rolesLabel = formatRoles(user.roles, t)
-  const isActive = user.status === 'ACTIVE'
 
   async function submitUserPassword(password: string) {
     if (!user.phone) {
@@ -164,43 +169,7 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
       />
 
       <section className={`${cardClassName} overflow-hidden`}>
-        <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
-          <div
-            className="pointer-events-none absolute -start-8 -top-10 size-32 rounded-full bg-teal-200/30"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
-            aria-hidden
-          />
-          <div className="relative flex items-start gap-3">
-            <UserAvatar user={user} />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-base font-semibold text-ink-900">{user.fullName}</h2>
-                <StatusBadge active={isActive} />
-              </div>
-              <p className="mt-1 text-xs leading-6 text-ink-600" dir="ltr">
-                @{user.username}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {user.nationalId ? (
-                  <MetaChip
-                    icon={IdCard}
-                    label={localizeDigits(user.nationalId, uiLocale)}
-                  />
-                ) : null}
-                {user.phone ? (
-                  <MetaChip icon={Phone} label={localizeDigits(user.phone, uiLocale)} />
-                ) : null}
-                {cityLabel ? <MetaChip icon={MapPin} label={cityLabel} /> : null}
-                {!scope.hideRoles && rolesLabel ? (
-                  <MetaChip icon={Shield} label={rolesLabel} />
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </header>
+        <RoleUserProfileHeader user={user} hideRoles={scope.hideRoles} />
 
         <nav className="flex flex-wrap gap-2 border-b border-line bg-cream-50/60 px-4 py-3 sm:px-5">
           {tabs.map((item) => {
@@ -251,16 +220,14 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                 <FactTile
                   icon={IdCard}
                   label={t('users.nationalId')}
-                  value={
-                    user.nationalId ? localizeDigits(user.nationalId, uiLocale) : empty
-                  }
+                  value={<CopyableDigits value={user.nationalId} empty={empty} />}
                   empty={!user.nationalId}
                   tone="teal"
                 />
                 <FactTile
                   icon={Phone}
                   label={t('users.phone')}
-                  value={user.phone ? localizeDigits(user.phone, uiLocale) : empty}
+                  value={<CopyableDigits value={user.phone} empty={empty} />}
                   empty={!user.phone}
                   tone="mint"
                 />
@@ -275,6 +242,69 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
             </section>
           ) : null}
 
+          {scope.showCaravans && tab === 'caravans' ? (
+            <section>
+              <SectionTitle icon={Tent}>{t('users.tabs.caravans')}</SectionTitle>
+              <TableCard
+                empty={t('caravanManagers.noCaravans')}
+                hasRows={Boolean(user.caravans?.length)}
+              >
+                <table className="w-full text-sm">
+                  <thead className="bg-cream-50 text-ink-700">
+                    <tr>
+                      <th className="px-4 py-3 text-start font-medium">
+                        {t('caravans.name')}
+                      </th>
+                      <th className="px-4 py-3 text-start font-medium">
+                        {t('caravans.city')}
+                      </th>
+                      <th className="px-4 py-3 text-start font-medium">
+                        {t('caravans.status')}
+                      </th>
+                      <th className="px-4 py-3 text-start font-medium">
+                        {t('caravans.totalCount')}
+                      </th>
+                      <th className="px-4 py-3 text-start font-medium">
+                        {t('common.actions')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(user.caravans ?? []).map((caravan) => (
+                      <tr key={caravan.id} className="border-t border-line">
+                        <td className="px-4 py-3">{caravan.name}</td>
+                        <td className="px-4 py-3">
+                          {caravan.city ? geoName(caravan.city) : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {caravan.isActive ? t('geo.active') : t('geo.inactive')}
+                        </td>
+                        <td className="px-4 py-3">
+                          {t('caravans.peopleCount', {
+                            count: formatNumber(caravan.totalCount ?? 0, uiLocale),
+                          })}
+                        </td>
+                        <td className="px-4 py-3">
+                          <EntityRowActions
+                            viewTo={`/caravans/${caravan.id}`}
+                            extra={
+                              <Link to={`/caravans/${caravan.id}/pilgrimage-history`}>
+                                <Button type="button" variant="soft">
+                                  <History className="size-4" aria-hidden />
+                                  {t('caravanPilgrimageHistory.open')}
+                                </Button>
+                              </Link>
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableCard>
+            </section>
+          ) : null}
+
           {tab === 'account' ? (
             <section>
               <SectionTitle icon={KeyRound}>{t('users.tabs.account')}</SectionTitle>
@@ -282,10 +312,10 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                 <FactTile
                   icon={UserRound}
                   label={t('users.username')}
-                  value={<span dir="ltr">{user.username}</span>}
+                  value={localizeDigits(user.username, uiLocale)}
                   tone="teal"
                 />
-                {scope.hideRoles ? null : (
+                {hideRoles ? null : (
                   <FactTile
                     icon={Shield}
                     label={t('users.roles')}
@@ -525,9 +555,13 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
             className=""
             editTo={`${scope.listPath}/${user.id}/edit`}
             editLabel={t('common.edit')}
-            deleteLabel={isSelf ? undefined : t(`${keys}.delete`)}
+            deleteLabel={
+              isSelf || scope.hideDelete || scope.i18nPrefix === 'pilgrims'
+                ? undefined
+                : t(`${keys}.delete`)
+            }
             onDelete={
-              isSelf
+              isSelf || scope.hideDelete || scope.i18nPrefix === 'pilgrims'
                 ? undefined
                 : () =>
                     confirmDelete({
@@ -561,6 +595,12 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                           {t('pilgrims.card')}
                         </Button>
                       </Link>
+                      <Link to={`${scope.listPath}/${user.id}/pilgrimage-history`}>
+                        <Button type="button" variant="soft">
+                          <History className="size-4" aria-hidden />
+                          {t('pilgrims.pilgrimageHistory')}
+                        </Button>
+                      </Link>
                     </>
                   ) : null}
                   {scope.i18nPrefix === 'users' ? (
@@ -578,34 +618,7 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                       <Send className="size-4" aria-hidden />
                       {t('users.forgotPassword')}
                     </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="soft"
-                      onClick={() => {
-                        if (!user.phone) {
-                          toast.error(t('pilgrims.phoneRequiredForSms'))
-                          return
-                        }
-                        confirmToast({
-                          title: t('pilgrims.forgotPasswordConfirm'),
-                          confirmLabel: t('common.yes'),
-                          cancelLabel: t('common.cancel'),
-                          onConfirm: async () => {
-                            try {
-                              await api.post(`${scope.apiBase}/${user.id}/password/recover`)
-                              toast.success(t('pilgrims.forgotPasswordSent'))
-                            } catch (error) {
-                              toast.error(getApiErrorMessage(error, t('common.error')))
-                            }
-                          },
-                        })
-                      }}
-                    >
-                      <Send className="size-4" aria-hidden />
-                      {t('pilgrims.forgotPassword')}
-                    </Button>
-                  )}
+                  ) : null}
                 </>
               ) : undefined
             }
@@ -613,53 +626,6 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
         </div>
       </section>
     </div>
-  )
-}
-
-function UserAvatar({ user }: { user: ManagedUser }) {
-  if (user.photoId) {
-    return (
-      <img
-        src={getImageUrl(user.photoId)}
-        alt=""
-        className="size-12 shrink-0 rounded-2xl object-cover shadow-[0_10px_22px_rgba(46,189,182,0.32)] ring-2 ring-white"
-      />
-    )
-  }
-  return (
-    <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-sm font-bold text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
-      {personInitials(user.firstName, user.lastName)}
-    </span>
-  )
-}
-
-function personInitials(firstName: string, lastName: string) {
-  const first = firstName.trim().charAt(0)
-  const last = lastName.trim().charAt(0)
-  return `${first}${last}` || '؟'
-}
-
-function StatusBadge({ active }: { active: boolean }) {
-  const { t } = useTranslation()
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${
-        active
-          ? 'bg-teal-500 text-white ring-teal-500'
-          : 'bg-white/80 text-ink-500 ring-line'
-      }`}
-    >
-      {active ? t('userStatuses.ACTIVE') : t('userStatuses.INACTIVE')}
-    </span>
-  )
-}
-
-function MetaChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-teal-100">
-      <Icon className="size-3 text-teal-600" aria-hidden />
-      {label}
-    </span>
   )
 }
 

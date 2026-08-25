@@ -53,8 +53,7 @@ function todayIso() {
 }
 
 export function IssueLicensePage() {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const nameOf = useGeoName()
   const [nationalId, setNationalId] = useState('')
@@ -173,16 +172,10 @@ export function IssueLicensePage() {
             chips={
               <>
                 {lookup.manager.nationalId ? (
-                  <FormMetaChip
-                    icon={IdCard}
-                    label={localizeDigits(lookup.manager.nationalId, locale)}
-                  />
+                  <FormMetaChip icon={IdCard} copyValue={lookup.manager.nationalId} />
                 ) : null}
                 {lookup.manager.phone ? (
-                  <FormMetaChip
-                    icon={Phone}
-                    label={localizeDigits(lookup.manager.phone, locale)}
-                  />
+                  <FormMetaChip icon={Phone} copyValue={lookup.manager.phone} />
                 ) : null}
                 {lookup.manager.city ? (
                   <FormMetaChip icon={MapPin} label={nameOf(lookup.manager.city)} />
@@ -200,23 +193,13 @@ export function IssueLicensePage() {
               <FormFactTile
                 icon={IdCard}
                 label={t('users.nationalId')}
-                value={
-                  lookup.manager.nationalId
-                    ? localizeDigits(lookup.manager.nationalId, locale)
-                    : empty
-                }
-                empty={!lookup.manager.nationalId}
+                copyValue={lookup.manager.nationalId}
                 tone="mint"
               />
               <FormFactTile
                 icon={Phone}
                 label={t('users.phone')}
-                value={
-                  lookup.manager.phone
-                    ? localizeDigits(lookup.manager.phone, locale)
-                    : empty
-                }
-                empty={!lookup.manager.phone}
+                copyValue={lookup.manager.phone}
                 tone="ink"
               />
               <FormFactTile
