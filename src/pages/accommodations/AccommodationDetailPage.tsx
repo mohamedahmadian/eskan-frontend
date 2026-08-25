@@ -68,6 +68,7 @@ import {
 } from './accommodationContacts'
 import { AccommodationYearAlert, managerDisplayName } from './AccommodationYearAlert'
 import { AccommodationTabNav, accommodationTabs, type AccommodationTab } from './AccommodationTabs'
+import { PilgrimNameLink } from './PilgrimNameLink'
 
 const roleIcons: Record<AccommodationContactRole, LucideIcon> = {
   DEPUTY: UserCog,
@@ -476,9 +477,14 @@ export function AccommodationDetailPage() {
                       </div>
                       {contact ? (
                         <div className="space-y-1.5 text-sm">
-                          <p className="font-semibold text-ink-900">
-                            {contact.user.fullName ||
-                              `${contact.user.firstName} ${contact.user.lastName}`.trim()}
+                          <p>
+                            <PilgrimNameLink
+                              id={contact.user.id || contact.userId}
+                              name={
+                                contact.user.fullName ||
+                                `${contact.user.firstName} ${contact.user.lastName}`.trim()
+                              }
+                            />
                           </p>
                           <p className="flex items-center gap-1.5 text-xs text-ink-600">
                             <IdCard className="size-3.5 shrink-0 text-teal-600" aria-hidden />
@@ -513,7 +519,15 @@ export function AccommodationDetailPage() {
                         key={contact.id}
                         icon={roleIcons[contact.role as AccommodationContactRole] ?? UserCog}
                         label={`${t(`accommodations.contactRoles.${contact.role}`)} — ${n(contact.year)}`}
-                        value={contact.user.fullName}
+                        value={
+                          <PilgrimNameLink
+                            id={contact.user.id || contact.userId}
+                            name={
+                              contact.user.fullName ||
+                              `${contact.user.firstName} ${contact.user.lastName}`.trim()
+                            }
+                          />
+                        }
                         tone="mint"
                       />
                     ))}
