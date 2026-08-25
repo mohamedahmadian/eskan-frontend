@@ -59,7 +59,7 @@ import {
 } from '../../components/ui/FormLayout'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
-import { currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
+import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Accommodation, AccommodationStatus } from '../../types/app'
 import {

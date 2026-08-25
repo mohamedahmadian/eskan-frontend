@@ -1,3 +1,4 @@
+import { FileText } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -43,7 +44,7 @@ export function EvaluationQuestionEditPage() {
     <div className={formShellClassName}>
       <PageHeader
         title={t('evaluations.questions.edit')}
-        subtitle={<EntityNameSubtitle name={query.data.title} />}
+        subtitle={<EntityNameSubtitle name={query.data.title} icon={FileText} />}
       />
       <EvaluationQuestionForm initial={query.data} onSubmit={onSubmit} />
     </div>

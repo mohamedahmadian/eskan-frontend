@@ -1,3 +1,4 @@
+import { CalendarRange } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -43,7 +44,7 @@ export function EvaluationCampaignEditPage() {
     <div className={formShellClassName}>
       <PageHeader
         title={t('evaluations.campaigns.edit')}
-        subtitle={<EntityNameSubtitle name={query.data.title} />}
+        subtitle={<EntityNameSubtitle name={query.data.title} icon={CalendarRange} />}
       />
       <EvaluationCampaignForm initial={query.data} onSubmit={onSubmit} />
     </div>

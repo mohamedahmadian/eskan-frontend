@@ -90,7 +90,11 @@ export function EvaluationCampaignsListPage() {
           </FilterPair>
         }
       />
-      <TableCard>
+      <TableCard
+        loading={query.isLoading}
+        empty={q || status ? t('common.noResults') : t('evaluations.campaigns.empty')}
+        hasRows={rows.length > 0}
+      >
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-line text-start text-ink-600">
@@ -160,11 +164,6 @@ export function EvaluationCampaignsListPage() {
             ))}
           </tbody>
         </table>
-        {!rows.length ? (
-          <p className="p-6 text-center text-sm text-ink-500">
-            {q || status ? t('common.noResults') : t('evaluations.campaigns.empty')}
-          </p>
-        ) : null}
       </TableCard>
       <PaginationBar
         page={query.data?.page ?? page}

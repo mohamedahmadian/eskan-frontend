@@ -218,7 +218,10 @@ export function MyEvaluationsPage() {
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-ink-800">{t('evaluations.mine.history')}</h2>
-        <TableCard>
+        <TableCard
+          empty={t('evaluations.mine.empty')}
+          hasRows={(data.evaluations ?? []).length > 0}
+        >
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-line text-start text-ink-600">
@@ -255,9 +258,6 @@ export function MyEvaluationsPage() {
               ))}
             </tbody>
           </table>
-          {!data.evaluations?.length ? (
-            <p className="p-6 text-center text-sm text-ink-500">{t('evaluations.mine.empty')}</p>
-          ) : null}
         </TableCard>
       </section>
     </div>

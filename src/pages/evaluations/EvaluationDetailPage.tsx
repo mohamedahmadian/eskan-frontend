@@ -103,7 +103,7 @@ export function EvaluationDetailPage() {
     <div className={formShellClassName}>
       <PageHeader
         title={t('evaluations.details')}
-        subtitle={<EntityNameSubtitle name={title} />}
+        subtitle={<EntityNameSubtitle name={title} icon={ClipboardList} />}
       />
 
       <div className="mb-4 space-y-4">

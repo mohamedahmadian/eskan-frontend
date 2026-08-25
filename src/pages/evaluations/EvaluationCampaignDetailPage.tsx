@@ -42,7 +42,7 @@ export function EvaluationCampaignDetailPage() {
     <div className={formShellClassName}>
       <PageHeader
         title={t('evaluations.campaigns.details')}
-        subtitle={<EntityNameSubtitle name={item.title} />}
+        subtitle={<EntityNameSubtitle name={item.title} icon={CalendarRange} />}
       />
       <FormCard icon={CalendarRange} title={item.title} subtitle={item.description || undefined}>
         <div className="space-y-6 p-5 sm:p-6">

@@ -41,7 +41,7 @@ export function EvaluationQuestionDetailPage() {
     <div className={formShellClassName}>
       <PageHeader
         title={t('evaluations.questions.details')}
-        subtitle={<EntityNameSubtitle name={item.title} />}
+        subtitle={<EntityNameSubtitle name={item.title} icon={FileText} />}
       />
       <FormCard
         icon={FileText}

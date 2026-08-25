@@ -168,7 +168,15 @@ export function EvaluationsListPage() {
           </FilterPair>
         }
       />
-      <TableCard>
+      <TableCard
+        loading={query.isLoading}
+        empty={
+          q || campaignId || evaluatorType || targetType || status
+            ? t('common.noResults')
+            : t('evaluations.list.empty')
+        }
+        hasRows={rows.length > 0}
+      >
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-line text-start text-ink-600">
@@ -245,13 +253,6 @@ export function EvaluationsListPage() {
             })}
           </tbody>
         </table>
-        {!rows.length ? (
-          <p className="p-6 text-center text-sm text-ink-500">
-            {q || campaignId || evaluatorType || targetType || status
-              ? t('common.noResults')
-              : t('evaluations.list.empty')}
-          </p>
-        ) : null}
       </TableCard>
       <PaginationBar
         page={query.data?.page ?? page}
