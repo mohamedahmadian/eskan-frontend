@@ -270,7 +270,7 @@ export function DashboardLayout() {
                   decorative
                   className={
                     brandLogoSrc
-                      ? 'h-10 w-10 shrink-0 rounded-xl object-contain ring-1 ring-teal-100'
+                      ? 'h-10 w-10 shrink-0 rounded-2xl bg-white object-cover shadow-[0_8px_18px_rgba(20,40,40,0.16)] ring-1 ring-teal-100'
                       : 'h-10 w-auto max-w-10 shrink-0 object-contain'
                   }
                 />

@@ -1,9 +1,13 @@
 import DatePickerImport, { DateObject } from 'react-multi-date-picker'
 import persian from 'react-date-object/calendars/persian'
-import persian_fa from 'react-date-object/locales/persian_fa'
 import { CalendarDays, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { fromIsoDateOnly, numberingDigits, toIsoDateOnly } from '../../lib/datetime'
+import {
+  fromIsoDateOnly,
+  jalaliPickerLocale,
+  numberingDigits,
+  toIsoDateOnly,
+} from '../../lib/datetime'
 import { HijriDateText } from './DateText'
 import { fieldClassName } from './Form'
 import 'react-multi-date-picker/styles/colors/teal.css'
@@ -49,13 +53,14 @@ function DatePickerActions({
   maxDate?: DateObject
   position?: string
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const pickerLocale = jalaliPickerLocale(i18n.language.split('-')[0] ?? 'fa')
   const selected = hasSelectedDate(state?.selectedDate)
 
   function todayDate() {
     return new DateObject({
       calendar: state?.calendar ?? persian,
-      locale: persian_fa,
+      locale: pickerLocale,
     })
   }
 
@@ -115,6 +120,7 @@ export function PersianDateField({
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
+  const pickerLocale = jalaliPickerLocale(locale)
   const dir = document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr'
   const selected = value
     ? fromIsoDateOnly(value)?.convert(persian)
@@ -129,7 +135,7 @@ export function PersianDateField({
         minDate={min}
         maxDate={max}
         calendar={persian}
-        locale={persian_fa}
+        locale={pickerLocale}
         format="YYYY/M/D"
         digits={locale === 'en' ? undefined : (numberingDigits[locale] ?? numberingDigits.fa)}
         className="teal"

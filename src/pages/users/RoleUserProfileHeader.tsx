@@ -1,6 +1,6 @@
 import { IdCard, MapPin, Phone, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { FormMetaChip } from '../../components/ui/FormLayout'
+import { FormCardHeaderDecor, FormMetaChip } from '../../components/ui/FormLayout'
 import { getImageUrl } from '../../lib/api'
 import { localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
@@ -23,14 +23,7 @@ export function RoleUserProfileHeader({
 
   return (
     <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
-      <div
-        className="pointer-events-none absolute -start-8 -top-10 size-32 rounded-full bg-teal-200/30"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
-        aria-hidden
-      />
+      <FormCardHeaderDecor />
       <div className="relative flex items-start gap-3">
         <UserAvatar user={user} />
         <div className="min-w-0 flex-1">

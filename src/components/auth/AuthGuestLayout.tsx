@@ -23,7 +23,14 @@ export function AuthGuestLayout({
     <div className="flex min-h-svh flex-col bg-cream-50">
       <header className="z-20 shrink-0 border-b border-line/70 bg-white/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
-          <AppLogo src={logoSrc} className="h-11 w-auto shrink-0 object-contain sm:h-12" />
+          <AppLogo
+            src={logoSrc}
+            className={
+              logoSrc
+                ? 'h-11 w-11 shrink-0 rounded-2xl bg-white object-cover shadow-[0_8px_18px_rgba(20,40,40,0.16)] ring-1 ring-teal-100 sm:h-12 sm:w-12'
+                : 'h-11 w-auto shrink-0 object-contain sm:h-12'
+            }
+          />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-ink-900 sm:text-base">{brandTitle}</p>
             {brandName && brandName !== brandTitle ? (

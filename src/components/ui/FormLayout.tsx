@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useBrandDisplay } from '../../hooks/useHeadquartersSummary'
 import { CopyableDigits, useCopyDigits } from './CopyableDigits'
 import { cardClassName } from './Form'
 
@@ -58,6 +59,32 @@ export function FormCard({
   )
 }
 
+/** Soft blobs + faded brand logo for shared teal/mint card headers. */
+export function FormCardHeaderDecor() {
+  const { logoSrc } = useBrandDisplay()
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute -start-8 -top-10 size-32 rounded-full bg-teal-200/30"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
+        aria-hidden
+      />
+      {logoSrc ? (
+        <img
+          src={logoSrc}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="pointer-events-none absolute end-3 top-1/2 h-[4.5rem] w-auto max-h-[calc(100%-0.75rem)] max-w-[6.5rem] -translate-y-1/2 rounded-2xl object-contain opacity-30 select-none sm:end-4 sm:h-20 sm:max-w-[7.5rem]"
+        />
+      ) : null}
+    </>
+  )
+}
+
 export function FormCardHeader({
   icon: Icon,
   title,
@@ -73,14 +100,7 @@ export function FormCardHeader({
 }) {
   return (
     <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
-      <div
-        className="pointer-events-none absolute -start-8 -top-10 size-32 rounded-full bg-teal-200/30"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
-        aria-hidden
-      />
+      <FormCardHeaderDecor />
       <div className="relative flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">

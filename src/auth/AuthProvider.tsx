@@ -12,6 +12,7 @@ import {
   applyUiLanguage,
   getStoredPreferredLocale,
   persistPreferredLocale,
+  uiLanguageFor,
   type AppLanguage,
 } from '../i18n'
 import type { AuthUser } from '../types/app'
@@ -59,9 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (username: string, password: string) => {
+      const locale = uiLanguageFor(getStoredPreferredLocale())
       const { data } = await api.post<{ token: string; user: AuthUser }>(
         '/auth/login',
-        { username, password },
+        { username, password, locale },
       )
       localStorage.setItem('eskan_token', data.token)
       applyUser(data.user)

@@ -3,6 +3,7 @@ import arabic from 'react-date-object/calendars/arabic'
 import gregorian from 'react-date-object/calendars/gregorian'
 import persian from 'react-date-object/calendars/persian'
 import arabic_ar from 'react-date-object/locales/arabic_ar'
+import persian_fa from 'react-date-object/locales/persian_fa'
 
 export const numberingDigits: Record<string, string[]> = {
   fa: ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'],
@@ -47,8 +48,48 @@ function toGregorianDateObject(value: string, dateOnly: boolean) {
   return new DateObject(new Date(normalized))
 }
 
+export function usesJalaliCalendar(locale: string) {
+  return locale === 'fa' || locale === 'ar'
+}
+
+export const persianArLocale = {
+  name: 'persian_ar',
+  months: [
+    ['فروردين', 'فر'],
+    ['أرديبهشت', 'أر'],
+    ['خرداد', 'خرد'],
+    ['تير', 'تير'],
+    ['مرداد', 'مر'],
+    ['شهريور', 'شه'],
+    ['مهر', 'مه'],
+    ['آبان', 'آبا'],
+    ['آذر', 'آذ'],
+    ['دي', 'دي'],
+    ['بهمن', 'بهم'],
+    ['إسفند', 'اسف'],
+  ],
+  weekDays: [
+    ['السبت', 'سبت'],
+    ['الأحد', 'أحد'],
+    ['الإثنين', 'إثن'],
+    ['الثلاثاء', 'ثلا'],
+    ['الأربعاء', 'أرب'],
+    ['الخميس', 'خمي'],
+    ['الجمعة', 'جمع'],
+  ],
+  digits: numberingDigits.ar,
+  meridiems: [
+    ['صباحاً', 'ص'],
+    ['مساءً', 'م'],
+  ],
+}
+
+export function jalaliPickerLocale(locale: string) {
+  return locale === 'ar' ? persianArLocale : persian_fa
+}
+
 function toDisplayDate(value: string, locale: string, dateOnly: boolean) {
-  const calendar = locale === 'fa' ? persian : gregorian
+  const calendar = usesJalaliCalendar(locale) ? persian : gregorian
   return toGregorianDateObject(value, dateOnly).convert(calendar)
 }
 

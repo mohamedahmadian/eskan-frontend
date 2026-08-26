@@ -2,6 +2,7 @@ import { Footprints, Lock, ScrollText, Users, type LucideIcon } from 'lucide-rea
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EntityNameSubtitle } from '../../components/ui/Form'
+import { FormCardHeaderDecor } from '../../components/ui/FormLayout'
 import { formatNumber } from '../../lib/datetime'
 import type { ReservationListItem } from '../../types/app'
 
@@ -24,14 +25,7 @@ export function ReservationSectionHeader({
 
   return (
     <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
-      <div
-        className="pointer-events-none absolute -start-8 -top-10 size-32 rounded-full bg-teal-200/30"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
-        aria-hidden
-      />
+      <FormCardHeaderDecor />
       <div className="relative flex items-start gap-3">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
           <Icon className="size-6" aria-hidden />
