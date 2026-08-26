@@ -2,7 +2,7 @@ import { Boxes, Menu, PackageOpen, Search, Snowflake, UsersRound, X } from 'luci
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { api, getImageUrl } from '../../lib/api'
 import { getNavIcon } from '../../lib/icons'
@@ -86,6 +86,27 @@ function insertAfterMenu(
   const index = menus.findIndex((item) => item.code === afterCode)
   if (index < 0) return [...menus, ...extra]
   return [...menus.slice(0, index + 1), ...extra, ...menus.slice(index + 1)]
+}
+
+function normalizeMenuPath(path: string) {
+  return path.replace(/\/+$/, '') || '/'
+}
+
+function menuPathMatches(pathname: string, menuPath: string) {
+  const path = normalizeMenuPath(pathname)
+  const itemPath = normalizeMenuPath(menuPath)
+  if (itemPath === '/') return path === '/'
+  return path === itemPath || path.startsWith(`${itemPath}/`)
+}
+
+/** Longest matching menu path wins, so `/evaluations` stays inactive on `/evaluations/campaigns`. */
+function isSidebarMenuActive(pathname: string, menuPath: string, allMenuPaths: string[]) {
+  if (!menuPathMatches(pathname, menuPath)) return false
+  const normalized = normalizeMenuPath(menuPath)
+  return !allMenuPaths.some((other) => {
+    const otherPath = normalizeMenuPath(other)
+    return otherPath !== normalized && otherPath.length > normalized.length && menuPathMatches(pathname, other)
+  })
 }
 
 function splitMenus(mod: NavModule) {
@@ -236,6 +257,14 @@ export function DashboardLayout() {
       .filter((mod) => mod.menus.length > 0)
   }, [pilgrimageYearMenus, query, t, user])
 
+  const allMenuPaths = useMemo(
+    () => [
+      ...(user?.modules ?? []).flatMap((mod) => mod.menus.map((item) => item.path)),
+      ...pilgrimageYearMenus.map((item) => item.path),
+    ],
+    [pilgrimageYearMenus, user],
+  )
+
   return (
     <QuickToolsProvider>
       <div className="h-svh overflow-hidden bg-cream-50">
@@ -330,7 +359,12 @@ export function DashboardLayout() {
                   </p>
                   <div className="space-y-1">
                     {ungrouped.map((item) => (
-                      <SidebarMenuLink key={item.code} item={item} onNavigate={() => setOpen(false)} />
+                      <SidebarMenuLink
+                        key={item.code}
+                        item={item}
+                        allMenuPaths={allMenuPaths}
+                        onNavigate={() => setOpen(false)}
+                      />
                     ))}
                   </div>
                   {sections.map((section) => {
@@ -346,6 +380,7 @@ export function DashboardLayout() {
                             <SidebarMenuLink
                               key={item.code}
                               item={item}
+                              allMenuPaths={allMenuPaths}
                               onNavigate={() => setOpen(false)}
                             />
                           ))}
@@ -399,33 +434,29 @@ export function DashboardLayout() {
 
 function SidebarMenuLink({
   item,
+  allMenuPaths,
   onNavigate,
 }: {
   item: SidebarNavMenu
+  allMenuPaths: string[]
   onNavigate: () => void
 }) {
   const { t } = useTranslation()
+  const { pathname } = useLocation()
   const Icon = getNavIcon(item.icon)
-  const exact =
-    item.path === '/' || item.path === '/my-reservations' || item.code.startsWith('reservations.year.')
+  const isActive = isSidebarMenuActive(pathname, item.path, allMenuPaths)
   return (
-    <NavLink
+    <Link
       to={item.path}
-      end={exact}
       onClick={onNavigate}
-      className={({ isActive }) =>
-        `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${
-          isActive ? 'bg-teal-500 text-white shadow-sm' : 'text-ink-700 hover:bg-cream-50'
-        }`
-      }
+      aria-current={isActive ? 'page' : undefined}
+      className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${
+        isActive ? 'bg-teal-500 text-white shadow-sm' : 'text-ink-700 hover:bg-cream-50'
+      }`}
     >
-      {({ isActive }) => (
-        <>
-          <Icon className={`size-4 ${isActive ? 'text-white' : 'text-ink-400'}`} aria-hidden />
-          {item.label ?? t(item.nameKey)}
-        </>
-      )}
-    </NavLink>
+      <Icon className={`size-4 ${isActive ? 'text-white' : 'text-ink-400'}`} aria-hidden />
+      {item.label ?? t(item.nameKey)}
+    </Link>
   )
 }
 

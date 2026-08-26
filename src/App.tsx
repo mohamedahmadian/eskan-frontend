@@ -10,6 +10,7 @@ import { languages, type AppLanguage } from "./i18n";
 import { CaravanCreatePage } from "./pages/caravans/CaravanCreatePage";
 import { CaravanDetailPage } from "./pages/caravans/CaravanDetailPage";
 import { CaravanEditPage } from "./pages/caravans/CaravanEditPage";
+import { CaravanImportPage } from "./pages/caravans/CaravanImportPage";
 import { CaravanPilgrimageHistoryPage } from "./pages/caravans/CaravanPilgrimageHistoryPage";
 import { CaravanYearManagementPage } from "./pages/caravans/CaravanYearManagementPage";
 import { CaravansListPage } from "./pages/caravans/CaravansListPage";
@@ -263,6 +264,7 @@ export default function App() {
                 <Route element={<RequireMenuAccess path="/caravans" />}>
                   <Route path="/caravans" element={<CaravansListPage />} />
                   <Route path="/caravans/new" element={<CaravanCreatePage />} />
+                  <Route path="/caravans/import" element={<CaravanImportPage />} />
                   <Route
                     path="/caravans/:id/pilgrimage-history"
                     element={<CaravanPilgrimageHistoryPage />}

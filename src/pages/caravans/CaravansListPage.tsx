@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -41,12 +41,20 @@ export function CaravansListPage() {
         title={t('menus.caravansList')}
         subtitle={t('caravans.subtitle')}
         action={
-          <Link to="/caravans/new">
-            <Button>
-              <Plus className="size-4" />
-              {t('caravans.create')}
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/caravans/import">
+              <Button type="button" variant="soft">
+                <Upload className="size-4" />
+                {t('caravans.import')}
+              </Button>
+            </Link>
+            <Link to="/caravans/new">
+              <Button>
+                <Plus className="size-4" />
+                {t('caravans.create')}
+              </Button>
+            </Link>
+          </div>
         }
       />
       <SearchBar

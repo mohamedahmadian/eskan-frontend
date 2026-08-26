@@ -41,7 +41,7 @@ import {
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useAuth } from '../../auth/AuthProvider'
 import { api, getImageUrl } from '../../lib/api'
-import { formatNumber, localizeDigits } from '../../lib/datetime'
+import { currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { isAdmin } from '../../lib/roles'
 import type { Caravan } from '../../types/app'
@@ -258,6 +258,29 @@ export function CaravanDetailPage() {
               </article>
             ) : (
               <EmptyHint>{t('caravans.managerEmpty')}</EmptyHint>
+            )}
+          </section>
+
+          <section>
+            <SectionTitle icon={Calendar}>{t('caravans.sectionYears')}</SectionTitle>
+            {caravan.years?.length ? (
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                {[...caravan.years]
+                  .sort((a, b) => b.year - a.year)
+                  .map((row) => (
+                    <FactTile
+                      key={row.id}
+                      icon={row.manager ? UserRound : Calendar}
+                      label={n(row.year)}
+                      value={
+                        row.manager?.fullName || t('caravans.unassignedManager')
+                      }
+                      tone={row.year === currentPersianYear() ? 'teal' : 'ink'}
+                    />
+                  ))}
+              </div>
+            ) : (
+              <EmptyHint>{t('caravans.noActivityYears')}</EmptyHint>
             )}
           </section>
 

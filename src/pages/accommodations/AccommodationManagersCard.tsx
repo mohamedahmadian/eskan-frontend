@@ -19,6 +19,57 @@ import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datet
 import type { Accommodation, ManagedUser } from '../../types/app'
 import { managerDisplayName } from './AccommodationYearAlert'
 
+export function AccommodationActivityYearFields({
+  year,
+  onYearChange,
+  userId,
+  onUserIdChange,
+  users,
+  yearInputId = 'assign-manager-year',
+  managerInputId = 'assign-manager',
+}: {
+  year: string
+  onYearChange: (value: string) => void
+  userId: string
+  onUserIdChange: (value: string) => void
+  users: ManagedUser[]
+  yearInputId?: string
+  managerInputId?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <>
+      <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor={yearInputId}>
+        <input
+          id={yearInputId}
+          className={fieldClassName}
+          inputMode="numeric"
+          min={1300}
+          max={1600}
+          required
+          value={year}
+          onChange={(event) => onYearChange(toLatinDigits(event.target.value))}
+        />
+      </FormField>
+      <FormField icon={UserRound} label={t('accommodations.selectManager')} htmlFor={managerInputId}>
+        <SearchSelect
+          id={managerInputId}
+          value={userId}
+          placeholder={t('accommodations.withoutManager')}
+          onChange={onUserIdChange}
+          options={[
+            { value: '', label: t('accommodations.withoutManager') },
+            ...users.map((user) => ({
+              value: user.id,
+              label: `${user.fullName} — ${user.username}`,
+            })),
+          ]}
+        />
+      </FormField>
+    </>
+  )
+}
+
 export function AccommodationManagersCard({
   accommodation,
   users,
@@ -49,14 +100,21 @@ export function AccommodationManagersCard({
   }
 
   const assign = useMutation({
-    mutationFn: async () =>
-      api.post(`/accommodations/${accommodation.id}/managers`, {
-        userId,
+    mutationFn: async () => {
+      const payload = {
+        userId: userId || null,
         year: Number(toLatinDigits(year)),
-      }),
-    onSuccess: async () => {
+      }
+      await api.post(`/accommodations/${accommodation.id}/managers`, payload)
+      return payload
+    },
+    onSuccess: async (payload) => {
       setUserId('')
-      toast.success(t('accommodations.managerAssigned'))
+      toast.success(
+        payload.userId
+          ? t('accommodations.managerAssigned')
+          : t('accommodations.activityYearAssigned'),
+      )
       await refresh()
     },
     onError: (error) => {
@@ -85,38 +143,23 @@ export function AccommodationManagersCard({
   return (
     <div className="space-y-4">
       <article className={`p-6 ${cardClassName}`}>
+        <p className="mb-4 text-sm leading-6 text-ink-600">
+          {t('accommodations.activityYearsHint')}
+        </p>
         <AppForm
           onSubmit={(event: FormEvent) => {
             event.preventDefault()
             assign.mutate()
           }}
-          className="grid gap-4 sm:grid-cols-[1fr_8rem_auto] sm:items-end"
+          className="grid gap-4 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-end"
         >
-          <FormField icon={UserRound} label={t('accommodations.selectManager')} htmlFor="assign-manager">
-            <SearchSelect
-              id="assign-manager"
-              value={userId}
-              required
-              placeholder={t('accommodations.selectManager')}
-              onChange={setUserId}
-              options={users.map((user) => ({
-                value: user.id,
-                label: `${user.fullName} — ${user.username}`,
-              }))}
-            />
-          </FormField>
-          <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor="assign-manager-year">
-            <input
-              id="assign-manager-year"
-              className={fieldClassName}
-              inputMode="numeric"
-              min={1300}
-              max={1600}
-              required
-              value={year}
-              onChange={(event) => setYear(toLatinDigits(event.target.value))}
-            />
-          </FormField>
+          <AccommodationActivityYearFields
+            year={year}
+            onYearChange={setYear}
+            userId={userId}
+            onUserIdChange={setUserId}
+            users={users}
+          />
           <FormActions submitLabel={t('accommodations.assign')} submitting={assign.isPending} />
         </AppForm>
       </article>

@@ -1771,6 +1771,8 @@ export type EvaluationCampaignStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
 
 export type EvaluationStatus = 'IN_PROGRESS' | 'COMPLETED';
 
+export type EvaluationAnswerType = 'FIVE_SCALE' | 'TEXT' | 'YES_NO';
+
 export type EvaluationPerson = {
   id: string;
   fullName: string;
@@ -1797,6 +1799,7 @@ export type EvaluationQuestion = {
   description: string | null;
   evaluatorType: EvaluationEvaluatorType;
   targetType: EvaluationTargetType;
+  answerType: EvaluationAnswerType;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
@@ -1807,7 +1810,9 @@ export type EvaluationAnswer = {
   id: string;
   evaluationId: string;
   questionId: string;
-  score: number;
+  score: number | null;
+  yesNo: boolean | null;
+  textValue: string | null;
   description: string | null;
   question?: EvaluationQuestion;
   createdAt: string;

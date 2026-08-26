@@ -20,7 +20,10 @@ import { api, getApiErrorMessage } from '../../lib/api'
 import { useAuth } from '../../auth/AuthProvider'
 import { isAdmin } from '../../lib/roles'
 import type { Evaluation, EvaluationQuestion } from '../../types/app'
-import { EvaluationSurveyForm } from './EvaluationSurveyForm'
+import {
+  EvaluationSurveyForm,
+  type EvaluationSurveyAnswerPayload,
+} from './EvaluationSurveyForm'
 import { ClipboardList, Trash2, UserRound } from 'lucide-react'
 
 export function EvaluationDetailPage() {
@@ -66,7 +69,7 @@ export function EvaluationDetailPage() {
 
   const submitMutation = useMutation({
     mutationFn: async (payload: {
-      answers: { questionId: string; score: number; description?: string | null }[]
+      answers: EvaluationSurveyAnswerPayload[]
       complete: boolean
     }) => {
       const { data } = await api.post<Evaluation>(`/evaluations/${id}/submit`, payload)

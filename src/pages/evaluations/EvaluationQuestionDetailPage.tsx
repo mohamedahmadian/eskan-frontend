@@ -1,4 +1,4 @@
-import { FileText, ToggleLeft, Users } from 'lucide-react'
+import { FileText, ListChecks, ToggleLeft, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -62,6 +62,12 @@ export function EvaluationQuestionDetailPage() {
               label={t('evaluations.targetType')}
               value={t(`evaluations.targetTypes.${item.targetType}`)}
               tone="mint"
+            />
+            <FormFactTile
+              icon={ListChecks}
+              label={t('evaluations.answerType')}
+              value={t(`evaluations.answerTypes.${item.answerType}`)}
+              tone="teal"
             />
             <FormFactTile
               icon={FileText}

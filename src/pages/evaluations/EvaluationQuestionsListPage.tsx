@@ -17,6 +17,7 @@ import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import {
+  EVALUATION_ANSWER_TYPES,
   EVALUATION_EVALUATOR_TYPES,
   EVALUATION_TARGET_TYPES,
 } from '../../lib/evaluations'
@@ -31,6 +32,7 @@ export function EvaluationQuestionsListPage() {
   const { confirmDelete } = useConfirmDelete()
   const evaluatorType = searchParams.get('evaluatorType') ?? ''
   const targetType = searchParams.get('targetType') ?? ''
+  const answerType = searchParams.get('answerType') ?? ''
   const isActive = searchParams.get('isActive') ?? ''
 
   const query = useQuery({
@@ -40,6 +42,7 @@ export function EvaluationQuestionsListPage() {
       q,
       evaluatorType,
       targetType,
+      answerType,
       isActive,
       page,
       sortBy,
@@ -52,6 +55,7 @@ export function EvaluationQuestionsListPage() {
           ...(q ? { q } : {}),
           ...(evaluatorType ? { evaluatorType } : {}),
           ...(targetType ? { targetType } : {}),
+          ...(answerType ? { answerType } : {}),
           ...(isActive ? { isActive } : {}),
           ...sortParams,
         },
@@ -83,7 +87,7 @@ export function EvaluationQuestionsListPage() {
         onSubmit={() => setParams({ q: term.trim() || undefined }, { resetPage: true })}
         label={t('common.search')}
         placeholder={t('evaluations.questions.searchPlaceholder')}
-        filtersActive={Boolean(evaluatorType || targetType || isActive)}
+        filtersActive={Boolean(evaluatorType || targetType || answerType || isActive)}
         extra={
           <FilterPair columns={3}>
             <FormField icon={Filter} label={t('evaluations.evaluatorType')} htmlFor="q-evaluator">
@@ -120,6 +124,23 @@ export function EvaluationQuestionsListPage() {
                 ]}
               />
             </FormField>
+            <FormField icon={Filter} label={t('evaluations.answerType')} htmlFor="q-answer-type">
+              <SearchSelect
+                id="q-answer-type"
+                value={answerType}
+                placeholder={t('evaluations.allAnswerTypes')}
+                onChange={(next) =>
+                  setParams({ answerType: next || undefined }, { resetPage: true })
+                }
+                options={[
+                  { value: '', label: t('evaluations.allAnswerTypes') },
+                  ...EVALUATION_ANSWER_TYPES.map((type) => ({
+                    value: type,
+                    label: t(`evaluations.answerTypes.${type}`),
+                  })),
+                ]}
+              />
+            </FormField>
             <FormField icon={Filter} label={t('evaluations.questions.isActive')} htmlFor="q-active">
               <SearchSelect
                 id="q-active"
@@ -141,7 +162,7 @@ export function EvaluationQuestionsListPage() {
       <TableCard
         loading={query.isLoading}
         empty={
-          q || evaluatorType || targetType || isActive
+          q || evaluatorType || targetType || answerType || isActive
             ? t('common.noResults')
             : t('evaluations.questions.empty')
         }
@@ -172,6 +193,13 @@ export function EvaluationQuestionsListPage() {
                 onSort={onSort}
               />
               <SortableTh
+                label={t('evaluations.answerType')}
+                column="answerType"
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
                 label={t('evaluations.questions.sortOrder')}
                 column="sortOrder"
                 sortBy={sortBy}
@@ -197,6 +225,9 @@ export function EvaluationQuestionsListPage() {
                 </td>
                 <td className="px-3 py-2.5">
                   {t(`evaluations.targetTypes.${item.targetType}`)}
+                </td>
+                <td className="px-3 py-2.5">
+                  {t(`evaluations.answerTypes.${item.answerType}`)}
                 </td>
                 <td className="px-3 py-2.5">
                   {formatNumber(item.sortOrder, locale)}

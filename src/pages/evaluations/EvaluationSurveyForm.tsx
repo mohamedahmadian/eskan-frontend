@@ -5,13 +5,21 @@ import { toast } from 'sonner'
 import { AppForm, Button, fieldClassName } from '../../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { getApiErrorMessage } from '../../lib/api'
-import { EVALUATION_SCORES, scoreTone } from '../../lib/evaluations'
+import {
+  EVALUATION_SCORES,
+  isQuestionAnswered,
+  scoreTone,
+  type EvaluationAnswerDraft,
+} from '../../lib/evaluations'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
-import type { Evaluation, EvaluationQuestion } from '../../types/app'
+import type { Evaluation, EvaluationAnswerType, EvaluationQuestion } from '../../types/app'
 
-type AnswerDraft = {
-  score: number | null
-  description: string
+export type EvaluationSurveyAnswerPayload = {
+  questionId: string
+  score?: number | null
+  yesNo?: boolean | null
+  textValue?: string | null
+  description?: string | null
 }
 
 const scoreButtonClass: Record<string, string> = {
@@ -24,19 +32,49 @@ const scoreButtonClass: Record<string, string> = {
   poor: 'border-red-200 bg-red-50 text-red-700 data-[selected=true]:border-red-600 data-[selected=true]:bg-red-600 data-[selected=true]:text-white',
 }
 
+const yesNoButtonClass = {
+  yes: scoreButtonClass.excellent,
+  no: scoreButtonClass.average,
+}
+
+function answerTypeOf(question: EvaluationQuestion): EvaluationAnswerType {
+  return question.answerType ?? 'FIVE_SCALE'
+}
+
 function buildInitialAnswers(
   questions: EvaluationQuestion[],
   evaluation?: Evaluation,
-): Record<string, AnswerDraft> {
-  const map: Record<string, AnswerDraft> = {}
+): Record<string, EvaluationAnswerDraft> {
+  const map: Record<string, EvaluationAnswerDraft> = {}
   for (const question of questions) {
     const existing = evaluation?.answers?.find((item) => item.questionId === question.id)
     map[question.id] = {
       score: existing?.score ?? null,
+      yesNo: existing?.yesNo ?? null,
+      textValue: existing?.textValue ?? '',
       description: existing?.description ?? '',
     }
   }
   return map
+}
+
+function toPayload(
+  question: EvaluationQuestion,
+  draft: EvaluationAnswerDraft,
+): EvaluationSurveyAnswerPayload | null {
+  const type = answerTypeOf(question)
+  if (!isQuestionAnswered(type, draft)) return null
+  if (type === 'FIVE_SCALE') {
+    return {
+      questionId: question.id,
+      score: draft.score,
+      description: draft.description.trim() || null,
+    }
+  }
+  if (type === 'YES_NO') {
+    return { questionId: question.id, yesNo: draft.yesNo }
+  }
+  return { questionId: question.id, textValue: draft.textValue.trim() }
 }
 
 export function EvaluationSurveyForm({
@@ -49,7 +87,7 @@ export function EvaluationSurveyForm({
   questions: EvaluationQuestion[]
   readOnly?: boolean
   onSubmit: (payload: {
-    answers: { questionId: string; score: number; description?: string | null }[]
+    answers: EvaluationSurveyAnswerPayload[]
     complete: boolean
   }) => Promise<void>
 }) {
@@ -59,41 +97,30 @@ export function EvaluationSurveyForm({
   const [answers, setAnswers] = useState(() => buildInitialAnswers(questions, evaluation))
 
   const answeredCount = useMemo(
-    () => questions.filter((q) => answers[q.id]?.score != null).length,
+    () => questions.filter((q) => isQuestionAnswered(answerTypeOf(q), answers[q.id])).length,
     [answers, questions],
   )
   const progress = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0
+  const hasScaleQuestions = questions.some((q) => answerTypeOf(q) === 'FIVE_SCALE')
   const targetLabel =
     evaluation.targetType === 'HEADQUARTERS'
       ? t('evaluations.headquarters')
       : evaluation.target?.fullName || '—'
   const isProxy = evaluation.submittedById !== evaluation.evaluatorId
 
-  function setScore(questionId: string, score: number) {
+  function patchAnswer(questionId: string, patch: Partial<EvaluationAnswerDraft>) {
     if (readOnly) return
     setAnswers((current) => ({
       ...current,
-      [questionId]: { ...current[questionId], score },
-    }))
-  }
-
-  function setDescription(questionId: string, description: string) {
-    if (readOnly) return
-    setAnswers((current) => ({
-      ...current,
-      [questionId]: { ...current[questionId], description },
+      [questionId]: { ...current[questionId], ...patch },
     }))
   }
 
   async function submit(complete: boolean) {
     if (readOnly) return
     const payload = questions
-      .filter((q) => answers[q.id]?.score != null)
-      .map((q) => ({
-        questionId: q.id,
-        score: answers[q.id].score as number,
-        description: answers[q.id].description.trim() || null,
-      }))
+      .map((q) => toPayload(q, answers[q.id]))
+      .filter((item): item is EvaluationSurveyAnswerPayload => item != null)
 
     if (complete && payload.length < questions.length) {
       toast.error(t('evaluations.answerAllRequired'))
@@ -161,12 +188,15 @@ export function EvaluationSurveyForm({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-[11px] leading-5 text-ink-500">{t('evaluations.scoreHint')}</p>
+          {hasScaleQuestions ? (
+            <p className="text-[11px] leading-5 text-ink-500">{t('evaluations.scoreHint')}</p>
+          ) : null}
         </div>
 
         <AppForm onSubmit={onFormSubmit} className={`${formCardBodyClassName} space-y-5`}>
           {questions.map((question, index) => {
             const draft = answers[question.id]
+            const type = answerTypeOf(question)
             return (
               <article
                 key={question.id}
@@ -183,52 +213,108 @@ export function EvaluationSurveyForm({
                     {question.description ? (
                       <p className="mt-1 text-xs leading-6 text-ink-500">{question.description}</p>
                     ) : null}
+                    <p className="mt-1 text-[11px] text-ink-500">
+                      {t(`evaluations.answerTypes.${type}`)}
+                      {' · '}
+                      {t(`evaluations.answerTypeHints.${type}`)}
+                    </p>
                   </div>
                 </div>
 
-                <div
-                  className="grid grid-cols-1 gap-2 sm:grid-cols-5"
-                  role="radiogroup"
-                  aria-label={question.title}
-                >
-                  {EVALUATION_SCORES.map((score) => {
-                    const selected = draft?.score === score
-                    return (
-                      <button
-                        key={score}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
+                {type === 'FIVE_SCALE' ? (
+                  <>
+                    <div
+                      className="grid grid-cols-1 gap-2 sm:grid-cols-5"
+                      role="radiogroup"
+                      aria-label={question.title}
+                    >
+                      {EVALUATION_SCORES.map((score) => {
+                        const selected = draft?.score === score
+                        return (
+                          <button
+                            key={score}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            disabled={readOnly}
+                            data-selected={selected}
+                            onClick={() => patchAnswer(question.id, { score })}
+                            className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:cursor-default ${scoreButtonClass[scoreTone(score)]}`}
+                          >
+                            <span className="text-lg font-bold leading-none">
+                              {localizeDigits(String(score), locale)}
+                            </span>
+                            <span className="text-[11px] font-medium leading-4">
+                              {t(`evaluations.scores.${score}`)}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <label className="mt-4 block">
+                      <span className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-600">
+                        <MessageSquareText className="size-3.5" aria-hidden />
+                        {t('evaluations.answerDescription')}
+                      </span>
+                      <textarea
+                        className={fieldClassName}
+                        rows={2}
                         disabled={readOnly}
-                        data-selected={selected}
-                        onClick={() => setScore(question.id, score)}
-                        className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:cursor-default ${scoreButtonClass[scoreTone(score)]}`}
-                      >
-                        <span className="text-lg font-bold leading-none">
-                          {localizeDigits(String(score), locale)}
-                        </span>
-                        <span className="text-[11px] font-medium leading-4">
-                          {t(`evaluations.scores.${score}`)}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+                        value={draft?.description ?? ''}
+                        onChange={(e) => patchAnswer(question.id, { description: e.target.value })}
+                        placeholder={t('evaluations.answerDescriptionPlaceholder')}
+                      />
+                    </label>
+                  </>
+                ) : null}
 
-                <label className="mt-4 block">
-                  <span className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-600">
-                    <MessageSquareText className="size-3.5" aria-hidden />
-                    {t('evaluations.answerDescription')}
-                  </span>
-                  <textarea
-                    className={fieldClassName}
-                    rows={2}
-                    disabled={readOnly}
-                    value={draft?.description ?? ''}
-                    onChange={(e) => setDescription(question.id, e.target.value)}
-                    placeholder={t('evaluations.answerDescriptionPlaceholder')}
-                  />
-                </label>
+                {type === 'YES_NO' ? (
+                  <div
+                    className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                    role="radiogroup"
+                    aria-label={question.title}
+                  >
+                    {(
+                      [
+                        { value: true, key: 'yes' as const },
+                        { value: false, key: 'no' as const },
+                      ]
+                    ).map((option) => {
+                      const selected = draft?.yesNo === option.value
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          disabled={readOnly}
+                          data-selected={selected}
+                          onClick={() => patchAnswer(question.id, { yesNo: option.value })}
+                          className={`flex min-h-16 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:cursor-default ${yesNoButtonClass[option.key]}`}
+                        >
+                          {t(`evaluations.yesNo.${option.key}`)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
+
+                {type === 'TEXT' ? (
+                  <label className="block">
+                    <span className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-600">
+                      <MessageSquareText className="size-3.5" aria-hidden />
+                      {t('evaluations.textAnswer')}
+                    </span>
+                    <textarea
+                      className={fieldClassName}
+                      rows={4}
+                      disabled={readOnly}
+                      value={draft?.textValue ?? ''}
+                      onChange={(e) => patchAnswer(question.id, { textValue: e.target.value })}
+                      placeholder={t('evaluations.textAnswerPlaceholder')}
+                    />
+                  </label>
+                ) : null}
               </article>
             )
           })}

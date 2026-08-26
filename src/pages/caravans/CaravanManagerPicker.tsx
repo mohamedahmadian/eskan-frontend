@@ -35,11 +35,13 @@ export function CaravanManagerPicker({
   value,
   onChange,
   defaultNationalId,
+  emptyLabel,
 }: {
   value: CaravanManagerChoice | null
   onChange: (next: CaravanManagerChoice | null) => void
   /** Prefill search, run it, and auto-select the matching pilgrim (e.g. file applicant). */
   defaultNationalId?: string | null
+  emptyLabel?: string
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -185,7 +187,7 @@ export function CaravanManagerPicker({
                   )}
                 </>
               ) : (
-                <p>{t('caravans.managerEmpty')}</p>
+                <p>{emptyLabel ?? t('caravans.managerEmpty')}</p>
               )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">

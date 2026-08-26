@@ -16,7 +16,7 @@ import {
   UserRound,
   Users,
 } from 'lucide-react'
-import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -31,6 +31,7 @@ import { FormCard } from '../../components/ui/FormLayout'
 import { FileDropField } from '../../components/ui/FileDropField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
+import { currentPersianYear, toLatinDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Caravan, City, Country, Paginated, Province, WalkingRoute } from '../../types/app'
 import { CaravanContactsPanel, firstIncompleteContactRole } from './CaravanContactsPanel'
@@ -47,8 +48,9 @@ import {
   type CaravanContactPayload,
   type CaravanContactRole,
 } from './caravanContacts'
-import { CaravanTabNav, type CaravanTab } from './CaravanTabs'
+import { CaravanTabNav, caravanTabs, type CaravanTab } from './CaravanTabs'
 import { CaravanYearAlert } from './CaravanYearAlert'
+import { CaravanActivityYearField, CaravanYearsCard } from './CaravanYearsCard'
 
 export type CaravanPayload = {
   name: string
@@ -61,6 +63,7 @@ export type CaravanPayload = {
   licenseNumber: string | null
   licenseImageId: string | null
   managerUserId?: string | null
+  year?: number
   totalCount: number
   maleCount: number
   femaleCount: number
@@ -185,6 +188,7 @@ export function CaravanForm({
   const [selectedManager, setSelectedManager] = useState<ManagerOption | null>(() =>
     initial?.manager ? toManagerOption(initial.manager) : null,
   )
+  const [activityYear, setActivityYear] = useState(String(currentPersianYear()))
   const [maleCount, setMaleCount] = useState(String(initial?.maleCount ?? 0))
   const [femaleCount, setFemaleCount] = useState(String(initial?.femaleCount ?? 0))
   const [eitaa, setEitaa] = useState(initial?.eitaa ?? '')
@@ -249,6 +253,15 @@ export function CaravanForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- apply once from profile defaults
   }, [initial, selectManager, defaultCountryId, defaultProvinceId, defaultCityId])
 
+  const tabs = useMemo(
+    () =>
+      (selectManager || initial?.id
+        ? caravanTabs
+        : caravanTabs.filter((item) => item !== 'years')) as CaravanTab[],
+    [selectManager, initial?.id],
+  )
+  const editYears = Boolean(selectManager && initial?.id)
+
   function panelClass(id: CaravanTab) {
     return `space-y-4 ${tab === id ? '' : 'hidden'}`
   }
@@ -306,6 +319,12 @@ export function CaravanForm({
         instagram: emptyToNull(instagram),
         isActive,
         contacts: toContactPayloads(contactDrafts),
+        ...(!initial
+          ? {
+              managerUserId: resolvedManagerId || null,
+              year: Number(toLatinDigits(activityYear)) || currentPersianYear(),
+            }
+          : {}),
       })
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
@@ -323,7 +342,10 @@ export function CaravanForm({
       subtitle={initial ? undefined : t('caravans.createSubtitle')}
     >
     <div className="space-y-4 p-5 sm:p-6">
-      <CaravanTabNav tab={tab} onChange={setTab} />
+      <CaravanTabNav tab={tab} tabs={tabs} onChange={setTab} />
+      {tab === 'years' && initial ? (
+        <CaravanYearsCard caravan={initial} canAssign={editYears} />
+      ) : (
       <AppForm
         onSubmit={submit}
         onInvalid={(event) => {
@@ -343,20 +365,6 @@ export function CaravanForm({
               required
             />
           </FormField>
-
-          {selectManager ? (
-            <CaravanManagerPicker
-              value={selectedManager}
-              onChange={(next) => {
-                setSelectedManager(next)
-                setManagerUserId(next?.id ?? '')
-                if (next?.provinceId && next?.cityId) {
-                  applyGeoFromProfile(next.countryId, next.provinceId, next.cityId)
-                  geoTouchedRef.current = true
-                }
-              }}
-            />
-          ) : null}
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField icon={Flag} label={t('geo.country')} htmlFor="countryId">
@@ -613,6 +621,29 @@ export function CaravanForm({
           </FormField>
         </div>
 
+        {selectManager && !initial ? (
+          <div data-tab="years" className={panelClass('years')}>
+            <p className="text-sm leading-6 text-ink-600">{t('caravans.activityYearsHint')}</p>
+            <CaravanActivityYearField
+              year={activityYear}
+              onYearChange={setActivityYear}
+              inputId="create-caravan-activity-year"
+            />
+            <CaravanManagerPicker
+              value={selectedManager}
+              onChange={(next) => {
+                setSelectedManager(next)
+                setManagerUserId(next?.id ?? '')
+                if (next?.provinceId && next?.cityId) {
+                  applyGeoFromProfile(next.countryId, next.provinceId, next.cityId)
+                  geoTouchedRef.current = true
+                }
+              }}
+              emptyLabel={t('caravans.withoutManager')}
+            />
+          </div>
+        ) : null}
+
         <div>
           <FormActions
             submitLabel={t('caravans.save')}
@@ -622,6 +653,7 @@ export function CaravanForm({
           />
         </div>
       </AppForm>
+      )}
     </div>
     </FormCard>
     </div>

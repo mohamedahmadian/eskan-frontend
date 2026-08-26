@@ -1,20 +1,22 @@
 import { useTranslation } from 'react-i18next'
 
-export const caravanTabs = ['basic', 'contacts', 'extra', 'license', 'social'] as const
+export const caravanTabs = ['basic', 'contacts', 'extra', 'license', 'social', 'years'] as const
 
 export type CaravanTab = (typeof caravanTabs)[number]
 
 export function CaravanTabNav({
   tab,
+  tabs = [...caravanTabs],
   onChange,
 }: {
   tab: CaravanTab
+  tabs?: CaravanTab[]
   onChange: (tab: CaravanTab) => void
 }) {
   const { t } = useTranslation()
   return (
     <nav className="flex flex-wrap gap-2 rounded-2xl border border-line bg-cream-50/80 p-3">
-      {caravanTabs.map((item) => (
+      {tabs.map((item) => (
         <button
           key={item}
           type="button"

@@ -74,6 +74,12 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "caravans.createSubtitle",
     };
   }
+  if (pathname.startsWith("/caravans/import")) {
+    return {
+      titleKey: "caravans.import",
+      subtitleKey: "caravans.importSubtitle",
+    };
+  }
   if (pathname.includes("/edit") && pathname.startsWith("/caravans/")) {
     return { titleKey: "caravans.edit", subtitleKey: "caravans.editSubtitle" };
   }

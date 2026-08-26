@@ -1,4 +1,4 @@
-import { AlignLeft, ArrowUpDown, FileText, ToggleLeft, Users } from 'lucide-react'
+import { AlignLeft, ArrowUpDown, FileText, ListChecks, ToggleLeft, Users } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -13,12 +13,14 @@ import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import {
+  EVALUATION_ANSWER_TYPES,
   EVALUATION_EVALUATOR_TYPES,
   EVALUATION_PAIRS,
   EVALUATION_TARGET_TYPES,
   isPairAllowed,
 } from '../../lib/evaluations'
 import type {
+  EvaluationAnswerType,
   EvaluationEvaluatorType,
   EvaluationQuestion,
   EvaluationTargetType,
@@ -29,6 +31,7 @@ export type EvaluationQuestionPayload = {
   description: string | null
   evaluatorType: EvaluationEvaluatorType
   targetType: EvaluationTargetType
+  answerType: EvaluationAnswerType
   sortOrder: number
   isActive: boolean
 }
@@ -52,6 +55,7 @@ export function EvaluationQuestionForm({
     description: initial?.description ?? '',
     evaluatorType: (initial?.evaluatorType ?? 'PILGRIM') as EvaluationEvaluatorType,
     targetType: (initial?.targetType ?? 'CARAVAN_MANAGER') as EvaluationTargetType,
+    answerType: (initial?.answerType ?? 'FIVE_SCALE') as EvaluationAnswerType,
     sortOrder: String(initial?.sortOrder ?? 0),
     isActive: initial?.isActive ?? true,
   })
@@ -78,6 +82,7 @@ export function EvaluationQuestionForm({
         description: emptyToNull(values.description),
         evaluatorType: values.evaluatorType,
         targetType: values.targetType,
+        answerType: values.answerType,
         sortOrder: Number(values.sortOrder) || 0,
         isActive: values.isActive,
       })
@@ -148,6 +153,19 @@ export function EvaluationQuestionForm({
             options={targetOptions.map((type) => ({
               value: type,
               label: t(`evaluations.targetTypes.${type}`),
+            }))}
+          />
+        </FormField>
+        <FormField icon={ListChecks} label={t('evaluations.answerType')} htmlFor="answerType">
+          <SearchSelect
+            id="answerType"
+            value={values.answerType}
+            required
+            onChange={(next) => set('answerType', next as EvaluationAnswerType)}
+            placeholder={t('evaluations.selectAnswerType')}
+            options={EVALUATION_ANSWER_TYPES.map((type) => ({
+              value: type,
+              label: t(`evaluations.answerTypes.${type}`),
             }))}
           />
         </FormField>

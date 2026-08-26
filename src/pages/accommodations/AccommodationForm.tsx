@@ -31,10 +31,9 @@ import { toast } from 'sonner'
 import { AppForm, FormActions, FormField, ToggleField, fieldClassName } from '../../components/ui/Form'
 import { FormCard } from '../../components/ui/FormLayout'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
-import { CheckboxField } from '../../components/ui/CheckboxField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear, formatNumber } from '../../lib/datetime'
+import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import {
   accommodationStatuses,
@@ -51,7 +50,7 @@ import {
   type Province,
   type City,
 } from '../../types/app'
-import { AccommodationManagersCard } from './AccommodationManagersCard'
+import { AccommodationActivityYearFields, AccommodationManagersCard } from './AccommodationManagersCard'
 import { AccommodationTabNav, type AccommodationTab } from './AccommodationTabs'
 import { AccommodationYearAlert } from './AccommodationYearAlert'
 import { AccommodationYearContactsCard } from './AccommodationYearContactsCard'
@@ -97,6 +96,7 @@ export type AccommodationPayload = {
   parkingCapacity: number | null
   bathroomCount: number | null
   toiletCount: number | null
+  year?: number
   managerUserIds?: string[]
   primaryManagerUserId?: string | null
   isPrimary?: boolean
@@ -182,13 +182,8 @@ export function AccommodationForm({
     parkingCapacity: initial?.parkingCapacity != null ? String(initial.parkingCapacity) : '',
     bathroomCount: initial?.bathroomCount != null ? String(initial.bathroomCount) : '',
     toiletCount: initial?.toiletCount != null ? String(initial.toiletCount) : '',
-    managerUserIds: (initial?.managers ?? [])
-      .filter((item) => item.year === currentPersianYear() && item.userId)
-      .map((item) => item.userId as string),
-    primaryManagerUserId:
-      (initial?.managers ?? []).find(
-        (item) => item.year === currentPersianYear() && item.isPrimary && item.userId,
-      )?.userId ?? '',
+    activityYear: String(currentPersianYear()),
+    managerUserId: '',
     isPrimary: initial?.managers
       ? initial.managers.some(
           (item) =>
@@ -251,18 +246,6 @@ export function AccommodationForm({
     }))
   }
 
-  function toggleManager(userId: string) {
-    setValues((current) => {
-      const selected = current.managerUserIds.includes(userId)
-        ? current.managerUserIds.filter((id) => id !== userId)
-        : [...current.managerUserIds, userId]
-      const primaryManagerUserId = selected.includes(current.primaryManagerUserId)
-        ? current.primaryManagerUserId
-        : (selected[0] ?? '')
-      return { ...current, managerUserIds: selected, primaryManagerUserId }
-    })
-  }
-
   async function submit(event: FormEvent) {
     event.preventDefault()
     setSaving(true)
@@ -302,8 +285,9 @@ export function AccommodationForm({
         ...(!isAdmin && !initial?.id ? { yearContactMode } : {}),
         ...(isAdmin && !initial?.id
           ? {
-              managerUserIds: values.managerUserIds,
-              primaryManagerUserId: emptyToNull(values.primaryManagerUserId),
+              year: toNumber(toLatinDigits(values.activityYear), currentPersianYear()),
+              managerUserIds: values.managerUserId ? [values.managerUserId] : [],
+              primaryManagerUserId: emptyToNull(values.managerUserId),
             }
           : !isAdmin
             ? { isPrimary: values.isPrimary }
@@ -777,46 +761,18 @@ export function AccommodationForm({
 
       {isAdmin && !initial?.id ? (
         <div data-tab="managers" className={panelClass('managers')}>
-          <div className="space-y-2">
-            {users.length ? (
-              users.map((user) => (
-                <CheckboxField
-                  key={user.id}
-                  checked={values.managerUserIds.includes(user.id)}
-                  onChange={(on) => {
-                    const selected = values.managerUserIds.includes(user.id)
-                    if (on !== selected) toggleManager(user.id)
-                  }}
-                  label={
-                    <span>
-                      {user.fullName}
-                      <span className="ms-2 text-ink-400">{user.username}</span>
-                    </span>
-                  }
-                />
-              ))
-            ) : (
-              <p className="text-sm text-ink-500">{t('accommodations.noManagers')}</p>
-            )}
-          </div>
-          <FormField icon={UserCheck} label={t('accommodations.primaryManager')} htmlFor="primaryManagerUserId">
-            <SearchSelect
-              id="primaryManagerUserId"
-              value={values.primaryManagerUserId}
-              disabled={!values.managerUserIds.length}
-              placeholder={t('accommodations.selectPrimaryManager')}
-              onChange={(next) => set('primaryManagerUserId', next)}
-              options={[
-                { value: '', label: t('accommodations.selectPrimaryManager') },
-                ...users
-                  .filter((user) => values.managerUserIds.includes(user.id))
-                  .map((user) => ({
-                    value: user.id,
-                    label: user.fullName,
-                  })),
-              ]}
+          <p className="text-sm leading-6 text-ink-600">{t('accommodations.activityYearsHint')}</p>
+          <div className="grid gap-4 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-end">
+            <AccommodationActivityYearFields
+              year={values.activityYear}
+              onYearChange={(next) => set('activityYear', next)}
+              userId={values.managerUserId}
+              onUserIdChange={(next) => set('managerUserId', next)}
+              users={users}
+              yearInputId="create-activity-year"
+              managerInputId="create-activity-manager"
             />
-          </FormField>
+          </div>
         </div>
       ) : null}
 
