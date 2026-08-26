@@ -40,7 +40,7 @@ export function HeadquartersServiceYearsCard({
           {t('dashboard.serviceYears')}
         </span>
         <p
-          className={`relative bg-gradient-to-l from-teal-700 to-mint-600 bg-clip-text font-extrabold leading-none tracking-tight text-transparent ${
+          className={`relative bg-gradient-to-e from-teal-700 to-mint-600 bg-clip-text font-extrabold leading-none tracking-tight text-transparent ${
             compact ? 'mt-1.5 text-[1.45rem]' : 'mt-2.5 text-[2rem]'
           }`}
         >

@@ -123,7 +123,7 @@ export function ReservationCompleteSummary({
 
   return (
     <section className={`${cardClassName} overflow-hidden`}>
-      <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
+      <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
         <FormCardHeaderDecor />
         <div className="relative flex items-start gap-3">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
@@ -175,7 +175,7 @@ export function ReservationCompleteSummary({
 
       <div className="space-y-5 p-5 sm:p-6">
         {cancelled || audience === 'admin' ? null : (
-          <p className="rounded-2xl border border-teal-100 bg-gradient-to-l from-white to-teal-50 px-4 py-3 text-sm leading-7 text-ink-700">
+          <p className="rounded-2xl border border-teal-100 bg-gradient-to-e from-white to-teal-50 px-4 py-3 text-sm leading-7 text-ink-700">
             {t('reservations.completedBody')}
           </p>
         )}

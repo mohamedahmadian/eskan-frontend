@@ -1,10 +1,10 @@
 import DatePickerImport, { DateObject } from 'react-multi-date-picker'
-import persian from 'react-date-object/calendars/persian'
 import { CalendarDays, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
+  datePickerCalendar,
+  datePickerLocale,
   fromIsoDateOnly,
-  jalaliPickerLocale,
   numberingDigits,
   toIsoDateOnly,
 } from '../../lib/datetime'
@@ -54,12 +54,14 @@ function DatePickerActions({
   position?: string
 }) {
   const { t, i18n } = useTranslation()
-  const pickerLocale = jalaliPickerLocale(i18n.language.split('-')[0] ?? 'fa')
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const pickerLocale = datePickerLocale(locale)
+  const pickerCalendar = datePickerCalendar(locale)
   const selected = hasSelectedDate(state?.selectedDate)
 
   function todayDate() {
     return new DateObject({
-      calendar: state?.calendar ?? persian,
+      calendar: state?.calendar ?? pickerCalendar,
       locale: pickerLocale,
     })
   }
@@ -120,13 +122,14 @@ export function PersianDateField({
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
-  const pickerLocale = jalaliPickerLocale(locale)
+  const pickerLocale = datePickerLocale(locale)
+  const pickerCalendar = datePickerCalendar(locale)
   const dir = document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr'
   const selected = value
-    ? fromIsoDateOnly(value)?.convert(persian)
+    ? fromIsoDateOnly(value)?.convert(pickerCalendar)
     : undefined
-  const min = minDate ? fromIsoDateOnly(minDate)?.convert(persian) : undefined
-  const max = maxDate ? fromIsoDateOnly(maxDate)?.convert(persian) : undefined
+  const min = minDate ? fromIsoDateOnly(minDate)?.convert(pickerCalendar) : undefined
+  const max = maxDate ? fromIsoDateOnly(maxDate)?.convert(pickerCalendar) : undefined
 
   return (
     <div className="w-full space-y-1.5">
@@ -134,7 +137,7 @@ export function PersianDateField({
         value={selected}
         minDate={min}
         maxDate={max}
-        calendar={persian}
+        calendar={pickerCalendar}
         locale={pickerLocale}
         format="YYYY/M/D"
         digits={locale === 'en' ? undefined : (numberingDigits[locale] ?? numberingDigits.fa)}

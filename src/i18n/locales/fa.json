@@ -56,7 +56,8 @@
     "panel": "پنل مدیریت",
     "searchMenu": "جستجوی منو...",
     "searchMenuHint": "دو بار کنترل جهت فعال‌سازی",
-    "contactFooter": "راه‌های ارتباطی جمعیت"
+    "contactFooter": "راه‌های ارتباطی جمعیت",
+    "appVersion": "نسخه"
   },
   "quickTools": {
     "open": "ابزارها",

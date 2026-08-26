@@ -19,6 +19,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
+import { geoName } from '../../lib/geo'
 import type { ProvincialMonitoringCityDetail } from '../../types/app'
 import { IranMonitoringMap } from './IranMonitoringMap'
 import {
@@ -76,7 +77,7 @@ export function ProvincialMonitoringCityPage() {
     <div className={listShellClassName}>
       <PageHeader
         title={t('provincialMonitoring.cityDetails')}
-        subtitle={<EntityNameSubtitle name={data.city.nameFa} icon={MapPin} />}
+        subtitle={<EntityNameSubtitle name={geoName(data.city, locale)} icon={MapPin} />}
         backTo={`/provincial-monitoring/provinces/${data.city.province.id}?${yearQuery(year)}`}
       />
       <div className="mb-4 space-y-3">
@@ -100,7 +101,7 @@ export function ProvincialMonitoringCityPage() {
           </Button>
         </div>
         <MonitoringStatTiles totals={data.totals} />
-        <FormCard icon={MapPin} title={data.city.nameFa} subtitle={data.city.province.nameFa}>
+        <FormCard icon={MapPin} title={geoName(data.city, locale)} subtitle={geoName(data.city.province, locale)}>
           <IranMonitoringMap
             provinces={[]}
             cities={[
@@ -114,6 +115,7 @@ export function ProvincialMonitoringCityPage() {
                 longitude: data.city.longitude,
                 provinceId: data.city.province.id,
                 provinceNameFa: data.city.province.nameFa,
+                provinceNameEn: data.city.province.nameEn,
                 isProvinceCapital: data.city.isProvinceCapital,
               },
             ]}

@@ -317,6 +317,7 @@ export type ProvincialMonitoringPlace = ProvincialMonitoringCounts & {
 export type ProvincialMonitoringCityPlace = ProvincialMonitoringPlace & {
   provinceId: string;
   provinceNameFa: string;
+  provinceNameEn: string;
   isProvinceCapital: boolean;
 };
 
@@ -350,6 +351,7 @@ export type ProvincialMonitoringMap = {
       code: string;
       provinceId: string;
       provinceNameFa: string;
+      provinceNameEn: string;
     }[];
   };
 };
@@ -373,6 +375,7 @@ export type ProvincialMonitoringProvinceDetail = {
 export type NationalMonitoringPlace = {
   id: string;
   nameFa: string;
+  nameEn: string;
   pilgrims: number;
   pilgrimMale: number;
   pilgrimFemale: number;
@@ -387,6 +390,7 @@ export type NationalMonitoringPlace = {
 export type NationalMonitoringCity = NationalMonitoringPlace & {
   provinceId: string;
   provinceNameFa: string;
+  provinceNameEn: string;
 };
 
 export type NationalMonitoringRoute = {
@@ -414,12 +418,13 @@ export type NationalMonitoringReport = {
     lodgingGap: number;
   };
   highlights: {
-    busiestProvince: { id: string; nameFa: string; pilgrims: number } | null;
-    busiestCity: { id: string; nameFa: string; pilgrims: number } | null;
+    busiestProvince: { id: string; nameFa: string; nameEn: string; pilgrims: number } | null;
+    busiestCity: { id: string; nameFa: string; nameEn: string; pilgrims: number } | null;
     busiestRoute: { id: string; name: string; pilgrims: number } | null;
     tightestProvince: {
       id: string;
       nameFa: string;
+      nameEn: string;
       pilgrims: number;
       lodgingCapacity: number;
       lodgingGap: number;
@@ -1783,7 +1788,7 @@ export type PreviousCaravanReservation = {
   status: ReservationStatus;
   stayStartDate: string | null;
   stayEndDate: string | null;
-  originCity: { nameFa: string } | null;
+  originCity: { nameFa: string; nameEn: string } | null;
   memberCount: number;
   maleCount: number;
   femaleCount: number;

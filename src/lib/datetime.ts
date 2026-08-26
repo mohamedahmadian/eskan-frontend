@@ -3,6 +3,8 @@ import arabic from 'react-date-object/calendars/arabic'
 import gregorian from 'react-date-object/calendars/gregorian'
 import persian from 'react-date-object/calendars/persian'
 import arabic_ar from 'react-date-object/locales/arabic_ar'
+import gregorian_en from 'react-date-object/locales/gregorian_en'
+import gregorian_hi from 'react-date-object/locales/gregorian_hi'
 import persian_fa from 'react-date-object/locales/persian_fa'
 
 export const numberingDigits: Record<string, string[]> = {
@@ -49,7 +51,11 @@ function toGregorianDateObject(value: string, dateOnly: boolean) {
 }
 
 export function usesJalaliCalendar(locale: string) {
-  return locale === 'fa' || locale === 'ar'
+  return locale === 'fa' || locale === 'ar' || locale === 'ur'
+}
+
+export function isLtrLocale(locale: string) {
+  return locale === 'en' || locale === 'hi'
 }
 
 export const persianArLocale = {
@@ -84,8 +90,15 @@ export const persianArLocale = {
   ],
 }
 
-export function jalaliPickerLocale(locale: string) {
-  return locale === 'ar' ? persianArLocale : persian_fa
+export function datePickerCalendar(locale: string) {
+  return usesJalaliCalendar(locale) ? persian : gregorian
+}
+
+export function datePickerLocale(locale: string) {
+  if (locale === 'ar') return persianArLocale
+  if (usesJalaliCalendar(locale)) return persian_fa
+  if (locale === 'hi') return gregorian_hi
+  return gregorian_en
 }
 
 function toDisplayDate(value: string, locale: string, dateOnly: boolean) {
@@ -153,8 +166,9 @@ export function formatGroupedNumber(value: number, locale: string) {
   if (!Number.isFinite(value)) {
     return ''
   }
-  const grouped = Math.trunc(value).toLocaleString('en-US').replace(/,/g, '٬')
-  return localizeDigits(grouped, locale)
+  const grouped = Math.trunc(value).toLocaleString('en-US')
+  const withSeparator = isLtrLocale(locale) ? grouped : grouped.replace(/,/g, '٬')
+  return localizeDigits(withSeparator, locale)
 }
 
 export function currentPersianYear() {

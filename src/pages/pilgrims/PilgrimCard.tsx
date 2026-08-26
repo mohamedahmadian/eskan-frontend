@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { forwardRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { languageDir } from '../../i18n'
 import { AppLogo } from '../../components/brand/AppLogo'
 import { getImageUrl } from '../../lib/api'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
@@ -37,7 +38,7 @@ export const PilgrimCard = forwardRef<
   const genderLabel = pilgrim.gender ? t(`userGenders.${pilgrim.gender}`) : null
 
   return (
-    <div ref={ref} className={modelClass[model]} dir="rtl">
+    <div ref={ref} className={modelClass[model]} dir={languageDir(locale)}>
       <div className="pilgrim-id-card__header">
         <div className="pilgrim-id-card__header-pattern" aria-hidden />
         <div className="pilgrim-id-card__brand">

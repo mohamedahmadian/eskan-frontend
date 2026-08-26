@@ -184,7 +184,7 @@ export function EvaluationSurveyForm({
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-cream-100">
             <div
-              className="h-full rounded-full bg-gradient-to-l from-mint-400 to-teal-500 transition-all duration-300"
+              className="h-full rounded-full bg-gradient-to-e from-mint-400 to-teal-500 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>

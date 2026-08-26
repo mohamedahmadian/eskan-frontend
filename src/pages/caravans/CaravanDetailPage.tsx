@@ -121,7 +121,7 @@ export function CaravanDetailPage() {
       <CaravanYearAlert caravan={caravan} />
 
       <section className={`${cardClassName} overflow-hidden`}>
-        <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
+        <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
           <FormCardHeaderDecor />
           <div className="relative flex items-start gap-3">
             <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">

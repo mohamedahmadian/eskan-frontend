@@ -262,7 +262,7 @@ function CountPairSection({
 function GroupMaxHint({ locale }: { locale: string }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-teal-100 bg-gradient-to-l from-mint-50 via-white to-teal-50 px-3 py-2.5 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
+    <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-3 py-2.5 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
       <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white">
         <Users className="size-3.5" aria-hidden />
       </span>

@@ -1,7 +1,8 @@
-import { Globe, Phone, type LucideIcon } from 'lucide-react'
+import { Globe, Phone, Tag, type LucideIcon } from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BaleIcon, EitaaIcon, InstagramIcon, TelegramIcon } from '../brand/SocialBrandIcon'
+import { APP_VERSION } from '../../lib/app-version'
 import { localizeDigits, parseDigitString } from '../../lib/datetime'
 import { displayExternalUrl, toExternalHref, type SocialNetwork } from '../../lib/social-links'
 import type { HeadquartersServiceSummary } from '../../types/app'
@@ -68,13 +69,13 @@ export function AdminFooter({
     ]
   })
 
-  if (!phones.length && !links.length) {
-    return null
-  }
+  const hasContacts = phones.length > 0 || links.length > 0
+  const versionLabel = t('nav.appVersion')
+  const versionText = localizeDigits(APP_VERSION, locale)
 
   return (
     <footer
-      aria-label={t('nav.contactFooter')}
+      aria-label={hasContacts ? t('nav.contactFooter') : versionLabel}
       className={`shrink-0 border-t border-line bg-white/90 px-4 py-2 backdrop-blur sm:px-8 ${
         compactEnd ? 'pe-20 sm:pe-24' : ''
       }`}
@@ -143,6 +144,19 @@ export function AdminFooter({
             </a>
           )
         })}
+        {hasContacts ? <span className="hidden h-4 w-px bg-line sm:block" aria-hidden /> : null}
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full bg-cream-50 px-2 py-1 text-[11px] text-ink-500 ring-1 ring-line"
+          title={`${versionLabel} ${APP_VERSION}`}
+        >
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-teal-600 ring-1 ring-teal-100">
+            <Tag className="size-3" aria-hidden />
+          </span>
+          <span>{versionLabel}</span>
+          <span dir="ltr" className="font-semibold tabular-nums text-teal-800">
+            {versionText}
+          </span>
+        </span>
       </div>
     </footer>
   )

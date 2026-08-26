@@ -7,6 +7,7 @@ import type {
   ProvincialMonitoringCityPlace,
   ProvincialMonitoringPlace,
 } from '../../types/app'
+import { geoName } from '../../lib/geo'
 import { heatColor } from './monitoringShared'
 
 const IRAN_BOUNDS = L.latLngBounds([24.4, 43.9], [40.0, 63.5])
@@ -98,12 +99,13 @@ export function IranMonitoringMap({
       if (province.latitude == null || province.longitude == null) continue
       const value = metricValue(province, metric)
       const fill = heatColor(value, max)
+      const provinceLabel = geoName(province, locale)
       const icon = L.divIcon({
         className: 'eskan-province-chip-wrap',
         iconSize: [118, 44],
         iconAnchor: [59, 22],
         html: `<button type="button" class="eskan-province-chip" style="background:${fill}">
-          <span class="eskan-province-chip-name">${escapeHtml(province.nameFa)}</span>
+          <span class="eskan-province-chip-name">${escapeHtml(provinceLabel)}</span>
           <span class="eskan-province-chip-value">${value > 0 ? escapeHtml(formatNumber(value, locale)) : '—'}</span>
         </button>`,
       })
@@ -112,7 +114,7 @@ export function IranMonitoringMap({
         zIndexOffset: 400,
       })
       marker.bindTooltip(
-        `${province.nameFa}<br/>${t('provincialMonitoring.reservationPilgrims')}: ${formatNumber(province.reservationPilgrims.total, locale)}<br/>${t('provincialMonitoring.caravans')}: ${formatNumber(province.caravanCount, locale)}<br/>${t('provincialMonitoring.residentPilgrims')}: ${formatNumber(province.residentPilgrims, locale)}`,
+        `${provinceLabel}<br/>${t('provincialMonitoring.reservationPilgrims')}: ${formatNumber(province.reservationPilgrims.total, locale)}<br/>${t('provincialMonitoring.caravans')}: ${formatNumber(province.caravanCount, locale)}<br/>${t('provincialMonitoring.residentPilgrims')}: ${formatNumber(province.residentPilgrims, locale)}`,
         { direction: 'top', sticky: true },
       )
       marker.on('click', () => onProvinceRef.current(province.id))
@@ -136,8 +138,9 @@ export function IranMonitoringMap({
           fillColor: '#2ebdb6',
           fillOpacity: 0.72,
         })
+        const cityLabel = `${geoName(city, locale)} — ${geoName({ nameFa: city.provinceNameFa, nameEn: city.provinceNameEn }, locale)}`
         marker.bindTooltip(
-          `${city.nameFa} — ${city.provinceNameFa}<br/>${t('provincialMonitoring.reservationPilgrims')}: ${formatNumber(city.reservationPilgrims.total, locale)}<br/>${t('provincialMonitoring.caravans')}: ${formatNumber(city.caravanCount, locale)}`,
+          `${cityLabel}<br/>${t('provincialMonitoring.reservationPilgrims')}: ${formatNumber(city.reservationPilgrims.total, locale)}<br/>${t('provincialMonitoring.caravans')}: ${formatNumber(city.caravanCount, locale)}`,
           { direction: 'top', sticky: true },
         )
         marker.on('click', () => onCityRef.current(city.id))

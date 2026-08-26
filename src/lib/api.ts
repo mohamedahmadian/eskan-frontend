@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getStoredPreferredLocale, uiLanguageFor } from '../i18n'
 import { isPublicSessionPath } from './public-paths'
 
 const envApiUrl = import.meta.env.VITE_API_URL?.trim()
@@ -36,6 +37,7 @@ api.interceptors.request.use((config) => {
   if (token && !url.includes('/public/vouchers/')) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  config.headers['Accept-Language'] = uiLanguageFor(getStoredPreferredLocale())
   return config
 })
 

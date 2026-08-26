@@ -34,7 +34,7 @@ const variantStyles: Record<
   intro: {
     Icon: Info,
     iconWrap: 'bg-teal-50 text-teal-600',
-    item: 'border-teal-100/80 bg-gradient-to-l from-teal-50/70 to-white',
+    item: 'border-teal-100/80 bg-gradient-to-e from-teal-50/70 to-white',
     title: 'text-teal-800',
   },
   rules: {

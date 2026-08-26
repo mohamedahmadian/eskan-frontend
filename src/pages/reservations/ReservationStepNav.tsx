@@ -25,7 +25,7 @@ export function StepBlockedNotice({
     <aside
       id={id}
       role="status"
-      className="flex items-start gap-3 rounded-[22px] border border-amber-200 bg-gradient-to-l from-amber-50 via-white to-cream-50 px-4 py-3.5 shadow-[0_10px_24px_rgba(245,158,11,0.12)]"
+      className="flex items-start gap-3 rounded-[22px] border border-amber-200 bg-gradient-to-e from-amber-50 via-white to-cream-50 px-4 py-3.5 shadow-[0_10px_24px_rgba(245,158,11,0.12)]"
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-[0_8px_16px_rgba(245,158,11,0.28)]">
         <Clock3 className="size-5" aria-hidden />

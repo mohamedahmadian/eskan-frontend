@@ -252,7 +252,7 @@ export function ReservationPartyFields({
           <p className="text-sm font-semibold text-ink-800">
             {t(isCaravan ? 'reservations.selectMyCaravan' : 'reservations.selectMyGroup')}
           </p>
-          <div className="flex items-start gap-3 overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-l from-mint-50 via-white to-teal-50 px-4 py-3 shadow-[0_8px_20px_rgba(46,189,182,0.12)]">
+          <div className="flex items-start gap-3 overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-4 py-3 shadow-[0_8px_20px_rgba(46,189,182,0.12)]">
             <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
               <PartyIcon className="size-4" aria-hidden />
             </span>

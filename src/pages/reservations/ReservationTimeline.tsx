@@ -177,7 +177,7 @@ function nodeTone(state: TimelineState) {
     return {
       node: 'border-teal-500 bg-teal-500 text-white shadow-[0_0_0_4px_rgba(46,189,182,0.16)]',
       line: 'bg-teal-200',
-      card: 'border-teal-100 bg-gradient-to-l from-white to-teal-50/70',
+      card: 'border-teal-100 bg-gradient-to-e from-white to-teal-50/70',
       badge: 'bg-teal-50 text-teal-800',
     }
   }

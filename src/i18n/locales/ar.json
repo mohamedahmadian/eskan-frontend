@@ -56,7 +56,8 @@
     "panel": "لوحة الإدارة",
     "searchMenu": "بحث في القائمة...",
     "searchMenuHint": "اضغط Ctrl مرتين للتفعيل",
-    "contactFooter": "وسائل التواصل مع الهيئة"
+    "contactFooter": "وسائل التواصل مع الهيئة",
+    "appVersion": "الإصدار"
   },
   "quickTools": {
     "open": "الأدوات",

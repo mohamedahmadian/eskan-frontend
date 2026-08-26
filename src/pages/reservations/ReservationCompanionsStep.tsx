@@ -418,7 +418,7 @@ function CompanionTabNav({
 
   return (
     <nav
-      className="flex flex-wrap gap-2 rounded-2xl border border-teal-100 bg-gradient-to-l from-mint-50 via-white to-teal-50 p-1.5"
+      className="flex flex-wrap gap-2 rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 p-1.5"
       role="tablist"
       aria-label={t(stepLabelKey("companions", isCaravan ? "CARAVAN" : undefined))}
     >
@@ -957,7 +957,7 @@ function NationalIdNotFoundNotice({ nationalId }: { nationalId: string }) {
       role="status"
     >
       <div
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-gold-400 via-gold-500 to-teal-400"
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-e from-gold-400 via-gold-500 to-teal-400"
         aria-hidden
       />
       <div className="flex items-start gap-3 pt-1">
@@ -1227,7 +1227,7 @@ function CompanionsCountIssue({
       role="alert"
     >
       <div
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-red-400 via-red-500 to-red-400"
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-e from-red-400 via-red-500 to-red-400"
         aria-hidden
       />
       <div className="flex items-start gap-3 pt-1">

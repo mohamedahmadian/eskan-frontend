@@ -64,7 +64,7 @@ export function useWalkingRouteMap(
         kind,
         badge: escapeHtml(badge),
         title: escapeHtml(city),
-        popupHtml: `<div class="eskan-route-popup-body" dir="rtl"><strong>${escapeHtml(city)}</strong><p>${facts.map((line) => escapeHtml(line)).join('</p><p>')}</p></div>`,
+        popupHtml: `<div class="eskan-route-popup-body" dir="${document.documentElement.dir}"><strong>${escapeHtml(city)}</strong><p>${facts.map((line) => escapeHtml(line)).join('</p><p>')}</p></div>`,
       })
       path.push(coords)
     }
@@ -194,7 +194,7 @@ export function WalkingRouteProgress({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-start gap-3 rounded-2xl border border-teal-100 bg-gradient-to-l from-mint-50 via-white to-teal-50 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-4 py-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
           <Route className="size-4" aria-hidden />
         </span>

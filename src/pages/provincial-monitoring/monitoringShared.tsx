@@ -7,6 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { languageDir } from '../../i18n'
 import {
   Bar,
   BarChart,
@@ -79,7 +80,7 @@ function MonitorBarTooltip({
   return (
     <div
       className="rounded-2xl border border-line bg-white px-3 py-2.5 text-sm shadow-[0_10px_30px_rgba(20,40,40,0.08)]"
-      dir="rtl"
+      dir={languageDir(locale)}
     >
       {label ? <p className="mb-1.5 font-medium text-ink-900">{label}</p> : null}
       <ul className="space-y-1">

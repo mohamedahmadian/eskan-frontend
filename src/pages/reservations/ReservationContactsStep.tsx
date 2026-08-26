@@ -690,7 +690,7 @@ function NationalIdNotFoundNotice({ nationalId }: { nationalId: string }) {
       role="status"
     >
       <div
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-gold-400 via-gold-500 to-teal-400"
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-e from-gold-400 via-gold-500 to-teal-400"
         aria-hidden
       />
       <div className="flex items-start gap-3 pt-1">

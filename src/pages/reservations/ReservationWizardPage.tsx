@@ -382,7 +382,7 @@ function ReviewWaitingBanner({ submittedAt }: { submittedAt: string }) {
 
   return (
     <aside
-      className="mb-4 rounded-2xl border border-gold-300 bg-gradient-to-l from-gold-50 via-white to-white px-3.5 py-3 shadow-[0_6px_16px_rgba(232,184,58,0.12)]"
+      className="mb-4 rounded-2xl border border-gold-300 bg-gradient-to-e from-gold-50 via-white to-white px-3.5 py-3 shadow-[0_6px_16px_rgba(232,184,58,0.12)]"
       role="status"
     >
       <div className="flex items-start gap-3">

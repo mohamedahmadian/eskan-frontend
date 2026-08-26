@@ -73,7 +73,7 @@ function CaravanNameBadges({
           label={t('caravanManagers.moreCaravans')}
           content={
             <div className="min-w-[12.5rem]">
-              <div className="flex items-center gap-2 border-b border-teal-50 bg-gradient-to-l from-mint-50 via-white to-teal-50 px-3 py-2">
+              <div className="flex items-center gap-2 border-b border-teal-50 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-3 py-2">
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-white shadow-[0_6px_12px_rgba(46,189,182,0.28)]">
                   <Tent className="size-3.5" aria-hidden />
                 </span>

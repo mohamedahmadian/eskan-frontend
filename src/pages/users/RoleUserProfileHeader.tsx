@@ -22,7 +22,7 @@ export function RoleUserProfileHeader({
   const isActive = user.status === 'ACTIVE'
 
   return (
-    <header className="relative overflow-hidden bg-gradient-to-l from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
+    <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
       <FormCardHeaderDecor />
       <div className="relative flex items-start gap-3">
         <UserAvatar user={user} />

@@ -1275,7 +1275,7 @@ function RemainingCapacityCard({
   ] as const
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-l from-mint-50 via-white to-teal-50 px-3 py-2 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
+    <section className="overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-3 py-2 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
       <div className="mb-1.5 flex items-center gap-2">
         <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-white">
           <Gauge className="size-3.5" aria-hidden />

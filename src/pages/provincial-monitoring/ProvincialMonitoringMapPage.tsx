@@ -19,6 +19,7 @@ import { useListParams } from '../../hooks/useListParams'
 import { useAuth } from '../../auth/AuthProvider'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, persianYearOptions } from '../../lib/datetime'
+import { geoName } from '../../lib/geo'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import type { ProvincialMonitoringMap } from '../../types/app'
 import { IranMonitoringMap, type MapMetric } from './IranMonitoringMap'
@@ -66,17 +67,17 @@ export function ProvincialMonitoringMapPage() {
     () =>
       (data?.lookup.provinces ?? []).map((item) => ({
         value: item.id,
-        label: item.nameFa,
+        label: geoName(item, locale),
       })),
-    [data],
+    [data, locale],
   )
   const cityOptions = useMemo(
     () =>
       (data?.lookup.cities ?? []).map((item) => ({
         value: item.id,
-        label: `${item.nameFa} — ${item.provinceNameFa}`,
+        label: `${geoName(item, locale)} — ${geoName({ nameFa: item.provinceNameFa, nameEn: item.provinceNameEn }, locale)}`,
       })),
-    [data],
+    [data, locale],
   )
   const chartData = useMemo(
     () =>
@@ -87,10 +88,10 @@ export function ProvincialMonitoringMapPage() {
         .slice(0, 20)
         .map((item) => ({
           id: item.id,
-          name: item.nameFa,
+          name: geoName(item, locale),
           pilgrims: item.reservationPilgrims.total,
         })),
-    [data],
+    [data, locale],
   )
 
   async function exportExcel() {

@@ -214,7 +214,7 @@ export function CaravanContactsPanel({
               <input
                 ref={nationalIdRef}
                 id={`contact-${activeRole}-nationalId`}
-                className={`${fieldClassName} text-right`}
+                className={`${fieldClassName} digit-field`}
                 value={draft.nationalId}
                 dir="ltr"
                 inputMode="numeric"
@@ -302,7 +302,7 @@ export function CaravanContactsPanel({
               >
                 <input
                   id={`contact-${activeRole}-phone`}
-                  className={`${inputClassName()} text-right`}
+                  className={`${inputClassName()} digit-field`}
                   value={draft.phone}
                   dir="ltr"
                   required

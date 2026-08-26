@@ -34,6 +34,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
+import { geoName } from '../../lib/geo'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { useAuth } from '../../auth/AuthProvider'
 import type {
@@ -56,6 +57,7 @@ function sortRows<T>(
   sortBy: string,
   sortDir: SortDir | '',
   valueOf: (row: T, key: string) => string | number,
+  locale: string,
 ) {
   if (!sortBy || !sortDir) return rows
   return [...rows].sort((a, b) => {
@@ -64,7 +66,7 @@ function sortRows<T>(
     const cmp =
       typeof av === 'number' && typeof bv === 'number'
         ? av - bv
-        : String(av).localeCompare(String(bv), 'fa')
+        : String(av).localeCompare(String(bv), locale)
     return sortDir === 'asc' ? cmp : -cmp
   })
 }
@@ -104,26 +106,31 @@ export function NationalMonitoringPage() {
   const provinces = useMemo(
     () =>
       sortRows(data?.byProvince ?? [], provinceSort.by, provinceSort.dir, (row, key) => {
-        if (key === 'nameFa') return row.nameFa
+        if (key === 'nameFa') return geoName(row, locale)
         if (key === 'accommodationCount') return row.accommodationCount
         if (key === 'lodgingCapacity') return row.lodgingCapacity.total
         if (key === 'lodgingGap') return row.lodgingGap
         if (key === 'caravanCount') return row.caravanCount
         return row.pilgrims
-      }),
-    [data, provinceSort],
+      }, locale),
+    [data, locale, provinceSort],
   )
   const cities = useMemo(
     () =>
       sortRows(data?.byCity ?? [], citySort.by, citySort.dir, (row, key) => {
-        if (key === 'nameFa') return row.nameFa
-        if (key === 'provinceNameFa') return row.provinceNameFa
+        if (key === 'nameFa') return geoName(row, locale)
+        if (key === 'provinceNameFa') {
+          return geoName(
+            { nameFa: row.provinceNameFa, nameEn: row.provinceNameEn },
+            locale,
+          )
+        }
         if (key === 'accommodationCount') return row.accommodationCount
         if (key === 'lodgingCapacity') return row.lodgingCapacity.total
         if (key === 'lodgingGap') return row.lodgingGap
         return row.pilgrims
-      }),
-    [data, citySort],
+      }, locale),
+    [data, locale, citySort],
   )
   const routes = useMemo(
     () =>
@@ -132,8 +139,8 @@ export function NationalMonitoringPage() {
         if (key === 'caravanCount') return row.caravanCount
         if (key === 'groupCount') return row.groupCount
         return row.pilgrims
-      }),
-    [data, routeSort, t],
+      }, locale),
+    [data, locale, routeSort, t],
   )
 
   async function exportExcel(section: ExportSection) {
@@ -200,7 +207,11 @@ export function NationalMonitoringPage() {
           <HighlightTile
             icon={Map}
             label={t('nationalMonitoring.busiestProvince')}
-            name={highlights.busiestProvince?.nameFa}
+            name={
+              highlights.busiestProvince
+                ? geoName(highlights.busiestProvince, locale)
+                : undefined
+            }
             value={highlights.busiestProvince?.pilgrims ?? 0}
             locale={locale}
             empty={t('nationalMonitoring.noHighlight')}
@@ -216,7 +227,11 @@ export function NationalMonitoringPage() {
           <HighlightTile
             icon={MapPin}
             label={t('nationalMonitoring.busiestCity')}
-            name={highlights.busiestCity?.nameFa}
+            name={
+              highlights.busiestCity
+                ? geoName(highlights.busiestCity, locale)
+                : undefined
+            }
             value={highlights.busiestCity?.pilgrims ?? 0}
             locale={locale}
             empty={t('nationalMonitoring.noHighlight')}
@@ -240,7 +255,11 @@ export function NationalMonitoringPage() {
           <HighlightTile
             icon={Building2}
             label={t('nationalMonitoring.tightestProvince')}
-            name={highlights.tightestProvince?.nameFa}
+            name={
+              highlights.tightestProvince
+                ? geoName(highlights.tightestProvince, locale)
+                : undefined
+            }
             value={highlights.tightestProvince?.lodgingGap ?? 0}
             locale={locale}
             empty={t('nationalMonitoring.noHighlight')}
@@ -313,7 +332,7 @@ export function NationalMonitoringPage() {
                 .filter((row) => row.pilgrims > 0)
                 .map((row) => ({
                   key: row.id,
-                  name: row.nameFa,
+                  name: geoName(row, locale),
                   value: row.pilgrims,
                 }))}
             />
@@ -352,7 +371,7 @@ export function NationalMonitoringPage() {
                 .filter((row) => row.pilgrims > 0)
                 .map((row) => ({
                   key: row.id,
-                  name: row.nameFa,
+                  name: geoName(row, locale),
                   value: row.pilgrims,
                 }))}
             />
@@ -518,7 +537,7 @@ function PlaceTable({
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className="border-t border-line">
-                  <td className="px-4 py-3 text-start font-medium">{row.nameFa}</td>
+                  <td className="px-4 py-3 text-start font-medium">{geoName(row, locale)}</td>
                   <td className="px-4 py-3 text-start">{formatNumber(row.pilgrims, locale)}</td>
                   <td className="px-4 py-3 text-start">{formatNumber(row.caravanCount, locale)}</td>
                   <td className="px-4 py-3 text-start">{formatNumber(row.accommodationCount, locale)}</td>
@@ -589,8 +608,13 @@ function CityTable({
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className="border-t border-line">
-                  <td className="px-4 py-3 text-start font-medium">{row.nameFa}</td>
-                  <td className="px-4 py-3 text-start">{row.provinceNameFa}</td>
+                  <td className="px-4 py-3 text-start font-medium">{geoName(row, locale)}</td>
+                  <td className="px-4 py-3 text-start">
+                    {geoName(
+                      { nameFa: row.provinceNameFa, nameEn: row.provinceNameEn },
+                      locale,
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-start">{formatNumber(row.pilgrims, locale)}</td>
                   <td className="px-4 py-3 text-start">{formatNumber(row.accommodationCount, locale)}</td>
                   <td className="px-4 py-3 text-start">{formatNumber(row.lodgingCapacity.total, locale)}</td>

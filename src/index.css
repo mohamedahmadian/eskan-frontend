@@ -1,6 +1,9 @@
 @import "@fontsource/vazirmatn/400.css";
 @import "@fontsource/vazirmatn/500.css";
 @import "@fontsource/vazirmatn/700.css";
+@import "@fontsource/noto-sans-devanagari/400.css";
+@import "@fontsource/noto-sans-devanagari/500.css";
+@import "@fontsource/noto-sans-devanagari/700.css";
 @import "tailwindcss";
 
 @theme {
@@ -38,6 +41,10 @@
   --color-ink-400: #9a958c;
 }
 
+@utility bg-gradient-to-e {
+  background-image: linear-gradient(to inline-end, var(--tw-gradient-stops));
+}
+
 html,
 body,
 #root {
@@ -49,6 +56,20 @@ body {
   font-family: var(--font-sans);
   background: var(--color-cream-50);
   color: var(--color-ink-900);
+}
+
+html[lang="hi"] {
+  --font-sans: "Noto Sans Devanagari", "Vazirmatn", ui-sans-serif, system-ui,
+    sans-serif;
+}
+
+.digit-field {
+  direction: ltr;
+  text-align: right;
+}
+
+html[dir="ltr"] .digit-field {
+  text-align: left;
 }
 
 *:focus-visible {

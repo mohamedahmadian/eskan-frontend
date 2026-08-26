@@ -25,7 +25,7 @@ export function PreviousApprovedCountsHint({ reservationId }: { reservationId: s
   const previous = query.data?.previous
   if (!previous) {
     return (
-      <aside className="flex items-start gap-3 rounded-2xl border border-dashed border-teal-200 bg-gradient-to-l from-mint-50/80 via-white to-teal-50/90 px-4 py-3.5 shadow-[0_8px_20px_rgba(46,189,182,0.08)]">
+      <aside className="flex items-start gap-3 rounded-2xl border border-dashed border-teal-200 bg-gradient-to-e from-mint-50/80 via-white to-teal-50/90 px-4 py-3.5 shadow-[0_8px_20px_rgba(46,189,182,0.08)]">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
           <History className="size-4" aria-hidden />
         </span>

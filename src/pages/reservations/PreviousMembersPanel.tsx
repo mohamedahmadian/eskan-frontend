@@ -8,6 +8,7 @@ import { confirmToast } from "../../components/ui/confirmToast";
 import { Button, LoadingState } from "../../components/ui/Form";
 import { api, getApiErrorMessage } from "../../lib/api";
 import { formatNumber } from "../../lib/datetime";
+import { geoName } from "../../lib/geo";
 import type {
   PreviousCaravanReservation,
   PreviousCaravanReservations,
@@ -112,8 +113,8 @@ export function PreviousMembersPanel({
                 <span aria-hidden>—</span>
                 <DateText value={item.stayEndDate} />
               </span>
-              {item.originCity?.nameFa ? (
-                <span>{item.originCity.nameFa}</span>
+              {item.originCity ? (
+                <span>{geoName(item.originCity, locale)}</span>
               ) : null}
             </div>
             <HeadcountPills

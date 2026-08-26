@@ -44,7 +44,7 @@ export function GovernmentOrgOfficerDashboard() {
   return (
     <div className={`${listShellClassName} space-y-8`}>
       <section className={`${cardClassName} overflow-hidden`}>
-        <div className="h-1.5 bg-gradient-to-l from-teal-400 to-mint-300" />
+        <div className="h-1.5 bg-gradient-to-e from-teal-400 to-mint-300" />
         <div className="flex items-start gap-3 px-5 py-5">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
             <HandHeart className="size-5" aria-hidden />

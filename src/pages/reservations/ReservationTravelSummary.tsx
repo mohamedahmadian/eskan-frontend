@@ -142,7 +142,7 @@ export function ReservationTravelSummary({
           </div>
           <div className="relative">
             <div
-              className="pointer-events-none absolute top-7 start-10 end-10 hidden h-0.5 bg-gradient-to-l from-teal-200 via-mint-100 to-teal-100 sm:block"
+              className="pointer-events-none absolute top-7 start-10 end-10 hidden h-0.5 bg-gradient-to-e from-teal-200 via-mint-100 to-teal-100 sm:block"
               aria-hidden
             />
             <div

@@ -225,7 +225,7 @@ export function MyIceVouchersListPage() {
       />
       {selectedCount > 0 ? (
         <section className={`${cardClassName} mb-4 overflow-hidden`} aria-live="polite">
-          <div className="h-1 bg-gradient-to-l from-gold-400 via-teal-400 to-teal-500" aria-hidden />
+          <div className="h-1 bg-gradient-to-e from-gold-400 via-teal-400 to-teal-500" aria-hidden />
           <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-4">
               <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">

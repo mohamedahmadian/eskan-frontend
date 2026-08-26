@@ -25,6 +25,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
+import { geoName } from '../../lib/geo'
 import type { ProvincialMonitoringProvinceDetail } from '../../types/app'
 import { IranMonitoringMap } from './IranMonitoringMap'
 import {
@@ -40,6 +41,7 @@ function sortRows<T>(
   sortBy: string,
   sortDir: SortDir | '',
   valueOf: (row: T, key: string) => string | number,
+  locale: string,
 ) {
   if (!sortBy || !sortDir) return rows
   return [...rows].sort((a, b) => {
@@ -48,7 +50,7 @@ function sortRows<T>(
     const cmp =
       typeof av === 'number' && typeof bv === 'number'
         ? av - bv
-        : String(av).localeCompare(String(bv), 'fa')
+        : String(av).localeCompare(String(bv), locale)
     return sortDir === 'asc' ? cmp : -cmp
   })
 }
@@ -81,22 +83,22 @@ export function ProvincialMonitoringProvincePage() {
   const cities = useMemo(
     () =>
       sortRows(data?.cities ?? [], sortBy, sortDir, (row, key) => {
-        if (key === 'nameFa') return row.nameFa
+        if (key === 'nameFa') return geoName(row, locale)
         if (key === 'caravanCount') return row.caravanCount
         if (key === 'groupCount') return row.groupCount
         if (key === 'residentPilgrims') return row.residentPilgrims
         return row.reservationPilgrims.total
-      }),
-    [data, sortBy, sortDir],
+      }, locale),
+    [data, locale, sortBy, sortDir],
   )
   const chartData = useMemo(
     () =>
       (data?.cities ?? []).map((item) => ({
         id: item.id,
-        name: item.nameFa,
+        name: geoName(item, locale),
         pilgrims: item.reservationPilgrims.total,
       })),
-    [data],
+    [data, locale],
   )
 
   function onSort(column: string) {
@@ -129,7 +131,7 @@ export function ProvincialMonitoringProvincePage() {
     <div className={listShellClassName}>
       <PageHeader
         title={t('provincialMonitoring.provinceDetails')}
-        subtitle={<EntityNameSubtitle name={data.province.nameFa} icon={Map} />}
+        subtitle={<EntityNameSubtitle name={geoName(data.province, locale)} icon={Map} />}
         backTo={`/provincial-monitoring?${yearQuery(year)}`}
       />
       <div className="mb-4 space-y-3">
@@ -153,7 +155,7 @@ export function ProvincialMonitoringProvincePage() {
           </Button>
         </div>
         <MonitoringStatTiles totals={data.totals} />
-        <FormCard icon={Map} title={data.province.nameFa} subtitle={t('provincialMonitoring.mapHint')}>
+        <FormCard icon={Map} title={geoName(data.province, locale)} subtitle={t('provincialMonitoring.mapHint')}>
           <IranMonitoringMap
             provinces={[
               {
@@ -170,6 +172,7 @@ export function ProvincialMonitoringProvincePage() {
               ...city,
               provinceId: data.province.id,
               provinceNameFa: data.province.nameFa,
+              provinceNameEn: data.province.nameEn,
               isProvinceCapital: false,
             }))}
             metric="pilgrims"
@@ -213,7 +216,7 @@ export function ProvincialMonitoringProvincePage() {
               <tbody>
                 {cities.map((city) => (
                   <tr key={city.id} className="border-t border-line">
-                    <td className="px-4 py-3 text-start font-medium">{city.nameFa}</td>
+                    <td className="px-4 py-3 text-start font-medium">{geoName(city, locale)}</td>
                     <td className="px-4 py-3 text-start">{formatNumber(city.caravanCount, locale)}</td>
                     <td className="px-4 py-3 text-start">{formatNumber(city.groupCount, locale)}</td>
                     <td className="px-4 py-3 text-start">{formatNumber(city.reservationPilgrims.total, locale)}</td>

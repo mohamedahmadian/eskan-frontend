@@ -14,6 +14,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import { languageDir } from '../../i18n'
 import { toast } from 'sonner'
 import {
   Bar,
@@ -1332,7 +1333,7 @@ function ReportTooltip({
   return (
     <div
       className="rounded-2xl border border-line bg-white px-3 py-2.5 text-sm shadow-[0_10px_30px_rgba(20,40,40,0.08)]"
-      dir="rtl"
+      dir={languageDir(locale)}
     >
       {label ? <p className="mb-1.5 font-medium text-ink-900">{label}</p> : null}
       <ul className="space-y-1">
