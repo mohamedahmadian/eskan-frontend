@@ -268,15 +268,35 @@ export function CaravanDetailPage() {
                 {[...caravan.years]
                   .sort((a, b) => b.year - a.year)
                   .map((row) => (
-                    <FactTile
+                    <article
                       key={row.id}
-                      icon={row.manager ? UserRound : Calendar}
-                      label={n(row.year)}
-                      value={
-                        row.manager?.fullName || t('caravans.unassignedManager')
-                      }
-                      tone={row.year === currentPersianYear() ? 'teal' : 'ink'}
-                    />
+                      className={`rounded-2xl border p-4 ${
+                        row.year === currentPersianYear()
+                          ? toneClass.teal.wrap
+                          : toneClass.ink.wrap
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-ink-900">
+                        {n(row.year)}
+                      </p>
+                      <p className="mt-1 text-sm text-ink-700">
+                        {row.manager?.fullName || t('caravans.unassignedManager')}
+                      </p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <FactTile
+                          icon={Mars}
+                          label={t('caravans.maleCount')}
+                          value={n(row.maleCount ?? 0)}
+                          tone="teal"
+                        />
+                        <FactTile
+                          icon={Venus}
+                          label={t('caravans.femaleCount')}
+                          value={n(row.femaleCount ?? 0)}
+                          tone="mint"
+                        />
+                      </div>
+                    </article>
                   ))}
               </div>
             ) : (

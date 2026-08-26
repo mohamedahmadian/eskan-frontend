@@ -1,106 +1,174 @@
-import { CircleAlert, IdCard, KeyRound, PhoneOff, UserPlus } from 'lucide-react'
+import { CircleAlert, IdCard, KeyRound, Mail, MessageSquare, PhoneOff, UserPlus } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthProvider'
-import { AuthGuestLayout, AuthNotice } from '../components/auth/AuthGuestLayout'
+import { AuthBackButton, AuthGuestLayout, AuthNotice } from '../components/auth/AuthGuestLayout'
 import { AppForm, Button, FormField, fieldClassName } from '../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../lib/api'
-import { parseDigitString } from '../lib/datetime'
+import { toLatinDigits } from '../lib/datetime'
 
-type ForgotStatus = 'sent' | 'no_phone' | 'not_found'
+type ForgotStatus = 'sent' | 'no_phone' | 'no_email' | 'not_found'
+type ForgotChannel = 'sms' | 'email'
+type ForgotStep = 'identify' | 'channel'
 
 export function ForgotPasswordPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [step, setStep] = useState<ForgotStep>('identify')
+  const [submitting, setSubmitting] = useState<ForgotChannel | null>(null)
   const [status, setStatus] = useState<ForgotStatus | null>(null)
 
   if (user) {
     return <Navigate to="/" replace />
   }
 
-  async function onSubmit(event: FormEvent) {
+  function onIdentify(event: FormEvent) {
     event.preventDefault()
-    setSubmitting(true)
+    const value = toLatinDigits(identifier.trim())
+    if (value.length < 3) {
+      toast.error(t('auth.required'))
+      return
+    }
+    setStatus(null)
+    setStep('channel')
+  }
+
+  async function recover(channel: ForgotChannel) {
+    const value = toLatinDigits(identifier.trim())
+    setSubmitting(channel)
     setStatus(null)
     try {
       const { data } = await api.post<{ status: ForgotStatus }>('/auth/forgot-password', {
-        identifier: parseDigitString(identifier),
+        identifier: value,
+        channel,
       })
       setStatus(data.status)
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
-      setSubmitting(false)
+      setSubmitting(null)
     }
   }
 
   const registerTo = identifier.trim()
-    ? `/register?identifier=${encodeURIComponent(parseDigitString(identifier))}`
+    ? `/register?identifier=${encodeURIComponent(toLatinDigits(identifier.trim()))}`
     : '/register'
 
+  const backToLogin = (
+    <p className="text-center text-sm">
+      <Link
+        to="/login"
+        className="font-medium text-teal-700 hover:text-teal-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 rounded-lg"
+      >
+        {t('auth.backToLogin')}
+      </Link>
+    </p>
+  )
+
   return (
-    <AuthGuestLayout
-      title={t('auth.forgotPassword')}
-      subtitle={t('auth.forgotPasswordSubtitle')}
-      backTo="/login"
-    >
-      {status === 'sent' ? (
-        <div className="mt-6 space-y-4">
-          <AuthNotice icon={KeyRound} tone="teal">
-            {t('auth.forgotPasswordSent')}
-          </AuthNotice>
-          <Button type="button" className="w-full" onClick={() => navigate('/login')}>
-            {t('auth.login')}
-          </Button>
-        </div>
-      ) : (
-        <AppForm className="mt-6 space-y-4" onSubmit={onSubmit}>
-          <FormField icon={IdCard} label={t('auth.forgotPasswordIdentifier')} htmlFor="identifier">
-            <input
-              id="identifier"
-              className={fieldClassName}
-              value={identifier}
-              onChange={(e) => {
-                setIdentifier(parseDigitString(e.target.value).slice(0, 15))
-                setStatus(null)
-              }}
-              inputMode="numeric"
-              autoComplete="username"
-              required
-              minLength={8}
-            />
-          </FormField>
-          <Button type="submit" className="w-full" disabled={submitting}>
-            <KeyRound className="size-4" />
-            {t('auth.forgotPasswordSubmit')}
-          </Button>
-        </AppForm>
-      )}
+    <AuthGuestLayout>
+      <FormCard
+        icon={KeyRound}
+        title={t('auth.forgotPassword')}
+        subtitle={
+          step === 'channel' ? t('auth.forgotPasswordChooseChannel') : t('auth.forgotPasswordSubtitle')
+        }
+        action={
+          <AuthBackButton
+            to={step === 'identify' ? '/login' : undefined}
+            onClick={step === 'channel' ? () => setStep('identify') : undefined}
+          />
+        }
+      >
+        {status === 'sent' ? (
+          <div className={`${formCardBodyClassName}`}>
+            <AuthNotice icon={KeyRound} tone="teal">
+              {t('auth.forgotPasswordSent')}
+            </AuthNotice>
+            {backToLogin}
+          </div>
+        ) : step === 'identify' ? (
+          <AppForm className={formCardBodyClassName} onSubmit={onIdentify} autoFocusFirst>
+            <FormField icon={IdCard} label={t('auth.username')} htmlFor="identifier">
+              <input
+                id="identifier"
+                className={fieldClassName}
+                value={identifier}
+                onChange={(e) => {
+                  setIdentifier(toLatinDigits(e.target.value))
+                  setStatus(null)
+                }}
+                placeholder={t('auth.identifier')}
+                autoComplete="username"
+                required
+                minLength={3}
+              />
+            </FormField>
+            <Button type="submit" className="w-full">
+              <KeyRound className="size-4" aria-hidden />
+              {t('auth.forgotPasswordSubmit')}
+            </Button>
+            {backToLogin}
+          </AppForm>
+        ) : (
+          <div className={formCardBodyClassName}>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                className="w-full"
+                disabled={Boolean(submitting)}
+                onClick={() => void recover('sms')}
+              >
+                <MessageSquare className="size-4" aria-hidden />
+                {t('auth.forgotPasswordViaSms')}
+              </Button>
+              <Button
+                type="button"
+                className="w-full"
+                disabled={Boolean(submitting)}
+                onClick={() => void recover('email')}
+              >
+                <Mail className="size-4" aria-hidden />
+                {t('auth.forgotPasswordViaEmail')}
+              </Button>
+            </div>
+            {backToLogin}
+          </div>
+        )}
 
-      {status === 'no_phone' ? (
-        <div className="mt-5">
-          <AuthNotice icon={PhoneOff} tone="mint">
-            {t('auth.forgotPasswordNoPhone')}
-          </AuthNotice>
-        </div>
-      ) : null}
+        {status === 'no_phone' ? (
+          <div className="px-5 pb-5 sm:px-6 sm:pb-6">
+            <AuthNotice icon={PhoneOff} tone="mint">
+              {t('auth.forgotPasswordNoPhone')}
+            </AuthNotice>
+          </div>
+        ) : null}
 
-      {status === 'not_found' ? (
-        <div className="mt-5 space-y-4">
-          <AuthNotice icon={CircleAlert} tone="warn">
-            {t('auth.forgotPasswordNotFound')}
-          </AuthNotice>
-          <Button type="button" variant="soft" className="w-full" onClick={() => navigate(registerTo)}>
-            <UserPlus className="size-4" aria-hidden />
-            {t('auth.register')}
-          </Button>
-        </div>
-      ) : null}
+        {status === 'no_email' ? (
+          <div className="px-5 pb-5 sm:px-6 sm:pb-6">
+            <AuthNotice icon={Mail} tone="mint">
+              {t('auth.forgotPasswordNoEmail')}
+            </AuthNotice>
+          </div>
+        ) : null}
+
+        {status === 'not_found' ? (
+          <div className="space-y-4 px-5 pb-5 sm:px-6 sm:pb-6">
+            <AuthNotice icon={CircleAlert} tone="warn">
+              {t('auth.forgotPasswordNotFound')}
+            </AuthNotice>
+            <Button type="button" variant="soft" className="w-full" onClick={() => navigate(registerTo)}>
+              <UserPlus className="size-4" aria-hidden />
+              {t('auth.register')}
+            </Button>
+          </div>
+        ) : null}
+      </FormCard>
     </AuthGuestLayout>
   )
 }

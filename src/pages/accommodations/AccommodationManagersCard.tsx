@@ -1,4 +1,4 @@
-import { CalendarDays, Trash2, UserRound } from 'lucide-react'
+import { CalendarDays, Mars, Trash2, UserRound, Venus } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -16,8 +16,10 @@ import { TableCard } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
-import type { Accommodation, ManagedUser } from '../../types/app'
+import { genderTypes, type Accommodation, type GenderType, type ManagedUser } from '../../types/app'
 import { managerDisplayName } from './AccommodationYearAlert'
+
+const capacityFieldClassName = `${fieldClassName} disabled:cursor-not-allowed disabled:opacity-60`
 
 export function AccommodationActivityYearFields({
   year,
@@ -25,18 +27,34 @@ export function AccommodationActivityYearFields({
   userId,
   onUserIdChange,
   users,
+  maleCapacity,
+  onMaleCapacityChange,
+  femaleCapacity,
+  onFemaleCapacityChange,
+  genderType,
   yearInputId = 'assign-manager-year',
   managerInputId = 'assign-manager',
+  maleInputId = 'assign-year-male',
+  femaleInputId = 'assign-year-female',
 }: {
   year: string
   onYearChange: (value: string) => void
   userId: string
   onUserIdChange: (value: string) => void
   users: ManagedUser[]
+  maleCapacity: string
+  onMaleCapacityChange: (value: string) => void
+  femaleCapacity: string
+  onFemaleCapacityChange: (value: string) => void
+  genderType: GenderType
   yearInputId?: string
   managerInputId?: string
+  maleInputId?: string
+  femaleInputId?: string
 }) {
   const { t } = useTranslation()
+  const maleDisabled = genderType === genderTypes.FEMALE
+  const femaleDisabled = genderType === genderTypes.MALE
   return (
     <>
       <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor={yearInputId}>
@@ -51,6 +69,32 @@ export function AccommodationActivityYearFields({
           onChange={(event) => onYearChange(toLatinDigits(event.target.value))}
         />
       </FormField>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField icon={Mars} label={t('accommodations.yearMaleCount')} htmlFor={maleInputId}>
+          <input
+            id={maleInputId}
+            type="number"
+            min={0}
+            required
+            disabled={maleDisabled}
+            className={capacityFieldClassName}
+            value={maleCapacity}
+            onChange={(event) => onMaleCapacityChange(toLatinDigits(event.target.value))}
+          />
+        </FormField>
+        <FormField icon={Venus} label={t('accommodations.yearFemaleCount')} htmlFor={femaleInputId}>
+          <input
+            id={femaleInputId}
+            type="number"
+            min={0}
+            required
+            disabled={femaleDisabled}
+            className={capacityFieldClassName}
+            value={femaleCapacity}
+            onChange={(event) => onFemaleCapacityChange(toLatinDigits(event.target.value))}
+          />
+        </FormField>
+      </div>
       <FormField icon={UserRound} label={t('accommodations.selectManager')} htmlFor={managerInputId}>
         <SearchSelect
           id={managerInputId}
@@ -82,6 +126,12 @@ export function AccommodationManagersCard({
   const queryClient = useQueryClient()
   const [userId, setUserId] = useState('')
   const [year, setYear] = useState(String(currentPersianYear()))
+  const [maleCapacity, setMaleCapacity] = useState(() =>
+    capacityForYear(accommodation, currentPersianYear()).male,
+  )
+  const [femaleCapacity, setFemaleCapacity] = useState(() =>
+    capacityForYear(accommodation, currentPersianYear()).female,
+  )
 
   const rows = [...accommodation.managers].sort((a, b) => {
     if (b.year !== a.year) return b.year - a.year
@@ -89,6 +139,15 @@ export function AccommodationManagersCard({
     const nameB = b.user?.fullName ?? ''
     return nameA.localeCompare(nameB, 'fa')
   })
+
+  function applyYear(next: string) {
+    setYear(next)
+    const parsed = Number(toLatinDigits(next))
+    if (!Number.isFinite(parsed)) return
+    const caps = capacityForYear(accommodation, parsed)
+    setMaleCapacity(caps.male)
+    setFemaleCapacity(caps.female)
+  }
 
   async function refresh() {
     await Promise.all([
@@ -101,9 +160,13 @@ export function AccommodationManagersCard({
 
   const assign = useMutation({
     mutationFn: async () => {
+      const maleDisabled = accommodation.genderType === genderTypes.FEMALE
+      const femaleDisabled = accommodation.genderType === genderTypes.MALE
       const payload = {
         userId: userId || null,
         year: Number(toLatinDigits(year)),
+        maleCapacity: maleDisabled ? 0 : Number(toLatinDigits(maleCapacity)) || 0,
+        femaleCapacity: femaleDisabled ? 0 : Number(toLatinDigits(femaleCapacity)) || 0,
       }
       await api.post(`/accommodations/${accommodation.id}/managers`, payload)
       return payload
@@ -151,14 +214,19 @@ export function AccommodationManagersCard({
             event.preventDefault()
             assign.mutate()
           }}
-          className="grid gap-4 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-end"
+          className="space-y-4"
         >
           <AccommodationActivityYearFields
             year={year}
-            onYearChange={setYear}
+            onYearChange={applyYear}
             userId={userId}
             onUserIdChange={setUserId}
             users={users}
+            maleCapacity={maleCapacity}
+            onMaleCapacityChange={setMaleCapacity}
+            femaleCapacity={femaleCapacity}
+            onFemaleCapacityChange={setFemaleCapacity}
+            genderType={accommodation.genderType}
           />
           <FormActions submitLabel={t('accommodations.assign')} submitting={assign.isPending} />
         </AppForm>
@@ -170,6 +238,8 @@ export function AccommodationManagersCard({
             <tr>
               <th className="px-4 py-3 text-start font-medium">{t('accommodations.year')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('accommodations.managerName')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('accommodations.yearMaleCount')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('accommodations.yearFemaleCount')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>
@@ -178,6 +248,8 @@ export function AccommodationManagersCard({
               <tr key={item.id} className="border-t border-line">
                 <td className="px-4 py-3">{formatNumber(item.year, locale)}</td>
                 <td className="px-4 py-3">{managerDisplayName(item, t('accommodations.unassignedManager'))}</td>
+                <td className="px-4 py-3">{formatNumber(item.maleCapacity, locale)}</td>
+                <td className="px-4 py-3">{formatNumber(item.femaleCapacity, locale)}</td>
                 <td className="px-4 py-3">
                   <Button
                     type="button"
@@ -197,4 +269,12 @@ export function AccommodationManagersCard({
       </TableCard>
     </div>
   )
+}
+
+function capacityForYear(accommodation: Accommodation, year: number) {
+  const row = accommodation.managers.find((item) => item.year === year)
+  return {
+    male: String(row?.maleCapacity ?? accommodation.maleCapacity),
+    female: String(row?.femaleCapacity ?? accommodation.femaleCapacity),
+  }
 }

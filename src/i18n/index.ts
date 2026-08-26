@@ -16,10 +16,44 @@ export const languages = {
 
 export type AppLanguage = keyof typeof languages
 
+export const PREFERRED_LOCALE_KEY = 'eskan_preferred_locale'
+
+export function isAppLanguage(value: string): value is AppLanguage {
+  return value in languages
+}
+
+export function getStoredPreferredLocale(): AppLanguage {
+  try {
+    const value = localStorage.getItem(PREFERRED_LOCALE_KEY)
+    if (value && isAppLanguage(value)) return value
+  } catch {
+    // ignore
+  }
+  return 'fa'
+}
+
+export function persistPreferredLocale(lang: AppLanguage) {
+  try {
+    localStorage.setItem(PREFERRED_LOCALE_KEY, lang)
+  } catch {
+    // ignore
+  }
+}
+
+export function uiLanguageFor(preferred: AppLanguage): AppLanguage {
+  return languages[preferred]?.enabled ? preferred : 'fa'
+}
+
 export function applyDocumentLanguage(lang: AppLanguage) {
   const meta = languages[lang]
   document.documentElement.lang = lang
   document.documentElement.dir = meta.dir
+}
+
+export function applyUiLanguage(preferred: AppLanguage) {
+  const ui = uiLanguageFor(preferred)
+  void i18n.changeLanguage(ui)
+  applyDocumentLanguage(ui)
 }
 
 void i18n.use(initReactI18next).init({
@@ -35,6 +69,6 @@ void i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 })
 
-applyDocumentLanguage('fa')
+applyUiLanguage(getStoredPreferredLocale())
 
 export default i18n

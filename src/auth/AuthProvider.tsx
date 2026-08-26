@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from 'react'
 import { api } from '../lib/api'
-import i18n, { applyDocumentLanguage, type AppLanguage } from '../i18n'
+import {
+  applyUiLanguage,
+  getStoredPreferredLocale,
+  persistPreferredLocale,
+  type AppLanguage,
+} from '../i18n'
 import type { AuthUser } from '../types/app'
 
 type AuthContextValue = {
@@ -28,8 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applyUser = useCallback((next: AuthUser) => {
     setUser(next)
     const lang = (next.locale as AppLanguage) || 'fa'
-    void i18n.changeLanguage(lang)
-    applyDocumentLanguage(lang)
+    persistPreferredLocale(lang)
+    applyUiLanguage(lang)
   }, [])
 
   const refresh = useCallback(async () => {
@@ -67,8 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem('eskan_token')
     setUser(null)
-    applyDocumentLanguage('fa')
-    void i18n.changeLanguage('fa')
+    applyUiLanguage(getStoredPreferredLocale())
   }, [])
 
   const value = useMemo(

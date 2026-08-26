@@ -12,6 +12,7 @@ import { CaravanDetailPage } from "./pages/caravans/CaravanDetailPage";
 import { CaravanEditPage } from "./pages/caravans/CaravanEditPage";
 import { CaravanImportPage } from "./pages/caravans/CaravanImportPage";
 import { CaravanPilgrimageHistoryPage } from "./pages/caravans/CaravanPilgrimageHistoryPage";
+import { CaravanReportPage } from "./pages/caravans/CaravanReportPage";
 import { CaravanYearManagementPage } from "./pages/caravans/CaravanYearManagementPage";
 import { CaravansListPage } from "./pages/caravans/CaravansListPage";
 import { MyCaravanCreatePage } from "./pages/caravans/MyCaravanCreatePage";
@@ -25,17 +26,31 @@ import { MyGroupsListPage } from "./pages/groups/MyGroupsListPage";
 import { MyReservationsListPage } from "./pages/reservations/MyReservationsListPage";
 import { ReceptionSettingsPage } from "./pages/reservations/ReceptionSettingsPage";
 import { ReceptionPage } from "./pages/reception/ReceptionPage";
+import { SupportRequestCreatePage } from "./pages/support-requests/SupportRequestCreatePage";
+import { SupportRequestDetailPage } from "./pages/support-requests/SupportRequestDetailPage";
+import { SupportRequestEditPage } from "./pages/support-requests/SupportRequestEditPage";
+import { SupportRequestReportPage } from "./pages/support-requests/SupportRequestReportPage";
+import { SupportRequestsListPage } from "./pages/support-requests/SupportRequestsListPage";
 import { ReservationAdminDetailPage } from "./pages/reservations/ReservationAdminDetailPage";
 import { ReservationCreatePage } from "./pages/reservations/ReservationCreatePage";
 import { ReservationsAdminListPage } from "./pages/reservations/ReservationsAdminListPage";
 import { ReservationStatsPage } from "./pages/reservations/ReservationStatsPage";
+import { ProvincialMonitoringMapPage } from "./pages/provincial-monitoring/ProvincialMonitoringMapPage";
+import { ProvincialMonitoringProvincePage } from "./pages/provincial-monitoring/ProvincialMonitoringProvincePage";
+import { ProvincialMonitoringCityPage } from "./pages/provincial-monitoring/ProvincialMonitoringCityPage";
+import { NationalMonitoringPage } from "./pages/national-monitoring/NationalMonitoringPage";
 import { ReservationWizardPage } from "./pages/reservations/ReservationWizardPage";
 import { AccountPage } from "./pages/AccountPage";
+import { MyLocationPage } from "./pages/location/MyLocationPage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { CitiesListPage } from "./pages/geo/CitiesListPage";
 import { CityCreatePage } from "./pages/geo/CityCreatePage";
 import { CityDetailPage } from "./pages/geo/CityDetailPage";
 import { CityEditPage } from "./pages/geo/CityEditPage";
+import { EntryBorderCreatePage } from "./pages/entry-borders/EntryBorderCreatePage";
+import { EntryBorderDetailPage } from "./pages/entry-borders/EntryBorderDetailPage";
+import { EntryBorderEditPage } from "./pages/entry-borders/EntryBorderEditPage";
+import { EntryBordersListPage } from "./pages/entry-borders/EntryBordersListPage";
 import { CountriesListPage } from "./pages/geo/CountriesListPage";
 import { CountryCreatePage } from "./pages/geo/CountryCreatePage";
 import { CountryDetailPage } from "./pages/geo/CountryDetailPage";
@@ -75,6 +90,7 @@ import { PilgrimCardPage } from "./pages/pilgrims/PilgrimCardPage";
 import { PilgrimCreatePage } from "./pages/pilgrims/PilgrimCreatePage";
 import { PilgrimDetailPage } from "./pages/pilgrims/PilgrimDetailPage";
 import { PilgrimEditPage } from "./pages/pilgrims/PilgrimEditPage";
+import { PilgrimLocationPage } from "./pages/pilgrims/PilgrimLocationPage";
 import { PilgrimPilgrimageHistoryPage } from "./pages/pilgrims/PilgrimPilgrimageHistoryPage";
 import { PilgrimSendSmsPage } from "./pages/pilgrims/PilgrimSendSmsPage";
 import { PilgrimSetPasswordPage } from "./pages/pilgrims/PilgrimSetPasswordPage";
@@ -88,6 +104,7 @@ import { SmsSettingsPage } from "./pages/sms/SmsSettingsPage";
 import { UserCreatePage } from "./pages/users/UserCreatePage";
 import { UserDetailPage } from "./pages/users/UserDetailPage";
 import { UserEditPage } from "./pages/users/UserEditPage";
+import { UserLocationPage } from "./pages/users/UserLocationPage";
 import { UsersListPage } from "./pages/users/UsersListPage";
 import { AccommodationCreatePage } from "./pages/accommodations/AccommodationCreatePage";
 import { AccommodationDetailPage } from "./pages/accommodations/AccommodationDetailPage";
@@ -100,10 +117,12 @@ import { MyAccommodationsListPage } from "./pages/accommodations/MyAccommodation
 import { AccommodationManagerCreatePage } from "./pages/accommodation-managers/AccommodationManagerCreatePage";
 import { AccommodationManagerDetailPage } from "./pages/accommodation-managers/AccommodationManagerDetailPage";
 import { AccommodationManagerEditPage } from "./pages/accommodation-managers/AccommodationManagerEditPage";
+import { AccommodationManagerLocationPage } from "./pages/accommodation-managers/AccommodationManagerLocationPage";
 import { AccommodationManagersListPage } from "./pages/accommodation-managers/AccommodationManagersListPage";
 import { CaravanManagerCreatePage } from "./pages/caravan-managers/CaravanManagerCreatePage";
 import { CaravanManagerDetailPage } from "./pages/caravan-managers/CaravanManagerDetailPage";
 import { CaravanManagerEditPage } from "./pages/caravan-managers/CaravanManagerEditPage";
+import { CaravanManagerLocationPage } from "./pages/caravan-managers/CaravanManagerLocationPage";
 import { CaravanManagersListPage } from "./pages/caravan-managers/CaravanManagersListPage";
 import { HeadquartersInfoCreatePage } from "./pages/headquarters-info/HeadquartersInfoCreatePage";
 import { HeadquartersInfoDetailPage } from "./pages/headquarters-info/HeadquartersInfoDetailPage";
@@ -116,6 +135,7 @@ import { HeadquartersPhonesListPage } from "./pages/headquarters-phones/Headquar
 import { HeadquartersRepresentativeCreatePage } from "./pages/headquarters-representatives/HeadquartersRepresentativeCreatePage";
 import { HeadquartersRepresentativeDetailPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeDetailPage";
 import { HeadquartersRepresentativeEditPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeEditPage";
+import { HeadquartersRepresentativeLocationPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeLocationPage";
 import { HeadquartersRepresentativesListPage } from "./pages/headquarters-representatives/HeadquartersRepresentativesListPage";
 import { OrgUnitCreatePage } from "./pages/org-units/OrgUnitCreatePage";
 import { OrgUnitDetailPage } from "./pages/org-units/OrgUnitDetailPage";
@@ -221,6 +241,9 @@ export default function App() {
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<OverviewPage />} />
                 <Route path="/account" element={<AccountPage />} />
+                <Route element={<RequireMenuAccess path="/my-location" />}>
+                  <Route path="/my-location" element={<MyLocationPage />} />
+                </Route>
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route
                   path="/settings/password"
@@ -253,6 +276,10 @@ export default function App() {
                     path="/pilgrims/:id/edit"
                     element={<PilgrimEditPage />}
                   />
+                  <Route
+                    path="/pilgrims/:id/location"
+                    element={<PilgrimLocationPage />}
+                  />
                   <Route path="/pilgrims/:id" element={<PilgrimDetailPage />} />
                 </Route>
                 <Route element={<RequireMenuAccess path="/pilgrim-report" />}>
@@ -283,6 +310,12 @@ export default function App() {
                   <Route
                     path="/caravan-year-management"
                     element={<CaravanYearManagementPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/caravan-report" />}>
+                  <Route
+                    path="/caravan-report"
+                    element={<CaravanReportPage />}
                   />
                 </Route>
                 <Route element={<RequireMenuAccess path="/my-caravans" />}>
@@ -342,6 +375,30 @@ export default function App() {
                     element={<ReservationStatsPage />}
                   />
                 </Route>
+                <Route
+                  element={<RequireMenuAccess path="/provincial-monitoring" />}
+                >
+                  <Route
+                    path="/provincial-monitoring"
+                    element={<ProvincialMonitoringMapPage />}
+                  />
+                  <Route
+                    path="/provincial-monitoring/provinces/:provinceId"
+                    element={<ProvincialMonitoringProvincePage />}
+                  />
+                  <Route
+                    path="/provincial-monitoring/cities/:cityId"
+                    element={<ProvincialMonitoringCityPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/national-monitoring" />}
+                >
+                  <Route
+                    path="/national-monitoring"
+                    element={<NationalMonitoringPage />}
+                  />
+                </Route>
                 <Route element={<RequireMenuAccess path="/reservations" />}>
                   <Route
                     path="/reservations"
@@ -358,6 +415,30 @@ export default function App() {
                 </Route>
                 <Route element={<RequireMenuAccess path="/reception" />}>
                   <Route path="/reception" element={<ReceptionPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/support-request-report" />}>
+                  <Route
+                    path="/support-request-report"
+                    element={<SupportRequestReportPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/support-requests" />}>
+                  <Route
+                    path="/support-requests"
+                    element={<SupportRequestsListPage />}
+                  />
+                  <Route
+                    path="/support-requests/new"
+                    element={<SupportRequestCreatePage />}
+                  />
+                  <Route
+                    path="/support-requests/:id"
+                    element={<SupportRequestDetailPage />}
+                  />
+                  <Route
+                    path="/support-requests/:id/edit"
+                    element={<SupportRequestEditPage />}
+                  />
                 </Route>
                 <Route
                   element={<RequireMenuAccess path="/reception-settings" />}
@@ -423,6 +504,28 @@ export default function App() {
                   <Route
                     path="/base-info/cities/:id/edit"
                     element={<CityEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/base-info/entry-borders" />
+                  }
+                >
+                  <Route
+                    path="/base-info/entry-borders"
+                    element={<EntryBordersListPage />}
+                  />
+                  <Route
+                    path="/base-info/entry-borders/new"
+                    element={<EntryBorderCreatePage />}
+                  />
+                  <Route
+                    path="/base-info/entry-borders/:id"
+                    element={<EntryBorderDetailPage />}
+                  />
+                  <Route
+                    path="/base-info/entry-borders/:id/edit"
+                    element={<EntryBorderEditPage />}
                   />
                 </Route>
                 <Route
@@ -585,6 +688,7 @@ export default function App() {
                   <Route path="/users/new" element={<UserCreatePage />} />
                   <Route path="/users/:id" element={<UserDetailPage />} />
                   <Route path="/users/:id/edit" element={<UserEditPage />} />
+                  <Route path="/users/:id/location" element={<UserLocationPage />} />
                 </Route>
                 <Route element={<RequireMenuAccess path="/caravan-managers" />}>
                   <Route
@@ -602,6 +706,10 @@ export default function App() {
                   <Route
                     path="/caravan-managers/:id/edit"
                     element={<CaravanManagerEditPage />}
+                  />
+                  <Route
+                    path="/caravan-managers/:id/location"
+                    element={<CaravanManagerLocationPage />}
                   />
                 </Route>
                 <Route
@@ -622,6 +730,10 @@ export default function App() {
                   <Route
                     path="/accommodation-managers/:id/edit"
                     element={<AccommodationManagerEditPage />}
+                  />
+                  <Route
+                    path="/accommodation-managers/:id/location"
+                    element={<AccommodationManagerLocationPage />}
                   />
                 </Route>
                 <Route
@@ -680,6 +792,10 @@ export default function App() {
                   <Route
                     path="/headquarters/representatives/:id/edit"
                     element={<HeadquartersRepresentativeEditPage />}
+                  />
+                  <Route
+                    path="/headquarters/representatives/:id/location"
+                    element={<HeadquartersRepresentativeLocationPage />}
                   />
                 </Route>
                 <Route

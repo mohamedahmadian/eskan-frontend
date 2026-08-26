@@ -128,6 +128,9 @@ const emptyTravel = (): TravelValues => ({
   groupId: '',
   requestsAccommodation: true,
   requestsBus: true,
+  requestsSimCard: false,
+  requestsBankCard: false,
+  specialServices: '',
 })
 
 function countsForIndividualGender(gender: 'MALE' | 'FEMALE' | null | undefined) {
@@ -172,6 +175,9 @@ function valuesFromReservation(reservation: Reservation, userProvinceId?: string
     groupId: reservation.group?.id ?? reservation.groupId ?? '',
     requestsAccommodation: reservation.requestsAccommodation ?? true,
     requestsBus: reservation.requestsBus ?? true,
+    requestsSimCard: reservation.requestsSimCard ?? false,
+    requestsBankCard: reservation.requestsBankCard ?? false,
+    specialServices: reservation.specialServices ?? '',
   }
 }
 
@@ -481,6 +487,9 @@ export function ReservationCreatePage() {
       walkingStartDate: nextValues.walkingStartDate || null,
       requestsAccommodation: nextValues.requestsAccommodation,
       requestsBus: nextValues.requestsBus,
+      requestsSimCard: nextValues.requestsSimCard,
+      requestsBankCard: nextValues.requestsBankCard,
+      specialServices: nextValues.specialServices.trim() || null,
       maleCount: male,
       femaleCount: female,
       caravanId: nextType === 'CARAVAN' ? nextValues.caravanId || null : null,

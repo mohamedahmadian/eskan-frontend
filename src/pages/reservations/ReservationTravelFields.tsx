@@ -1,12 +1,15 @@
 import {
+  Accessibility,
   Building2,
   Bus,
   Calendar,
+  CreditCard,
   Footprints,
   MapPin,
   MoonStar,
   Route,
   Shield,
+  Smartphone,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,7 +18,7 @@ import { toast } from "sonner";
 import { useAuth } from "../../auth/AuthProvider";
 import { CheckboxField } from "../../components/ui/CheckboxField";
 import { DateText, HijriDateText } from "../../components/ui/DateText";
-import { FormField } from "../../components/ui/Form";
+import { FormField, fieldClassName } from "../../components/ui/Form";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
 import { api, getApiErrorMessage } from "../../lib/api";
@@ -86,6 +89,9 @@ export type TravelValues = {
   groupId: string;
   requestsAccommodation: boolean;
   requestsBus: boolean;
+  requestsSimCard: boolean;
+  requestsBankCard: boolean;
+  specialServices: string;
 };
 
 export function ReservationTravelFields({
@@ -180,7 +186,14 @@ export function ReservationApplicantFields({
   onChange,
   locked,
 }: {
-  values: Pick<TravelValues, "requestsAccommodation" | "requestsBus">;
+  values: Pick<
+    TravelValues,
+    | "requestsAccommodation"
+    | "requestsBus"
+    | "requestsSimCard"
+    | "requestsBankCard"
+    | "specialServices"
+  >;
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
 }) {
@@ -227,6 +240,53 @@ export function ReservationApplicantFields({
           </span>
         }
       />
+      <CheckboxField
+        id="requestsSimCard"
+        checked={values.requestsSimCard}
+        disabled={locked}
+        onChange={(checked) => onChange({ requestsSimCard: checked })}
+        label={
+          <span className="flex items-center gap-2">
+            <Smartphone className="size-4 shrink-0 text-teal-600" aria-hidden />
+            {t("reservations.requestsSimCard")}
+          </span>
+        }
+      />
+      <CheckboxField
+        id="requestsBankCard"
+        checked={values.requestsBankCard}
+        disabled={locked}
+        onChange={(checked) => onChange({ requestsBankCard: checked })}
+        label={
+          <span className="flex items-center gap-2">
+            <CreditCard className="size-4 shrink-0 text-teal-600" aria-hidden />
+            {t("reservations.requestsBankCard")}
+          </span>
+        }
+      />
+      <FormField
+        icon={Accessibility}
+        label={t("reservations.specialServices")}
+        htmlFor="specialServices"
+      >
+        {locked ? (
+          <p className="text-sm text-ink-800">
+            {values.specialServices.trim() || t("reservations.notEntered")}
+          </p>
+        ) : (
+          <textarea
+            id="specialServices"
+            rows={3}
+            maxLength={500}
+            className={fieldClassName}
+            value={values.specialServices}
+            placeholder={t("reservations.specialServicesPlaceholder")}
+            onChange={(event) =>
+              onChange({ specialServices: event.target.value })
+            }
+          />
+        )}
+      </FormField>
     </div>
   );
 }

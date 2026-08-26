@@ -1,32 +1,50 @@
-import { IdCard, Phone, UserPlus, UserRound } from 'lucide-react'
-import { type FormEvent, useMemo, useState } from 'react'
+import { Globe, IdCard, Lock, Mail, Phone, User, UserPlus, UserRound } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthProvider'
-import { AuthGuestLayout, AuthNotice } from '../components/auth/AuthGuestLayout'
+import { AuthBackButton, AuthGuestLayout, AuthNotice } from '../components/auth/AuthGuestLayout'
 import { SearchSelect } from '../components/ui/SearchSelect'
-import { AppForm, Button, FormField, fieldClassName } from '../components/ui/Form'
+import { AppForm, Button, FormField, ToggleField, fieldClassName } from '../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
+import { usePreferredLocale } from '../hooks/usePreferredLocale'
 import { api, getApiErrorMessage } from '../lib/api'
-import { parseDigitString } from '../lib/datetime'
-import { isValidIranianNationalId, normalizeNationalId } from '../lib/national-id'
-import { userGenders } from '../types/app'
+import { parseDigitString, toLatinDigits } from '../lib/datetime'
+import { useGeoName } from '../lib/geo'
+import { isValidIranianNationalId, normalizePassportNumber } from '../lib/national-id'
+import { type Country, userGenders, type UserGender } from '../types/app'
+
+function isLikelyEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+}
 
 function splitIdentifier(value: string) {
-  const digits = parseDigitString(value)
+  const trimmed = toLatinDigits(value.trim())
+  if (isLikelyEmail(trimmed)) {
+    return { email: trimmed.toLowerCase(), phone: '', passport: '' }
+  }
+  const digits = parseDigitString(trimmed)
   if (digits.startsWith('09') && digits.length === 11) {
-    return { phone: digits, nationalId: '' }
+    return { email: '', phone: digits, passport: '' }
   }
   if (isValidIranianNationalId(digits)) {
-    return { phone: '', nationalId: normalizeNationalId(digits) }
+    return { email: '', phone: '', passport: '' }
   }
-  return { phone: '', nationalId: digits }
+  return {
+    email: '',
+    phone: '',
+    passport: trimmed ? normalizePassportNumber(trimmed) : '',
+  }
 }
 
 export function RegisterPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const geoName = useGeoName()
+  const { locale } = usePreferredLocale()
   const [params] = useSearchParams()
   const initial = useMemo(
     () => splitIdentifier(params.get('identifier') ?? ''),
@@ -34,11 +52,34 @@ export function RegisterPage() {
   )
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [nationalId, setNationalId] = useState(initial.nationalId)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [phone, setPhone] = useState(initial.phone)
-  const [gender, setGender] = useState('')
+  const [passportNumber, setPassportNumber] = useState(initial.passport)
+  const [email, setEmail] = useState(initial.email)
+  const [gender, setGender] = useState<UserGender>(userGenders.MALE)
+  const [countryId, setCountryId] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [registered, setRegistered] = useState(false)
+
+  const countries = useQuery({
+    queryKey: ['countries', 'lookup', 'public'],
+    queryFn: async () => {
+      const { data } = await api.get<Country[] | { items: Country[] }>('/countries', {
+        params: { activeOnly: true },
+      })
+      return Array.isArray(data) ? data : data.items
+    },
+  })
+  const iranCountryId = countries.data?.find((country) => country.iso2 === 'IR')?.id ?? ''
+
+  useEffect(() => {
+    if (!countryId && iranCountryId) {
+      setCountryId(iranCountryId)
+    }
+  }, [countryId, iranCountryId])
+
+  const isIranian = !countryId || countryId === iranCountryId
 
   if (user) {
     return <Navigate to="/" replace />
@@ -46,18 +87,45 @@ export function RegisterPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!isValidIranianNationalId(nationalId)) {
-      toast.error(t('users.nationalIdInvalid'))
+    if (username.trim().length < 3) {
+      toast.error(t('users.usernameMin'))
       return
+    }
+    if (password.length < 8) {
+      toast.error(t('users.passwordMin'))
+      return
+    }
+    if (isIranian) {
+      if (!/^09\d{9}$/.test(parseDigitString(phone))) {
+        toast.error(t('users.phoneRequired'))
+        return
+      }
+    } else {
+      if (normalizePassportNumber(passportNumber).length < 5) {
+        toast.error(t('users.passportRequired'))
+        return
+      }
+      if (!isLikelyEmail(email)) {
+        toast.error(t('users.emailInvalid'))
+        return
+      }
     }
     setSubmitting(true)
     try {
       await api.post('/auth/register', {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        nationalId: normalizeNationalId(nationalId),
-        phone: parseDigitString(phone),
-        gender: gender || null,
+        username: toLatinDigits(username.trim()),
+        password: toLatinDigits(password),
+        gender,
+        locale,
+        countryId: countryId || undefined,
+        ...(isIranian
+          ? { phone: parseDigitString(phone) }
+          : {
+              passportNumber: normalizePassportNumber(passportNumber),
+              email: email.trim().toLowerCase(),
+            }),
       })
       setRegistered(true)
     } catch (error) {
@@ -68,88 +136,149 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthGuestLayout
-      title={t('auth.register')}
-      subtitle={t('auth.registerSubtitle')}
-      backTo="/forgot-password"
-    >
-      {registered ? (
-        <div className="mt-6 space-y-4">
-          <AuthNotice icon={UserPlus} tone="teal">
-            {t('auth.registerSuccess')}
-          </AuthNotice>
-          <Button type="button" className="w-full" onClick={() => navigate('/login')}>
-            {t('auth.login')}
-          </Button>
-        </div>
-      ) : (
-        <AppForm className="mt-6 space-y-4" onSubmit={onSubmit}>
-          <FormField icon={UserRound} label={t('users.firstName')} htmlFor="firstName">
-            <input
-              id="firstName"
-              className={fieldClassName}
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              autoComplete="given-name"
-              required
-            />
-          </FormField>
-          <FormField icon={UserRound} label={t('users.lastName')} htmlFor="lastName">
-            <input
-              id="lastName"
-              className={fieldClassName}
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              autoComplete="family-name"
-              required
-            />
-          </FormField>
-          <FormField icon={IdCard} label={t('users.nationalId')} htmlFor="nationalId">
-            <input
-              id="nationalId"
-              className={fieldClassName}
-              value={nationalId}
-              onChange={(e) => setNationalId(parseDigitString(e.target.value).slice(0, 10))}
-              inputMode="numeric"
-              required
-              minLength={10}
-              maxLength={10}
-            />
-          </FormField>
-          <FormField icon={Phone} label={t('users.phone')} htmlFor="phone">
-            <input
-              id="phone"
-              className={fieldClassName}
-              value={phone}
-              onChange={(e) => setPhone(parseDigitString(e.target.value).slice(0, 11))}
-              inputMode="tel"
-              autoComplete="tel"
-              required
-              minLength={11}
-              maxLength={11}
-            />
-          </FormField>
-          <FormField icon={UserRound} label={t('users.gender')} htmlFor="gender">
-            <SearchSelect
-              id="gender"
-              value={gender}
-              onChange={setGender}
-              placeholder={t('users.selectOptional')}
-              options={[
-                { value: '', label: t('users.selectOptional') },
-                ...Object.values(userGenders).map((item) => ({
-                  value: item,
-                  label: t(`userGenders.${item}`),
-                })),
-              ]}
-            />
-          </FormField>
-          <Button type="submit" className="w-full" disabled={submitting}>
-            <UserPlus className="size-4" />
-            {t('auth.register')}
-          </Button>
-        </AppForm>
-      )}
+    <AuthGuestLayout wide>
+      <FormCard
+        icon={UserPlus}
+        title={t('auth.register')}
+        subtitle={t('auth.registerSubtitle')}
+        action={<AuthBackButton to="/login" />}
+      >
+        {registered ? (
+          <div className={`${formCardBodyClassName}`}>
+            <AuthNotice icon={UserPlus} tone="teal">
+              {t('auth.registerSuccess')}
+            </AuthNotice>
+            <Button type="button" className="w-full" onClick={() => navigate('/login')}>
+              {t('auth.login')}
+            </Button>
+          </div>
+        ) : (
+          <AppForm className={formCardBodyClassName} onSubmit={onSubmit} autoFocusFirst>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField icon={UserRound} label={t('users.firstName')} htmlFor="firstName">
+                <input
+                  id="firstName"
+                  className={fieldClassName}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  autoComplete="given-name"
+                  required
+                />
+              </FormField>
+              <FormField icon={UserRound} label={t('users.lastName')} htmlFor="lastName">
+                <input
+                  id="lastName"
+                  className={fieldClassName}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                  required
+                />
+              </FormField>
+              <FormField icon={User} label={t('users.username')} htmlFor="username">
+                <input
+                  id="username"
+                  className={fieldClassName}
+                  value={username}
+                  onChange={(e) => setUsername(toLatinDigits(e.target.value))}
+                  autoComplete="username"
+                  required
+                  minLength={3}
+                />
+              </FormField>
+              <FormField icon={Lock} label={t('users.password')} htmlFor="password">
+                <input
+                  id="password"
+                  type="password"
+                  className={fieldClassName}
+                  value={password}
+                  onChange={(e) => setPassword(toLatinDigits(e.target.value))}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                />
+              </FormField>
+              {isIranian ? (
+                <FormField icon={Phone} label={t('users.phone')} htmlFor="phone">
+                  <input
+                    id="phone"
+                    className={fieldClassName}
+                    value={phone}
+                    onChange={(e) => setPhone(parseDigitString(e.target.value).slice(0, 11))}
+                    inputMode="tel"
+                    autoComplete="tel"
+                    required
+                    minLength={11}
+                    maxLength={11}
+                  />
+                </FormField>
+              ) : (
+                <>
+                  <FormField icon={IdCard} label={t('users.passportNumber')} htmlFor="passportNumber">
+                    <input
+                      id="passportNumber"
+                      className={fieldClassName}
+                      value={passportNumber}
+                      onChange={(e) =>
+                        setPassportNumber(normalizePassportNumber(e.target.value).slice(0, 20))
+                      }
+                      autoComplete="off"
+                      required
+                      minLength={5}
+                      maxLength={20}
+                    />
+                  </FormField>
+                  <FormField icon={Mail} label={t('users.email')} htmlFor="email">
+                    <input
+                      id="email"
+                      type="email"
+                      className={fieldClassName}
+                      value={email}
+                      onChange={(e) => setEmail(toLatinDigits(e.target.value))}
+                      autoComplete="email"
+                      required
+                    />
+                  </FormField>
+                </>
+              )}
+              <FormField icon={UserRound} label={t('users.gender')} htmlFor="gender">
+                <ToggleField
+                  id="gender"
+                  checked={gender === userGenders.MALE}
+                  onChange={(male) => setGender(male ? userGenders.MALE : userGenders.FEMALE)}
+                  onLabel={t('userGenders.MALE')}
+                  offLabel={t('userGenders.FEMALE')}
+                />
+              </FormField>
+            </div>
+            <FormField icon={Globe} label={t('geo.country')} htmlFor="countryId">
+              <SearchSelect
+                id="countryId"
+                value={countryId}
+                onChange={setCountryId}
+                placeholder={t('geo.selectCountry')}
+                options={(countries.data ?? []).map((country) => ({
+                  value: country.id,
+                  label: geoName(country),
+                }))}
+              />
+            </FormField>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              <UserPlus className="size-4" />
+              {t('auth.register')}
+            </Button>
+            <p className="text-center text-sm text-ink-500">
+              {t('auth.hasAccount')}{' '}
+              <Link
+                to="/login"
+                className="font-medium text-teal-700 hover:text-teal-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 rounded-lg"
+              >
+                {t('auth.login')}
+              </Link>
+            </p>
+          </AppForm>
+        )}
+      </FormCard>
     </AuthGuestLayout>
   )
 }

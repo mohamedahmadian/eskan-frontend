@@ -1,8 +1,8 @@
-import { Plus, ScanSearch, X } from 'lucide-react'
+import { LocateFixed, Plus, ScanSearch, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { ReceptionDesk } from '../../pages/reception/ReceptionDesk'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
@@ -15,11 +15,21 @@ function isReceptionPath(pathname: string) {
   return pathname === '/reception' || pathname.startsWith('/reception/')
 }
 
+function isLocationPath(pathname: string) {
+  return pathname === '/my-location' || pathname.startsWith('/my-location/')
+}
+
 export function QuickToolsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { pathname } = useLocation()
-  const enabled = hasMenuAccess('/reception', user?.modules ?? [])
+  const navigate = useNavigate()
+  const canReception = hasMenuAccess('/reception', user?.modules ?? [])
+  const canLocation = hasMenuAccess('/my-location', user?.modules ?? [])
   const onReceptionPage = isReceptionPath(pathname)
+  const onLocationPage = isLocationPath(pathname)
+  const showSearch = canReception && !onReceptionPage
+  const showLocation = canLocation && !onLocationPage
+  const fabEnabled = showSearch || showLocation
   const focusFnRef = useRef<(() => void) | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -37,13 +47,19 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     setSearchOpen(true)
   }, [])
 
+  const openLocation = useCallback(() => {
+    cancelPendingFormEnter()
+    setMenuOpen(false)
+    navigate('/my-location')
+  }, [navigate])
+
   useEffect(() => {
     setMenuOpen(false)
     setSearchOpen(false)
   }, [pathname])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!canReception) return
     let lastAt = 0
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== 'Enter' || event.repeat || event.isComposing) return
@@ -69,24 +85,27 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [enabled, onReceptionPage, searchOpen])
+  }, [canReception, onReceptionPage, searchOpen])
 
   const value = useMemo(() => ({ registerFocus }), [registerFocus])
 
   return (
     <QuickToolsContext.Provider value={value}>
       {children}
-      {enabled ? (
+      {fabEnabled ? (
         <QuickToolsFab
           menuOpen={menuOpen}
           searchOpen={searchOpen}
-          hidden={onReceptionPage || searchOpen}
+          hidden={searchOpen}
+          showSearch={showSearch}
+          showLocation={showLocation}
           onToggleMenu={() => setMenuOpen((open) => !open)}
           onCloseMenu={() => setMenuOpen(false)}
           onOpenSearch={openSearch}
+          onOpenLocation={openLocation}
         />
       ) : null}
-      {enabled && searchOpen ? (
+      {canReception && searchOpen ? (
         <ReceptionSearchModal onClose={() => setSearchOpen(false)} />
       ) : null}
     </QuickToolsContext.Provider>
@@ -97,16 +116,22 @@ function QuickToolsFab({
   menuOpen,
   searchOpen,
   hidden,
+  showSearch,
+  showLocation,
   onToggleMenu,
   onCloseMenu,
   onOpenSearch,
+  onOpenLocation,
 }: {
   menuOpen: boolean
   searchOpen: boolean
   hidden: boolean
+  showSearch: boolean
+  showLocation: boolean
   onToggleMenu: () => void
   onCloseMenu: () => void
   onOpenSearch: () => void
+  onOpenLocation: () => void
 }) {
   const { t } = useTranslation()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -142,18 +167,34 @@ function QuickToolsFab({
           role="menu"
           className="pointer-events-auto w-60 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_16px_40px_rgba(20,40,40,0.14)]"
         >
-          <button
-            type="button"
-            role="menuitem"
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-sm text-ink-800 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-300"
-            onClick={onOpenSearch}
-          >
-            <ScanSearch className="size-4 shrink-0 text-teal-600" aria-hidden />
-            <span className="min-w-0">
-              <span className="block font-medium">{t('quickTools.searchInfo')}</span>
-              <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.searchInfoHint')}</span>
-            </span>
-          </button>
+          {showSearch ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-sm text-ink-800 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-300"
+              onClick={onOpenSearch}
+            >
+              <ScanSearch className="size-4 shrink-0 text-teal-600" aria-hidden />
+              <span className="min-w-0">
+                <span className="block font-medium">{t('quickTools.searchInfo')}</span>
+                <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.searchInfoHint')}</span>
+              </span>
+            </button>
+          ) : null}
+          {showLocation ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-sm text-ink-800 transition hover:bg-mint-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mint-300"
+              onClick={onOpenLocation}
+            >
+              <LocateFixed className="size-4 shrink-0 text-mint-600" aria-hidden />
+              <span className="min-w-0">
+                <span className="block font-medium">{t('quickTools.myLocation')}</span>
+                <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.myLocationHint')}</span>
+              </span>
+            </button>
+          ) : null}
         </div>
       ) : null}
       <button

@@ -145,6 +145,7 @@ const PAGE_BACK_LEAVES = new Set([
   'password',
   'import',
   'pilgrimage-history',
+  'location',
 ])
 
 const PAGE_BACK_NESTED_LISTS = new Set(['items', 'vouchers', 'phones'])

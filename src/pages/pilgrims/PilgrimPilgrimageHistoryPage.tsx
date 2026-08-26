@@ -1,14 +1,17 @@
 import {
+  Accessibility,
   Building2,
   Bus,
   CalendarCheck,
   CalendarRange,
   ClipboardCheck,
+  CreditCard,
   Footprints,
   History,
   MapPin,
   Phone,
   Shield,
+  Smartphone,
   Tent,
   Timer,
   UserRound,
@@ -347,6 +350,25 @@ export function PilgrimPilgrimageHistoryPage() {
                       icon={Bus}
                       label={t('reservations.requestsBusShort')}
                       value={item.requestsBus ? t('common.yes') : t('common.no')}
+                      tone="teal"
+                    />
+                    <FormFactTile
+                      icon={Smartphone}
+                      label={t('reservations.requestsSimCardShort')}
+                      value={item.requestsSimCard ? t('common.yes') : t('common.no')}
+                      tone="mint"
+                    />
+                    <FormFactTile
+                      icon={CreditCard}
+                      label={t('reservations.requestsBankCardShort')}
+                      value={item.requestsBankCard ? t('common.yes') : t('common.no')}
+                      tone="ink"
+                    />
+                    <FormFactTile
+                      icon={Accessibility}
+                      label={t('reservations.specialServices')}
+                      value={item.specialServices?.trim() || empty}
+                      empty={!item.specialServices?.trim()}
                       tone="teal"
                     />
                     {item.type === 'CARAVAN' ? (

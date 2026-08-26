@@ -3,49 +3,88 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useBrandDisplay } from '../../hooks/useHeadquartersSummary'
+import { languages, type AppLanguage } from '../../i18n'
+import { usePreferredLocale } from '../../hooks/usePreferredLocale'
 import { AppLogo } from '../brand/AppLogo'
-import { cardClassName } from '../ui/Form'
+import { AdminFooter } from '../layout/AdminFooter'
 
 export function AuthGuestLayout({
-  title,
-  subtitle,
-  backTo,
   children,
+  wide = false,
 }: {
-  title: string
-  subtitle?: string
-  backTo?: string
   children: ReactNode
+  wide?: boolean
 }) {
   const { t } = useTranslation()
-  const { title: brandTitle, logoSrc } = useBrandDisplay()
-  const navigate = useNavigate()
+  const { title: brandTitle, name: brandName, logoSrc, branding } = useBrandDisplay()
+  const { locale, setLocale } = usePreferredLocale()
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-cream-50 px-4 py-8">
-      <div className={`relative w-full max-w-md p-8 ${cardClassName}`}>
-        <AppLogo src={logoSrc} className="mx-auto mb-4 h-16 w-auto object-contain" />
-        <p className="text-center text-2xl font-semibold text-ink-900">{brandTitle}</p>
-        <p className="mt-2 text-center text-sm text-ink-500">{t('app.tagline')}</p>
-        <div className="mt-8 flex items-center gap-2">
-          {backTo ? (
-            <button
-              type="button"
-              aria-label={t('common.back')}
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl text-teal-700 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
-              onClick={() => navigate(backTo)}
-            >
-              <ArrowRight className="size-5 ltr:rotate-180" aria-hidden />
-            </button>
-          ) : null}
-          <h1 className="text-lg font-medium text-ink-900">{title}</h1>
+    <div className="flex min-h-svh flex-col bg-cream-50">
+      <header className="z-20 shrink-0 border-b border-line/70 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
+          <AppLogo src={logoSrc} className="h-11 w-auto shrink-0 object-contain sm:h-12" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink-900 sm:text-base">{brandTitle}</p>
+            {brandName && brandName !== brandTitle ? (
+              <p className="truncate text-[11px] text-ink-400 sm:text-xs">{brandName}</p>
+            ) : null}
+          </div>
+          <div
+            role="group"
+            aria-label={t('settings.locale')}
+            className="flex max-w-[min(100%,18rem)] flex-wrap justify-end gap-1"
+          >
+            {(Object.keys(languages) as AppLanguage[]).map((code) => {
+              const selected = locale === code
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setLocale(code)}
+                  className={`rounded-full px-2 py-1 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:px-2.5 ${
+                    selected
+                      ? 'bg-teal-500 text-white shadow-sm'
+                      : 'bg-cream-50 text-ink-600 ring-1 ring-line hover:bg-teal-50 hover:text-teal-800'
+                  }`}
+                >
+                  {t(`languages.${code}`)}
+                </button>
+              )
+            })}
+          </div>
         </div>
-        {subtitle ? (
-          <p className={`mt-1 text-sm text-ink-500 ${backTo ? 'ps-11' : ''}`}>{subtitle}</p>
-        ) : null}
-        {children}
-      </div>
+      </header>
+      <main className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center">
+        <div className={`mx-auto w-full ${wide ? 'max-w-xl' : 'max-w-md'}`}>{children}</div>
+      </main>
+      <AdminFooter branding={branding} />
     </div>
+  )
+}
+
+export function AuthBackButton({
+  to,
+  onClick,
+}: {
+  to?: string
+  onClick?: () => void
+}) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  return (
+    <button
+      type="button"
+      aria-label={t('common.back')}
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl text-teal-700 transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+      onClick={() => {
+        if (onClick) onClick()
+        else if (to) navigate(to)
+      }}
+    >
+      <ArrowRight className="size-5 ltr:rotate-180" aria-hidden />
+    </button>
   )
 }
 

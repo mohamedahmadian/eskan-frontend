@@ -112,8 +112,8 @@ export function GovernmentOrganizationsListPage() {
               <tr key={item.id} className="border-t border-line">
                 <td className="px-4 py-3">{item.name}</td>
                 <td className="px-4 py-3">{item.phone ? localizeDigits(item.phone, locale) : '—'}</td>
-                <td className="px-4 py-3">{item.contactPerson || '—'}</td>
-                <td className="px-4 py-3">{item.mobile || '—'}</td>
+                <td className="px-4 py-3">{item.contactUser?.fullName || '—'}</td>
+                <td className="px-4 py-3">{item.mobile ? localizeDigits(item.mobile, locale) : '—'}</td>
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/base-info/government-organizations/${item.id}`}

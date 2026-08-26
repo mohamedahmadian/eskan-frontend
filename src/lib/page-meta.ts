@@ -11,6 +11,12 @@ export function getPageMeta(pathname: string): {
   if (pathname.startsWith("/account")) {
     return { titleKey: "account.title", subtitleKey: "account.subtitle" };
   }
+  if (pathname.startsWith("/my-location")) {
+    return {
+      titleKey: "location.register",
+      subtitleKey: "location.registerSubtitle",
+    };
+  }
   if (pathname.startsWith("/settings")) {
     return { titleKey: "settings.title", subtitleKey: "settings.subtitle" };
   }
@@ -54,6 +60,12 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "pilgrims.pilgrimageHistory",
       subtitleKey: "pilgrims.pilgrimageHistorySubtitle",
+    };
+  }
+  if (pathname.includes("/location") && pathname.startsWith("/pilgrims/")) {
+    return {
+      titleKey: "location.register",
+      subtitleKey: "location.registerSubtitle",
     };
   }
   if (pathname.includes("/edit") && pathname.startsWith("/pilgrims/")) {
@@ -179,6 +191,36 @@ export function getPageMeta(pathname: string): {
   if (pathname.startsWith("/my-reservations")) {
     return { titleKey: "menus.myReservations" };
   }
+  if (pathname.startsWith("/support-request-report")) {
+    return {
+      titleKey: "menus.supportRequestReport",
+      subtitleKey: "supportRequestReports.subtitle",
+    };
+  }
+  if (pathname.startsWith("/support-requests/new")) {
+    return {
+      titleKey: "supportRequests.create",
+      subtitleKey: "supportRequests.createSubtitle",
+    };
+  }
+  if (pathname.includes("/edit") && pathname.startsWith("/support-requests/")) {
+    return {
+      titleKey: "supportRequests.edit",
+      subtitleKey: "supportRequests.editSubtitle",
+    };
+  }
+  if (pathname.startsWith("/support-requests/") && pathname !== "/support-requests") {
+    return {
+      titleKey: "supportRequests.details",
+      subtitleKey: "supportRequests.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/support-requests")) {
+    return {
+      titleKey: "menus.supportRequests",
+      subtitleKey: "supportRequests.subtitle",
+    };
+  }
   if (pathname.startsWith("/reception-settings")) {
     return {
       titleKey: "menus.receptionSettings",
@@ -192,6 +234,30 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.reservationsReport",
       subtitleKey: "reservations.statsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/provincial-monitoring/provinces/")) {
+    return {
+      titleKey: "provincialMonitoring.provinceDetails",
+      subtitleKey: "provincialMonitoring.subtitle",
+    };
+  }
+  if (pathname.startsWith("/provincial-monitoring/cities/")) {
+    return {
+      titleKey: "provincialMonitoring.cityDetails",
+      subtitleKey: "provincialMonitoring.subtitle",
+    };
+  }
+  if (pathname.startsWith("/provincial-monitoring")) {
+    return {
+      titleKey: "menus.provincialMonitoring",
+      subtitleKey: "provincialMonitoring.subtitle",
+    };
+  }
+  if (pathname.startsWith("/national-monitoring")) {
+    return {
+      titleKey: "menus.nationalMonitoring",
+      subtitleKey: "nationalMonitoring.subtitle",
     };
   }
   if (pathname.startsWith("/reservations/new")) {
@@ -280,6 +346,36 @@ export function getPageMeta(pathname: string): {
   }
   if (pathname.startsWith("/base-info/cities")) {
     return { titleKey: "menus.cities", subtitleKey: "cities.subtitle" };
+  }
+  if (pathname.startsWith("/base-info/entry-borders/new")) {
+    return {
+      titleKey: "entryBorders.create",
+      subtitleKey: "entryBorders.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/base-info/entry-borders/")
+  ) {
+    return {
+      titleKey: "entryBorders.edit",
+      subtitleKey: "entryBorders.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/base-info/entry-borders/") &&
+    pathname !== "/base-info/entry-borders"
+  ) {
+    return {
+      titleKey: "entryBorders.details",
+      subtitleKey: "entryBorders.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/base-info/entry-borders")) {
+    return {
+      titleKey: "menus.entryBorders",
+      subtitleKey: "entryBorders.subtitle",
+    };
   }
   if (pathname.startsWith("/base-info/walking-routes/new")) {
     return {
@@ -556,6 +652,15 @@ export function getPageMeta(pathname: string): {
     };
   }
   if (
+    pathname.includes("/location") &&
+    pathname.startsWith("/headquarters/representatives/")
+  ) {
+    return {
+      titleKey: "location.register",
+      subtitleKey: "location.registerSubtitle",
+    };
+  }
+  if (
     pathname.includes("/edit") &&
     pathname.startsWith("/headquarters/representatives/")
   ) {
@@ -645,6 +750,12 @@ export function getPageMeta(pathname: string): {
   if (pathname.startsWith("/users/new")) {
     return { titleKey: "users.create", subtitleKey: "users.createSubtitle" };
   }
+  if (pathname.includes("/location") && pathname.startsWith("/users/")) {
+    return {
+      titleKey: "location.register",
+      subtitleKey: "location.registerSubtitle",
+    };
+  }
   if (pathname.includes("/edit") && pathname.startsWith("/users/")) {
     return { titleKey: "users.edit", subtitleKey: "users.editSubtitle" };
   }
@@ -660,10 +771,22 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "caravanYearManagement.subtitle",
     };
   }
+  if (pathname.startsWith("/caravan-report")) {
+    return {
+      titleKey: "menus.caravanReport",
+      subtitleKey: "caravans.reportSubtitle",
+    };
+  }
   if (pathname.startsWith("/caravan-managers/new")) {
     return {
       titleKey: "caravanManagers.create",
       subtitleKey: "caravanManagers.createSubtitle",
+    };
+  }
+  if (pathname.includes("/location") && pathname.startsWith("/caravan-managers/")) {
+    return {
+      titleKey: "location.register",
+      subtitleKey: "location.registerSubtitle",
     };
   }
   if (pathname.includes("/edit") && pathname.startsWith("/caravan-managers/")) {
@@ -691,6 +814,15 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "accommodationManagers.create",
       subtitleKey: "accommodationManagers.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/location") &&
+    pathname.startsWith("/accommodation-managers/")
+  ) {
+    return {
+      titleKey: "location.register",
+      subtitleKey: "location.registerSubtitle",
     };
   }
   if (

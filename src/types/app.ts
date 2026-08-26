@@ -225,6 +225,8 @@ export type CaravanYearLink = {
   id: string;
   year: number;
   managerUserId: string | null;
+  maleCount: number;
+  femaleCount: number;
   manager?: {
     id: string;
     firstName: string;
@@ -233,11 +235,221 @@ export type CaravanYearLink = {
   } | null;
 };
 
+export const caravanGenderKinds = {
+  FEMALE: "FEMALE",
+  MALE: "MALE",
+  MIXED: "MIXED",
+  UNSPECIFIED: "UNSPECIFIED",
+} as const;
+
+export type CaravanGenderKind =
+  (typeof caravanGenderKinds)[keyof typeof caravanGenderKinds];
+
+export const caravanOrigins = {
+  IRANIAN: "IRANIAN",
+  INTERNATIONAL: "INTERNATIONAL",
+} as const;
+
+export type CaravanOrigin =
+  (typeof caravanOrigins)[keyof typeof caravanOrigins];
+
 export type CaravanYearStats = {
   year: number;
   total: number;
   active: number;
   inactive: number;
+};
+
+export type CaravanReport = {
+  year: number;
+  total: number;
+  capacity: {
+    male: number;
+    female: number;
+    total: number;
+  };
+  byManagerStatus: {
+    withManager: number;
+    withoutManager: number;
+  };
+  byYearActivity: {
+    active: number;
+    inactive: number;
+  };
+  byOrigin: {
+    iranian: number;
+    international: number;
+  };
+  byContactStatus: {
+    complete: number;
+    partial: number;
+    none: number;
+  };
+  byGenderType: { genderType: CaravanGenderKind; count: number }[];
+  byWalkingRoute: { id: string | null; name: string; count: number }[];
+  byProvince: { id: string; name: string; count: number }[];
+  byCombination: {
+    genderType: CaravanGenderKind;
+    origin: CaravanOrigin;
+    count: number;
+  }[];
+};
+
+export type ProvincialMonitoringCounts = {
+  caravanCount: number;
+  activeCaravanCount: number;
+  groupCount: number;
+  caravanCapacity: { male: number; female: number; total: number };
+  reservationCount: number;
+  reservationPilgrims: { male: number; female: number; total: number };
+  residentPilgrims: number;
+};
+
+export type ProvincialMonitoringPlace = ProvincialMonitoringCounts & {
+  id: string;
+  nameFa: string;
+  nameEn: string;
+  code: string;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+export type ProvincialMonitoringCityPlace = ProvincialMonitoringPlace & {
+  provinceId: string;
+  provinceNameFa: string;
+  isProvinceCapital: boolean;
+};
+
+export type ProvincialMonitoringParty = {
+  id: string;
+  name: string;
+  cityId: string;
+  cityNameFa: string;
+  reservationCount: number;
+  reservationPilgrims: { male: number; female: number; total: number };
+  capacity: { male: number; female: number; total: number };
+};
+
+export type ProvincialMonitoringCaravan = ProvincialMonitoringParty & {
+  active: boolean;
+};
+
+export type ProvincialMonitoringGroup = ProvincialMonitoringParty;
+
+export type ProvincialMonitoringMap = {
+  year: number;
+  totals: ProvincialMonitoringCounts;
+  provinces: ProvincialMonitoringPlace[];
+  cities: ProvincialMonitoringCityPlace[];
+  lookup: {
+    provinces: { id: string; nameFa: string; nameEn: string; code: string }[];
+    cities: {
+      id: string;
+      nameFa: string;
+      nameEn: string;
+      code: string;
+      provinceId: string;
+      provinceNameFa: string;
+    }[];
+  };
+};
+
+export type ProvincialMonitoringProvinceDetail = {
+  year: number;
+  province: {
+    id: string;
+    nameFa: string;
+    nameEn: string;
+    code: string;
+    latitude: number | null;
+    longitude: number | null;
+  };
+  totals: ProvincialMonitoringCounts;
+  cities: ProvincialMonitoringPlace[];
+  caravans: ProvincialMonitoringCaravan[];
+  groups: ProvincialMonitoringGroup[];
+};
+
+export type NationalMonitoringPlace = {
+  id: string;
+  nameFa: string;
+  pilgrims: number;
+  pilgrimMale: number;
+  pilgrimFemale: number;
+  reservationCount: number;
+  caravanCount: number;
+  accommodationCount: number;
+  activeAccommodationCount: number;
+  lodgingCapacity: { male: number; female: number; total: number };
+  lodgingGap: number;
+};
+
+export type NationalMonitoringCity = NationalMonitoringPlace & {
+  provinceId: string;
+  provinceNameFa: string;
+};
+
+export type NationalMonitoringRoute = {
+  id: string | null;
+  name: string;
+  pilgrims: number;
+  pilgrimMale: number;
+  pilgrimFemale: number;
+  reservationCount: number;
+  caravanCount: number;
+  groupCount: number;
+};
+
+export type NationalMonitoringReport = {
+  year: number;
+  totals: {
+    pilgrims: number;
+    pilgrimMale: number;
+    pilgrimFemale: number;
+    reservationCount: number;
+    caravanCount: number;
+    accommodationCount: number;
+    activeAccommodationCount: number;
+    lodgingCapacity: { male: number; female: number; total: number };
+    lodgingGap: number;
+  };
+  highlights: {
+    busiestProvince: { id: string; nameFa: string; pilgrims: number } | null;
+    busiestCity: { id: string; nameFa: string; pilgrims: number } | null;
+    busiestRoute: { id: string; name: string; pilgrims: number } | null;
+    tightestProvince: {
+      id: string;
+      nameFa: string;
+      pilgrims: number;
+      lodgingCapacity: number;
+      lodgingGap: number;
+    } | null;
+  };
+  byProvince: NationalMonitoringPlace[];
+  byCity: NationalMonitoringCity[];
+  byWalkingRoute: NationalMonitoringRoute[];
+};
+
+export type ProvincialMonitoringCityDetail = {
+  year: number;
+  city: {
+    id: string;
+    nameFa: string;
+    nameEn: string;
+    code: string;
+    latitude: number | null;
+    longitude: number | null;
+    isProvinceCapital: boolean;
+    province: {
+      id: string;
+      nameFa: string;
+      nameEn: string;
+      code: string;
+    };
+  };
+  totals: ProvincialMonitoringCounts;
+  caravans: ProvincialMonitoringCaravan[];
+  groups: ProvincialMonitoringGroup[];
 };
 
 export type CaravanYearRow = Caravan & {
@@ -356,10 +568,18 @@ export type ManagedUser = {
   countryId: string | null;
   provinceId: string | null;
   cityId: string | null;
+  locationProvinceId: string | null;
+  locationCityId: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  locationNotes: string | null;
+  locationUpdatedAt: string | null;
   issuingOrganizationId: string | null;
   country: (GeoName & { id: string }) | null;
   province: (GeoName & { id: string; countryId: string }) | null;
   city: (GeoName & { id: string; provinceId: string }) | null;
+  locationProvince: (GeoName & { id: string; countryId: string }) | null;
+  locationCity: (GeoName & { id: string; provinceId: string }) | null;
   issuingOrganization: {
     id: string;
     name: string;
@@ -454,11 +674,33 @@ export type City = GeoName & {
   };
 };
 
+export const ENTRY_BORDER_TYPES = ["LAND", "AIR", "SEA"] as const;
+
+export type EntryBorderType = (typeof ENTRY_BORDER_TYPES)[number];
+
+export type EntryBorder = {
+  id: string;
+  name: string;
+  neighboringCountryId: string;
+  provinceId: string;
+  cityId: string;
+  borderType: EntryBorderType;
+  isActive: boolean;
+  description: string | null;
+  neighboringCountry: GeoName & { id: string; iso2: string };
+  province: GeoName & { id: string; countryId: string };
+  city: GeoName & { id: string; provinceId: string };
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AccommodationManagerLink = {
   id: string;
   userId: string | null;
   isPrimary: boolean;
   year: number;
+  maleCapacity: number;
+  femaleCapacity: number;
   createdAt: string;
   user: { id: string; username: string; fullName: string } | null;
 };
@@ -647,6 +889,8 @@ export type WalkingRouteStage = {
   city: GeoName & {
     id: string;
     provinceId: string;
+    latitude: number | null;
+    longitude: number | null;
     province: GeoName & { id: string; countryId: string };
   };
   stageNumber: number;
@@ -656,15 +900,22 @@ export type WalkingRouteStage = {
   description: string | null;
 };
 
+export type ActiveWalkingRoute = {
+  route: WalkingRoute | null;
+};
+
 export type WalkingRoute = {
   id: string;
   name: string;
   distanceToMashhadKm: number;
-  entryBorderCityId: string;
-  entryBorderCity: GeoName & {
+  entryBorderId: string;
+  entryBorder: {
     id: string;
-    provinceId: string;
+    name: string;
+    borderType: EntryBorderType;
+    neighboringCountry: GeoName & { id: string; iso2: string };
     province: GeoName & { id: string; countryId: string };
+    city: GeoName & { id: string; provinceId: string };
   };
   originCountries: (GeoName & { id: string; iso2: string })[];
   stages: WalkingRouteStage[];
@@ -707,16 +958,132 @@ export type RedCrescent = MedicalCenter;
 
 export type Benefactor = MedicalCenter;
 
+export type GovernmentOrganizationContactUser = {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  nationalId: string | null;
+};
+
 export type GovernmentOrganization = {
   id: string;
   name: string;
   phone: string | null;
   address: string | null;
-  contactPerson: string | null;
+  contactUserId: string | null;
+  contactUser: GovernmentOrganizationContactUser | null;
   mobile: string | null;
   description: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export const supportRequestTypes = {
+  GOODS: "GOODS",
+  PLACE: "PLACE",
+  TRANSPORT: "TRANSPORT",
+  OTHER: "OTHER",
+} as const;
+export type SupportRequestType =
+  (typeof supportRequestTypes)[keyof typeof supportRequestTypes];
+
+export const supportRequestStatuses = {
+  PENDING: "PENDING",
+  IN_PROGRESS: "IN_PROGRESS",
+  FULFILLED: "FULFILLED",
+  REJECTED: "REJECTED",
+} as const;
+export type SupportRequestStatus =
+  (typeof supportRequestStatuses)[keyof typeof supportRequestStatuses];
+
+export type SupportRequestOrg = {
+  id: string;
+  name: string;
+};
+
+export type SupportRequestPerson = {
+  id: string;
+  fullName: string;
+};
+
+export type SupportRequest = {
+  id: string;
+  organizationId: string;
+  organization: SupportRequestOrg;
+  type: SupportRequestType;
+  subject: string;
+  quantity: number | null;
+  requestedAt: string;
+  neededBy: string | null;
+  description: string | null;
+  status: SupportRequestStatus;
+  handlingOrganizationId: string | null;
+  handlingOrganization: SupportRequestOrg | null;
+  handledAt: string | null;
+  handlingNotes: string | null;
+  requestedById: string | null;
+  requestedBy: SupportRequestPerson | null;
+  handledById: string | null;
+  handledBy: SupportRequestPerson | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SupportRequestReportTypeRow = {
+  type: SupportRequestType;
+  count: number;
+  quantity: number;
+  pending: number;
+  inProgress: number;
+  fulfilled: number;
+  rejected: number;
+};
+
+export type SupportRequestReportStatusRow = {
+  status: SupportRequestStatus;
+  count: number;
+  quantity: number;
+};
+
+export type SupportRequestReportOrgRow = {
+  id: string;
+  name: string;
+  count: number;
+  quantity: number;
+  pending: number;
+  inProgress: number;
+  fulfilled: number;
+  rejected: number;
+};
+
+export type SupportRequestReportHandlingOrgRow = {
+  id: string;
+  name: string;
+  count: number;
+  quantity: number;
+};
+
+export type SupportRequestReportMonthRow = {
+  month: number;
+  count: number;
+  quantity: number;
+};
+
+export type SupportRequestReport = {
+  year: number;
+  fromDate: string;
+  toDate: string;
+  total: number;
+  quantity: number;
+  pending: number;
+  inProgress: number;
+  fulfilled: number;
+  rejected: number;
+  byType: SupportRequestReportTypeRow[];
+  byStatus: SupportRequestReportStatusRow[];
+  byOrganization: SupportRequestReportOrgRow[];
+  byHandlingOrganization: SupportRequestReportHandlingOrgRow[];
+  byMonth: SupportRequestReportMonthRow[];
 };
 
 export type HeadquartersPhone = {
@@ -1361,6 +1728,9 @@ export type PilgrimPilgrimageHistoryItem = {
   walkingStartDate: string | null;
   requestsAccommodation: boolean;
   requestsBus: boolean;
+  requestsSimCard: boolean;
+  requestsBankCard: boolean;
+  specialServices: string | null;
   requestedMaleCount: number;
   requestedFemaleCount: number;
   maleCount: number;
@@ -1390,6 +1760,9 @@ export type CaravanPilgrimageHistoryItem = {
   walkingStartDate: string | null;
   requestsAccommodation: boolean;
   requestsBus: boolean;
+  requestsSimCard: boolean;
+  requestsBankCard: boolean;
+  specialServices: string | null;
   requestedMaleCount: number;
   requestedFemaleCount: number;
   maleCount: number;
@@ -1454,6 +1827,9 @@ export type ReservationListItem = {
   walkingStartDate: string | null;
   requestsAccommodation: boolean;
   requestsBus: boolean;
+  requestsSimCard: boolean;
+  requestsBankCard: boolean;
+  specialServices: string | null;
   requestedMaleCount: number;
   requestedFemaleCount: number;
   maleCount: number;
@@ -1497,6 +1873,15 @@ export type Reservation = ReservationListItem & {
   stayStartDate: string | null;
   stayEndDate: string | null;
   walkingStartDate: string | null;
+  simCardNumber: string | null;
+  simCardOperator: string | null;
+  simCardDeliveredAt: string | null;
+  simCardInitialCharge: number | null;
+  bankCardNumber: string | null;
+  bankCardIban: string | null;
+  bankCardBank: string | null;
+  bankCardDeliveredAt: string | null;
+  bankCardInitialBalance: number | null;
   caravanManager: ReservationPerson | null;
   caravanManagerNotes: string | null;
   managementNotes: string | null;

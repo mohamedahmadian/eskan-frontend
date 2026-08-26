@@ -32,6 +32,12 @@ export function isUnitManager(user: { roles?: { code: string }[] } | null | unde
   return hasRole(user, 'UNIT_MANAGER')
 }
 
+export function isGovernmentOrgOfficer(
+  user: { roles?: { code: string }[] } | null | undefined,
+) {
+  return hasRole(user, 'GOVERNMENT_ORG_OFFICER')
+}
+
 export function canAccessMyCaravans(user: { roles?: { code: string }[] } | null | undefined) {
   return isAdmin(user) || isCaravanManager(user)
 }
@@ -65,7 +71,11 @@ export function usesDedicatedHomeDashboard(
 ) {
   return (
     !isAdmin(user) &&
-    (isPilgrim(user) || isCaravanManager(user) || isGroupManager(user) || isLicenseIssuer(user))
+    (isPilgrim(user) ||
+      isCaravanManager(user) ||
+      isGroupManager(user) ||
+      isLicenseIssuer(user) ||
+      isGovernmentOrgOfficer(user))
   )
 }
 

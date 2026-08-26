@@ -1,4 +1,4 @@
-import { parseDigitString } from './datetime'
+import { parseDigitString, toLatinDigits } from './datetime'
 
 export function normalizeNationalId(input: string) {
   const digits = parseDigitString(input)
@@ -6,6 +6,11 @@ export function normalizeNationalId(input: string) {
     return digits.padStart(10, '0')
   }
   return digits
+}
+
+/** شماره گذرنامه: حروف و رقم لاتین، بدون فاصله. */
+export function normalizePassportNumber(input: string) {
+  return toLatinDigits(input.trim()).replace(/[\s-]/g, '').toUpperCase()
 }
 
 export function isValidIranianNationalId(input: string) {

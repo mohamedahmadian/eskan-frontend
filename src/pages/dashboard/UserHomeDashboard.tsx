@@ -27,6 +27,7 @@ import type {
 } from '../../types/app'
 import { ReservationStatusBadge } from '../reservations/ReservationStatusBadge'
 import { HeadquartersServiceYearsCard } from './HeadquartersServiceYearsCard'
+import { UserLocationCard } from './UserLocationCard'
 
 const emptyTotals = { all: 0, inProgress: 0, pendingReview: 0, completed: 0 }
 
@@ -318,6 +319,8 @@ export function UserHomeDashboard() {
       </section>
 
       <HeadquartersServiceYearsCard />
+
+      {showPilgrim || showManager ? <UserLocationCard /> : null}
 
       {query.isLoading ? (
         <p className="text-sm text-ink-500">{t('common.loading')}</p>

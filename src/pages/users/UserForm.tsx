@@ -188,10 +188,22 @@ export function UserForm({
     [...new Set([...(initial?.roleIds ?? initial?.roles?.map((role) => role.id) ?? []), ...lockedIds])],
   )
   const licenseIssuerRoleId = roles.find((role) => role.code === 'LICENSE_ISSUER')?.id
+  const governmentOrgOfficerRoleId = roles.find((role) => role.code === 'GOVERNMENT_ORG_OFFICER')?.id
   const showIssuingOrganization = Boolean(
-    licenseIssuerRoleId &&
-      (roleIds.includes(licenseIssuerRoleId) || lockedIds.includes(licenseIssuerRoleId)),
+    (licenseIssuerRoleId &&
+      (roleIds.includes(licenseIssuerRoleId) || lockedIds.includes(licenseIssuerRoleId))) ||
+      (governmentOrgOfficerRoleId &&
+        (roleIds.includes(governmentOrgOfficerRoleId) ||
+          lockedIds.includes(governmentOrgOfficerRoleId))),
   )
+  const organizationFieldLabel = governmentOrgOfficerRoleId &&
+    (roleIds.includes(governmentOrgOfficerRoleId) || lockedIds.includes(governmentOrgOfficerRoleId))
+    ? t('users.linkedOrganization')
+    : t('users.issuingOrganization')
+  const organizationRequiredMessage = governmentOrgOfficerRoleId &&
+    (roleIds.includes(governmentOrgOfficerRoleId) || lockedIds.includes(governmentOrgOfficerRoleId))
+    ? t('users.linkedOrganizationRequired')
+    : t('users.issuingOrganizationRequired')
   const [saving, setSaving] = useState(false)
   const [checkingNationalId, setCheckingNationalId] = useState(false)
   const [nationalIdReady, setNationalIdReady] = useState(
@@ -472,7 +484,7 @@ export function UserForm({
       return
     }
     if (showIssuingOrganization && !issuingOrganizationId) {
-      failField('account', 'issuingOrganizationId', t('users.issuingOrganizationRequired'))
+      failField('account', 'issuingOrganizationId', organizationRequiredMessage)
       return
     }
     if (!username.trim() || username.trim().length < 3) {
@@ -825,7 +837,7 @@ export function UserForm({
         {showIssuingOrganization ? (
           <FormField
             icon={Building}
-            label={t('users.issuingOrganization')}
+            label={organizationFieldLabel}
             htmlFor="issuingOrganizationId"
             error={fieldErrors.issuingOrganizationId}
           >

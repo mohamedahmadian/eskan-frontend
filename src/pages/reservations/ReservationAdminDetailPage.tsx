@@ -50,6 +50,7 @@ import { ReservationStepReadonly } from './ReservationStepReadonly'
 import { ReservationCompleteSummary } from './ReservationCompleteSummary'
 import { InsuranceStep } from './ReservationInsuranceStep'
 import { ReservationPermitPanel } from './ReservationPermitPanel'
+import { ReservationIssuedServicesPanel } from './ReservationIssuedServicesPanel'
 
 function personName(person?: ReservationPerson | null) {
   return person?.fullName || '—'
@@ -187,6 +188,8 @@ export function ReservationAdminDetailPage() {
         }
         caravanApplicant={reservation.type === 'CARAVAN' && Boolean(reservation.caravanManager)}
       />
+
+      <ReservationIssuedServicesPanel reservation={reservation} onChanged={refresh} />
 
       {rejected && reservation.rejectionReason ? (
         <div className={`${cardClassName} mb-4 flex items-start gap-3 border-red-100 p-4`}>

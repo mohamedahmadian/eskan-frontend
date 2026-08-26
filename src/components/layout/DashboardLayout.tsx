@@ -1,4 +1,4 @@
-import { Boxes, Menu, PackageOpen, Search, Snowflake, UsersRound, X } from 'lucide-react'
+import { Boxes, HandHeart, Menu, PackageOpen, Search, Snowflake, UsersRound, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -6,17 +6,17 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { api, getImageUrl } from '../../lib/api'
 import { getNavIcon } from '../../lib/icons'
-import { currentPersianYear, formatNumber } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import { displayExternalUrl, toExternalHref } from '../../lib/social-links'
-import { getPageMeta } from '../../lib/page-meta'
+import { isSidebarMenuActive } from '../../lib/nav-path'
 import { useHeadquartersSummary } from '../../hooks/useHeadquartersSummary'
+import { PageBreadcrumb } from './PageBreadcrumb'
 import {
   canAccessMyAccommodations,
   canAccessMyCaravans,
   canAccessMyGroups,
   canAccessMyReservations,
   isPilgrim,
-  usesDedicatedHomeDashboard,
 } from '../../lib/roles'
 import type { NavMenu, NavModule, Paginated, ReservationListItem } from '../../types/app'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
@@ -34,6 +34,11 @@ const menuSections: Record<string, { titleKey: string; icon?: typeof Snowflake; 
       titleKey: 'menus.groupsSection',
       icon: UsersRound,
       codes: ['groups.mine'],
+    },
+    {
+      titleKey: 'menus.supportRequestsSection',
+      icon: HandHeart,
+      codes: ['caravans.support-requests', 'caravans.support-request-report'],
     },
   ],
   logistics: [
@@ -86,27 +91,6 @@ function insertAfterMenu(
   const index = menus.findIndex((item) => item.code === afterCode)
   if (index < 0) return [...menus, ...extra]
   return [...menus.slice(0, index + 1), ...extra, ...menus.slice(index + 1)]
-}
-
-function normalizeMenuPath(path: string) {
-  return path.replace(/\/+$/, '') || '/'
-}
-
-function menuPathMatches(pathname: string, menuPath: string) {
-  const path = normalizeMenuPath(pathname)
-  const itemPath = normalizeMenuPath(menuPath)
-  if (itemPath === '/') return path === '/'
-  return path === itemPath || path.startsWith(`${itemPath}/`)
-}
-
-/** Longest matching menu path wins, so `/evaluations` stays inactive on `/evaluations/campaigns`. */
-function isSidebarMenuActive(pathname: string, menuPath: string, allMenuPaths: string[]) {
-  if (!menuPathMatches(pathname, menuPath)) return false
-  const normalized = normalizeMenuPath(menuPath)
-  return !allMenuPaths.some((other) => {
-    const otherPath = normalizeMenuPath(other)
-    return otherPath !== normalized && otherPath.length > normalized.length && menuPathMatches(pathname, other)
-  })
 }
 
 function splitMenus(mod: NavModule) {
@@ -190,12 +174,6 @@ export function DashboardLayout() {
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [focusMenuSearch])
 
-  const meta = getPageMeta(location.pathname)
-  const subtitleKey =
-    (location.pathname === '/' || location.pathname === '') && usesDedicatedHomeDashboard(user)
-      ? 'dashboard.userSubtitle'
-      : meta.subtitleKey
-
   useEffect(() => {
     mainRef.current?.scrollTo(0, 0)
   }, [location.pathname])
@@ -224,12 +202,12 @@ export function DashboardLayout() {
     }))
   }, [locale, mineNavQuery.data?.items, showPilgrimageYears, t])
 
-  const modules = useMemo(() => {
+  const navModules = useMemo(() => {
     const showMyCaravans = canAccessMyCaravans(user)
     const showMyGroups = canAccessMyGroups(user)
     const showMyReservations = canAccessMyReservations(user)
     const showMyAccommodations = canAccessMyAccommodations(user)
-    const visible = (user?.modules ?? [])
+    return (user?.modules ?? [])
       .map((mod) => {
         const menus = mod.menus.filter(
           (item) =>
@@ -247,22 +225,22 @@ export function DashboardLayout() {
         }
       })
       .filter((mod) => mod.menus.length > 0)
+  }, [pilgrimageYearMenus, user])
+
+  const modules = useMemo(() => {
     const needle = query.trim()
-    if (!needle) return visible
-    return visible
+    if (!needle) return navModules
+    return navModules
       .map((mod) => ({
         ...mod,
         menus: mod.menus.filter((item) => menuMatchesSearch(mod, item, needle, t)),
       }))
       .filter((mod) => mod.menus.length > 0)
-  }, [pilgrimageYearMenus, query, t, user])
+  }, [navModules, query, t])
 
   const allMenuPaths = useMemo(
-    () => [
-      ...(user?.modules ?? []).flatMap((mod) => mod.menus.map((item) => item.path)),
-      ...pilgrimageYearMenus.map((item) => item.path),
-    ],
-    [pilgrimageYearMenus, user],
+    () => navModules.flatMap((mod) => mod.menus.map((item) => item.path)),
+    [navModules],
   )
 
   return (
@@ -404,14 +382,7 @@ export function DashboardLayout() {
             >
               <Menu className="size-5" />
             </button>
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate text-lg font-semibold text-ink-900">
-                {t(meta.titleKey, { year: formatNumber(currentPersianYear(), locale) })}
-              </h1>
-              {subtitleKey ? (
-                <p className="truncate text-xs text-ink-400">{t(subtitleKey)}</p>
-              ) : null}
-            </div>
+            <PageBreadcrumb pathname={location.pathname} modules={navModules} />
             <UserMenu />
           </header>
           <main

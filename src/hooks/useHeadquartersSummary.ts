@@ -27,11 +27,12 @@ export function useInvalidateHeadquartersBranding() {
   return () => invalidateHeadquartersBranding(queryClient)
 }
 
-/** Title and logo from headquarters info, with app name as fallback. */
+/** Title, name and logo from headquarters info, with app name as fallback. */
 export function useBrandDisplay() {
   const { t } = useTranslation()
   const query = useHeadquartersSummary()
-  const title = query.data?.title?.trim() || query.data?.name?.trim() || t('app.name')
+  const name = query.data?.name?.trim() || ''
+  const title = query.data?.title?.trim() || name || t('app.name')
   const logoSrc = query.data?.logoId ? getImageUrl(query.data.logoId) : undefined
-  return { title, logoSrc, branding: query.data }
+  return { title, name, logoSrc, branding: query.data }
 }

@@ -81,20 +81,20 @@ export function FormCardHeader({
         className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
         aria-hidden
       />
-      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
+      <div className="relative flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
             <Icon className="size-6" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-ink-900">{title}</h2>
+            <h2 className="text-base font-semibold leading-snug text-ink-900">{title}</h2>
             {subtitle ? (
               <p className="mt-1 text-xs leading-6 text-ink-600">{subtitle}</p>
             ) : null}
             {chips ? <div className="mt-3 flex flex-wrap gap-1.5">{chips}</div> : null}
           </div>
         </div>
-        {action ? <div className="relative z-10 shrink-0 self-start sm:ms-auto">{action}</div> : null}
+        {action ? <div className="relative z-10 shrink-0">{action}</div> : null}
       </div>
     </header>
   )

@@ -1,17 +1,20 @@
 import { AlignLeft, Building, MapPin, Phone, Smartphone, UserRound } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
-import { getApiErrorMessage } from '../../lib/api'
-import type { GovernmentOrganization } from '../../types/app'
+import { SearchSelect } from '../../components/ui/SearchSelect'
+import { api, getApiErrorMessage } from '../../lib/api'
+import { localizeDigits } from '../../lib/datetime'
+import type { GovernmentOrganization, ManagedUser } from '../../types/app'
 
 export type GovernmentOrganizationPayload = {
   name: string
   phone: string | null
   address: string | null
-  contactPerson: string | null
+  contactUserId: string | null
   mobile: string | null
   description: string | null
 }
@@ -28,16 +31,43 @@ export function GovernmentOrganizationForm({
   initial?: GovernmentOrganization
   onSubmit: (payload: GovernmentOrganizationPayload) => Promise<void>
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const [saving, setSaving] = useState(false)
   const [values, setValues] = useState({
     name: initial?.name ?? '',
     phone: initial?.phone ?? '',
     address: initial?.address ?? '',
-    contactPerson: initial?.contactPerson ?? '',
+    contactUserId: initial?.contactUserId ?? '',
     mobile: initial?.mobile ?? '',
     description: initial?.description ?? '',
   })
+
+  const officers = useQuery({
+    queryKey: ['users', 'lookup', 'GOVERNMENT_ORG_OFFICER'],
+    queryFn: async () => {
+      const { data } = await api.get<ManagedUser[]>('/users', {
+        params: { roleCode: 'GOVERNMENT_ORG_OFFICER' },
+      })
+      return data
+    },
+  })
+
+  const officerOptions = useMemo(() => {
+    const items = officers.data ?? []
+    return items.filter((user) => {
+      if (user.id === values.contactUserId) {
+        return true
+      }
+      if (user.status !== 'ACTIVE') {
+        return false
+      }
+      if (!user.issuingOrganizationId) {
+        return true
+      }
+      return Boolean(initial?.id) && user.issuingOrganizationId === initial?.id
+    })
+  }, [officers.data, values.contactUserId, initial?.id])
 
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({ ...current, [key]: value }))
@@ -51,7 +81,7 @@ export function GovernmentOrganizationForm({
         name: values.name.trim(),
         phone: emptyToNull(values.phone),
         address: emptyToNull(values.address),
-        contactPerson: emptyToNull(values.contactPerson),
+        contactUserId: emptyToNull(values.contactUserId),
         mobile: emptyToNull(values.mobile),
         description: emptyToNull(values.description),
       })
@@ -99,14 +129,24 @@ export function GovernmentOrganizationForm({
       <FormField
         icon={UserRound}
         label={t('governmentOrganizations.contactPerson')}
-        htmlFor="contactPerson"
+        htmlFor="contactUserId"
       >
-        <input
-          id="contactPerson"
-          className={fieldClassName}
-          value={values.contactPerson}
-          onChange={(e) => set('contactPerson', e.target.value)}
+        <SearchSelect
+          id="contactUserId"
+          value={values.contactUserId}
+          placeholder={t('governmentOrganizations.selectContactPerson')}
+          onChange={(next) => set('contactUserId', next)}
+          options={[
+            { value: '', label: t('governmentOrganizations.selectContactPerson') },
+            ...officerOptions.map((user) => ({
+              value: user.id,
+              label: user.phone
+                ? `${user.fullName} — ${localizeDigits(user.phone, locale)}`
+                : user.fullName,
+            })),
+          ]}
         />
+        <p className="text-xs text-ink-500">{t('governmentOrganizations.contactPersonHint')}</p>
       </FormField>
       <FormField icon={Smartphone} label={t('governmentOrganizations.mobile')} htmlFor="mobile">
         <input

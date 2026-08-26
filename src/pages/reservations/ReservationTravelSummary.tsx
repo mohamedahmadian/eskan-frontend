@@ -1,9 +1,11 @@
 import {
+  Accessibility,
   Building2,
   Bus,
   CalendarCheck,
   CalendarX,
   ClipboardCheck,
+  CreditCard,
   Footprints,
   HeartHandshake,
   MapPin,
@@ -11,6 +13,7 @@ import {
   Phone,
   Route,
   Shield,
+  Smartphone,
   UserRound,
   Users,
   Venus,
@@ -21,11 +24,12 @@ import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { cardClassName } from '../../components/ui/Form'
-import { formatNumber } from '../../lib/datetime'
+import { formatGroupedNumber, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
 import { ReservationCountMetrics } from './ReservationCountMetrics'
 import { ReservationIdentityChips, ReservationSectionHeader } from './ReservationSectionHeader'
+import { bankLabel, simOperatorLabel } from './ReservationIssuedServicesPanel'
 import { workingHeadcount } from './reservation-steps'
 
 type Tone = 'teal' | 'mint' | 'ink'
@@ -201,7 +205,142 @@ export function ReservationTravelSummary({
               }
               tone="ink"
             />
+            <FactTile
+              icon={Smartphone}
+              label={t('reservations.requestsSimCardShort')}
+              value={reservation.requestsSimCard ? t('common.yes') : t('common.no')}
+              tone="teal"
+            />
+            <FactTile
+              icon={CreditCard}
+              label={t('reservations.requestsBankCardShort')}
+              value={reservation.requestsBankCard ? t('common.yes') : t('common.no')}
+              tone="mint"
+            />
+            <FactTile
+              icon={Accessibility}
+              label={t('reservations.specialServices')}
+              value={reservation.specialServices?.trim() || empty}
+              empty={!reservation.specialServices?.trim()}
+              tone="ink"
+            />
           </div>
+          {reservation.simCardNumber ||
+          reservation.simCardOperator ||
+          reservation.simCardDeliveredAt ||
+          reservation.simCardInitialCharge != null ? (
+            <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+              <FactTile
+                icon={Smartphone}
+                label={t('reservations.simCardNumber')}
+                value={
+                  reservation.simCardNumber ? (
+                    <CopyableDigits value={reservation.simCardNumber} empty={empty} />
+                  ) : (
+                    empty
+                  )
+                }
+                empty={!reservation.simCardNumber}
+                tone="teal"
+              />
+              <FactTile
+                icon={Smartphone}
+                label={t('reservations.simCardOperator')}
+                value={simOperatorLabel(reservation.simCardOperator, t) || empty}
+                empty={!reservation.simCardOperator}
+                tone="mint"
+              />
+              <FactTile
+                icon={CalendarCheck}
+                label={t('reservations.simCardDeliveredAt')}
+                value={
+                  reservation.simCardDeliveredAt ? (
+                    <DateText value={reservation.simCardDeliveredAt} />
+                  ) : (
+                    empty
+                  )
+                }
+                empty={!reservation.simCardDeliveredAt}
+                tone="ink"
+              />
+              <FactTile
+                icon={Smartphone}
+                label={t('reservations.simCardInitialCharge')}
+                value={
+                  reservation.simCardInitialCharge != null
+                    ? `${formatGroupedNumber(reservation.simCardInitialCharge, locale)} ${t('receptionSettings.toman')}`
+                    : empty
+                }
+                empty={reservation.simCardInitialCharge == null}
+                tone="teal"
+              />
+            </div>
+          ) : null}
+          {reservation.bankCardNumber ||
+          reservation.bankCardIban ||
+          reservation.bankCardBank ||
+          reservation.bankCardDeliveredAt ||
+          reservation.bankCardInitialBalance != null ? (
+            <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+              <FactTile
+                icon={CreditCard}
+                label={t('reservations.bankCardNumber')}
+                value={
+                  reservation.bankCardNumber ? (
+                    <CopyableDigits value={reservation.bankCardNumber} empty={empty} />
+                  ) : (
+                    empty
+                  )
+                }
+                empty={!reservation.bankCardNumber}
+                tone="teal"
+              />
+              <FactTile
+                icon={CreditCard}
+                label={t('reservations.bankCardIban')}
+                value={
+                  reservation.bankCardIban ? (
+                    <CopyableDigits value={reservation.bankCardIban} empty={empty} />
+                  ) : (
+                    empty
+                  )
+                }
+                empty={!reservation.bankCardIban}
+                tone="mint"
+              />
+              <FactTile
+                icon={Building2}
+                label={t('reservations.bankCardBank')}
+                value={bankLabel(reservation.bankCardBank, t) || empty}
+                empty={!reservation.bankCardBank}
+                tone="ink"
+              />
+              <FactTile
+                icon={CalendarCheck}
+                label={t('reservations.bankCardDeliveredAt')}
+                value={
+                  reservation.bankCardDeliveredAt ? (
+                    <DateText value={reservation.bankCardDeliveredAt} />
+                  ) : (
+                    empty
+                  )
+                }
+                empty={!reservation.bankCardDeliveredAt}
+                tone="teal"
+              />
+              <FactTile
+                icon={CreditCard}
+                label={t('reservations.bankCardInitialBalance')}
+                value={
+                  reservation.bankCardInitialBalance != null
+                    ? `${formatGroupedNumber(reservation.bankCardInitialBalance, locale)} ${t('receptionSettings.toman')}`
+                    : empty
+                }
+                empty={reservation.bankCardInitialBalance == null}
+                tone="mint"
+              />
+            </div>
+          ) : null}
         </section>
 
         {origin ||

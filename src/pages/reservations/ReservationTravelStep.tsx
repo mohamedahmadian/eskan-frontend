@@ -50,6 +50,9 @@ export function ReservationTravelStep({
     groupId: reservation.group?.id ?? '',
     requestsAccommodation: reservation.requestsAccommodation ?? true,
     requestsBus: reservation.requestsBus ?? true,
+    requestsSimCard: reservation.requestsSimCard ?? false,
+    requestsBankCard: reservation.requestsBankCard ?? false,
+    specialServices: reservation.specialServices ?? '',
   })
   const selectedParty: PartyItemSnapshot | null =
     reservation.type === 'CARAVAN' && reservation.caravan
@@ -319,6 +322,9 @@ function travelPayload(
     walkingStartDate: values.walkingStartDate || null,
     requestsAccommodation: values.requestsAccommodation,
     requestsBus: values.requestsBus,
+    requestsSimCard: values.requestsSimCard,
+    requestsBankCard: values.requestsBankCard,
+    specialServices: values.specialServices.trim() || null,
     caravanId: type === 'CARAVAN' ? values.caravanId || null : null,
     groupId: type === 'GROUP' ? values.groupId || null : null,
   }

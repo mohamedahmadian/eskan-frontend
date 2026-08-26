@@ -762,15 +762,22 @@ export function AccommodationForm({
       {isAdmin && !initial?.id ? (
         <div data-tab="managers" className={panelClass('managers')}>
           <p className="text-sm leading-6 text-ink-600">{t('accommodations.activityYearsHint')}</p>
-          <div className="grid gap-4 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-end">
+          <div className="space-y-4">
             <AccommodationActivityYearFields
               year={values.activityYear}
               onYearChange={(next) => set('activityYear', next)}
               userId={values.managerUserId}
               onUserIdChange={(next) => set('managerUserId', next)}
               users={users}
+              maleCapacity={values.maleCapacity}
+              onMaleCapacityChange={(next) => set('maleCapacity', next)}
+              femaleCapacity={values.femaleCapacity}
+              onFemaleCapacityChange={(next) => set('femaleCapacity', next)}
+              genderType={values.genderType}
               yearInputId="create-activity-year"
               managerInputId="create-activity-manager"
+              maleInputId="create-activity-male"
+              femaleInputId="create-activity-female"
             />
           </div>
         </div>

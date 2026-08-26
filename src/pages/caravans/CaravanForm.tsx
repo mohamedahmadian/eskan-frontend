@@ -20,6 +20,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { useAuth } from '../../auth/AuthProvider'
 import {
   AppForm,
   FormActions,
@@ -112,6 +113,15 @@ function toOptionalYear(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null
 }
 
+function suggestedCaravanName(
+  personName: string | null | undefined,
+  format: (name: string) => string,
+) {
+  const trimmed = personName?.trim()
+  if (!trimmed) return ''
+  return format(trimmed)
+}
+
 function toManagerOption(
   user:
     | CaravanManagerChoice
@@ -161,11 +171,17 @@ export function CaravanForm({
   onSubmit: (payload: CaravanPayload) => Promise<void>
 }) {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const nameOf = useGeoName()
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const [tab, setTab] = useState<CaravanTab>('basic')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [name, setName] = useState(initial?.name ?? '')
+  const [nameTouched, setNameTouched] = useState(Boolean(initial?.name))
+  const [name, setName] = useState(() =>
+    initial?.name ??
+      suggestedCaravanName(user?.fullName, (person) => t('caravans.defaultName', { name: person })),
+  )
   const [description, setDescription] = useState(initial?.description ?? '')
   const [officeAddress, setOfficeAddress] = useState(initial?.officeAddress ?? '')
   const [officePhone, setOfficePhone] = useState(initial?.officePhone ?? '')
@@ -243,6 +259,22 @@ export function CaravanForm({
       setManagerUserId(currentUserId)
     }
   }, [initial?.managerUserId, selectManager, currentUserId])
+
+  useEffect(() => {
+    if (initial || nameTouched) return
+    const next = suggestedCaravanName(
+      selectedManager?.fullName ?? user?.fullName,
+      (person) => t('caravans.defaultName', { name: person }),
+    )
+    if (!next) return
+    setName(next)
+    const input = nameInputRef.current
+    if (input && document.activeElement === input) {
+      requestAnimationFrame(() => {
+        if (document.activeElement === input) input.select()
+      })
+    }
+  }, [initial, nameTouched, selectedManager?.fullName, user?.fullName, t])
 
   useEffect(() => {
     if (initial || geoTouchedRef.current) return
@@ -358,9 +390,16 @@ export function CaravanForm({
           <FormField icon={Tent} label={t('caravans.name')} htmlFor="name">
             <input
               id="name"
+              ref={nameInputRef}
               className={fieldClassName}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setNameTouched(true)
+                setName(e.target.value)
+              }}
+              onFocus={(e) => {
+                if (!initial && !nameTouched) e.currentTarget.select()
+              }}
               required
             />
           </FormField>
@@ -640,6 +679,28 @@ export function CaravanForm({
               }}
               emptyLabel={t('caravans.withoutManager')}
             />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField icon={UserRound} label={t('caravans.maleCount')} htmlFor="create-year-maleCount">
+                <input
+                  id="create-year-maleCount"
+                  type="number"
+                  min={0}
+                  className={fieldClassName}
+                  value={maleCount}
+                  onChange={(e) => setMaleCount(e.target.value)}
+                />
+              </FormField>
+              <FormField icon={UserPlus} label={t('caravans.femaleCount')} htmlFor="create-year-femaleCount">
+                <input
+                  id="create-year-femaleCount"
+                  type="number"
+                  min={0}
+                  className={fieldClassName}
+                  value={femaleCount}
+                  onChange={(e) => setFemaleCount(e.target.value)}
+                />
+              </FormField>
+            </div>
           </div>
         ) : null}
 

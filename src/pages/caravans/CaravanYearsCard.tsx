@@ -1,4 +1,4 @@
-import { CalendarDays, Trash2 } from 'lucide-react'
+import { CalendarDays, Trash2, UserPlus, UserRound } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -60,6 +60,8 @@ export function CaravanYearsCard({
   const queryClient = useQueryClient()
   const [year, setYear] = useState(String(currentPersianYear()))
   const [manager, setManager] = useState<CaravanManagerChoice | null>(null)
+  const [maleCount, setMaleCount] = useState(String(caravan.maleCount ?? 0))
+  const [femaleCount, setFemaleCount] = useState(String(caravan.femaleCount ?? 0))
 
   const rows = [...(caravan.years ?? [])].sort((a, b) => {
     if (b.year !== a.year) return b.year - a.year
@@ -79,6 +81,8 @@ export function CaravanYearsCard({
       const payload = {
         year: Number(toLatinDigits(year)),
         managerUserId: manager?.id ?? null,
+        maleCount: Number(toLatinDigits(maleCount)) || 0,
+        femaleCount: Number(toLatinDigits(femaleCount)) || 0,
       }
       await api.post(`/caravans/${caravan.id}/years`, payload)
       return payload
@@ -133,6 +137,28 @@ export function CaravanYearsCard({
             onChange={setManager}
             emptyLabel={t('caravans.withoutManager')}
           />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField icon={UserRound} label={t('caravans.maleCount')} htmlFor="year-maleCount">
+              <input
+                id="year-maleCount"
+                type="number"
+                min={0}
+                className={fieldClassName}
+                value={maleCount}
+                onChange={(event) => setMaleCount(toLatinDigits(event.target.value))}
+              />
+            </FormField>
+            <FormField icon={UserPlus} label={t('caravans.femaleCount')} htmlFor="year-femaleCount">
+              <input
+                id="year-femaleCount"
+                type="number"
+                min={0}
+                className={fieldClassName}
+                value={femaleCount}
+                onChange={(event) => setFemaleCount(toLatinDigits(event.target.value))}
+              />
+            </FormField>
+          </div>
           <FormActions submitLabel={t('caravans.assign')} submitting={assign.isPending} />
         </AppForm>
       </article>
@@ -144,6 +170,8 @@ export function CaravanYearsCard({
             <tr>
               <th className="px-4 py-3 text-start font-medium">{t('caravans.year')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('caravans.managerName')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('caravans.maleCount')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('caravans.femaleCount')}</th>
               {canAssign ? (
                 <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
               ) : null}
@@ -156,6 +184,8 @@ export function CaravanYearsCard({
                 <td className="px-4 py-3">
                   {yearManagerLabel(caravan, item.year, t('caravans.unassignedManager'))}
                 </td>
+                <td className="px-4 py-3">{formatNumber(item.maleCount ?? 0, locale)}</td>
+                <td className="px-4 py-3">{formatNumber(item.femaleCount ?? 0, locale)}</td>
                 {canAssign ? (
                 <td className="px-4 py-3">
                   <Button

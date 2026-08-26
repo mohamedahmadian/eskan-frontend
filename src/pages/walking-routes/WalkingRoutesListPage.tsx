@@ -1,4 +1,4 @@
-import { Filter, Plus } from 'lucide-react'
+import { Fence, Globe2, MapPin, MapPinned, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -23,7 +23,7 @@ import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import type { City, Country, Paginated, Province, WalkingRoute } from '../../types/app'
+import type { City, Country, EntryBorder, Paginated, Province, WalkingRoute } from '../../types/app'
 
 export function WalkingRoutesListPage() {
   const { t, i18n } = useTranslation()
@@ -33,6 +33,7 @@ export function WalkingRoutesListPage() {
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const originCountryId = searchParams.get('originCountryId') ?? ''
+  const entryBorderId = searchParams.get('entryBorderId') ?? ''
   const provinceId = searchParams.get('provinceId') ?? ''
   const cityId = searchParams.get('cityId') ?? ''
 
@@ -68,12 +69,21 @@ export function WalkingRoutesListPage() {
     },
   })
 
+  const entryBorders = useQuery({
+    queryKey: ['entry-borders', 'lookup'],
+    queryFn: async () => {
+      const { data } = await api.get<EntryBorder[]>('/entry-borders')
+      return data
+    },
+  })
+
   const query = useQuery({
     queryKey: [
       'walking-routes',
       'list',
       q,
       originCountryId,
+      entryBorderId,
       provinceId,
       cityId,
       page,
@@ -86,6 +96,7 @@ export function WalkingRoutesListPage() {
           page,
           ...(q ? { q } : {}),
           ...(originCountryId ? { originCountryId } : {}),
+          ...(entryBorderId ? { entryBorderId } : {}),
           ...(provinceId ? { provinceId } : {}),
           ...(cityId ? { cityId } : {}),
           ...sortParams,
@@ -100,7 +111,7 @@ export function WalkingRoutesListPage() {
   }
 
   const rows = query.data?.items ?? []
-  const hasFilter = Boolean(q || originCountryId || provinceId || cityId)
+  const hasFilter = Boolean(q || originCountryId || entryBorderId || provinceId || cityId)
   const emptyMessage = hasFilter ? t('walkingRoutes.noResults') : t('walkingRoutes.empty')
 
   return (
@@ -124,11 +135,51 @@ export function WalkingRoutesListPage() {
         onSubmit={onSearch}
         label={t('walkingRoutes.search')}
         placeholder={t('walkingRoutes.searchPlaceholder')}
-        filtersActive={Boolean(originCountryId || provinceId || cityId)}
+        filtersActive={Boolean(originCountryId || entryBorderId || provinceId || cityId)}
         extra={
           <>
             <FilterPair>
-              <FormField icon={Filter} label={t('geo.province')} htmlFor="route-province">
+              <FormField
+                icon={Fence}
+                label={t('walkingRoutes.entryBorder')}
+                htmlFor="route-entry-border"
+              >
+                <SearchSelect
+                  id="route-entry-border"
+                  value={entryBorderId}
+                  placeholder={t('walkingRoutes.allEntryBorders')}
+                  onChange={(next) =>
+                    setParams({ entryBorderId: next || undefined }, { resetPage: true })
+                  }
+                  options={[
+                    { value: '', label: t('walkingRoutes.allEntryBorders') },
+                    ...(entryBorders.data ?? []).map((border) => ({
+                      value: border.id,
+                      label: border.name,
+                    })),
+                  ]}
+                />
+              </FormField>
+              <FormField icon={Globe2} label={t('walkingRoutes.originCountry')} htmlFor="route-origin">
+                <SearchSelect
+                  id="route-origin"
+                  value={originCountryId}
+                  placeholder={t('walkingRoutes.allOriginCountries')}
+                  onChange={(next) =>
+                    setParams({ originCountryId: next || undefined }, { resetPage: true })
+                  }
+                  options={[
+                    { value: '', label: t('walkingRoutes.allOriginCountries') },
+                    ...(countries.data ?? []).map((country) => ({
+                      value: country.id,
+                      label: name(country),
+                    })),
+                  ]}
+                />
+              </FormField>
+            </FilterPair>
+            <FilterPair>
+              <FormField icon={MapPinned} label={t('geo.province')} htmlFor="route-province">
                 <SearchSelect
                   id="route-province"
                   value={provinceId}
@@ -148,7 +199,7 @@ export function WalkingRoutesListPage() {
                   ]}
                 />
               </FormField>
-              <FormField icon={Filter} label={t('geo.city')} htmlFor="route-city">
+              <FormField icon={MapPin} label={t('geo.city')} htmlFor="route-city">
                 <SearchSelect
                   id="route-city"
                   value={cityId}
@@ -167,23 +218,6 @@ export function WalkingRoutesListPage() {
                 />
               </FormField>
             </FilterPair>
-            <FormField icon={Filter} label={t('walkingRoutes.originCountry')} htmlFor="route-origin">
-              <SearchSelect
-                id="route-origin"
-                value={originCountryId}
-                placeholder={t('walkingRoutes.allOriginCountries')}
-                onChange={(next) =>
-                  setParams({ originCountryId: next || undefined }, { resetPage: true })
-                }
-                options={[
-                  { value: '', label: t('walkingRoutes.allOriginCountries') },
-                  ...(countries.data ?? []).map((country) => ({
-                    value: country.id,
-                    label: name(country),
-                  })),
-                ]}
-              />
-            </FormField>
           </>
         }
       />
@@ -221,7 +255,7 @@ export function WalkingRoutesListPage() {
             {rows.map((item) => (
               <tr key={item.id} className="border-t border-line">
                 <td className="px-4 py-3">{item.name}</td>
-                <td className="px-4 py-3">{name(item.entryBorderCity)}</td>
+                <td className="px-4 py-3">{item.entryBorder.name}</td>
                 <td className="px-4 py-3">
                   {item.originCountries.map((country) => name(country)).join('، ') || '—'}
                 </td>

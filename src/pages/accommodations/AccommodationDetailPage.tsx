@@ -572,13 +572,29 @@ export function AccommodationDetailPage() {
                                 </span>
                               ) : null}
                             </div>
-                            <FormFactTile
-                              icon={Calendar}
-                              label={t('accommodations.year')}
-                              value={n(manager.year)}
-                              tone={current ? 'teal' : 'ink'}
-                              compact
-                            />
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              <FormFactTile
+                                icon={Calendar}
+                                label={t('accommodations.year')}
+                                value={n(manager.year)}
+                                tone={current ? 'teal' : 'ink'}
+                                compact
+                              />
+                              <FormFactTile
+                                icon={Mars}
+                                label={t('accommodations.yearMaleCount')}
+                                value={n(manager.maleCapacity)}
+                                tone={current ? 'teal' : 'mint'}
+                                compact
+                              />
+                              <FormFactTile
+                                icon={Venus}
+                                label={t('accommodations.yearFemaleCount')}
+                                value={n(manager.femaleCapacity)}
+                                tone={current ? 'mint' : 'ink'}
+                                compact
+                              />
+                            </div>
                           </div>
                         </div>
                       </article>

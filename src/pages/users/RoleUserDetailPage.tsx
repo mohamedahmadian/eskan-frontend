@@ -11,6 +11,7 @@ import {
   ImagePlus,
   KeyRound,
   Languages,
+  LocateFixed,
   Mail,
   Map,
   MapPin,
@@ -42,6 +43,7 @@ import {
   userFormShellClassName,
 } from '../../components/ui/Form'
 import { DateText } from '../../components/ui/DateText'
+import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { EntityRowActions, TableCard } from '../../components/ui/ListControls'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { languages, type AppLanguage } from '../../i18n'
@@ -327,7 +329,11 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                 {user.issuingOrganization ? (
                   <FactTile
                     icon={Building}
-                    label={t('users.issuingOrganization')}
+                    label={
+                      user.roles?.some((role) => role.code === 'GOVERNMENT_ORG_OFFICER')
+                        ? t('users.linkedOrganization')
+                        : t('users.issuingOrganization')
+                    }
                     value={user.issuingOrganization.name}
                     tone="ink"
                   />
@@ -388,6 +394,52 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                   className="sm:col-span-2"
                 />
               </div>
+              <SectionTitle icon={LocateFixed} className="mb-2.5 mt-6">
+                {t('location.title')}
+              </SectionTitle>
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                <FactTile
+                  icon={MapPinned}
+                  label={t('geo.province')}
+                  value={user.locationProvince ? geoName(user.locationProvince) : empty}
+                  empty={!user.locationProvince}
+                  tone="teal"
+                />
+                <FactTile
+                  icon={Building2}
+                  label={t('geo.city')}
+                  value={user.locationCity ? geoName(user.locationCity) : empty}
+                  empty={!user.locationCity}
+                  tone="mint"
+                />
+                <FactTile
+                  icon={MapPinned}
+                  label={t('location.notes')}
+                  value={user.locationNotes || empty}
+                  empty={!user.locationNotes}
+                  tone="ink"
+                  className="sm:col-span-2"
+                />
+              </div>
+              {user.latitude != null && user.longitude != null ? (
+                <div className="mt-3 overflow-hidden rounded-2xl ring-1 ring-teal-100">
+                  <OsmMapPicker
+                    variant="always"
+                    readOnly
+                    latitude={String(user.latitude)}
+                    longitude={String(user.longitude)}
+                    onChange={() => undefined}
+                    heightClass="h-56"
+                  />
+                </div>
+              ) : null}
+              {user.locationUpdatedAt ? (
+                <p className="mt-2 text-xs text-ink-400">
+                  {t('location.updatedAt')}
+                  {' · '}
+                  <DateText value={user.locationUpdatedAt} withTime />
+                </p>
+              ) : null}
             </section>
           ) : null}
 
@@ -573,54 +625,58 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                     })
             }
             extra={
-              scope.showPilgrimCard || scope.i18nPrefix === 'users' ? (
-                <>
-                  {scope.showPilgrimCard ? (
-                    <>
-                      <Link to={`${scope.listPath}/${user.id}/sms`}>
-                        <Button type="button" variant="soft">
-                          <MessageSquare className="size-4" aria-hidden />
-                          {t('pilgrims.sendSms')}
-                        </Button>
-                      </Link>
-                      <Link to={`${scope.listPath}/${user.id}/password`}>
-                        <Button type="button" variant="soft">
-                          <KeyRound className="size-4" aria-hidden />
-                          {t('pilgrims.setPassword')}
-                        </Button>
-                      </Link>
-                      <Link to={`${scope.listPath}/${user.id}/card`}>
-                        <Button type="button" variant="soft">
-                          <IdCard className="size-4" aria-hidden />
-                          {t('pilgrims.card')}
-                        </Button>
-                      </Link>
-                      <Link to={`${scope.listPath}/${user.id}/pilgrimage-history`}>
-                        <Button type="button" variant="soft">
-                          <History className="size-4" aria-hidden />
-                          {t('pilgrims.pilgrimageHistory')}
-                        </Button>
-                      </Link>
-                    </>
-                  ) : null}
-                  {scope.i18nPrefix === 'users' ? (
-                    <Button
-                      type="button"
-                      variant="soft"
-                      onClick={() => {
-                        if (!user.phone) {
-                          toast.error(t('users.phoneRequiredForSms'))
-                          return
-                        }
-                        setPasswordModalOpen(true)
-                      }}
-                    >
-                      <Send className="size-4" aria-hidden />
-                      {t('users.forgotPassword')}
-                    </Button>
-                  ) : null}
-                </>
-              ) : undefined
+              <>
+                <Link to={`${scope.listPath}/${user.id}/location`}>
+                  <Button type="button" variant="soft">
+                    <MapPinned className="size-4" aria-hidden />
+                    {t('location.register')}
+                  </Button>
+                </Link>
+                {scope.showPilgrimCard ? (
+                  <>
+                    <Link to={`${scope.listPath}/${user.id}/sms`}>
+                      <Button type="button" variant="soft">
+                        <MessageSquare className="size-4" aria-hidden />
+                        {t('pilgrims.sendSms')}
+                      </Button>
+                    </Link>
+                    <Link to={`${scope.listPath}/${user.id}/password`}>
+                      <Button type="button" variant="soft">
+                        <KeyRound className="size-4" aria-hidden />
+                        {t('pilgrims.setPassword')}
+                      </Button>
+                    </Link>
+                    <Link to={`${scope.listPath}/${user.id}/card`}>
+                      <Button type="button" variant="soft">
+                        <IdCard className="size-4" aria-hidden />
+                        {t('pilgrims.card')}
+                      </Button>
+                    </Link>
+                    <Link to={`${scope.listPath}/${user.id}/pilgrimage-history`}>
+                      <Button type="button" variant="soft">
+                        <History className="size-4" aria-hidden />
+                        {t('pilgrims.pilgrimageHistory')}
+                      </Button>
+                    </Link>
+                  </>
+                ) : null}
+                {scope.i18nPrefix === 'users' ? (
+                  <Button
+                    type="button"
+                    variant="soft"
+                    onClick={() => {
+                      if (!user.phone) {
+                        toast.error(t('users.phoneRequiredForSms'))
+                        return
+                      }
+                      setPasswordModalOpen(true)
+                    }}
+                  >
+                    <Send className="size-4" aria-hidden />
+                    {t('users.forgotPassword')}
+                  </Button>
+                ) : null}
+              </>
             }
           />
         </div>

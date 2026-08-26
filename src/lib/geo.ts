@@ -22,3 +22,88 @@ export function slugifyCode(value: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
+
+export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (value: number) => (value * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2)
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+export function nearestGeoItem<
+  T extends { latitude: number | null; longitude: number | null },
+>(lat: number, lng: number, items: T[], maxKm = 80) {
+  let best: T | null = null
+  let bestDistance = maxKm
+  for (const item of items) {
+    if (item.latitude == null || item.longitude == null) continue
+    const distance = haversineKm(lat, lng, item.latitude, item.longitude)
+    if (distance < bestDistance) {
+      best = item
+      bestDistance = distance
+    }
+  }
+  return best
+}
+
+export function stageCoordinates(stage: {
+  city?: { latitude?: number | null; longitude?: number | null } | null
+}) {
+  const lat = stage.city?.latitude
+  const lng = stage.city?.longitude
+  if (lat == null || lng == null) return null
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  return { lat, lng }
+}
+
+export function resolveWalkingProgress<
+  T extends {
+    cityId: string
+    stageNumber: number
+    city?: { latitude?: number | null; longitude?: number | null } | null
+  },
+>(
+  stages: T[],
+  here: { cityId?: string | null; lat?: number | null; lng?: number | null },
+) {
+  const ordered = [...stages].sort((a, b) => a.stageNumber - b.stageNumber)
+  let index = here.cityId
+    ? ordered.findIndex((stage) => stage.cityId === here.cityId)
+    : -1
+  if (index < 0 && here.lat != null && here.lng != null) {
+    let best = -1
+    let bestDistance = 80
+    ordered.forEach((stage, stageIndex) => {
+      const coords = stageCoordinates(stage)
+      if (!coords) return
+      const distance = haversineKm(here.lat!, here.lng!, coords.lat, coords.lng)
+      if (distance < bestDistance) {
+        best = stageIndex
+        bestDistance = distance
+      }
+    })
+    index = best
+  }
+  const current = index >= 0 ? ordered[index] ?? null : null
+  const previous = index > 0 ? ordered[index - 1] ?? null : null
+  const next =
+    index >= 0
+      ? ordered[index + 1] ?? null
+      : ordered[0] ?? null
+  return { ordered, index, current, previous, next }
+}
+
+export function pointBounds(lat: number, lng: number, padDeg: number) {
+  return {
+    south: lat - padDeg,
+    west: lng - padDeg,
+    north: lat + padDeg,
+    east: lng + padDeg,
+  }
+}
