@@ -25,6 +25,7 @@ import {
   type EvaluationSurveyAnswerPayload,
 } from './EvaluationSurveyForm'
 import { ClipboardList, Trash2, UserRound } from 'lucide-react'
+import { PerformanceRankBadge } from './PerformanceRankBadge'
 
 export function EvaluationDetailPage() {
   const { t } = useTranslation()
@@ -104,10 +105,16 @@ export function EvaluationDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader
-        title={t('evaluations.details')}
-        subtitle={<EntityNameSubtitle name={title} icon={ClipboardList} />}
-      />
+      <div className="mb-6 flex items-start gap-4">
+        <PerformanceRankBadge rank={item.performanceRank} />
+        <div className="min-w-0 flex-1">
+          <PageHeader
+            className="mb-0"
+            title={t('evaluations.details')}
+            subtitle={<EntityNameSubtitle name={title} icon={ClipboardList} />}
+          />
+        </div>
+      </div>
 
       <div className="mb-4 space-y-4">
         <FormCard icon={ClipboardList} title={item.campaign?.title ?? t('evaluations.campaign')}>

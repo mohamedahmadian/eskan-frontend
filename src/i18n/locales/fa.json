@@ -2864,6 +2864,7 @@
     "status": "وضعیت",
     "startedAt": "شروع",
     "completedAt": "تکمیل",
+    "performanceRank": "رتبه عملکرد",
     "count": "تعداد ارزیابی",
     "meta": "اطلاعات ارزیابی",
     "details": "جزئیات ارزیابی",

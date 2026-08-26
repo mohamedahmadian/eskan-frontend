@@ -309,7 +309,6 @@ export function CaravanForm({
         walkingRouteId: emptyToNull(walkingRouteId),
         licenseNumber: emptyToNull(licenseNumber),
         licenseImageId: emptyToNull(licenseImageId),
-        managerUserId: resolvedManagerId || null,
         totalCount: totalCountValue,
         maleCount: toCount(maleCount),
         femaleCount: toCount(femaleCount),

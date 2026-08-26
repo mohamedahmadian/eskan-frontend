@@ -1,3 +1,4 @@
+import { localizeDigits } from './datetime'
 import type {
   EvaluationAnswerType,
   EvaluationEvaluatorType,
@@ -61,6 +62,22 @@ export function scoreTone(score: number) {
   if (score === 3) return 'average'
   if (score === 4) return 'weak'
   return 'poor'
+}
+
+export function performanceRankTone(rank: number) {
+  const rounded = Math.min(5, Math.max(1, Math.round(rank)))
+  return scoreTone(rounded)
+}
+
+export function performanceRankLabelKey(rank: number) {
+  const rounded = Math.min(5, Math.max(1, Math.round(rank)))
+  return `evaluations.scores.${rounded}` as const
+}
+
+export function formatPerformanceRank(rank: number, locale: string) {
+  const rounded = Math.round(rank * 10) / 10
+  const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+  return localizeDigits(text, locale)
 }
 
 export function isQuestionAnswered(

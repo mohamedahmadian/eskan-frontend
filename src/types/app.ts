@@ -1836,6 +1836,7 @@ export type Evaluation = {
   submittedById: string;
   submittedBy?: EvaluationPerson;
   submittedAt: string | null;
+  performanceRank: number | null;
   answers?: EvaluationAnswer[];
   _count?: { answers: number };
   createdAt: string;

@@ -20,6 +20,8 @@ import { api } from '../../lib/api'
 import {
   EVALUATION_EVALUATOR_TYPES,
   EVALUATION_TARGET_TYPES,
+  formatPerformanceRank,
+  performanceRankLabelKey,
 } from '../../lib/evaluations'
 import type {
   Evaluation,
@@ -28,7 +30,8 @@ import type {
 } from '../../types/app'
 
 export function EvaluationsListPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const { q, page, term, setTerm, setParams, searchParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
@@ -191,6 +194,13 @@ export function EvaluationsListPage() {
                 onSort={onSort}
               />
               <SortableTh
+                label={t('evaluations.performanceRank')}
+                column="performanceRank"
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
                 label={t('evaluations.startedAt')}
                 column="startedAt"
                 sortBy={sortBy}
@@ -225,6 +235,20 @@ export function EvaluationsListPage() {
                   </td>
                   <td className="px-3 py-2.5">
                     {t(`evaluations.statuses.${item.status}`)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {item.performanceRank != null ? (
+                      <div>
+                        <div className="font-semibold text-ink-900">
+                          {formatPerformanceRank(item.performanceRank, locale)}
+                        </div>
+                        <div className="text-xs text-ink-500">
+                          {t(performanceRankLabelKey(item.performanceRank))}
+                        </div>
+                      </div>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td className="px-3 py-2.5">
                     <DateText value={item.startedAt} withTime />
