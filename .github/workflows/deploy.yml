@@ -25,16 +25,9 @@ jobs:
             OLD_COMMIT=$(git rev-parse HEAD)
 
             echo "📥 Pulling latest code..."
-            git pull --ff-only origin main
-
-            CHANGED_FILES=$(git diff --name-only "$OLD_COMMIT" HEAD)
-
-            if echo "$CHANGED_FILES" | grep -qE '^(package.json|package-lock.json)$'; then
-              echo "📦 Dependencies changed → npm install"
-              npm install
-            else
-              echo "⏭️ Dependencies unchanged → skip npm install"
-            fi
+            git fetch origin main 
+            git reset --hard origin/main
+            git clean -fd
 
             echo "♻️ Restarting frontend..."
             pm2 restart eskan-frontend-dev
