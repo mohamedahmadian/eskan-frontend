@@ -105,8 +105,7 @@ export function EvaluationDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <div className="mb-6 flex items-start gap-4">
-        <PerformanceRankBadge rank={item.performanceRank} />
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <PageHeader
             className="mb-0"
@@ -114,6 +113,7 @@ export function EvaluationDetailPage() {
             subtitle={<EntityNameSubtitle name={title} icon={ClipboardList} />}
           />
         </div>
+        <PerformanceRankBadge rank={item.performanceRank} />
       </div>
 
       <div className="mb-4 space-y-4">
