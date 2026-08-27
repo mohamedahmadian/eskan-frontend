@@ -41,6 +41,7 @@ import { ProvincialMonitoringCityPage } from "./pages/provincial-monitoring/Prov
 import { NationalMonitoringPage } from "./pages/national-monitoring/NationalMonitoringPage";
 import { ReservationWizardPage } from "./pages/reservations/ReservationWizardPage";
 import { AccountPage } from "./pages/AccountPage";
+import { MyLocationHistoryPage } from "./pages/location/LocationHistoryPage";
 import { MyLocationPage } from "./pages/location/MyLocationPage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { CitiesListPage } from "./pages/geo/CitiesListPage";
@@ -83,6 +84,8 @@ import { RedCrescentDetailPage } from "./pages/red-crescents/RedCrescentDetailPa
 import { RedCrescentEditPage } from "./pages/red-crescents/RedCrescentEditPage";
 import { RedCrescentsListPage } from "./pages/red-crescents/RedCrescentsListPage";
 import { LoginPage } from "./pages/LoginPage";
+import { ImpersonateEndedPage } from "./pages/ImpersonateEndedPage";
+import { ImpersonateEntryPage } from "./pages/ImpersonateEntryPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { OverviewPage } from "./pages/OverviewPage";
@@ -90,7 +93,7 @@ import { PilgrimCardPage } from "./pages/pilgrims/PilgrimCardPage";
 import { PilgrimCreatePage } from "./pages/pilgrims/PilgrimCreatePage";
 import { PilgrimDetailPage } from "./pages/pilgrims/PilgrimDetailPage";
 import { PilgrimEditPage } from "./pages/pilgrims/PilgrimEditPage";
-import { PilgrimLocationPage } from "./pages/pilgrims/PilgrimLocationPage";
+import { PilgrimLocationHistoryPage, PilgrimLocationPage } from "./pages/pilgrims/PilgrimLocationPage";
 import { PilgrimPilgrimageHistoryPage } from "./pages/pilgrims/PilgrimPilgrimageHistoryPage";
 import { PilgrimSendSmsPage } from "./pages/pilgrims/PilgrimSendSmsPage";
 import { PilgrimSetPasswordPage } from "./pages/pilgrims/PilgrimSetPasswordPage";
@@ -104,7 +107,7 @@ import { SmsSettingsPage } from "./pages/sms/SmsSettingsPage";
 import { UserCreatePage } from "./pages/users/UserCreatePage";
 import { UserDetailPage } from "./pages/users/UserDetailPage";
 import { UserEditPage } from "./pages/users/UserEditPage";
-import { UserLocationPage } from "./pages/users/UserLocationPage";
+import { UserLocationHistoryPage, UserLocationPage } from "./pages/users/UserLocationPage";
 import { UsersListPage } from "./pages/users/UsersListPage";
 import { AccommodationCreatePage } from "./pages/accommodations/AccommodationCreatePage";
 import { AccommodationDetailPage } from "./pages/accommodations/AccommodationDetailPage";
@@ -120,12 +123,12 @@ import { MyAccommodationsListPage } from "./pages/accommodations/MyAccommodation
 import { AccommodationManagerCreatePage } from "./pages/accommodation-managers/AccommodationManagerCreatePage";
 import { AccommodationManagerDetailPage } from "./pages/accommodation-managers/AccommodationManagerDetailPage";
 import { AccommodationManagerEditPage } from "./pages/accommodation-managers/AccommodationManagerEditPage";
-import { AccommodationManagerLocationPage } from "./pages/accommodation-managers/AccommodationManagerLocationPage";
+import { AccommodationManagerLocationHistoryPage, AccommodationManagerLocationPage } from "./pages/accommodation-managers/AccommodationManagerLocationPage";
 import { AccommodationManagersListPage } from "./pages/accommodation-managers/AccommodationManagersListPage";
 import { CaravanManagerCreatePage } from "./pages/caravan-managers/CaravanManagerCreatePage";
 import { CaravanManagerDetailPage } from "./pages/caravan-managers/CaravanManagerDetailPage";
 import { CaravanManagerEditPage } from "./pages/caravan-managers/CaravanManagerEditPage";
-import { CaravanManagerLocationPage } from "./pages/caravan-managers/CaravanManagerLocationPage";
+import { CaravanManagerLocationHistoryPage, CaravanManagerLocationPage } from "./pages/caravan-managers/CaravanManagerLocationPage";
 import { CaravanManagersListPage } from "./pages/caravan-managers/CaravanManagersListPage";
 import { HeadquartersInfoCreatePage } from "./pages/headquarters-info/HeadquartersInfoCreatePage";
 import { HeadquartersInfoDetailPage } from "./pages/headquarters-info/HeadquartersInfoDetailPage";
@@ -138,7 +141,7 @@ import { HeadquartersPhonesListPage } from "./pages/headquarters-phones/Headquar
 import { HeadquartersRepresentativeCreatePage } from "./pages/headquarters-representatives/HeadquartersRepresentativeCreatePage";
 import { HeadquartersRepresentativeDetailPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeDetailPage";
 import { HeadquartersRepresentativeEditPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeEditPage";
-import { HeadquartersRepresentativeLocationPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeLocationPage";
+import { HeadquartersRepresentativeLocationHistoryPage, HeadquartersRepresentativeLocationPage } from "./pages/headquarters-representatives/HeadquartersRepresentativeLocationPage";
 import { HeadquartersRepresentativesListPage } from "./pages/headquarters-representatives/HeadquartersRepresentativesListPage";
 import { OrgUnitCreatePage } from "./pages/org-units/OrgUnitCreatePage";
 import { OrgUnitDetailPage } from "./pages/org-units/OrgUnitDetailPage";
@@ -236,6 +239,8 @@ export default function App() {
           <AppToaster />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/impersonate" element={<ImpersonateEntryPage />} />
+            <Route path="/impersonate-ended" element={<ImpersonateEndedPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/v/item/:code" element={<PublicItemVoucherPage />} />
@@ -244,6 +249,9 @@ export default function App() {
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<OverviewPage />} />
                 <Route path="/account" element={<AccountPage />} />
+                <Route element={<RequireMenuAccess path="/my-location/history" />}>
+                  <Route path="/my-location/history" element={<MyLocationHistoryPage />} />
+                </Route>
                 <Route element={<RequireMenuAccess path="/my-location" />}>
                   <Route path="/my-location" element={<MyLocationPage />} />
                 </Route>
@@ -278,6 +286,10 @@ export default function App() {
                   <Route
                     path="/pilgrims/:id/edit"
                     element={<PilgrimEditPage />}
+                  />
+                  <Route
+                    path="/pilgrims/:id/location/history"
+                    element={<PilgrimLocationHistoryPage />}
                   />
                   <Route
                     path="/pilgrims/:id/location"
@@ -691,6 +703,7 @@ export default function App() {
                   <Route path="/users/new" element={<UserCreatePage />} />
                   <Route path="/users/:id" element={<UserDetailPage />} />
                   <Route path="/users/:id/edit" element={<UserEditPage />} />
+                  <Route path="/users/:id/location/history" element={<UserLocationHistoryPage />} />
                   <Route path="/users/:id/location" element={<UserLocationPage />} />
                 </Route>
                 <Route element={<RequireMenuAccess path="/caravan-managers" />}>
@@ -709,6 +722,10 @@ export default function App() {
                   <Route
                     path="/caravan-managers/:id/edit"
                     element={<CaravanManagerEditPage />}
+                  />
+                  <Route
+                    path="/caravan-managers/:id/location/history"
+                    element={<CaravanManagerLocationHistoryPage />}
                   />
                   <Route
                     path="/caravan-managers/:id/location"
@@ -733,6 +750,10 @@ export default function App() {
                   <Route
                     path="/accommodation-managers/:id/edit"
                     element={<AccommodationManagerEditPage />}
+                  />
+                  <Route
+                    path="/accommodation-managers/:id/location/history"
+                    element={<AccommodationManagerLocationHistoryPage />}
                   />
                   <Route
                     path="/accommodation-managers/:id/location"
@@ -795,6 +816,10 @@ export default function App() {
                   <Route
                     path="/headquarters/representatives/:id/edit"
                     element={<HeadquartersRepresentativeEditPage />}
+                  />
+                  <Route
+                    path="/headquarters/representatives/:id/location/history"
+                    element={<HeadquartersRepresentativeLocationHistoryPage />}
                   />
                   <Route
                     path="/headquarters/representatives/:id/location"

@@ -19,11 +19,11 @@ import {
   isPilgrim,
 } from '../../lib/roles'
 import type { NavMenu, NavModule, Paginated, ReservationListItem } from '../../types/app'
-import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { AppLogo } from '../brand/AppLogo'
 import { PageTransition } from '../ui/PageTransition'
 import { AdminFooter } from './AdminFooter'
-import { QuickToolsProvider } from './QuickTools'
+import { ImpersonationBanner } from './ImpersonationBanner'
+import { isQuickToolsFabVisible, QuickToolsProvider } from './QuickTools'
 import { UserMenu } from './UserMenu'
 
 type SidebarNavMenu = NavMenu & { label?: string }
@@ -129,10 +129,7 @@ export function DashboardLayout() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const location = useLocation()
-  const showQuickToolsFab =
-    hasMenuAccess('/reception', user?.modules ?? []) &&
-    location.pathname !== '/reception' &&
-    !location.pathname.startsWith('/reception/')
+  const showQuickToolsFab = isQuickToolsFabVisible(location.pathname, user)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const mainRef = useRef<HTMLElement>(null)
@@ -373,6 +370,7 @@ export function DashboardLayout() {
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <ImpersonationBanner />
           <header className="z-20 flex shrink-0 items-center gap-3 bg-cream-50/90 px-4 py-4 backdrop-blur sm:px-8">
             <button
               type="button"
@@ -387,8 +385,8 @@ export function DashboardLayout() {
           </header>
           <main
             ref={mainRef}
-            className={`min-h-0 flex-1 overflow-y-auto px-4 sm:px-8 ${
-              showQuickToolsFab ? 'pb-24' : 'pb-8'
+            className={`min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-8 ${
+              showQuickToolsFab ? 'pb-8 lg:pb-24' : 'pb-8'
             }`}
           >
             <PageTransition>

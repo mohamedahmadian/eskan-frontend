@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { IdCard, MapPin, Phone, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { FormCardHeaderDecor, FormMetaChip } from '../../components/ui/FormLayout'
@@ -10,9 +11,11 @@ import type { ManagedUser } from '../../types/app'
 export function RoleUserProfileHeader({
   user,
   hideRoles,
+  action,
 }: {
   user: ManagedUser
   hideRoles?: boolean
+  action?: ReactNode
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -24,29 +27,32 @@ export function RoleUserProfileHeader({
   return (
     <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
       <FormCardHeaderDecor />
-      <div className="relative flex items-start gap-3">
-        <UserAvatar user={user} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold text-ink-900">{user.fullName}</h2>
-            <StatusBadge active={isActive} />
-          </div>
-          <p className="mt-1 text-xs leading-6 text-ink-600">
-            @{localizeDigits(user.username, locale)}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {user.nationalId ? (
-              <FormMetaChip icon={IdCard} copyValue={user.nationalId} />
-            ) : null}
-            {user.phone ? (
-              <FormMetaChip icon={Phone} copyValue={user.phone} />
-            ) : null}
-            {cityLabel ? <FormMetaChip icon={MapPin} label={cityLabel} /> : null}
-            {!hideRoles && rolesLabel ? (
-              <FormMetaChip icon={Shield} label={rolesLabel} />
-            ) : null}
+      <div className="relative flex flex-wrap items-start gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <UserAvatar user={user} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold text-ink-900">{user.fullName}</h2>
+              <StatusBadge active={isActive} />
+            </div>
+            <p className="mt-1 text-xs leading-6 text-ink-600">
+              @{localizeDigits(user.username, locale)}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {user.nationalId ? (
+                <FormMetaChip icon={IdCard} copyValue={user.nationalId} />
+              ) : null}
+              {user.phone ? (
+                <FormMetaChip icon={Phone} copyValue={user.phone} />
+              ) : null}
+              {cityLabel ? <FormMetaChip icon={MapPin} label={cityLabel} /> : null}
+              {!hideRoles && rolesLabel ? (
+                <FormMetaChip icon={Shield} label={rolesLabel} />
+              ) : null}
+            </div>
           </div>
         </div>
+        {action ? <div className="relative z-10 shrink-0">{action}</div> : null}
       </div>
     </header>
   )

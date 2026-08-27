@@ -1,5 +1,11 @@
 import axios from 'axios'
 import { getStoredPreferredLocale, uiLanguageFor } from '../i18n'
+import {
+  clearImpersonateToken,
+  clearSessionToken,
+  getAuthToken,
+  isImpersonatingSession,
+} from './auth-token'
 import { isPublicSessionPath } from './public-paths'
 
 const envApiUrl = import.meta.env.VITE_API_URL?.trim()
@@ -32,7 +38,7 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
 }
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('eskan_token')
+  const token = getAuthToken()
   const url = `${config.baseURL ?? ''}${config.url ?? ''}`
   if (token && !url.includes('/public/vouchers/')) {
     config.headers.Authorization = `Bearer ${token}`
@@ -45,7 +51,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('eskan_token')
+      if (isImpersonatingSession()) {
+        clearImpersonateToken()
+        window.location.assign('/impersonate-ended')
+        return Promise.reject(error)
+      }
+      clearSessionToken()
       const path = window.location.pathname
       if (!isPublicSessionPath(path)) {
         window.location.assign('/login')

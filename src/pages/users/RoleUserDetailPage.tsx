@@ -3,6 +3,7 @@ import {
   Building,
   Calendar,
   Car,
+  FileBadge2,
   FileImage,
   FileText,
   Flag,
@@ -11,6 +12,7 @@ import {
   ImagePlus,
   KeyRound,
   Languages,
+  LayoutGrid,
   LocateFixed,
   Mail,
   Map,
@@ -50,7 +52,8 @@ import { languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { toast } from 'sonner'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
-import { formatNumber, localizeDigits } from '../../lib/datetime'
+import { FormCard } from '../../components/ui/FormLayout'
+import { currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
 import { formatRoles, isAdmin } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import type { ManagedUser } from '../../types/app'
@@ -58,6 +61,7 @@ import { HeadquartersAreasCard } from '../headquarters-representatives/Headquart
 import type { RoleUserScope } from './user-scopes'
 import { RoleUserProfileHeader } from './RoleUserProfileHeader'
 import { SetUserPasswordModal } from './SetUserPasswordModal'
+import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
 
 const baseTabs = ['personal', 'account', 'location', 'documents', 'social', 'other'] as const
 type UserDetailTab = (typeof baseTabs)[number] | 'accommodations' | 'caravans' | 'areas'
@@ -171,7 +175,11 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
       />
 
       <section className={`${cardClassName} overflow-hidden`}>
-        <RoleUserProfileHeader user={user} hideRoles={scope.hideRoles} />
+        <RoleUserProfileHeader
+          user={user}
+          hideRoles={scope.hideRoles}
+          action={<OpenUserPanelButton userId={user.id} status={user.status} />}
+        />
 
         <nav className="flex flex-wrap gap-2 border-b border-line bg-cream-50/60 px-4 py-3 sm:px-5">
           {tabs.map((item) => {
@@ -625,63 +633,95 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                     })
             }
             extra={
-              <>
-                <Link to={`${scope.listPath}/${user.id}/location`}>
-                  <Button type="button" variant="soft">
-                    <MapPinned className="size-4" aria-hidden />
-                    {t('location.register')}
-                  </Button>
-                </Link>
-                {scope.showPilgrimCard ? (
-                  <>
-                    <Link to={`${scope.listPath}/${user.id}/sms`}>
-                      <Button type="button" variant="soft">
-                        <MessageSquare className="size-4" aria-hidden />
-                        {t('pilgrims.sendSms')}
-                      </Button>
-                    </Link>
-                    <Link to={`${scope.listPath}/${user.id}/password`}>
-                      <Button type="button" variant="soft">
-                        <KeyRound className="size-4" aria-hidden />
-                        {t('pilgrims.setPassword')}
-                      </Button>
-                    </Link>
-                    <Link to={`${scope.listPath}/${user.id}/card`}>
-                      <Button type="button" variant="soft">
-                        <IdCard className="size-4" aria-hidden />
-                        {t('pilgrims.card')}
-                      </Button>
-                    </Link>
-                    <Link to={`${scope.listPath}/${user.id}/pilgrimage-history`}>
-                      <Button type="button" variant="soft">
-                        <History className="size-4" aria-hidden />
-                        {t('pilgrims.pilgrimageHistory')}
-                      </Button>
-                    </Link>
-                  </>
-                ) : null}
-                {scope.i18nPrefix === 'users' ? (
-                  <Button
-                    type="button"
-                    variant="soft"
-                    onClick={() => {
-                      if (!user.phone) {
-                        toast.error(t('users.phoneRequiredForSms'))
-                        return
-                      }
-                      setPasswordModalOpen(true)
-                    }}
-                  >
-                    <Send className="size-4" aria-hidden />
-                    {t('users.forgotPassword')}
-                  </Button>
-                ) : null}
-              </>
+              scope.showPilgrimCard ? undefined : (
+                <>
+                  <Link to={`${scope.listPath}/${user.id}/location`}>
+                    <Button type="button" variant="soft">
+                      <MapPinned className="size-4" aria-hidden />
+                      {t('location.register')}
+                    </Button>
+                  </Link>
+                  {scope.i18nPrefix === 'users' ? (
+                    <Button
+                      type="button"
+                      variant="soft"
+                      onClick={() => {
+                        if (!user.phone) {
+                          toast.error(t('users.phoneRequiredForSms'))
+                          return
+                        }
+                        setPasswordModalOpen(true)
+                      }}
+                    >
+                      <Send className="size-4" aria-hidden />
+                      {t('users.forgotPassword')}
+                    </Button>
+                  ) : null}
+                </>
+              )
             }
           />
         </div>
       </section>
+      {scope.showPilgrimCard ? (
+        <PilgrimOperationsBox userId={user.id} listPath={scope.listPath} />
+      ) : null}
     </div>
+  )
+}
+
+function PilgrimOperationsBox({ userId, listPath }: { userId: string; listPath: string }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const year = formatNumber(currentPersianYear(), locale)
+  const base = `${listPath}/${userId}`
+
+  return (
+    <FormCard
+      className="mt-4"
+      icon={LayoutGrid}
+      title={t('pilgrims.operations')}
+      subtitle={t('pilgrims.operationsSubtitle')}
+    >
+      <div className="flex flex-wrap gap-2.5 p-4 sm:p-5">
+        <Link to={`/reservations/new?forUser=${encodeURIComponent(userId)}`}>
+          <Button type="button">
+            <FileBadge2 className="size-4" aria-hidden />
+            {t('reservations.createYear', { year })}
+          </Button>
+        </Link>
+        <Link to={`${base}/sms`}>
+          <Button type="button" variant="soft">
+            <MessageSquare className="size-4" aria-hidden />
+            {t('pilgrims.sendSms')}
+          </Button>
+        </Link>
+        <Link to={`${base}/password`}>
+          <Button type="button" variant="soft">
+            <KeyRound className="size-4" aria-hidden />
+            {t('pilgrims.setPassword')}
+          </Button>
+        </Link>
+        <Link to={`${base}/card`}>
+          <Button type="button" variant="soft">
+            <IdCard className="size-4" aria-hidden />
+            {t('pilgrims.card')}
+          </Button>
+        </Link>
+        <Link to={`${base}/location`}>
+          <Button type="button" variant="soft">
+            <MapPinned className="size-4" aria-hidden />
+            {t('location.register')}
+          </Button>
+        </Link>
+        <Link to={`${base}/pilgrimage-history`}>
+          <Button type="button" variant="soft">
+            <History className="size-4" aria-hidden />
+            {t('pilgrims.pilgrimageHistory')}
+          </Button>
+        </Link>
+      </div>
+    </FormCard>
   )
 }
 

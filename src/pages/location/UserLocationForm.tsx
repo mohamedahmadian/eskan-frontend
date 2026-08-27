@@ -16,7 +16,7 @@ import {
 import { OsmMapPicker, type MapBounds, type MapFocus } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api } from '../../lib/api'
-import { nearestGeoItem, pointBounds, useGeoName } from '../../lib/geo'
+import { IRAN_MAP_BOUNDS, IRAN_MAP_CENTER, nearestGeoItem, pointBounds, useGeoName } from '../../lib/geo'
 import type {
   ActiveWalkingRoute,
   City,
@@ -24,6 +24,10 @@ import type {
   ManagedUser,
   Province,
 } from '../../types/app'
+import {
+  useAccountLocationHistoryMap,
+  useLocationHistoryOverlays,
+} from './locationHistoryMap'
 import { useWalkingRouteMap, WalkingRouteProgress } from './WalkingRouteProgress'
 
 export type UserLocationPayload = {
@@ -48,9 +52,9 @@ function toOptionalNumber(value: string) {
 export function UserLocationForm({
   initial,
   showWalkingRoute = false,
+  showLocationHistory = false,
   routeUserId,
   onSubmit,
-  onCancel,
 }: {
   initial?: Pick<
     ManagedUser,
@@ -61,9 +65,9 @@ export function UserLocationForm({
     | 'locationNotes'
   >
   showWalkingRoute?: boolean
+  showLocationHistory?: boolean
   routeUserId?: string
   onSubmit: (payload: UserLocationPayload) => Promise<void>
-  onCancel: () => void
 }) {
   const { t } = useTranslation()
   const geoName = useGeoName()
@@ -106,6 +110,7 @@ export function UserLocationForm({
       return data.route
     },
   })
+  const locationHistory = useAccountLocationHistoryMap(showLocationHistory)
   const cities = useQuery({
     queryKey: ['cities', 'lookup', provinceId],
     enabled: Boolean(provinceId),
@@ -125,8 +130,13 @@ export function UserLocationForm({
     lat: toOptionalNumber(latitude),
     lng: toOptionalNumber(longitude),
   }
-  const { overlays } = useWalkingRouteMap(walkingRoute.data, here)
+  const { overlays: routeOverlays } = useWalkingRouteMap(walkingRoute.data, here)
+  const historyOverlays = useLocationHistoryOverlays(locationHistory.data)
+  const overlays = routeOverlays ?? historyOverlays
   const hasRouteOverlay = Boolean(overlays?.markers.length)
+
+  const hasPin =
+    toOptionalNumber(latitude) != null && toOptionalNumber(longitude) != null
 
   const focus = useMemo((): MapFocus | null => {
     if (selectedCity?.latitude != null && selectedCity.longitude != null) {
@@ -135,8 +145,14 @@ export function UserLocationForm({
     if (selectedProvince?.latitude != null && selectedProvince.longitude != null) {
       return { lat: selectedProvince.latitude, lng: selectedProvince.longitude, zoom: 8 }
     }
-    return null
-  }, [selectedCity, selectedProvince])
+    if (hasPin) return null
+    return {
+      lat: IRAN_MAP_CENTER.lat,
+      lng: IRAN_MAP_CENTER.lng,
+      zoom: 6,
+      bounds: IRAN_MAP_BOUNDS,
+    }
+  }, [hasPin, selectedCity, selectedProvince])
 
   const maxBounds = useMemo((): MapBounds | null => {
     if (hasRouteOverlay) return null
@@ -185,40 +201,42 @@ export function UserLocationForm({
       subtitle={t('location.registerSubtitle')}
     >
       <AppForm onSubmit={submit} className={formCardBodyClassName}>
-        <FormField icon={MapPinned} label={t('geo.province')} htmlFor="locationProvinceId">
-          <SearchSelect
-            id="locationProvinceId"
-            value={provinceId}
-            onChange={(next) => {
-              setProvinceId(next)
-              setCityId('')
-            }}
-            placeholder={t('geo.selectProvince')}
-            options={[
-              { value: '', label: t('geo.selectProvince') },
-              ...(provinces.data ?? []).map((province) => ({
-                value: province.id,
-                label: geoName(province),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={MapPin} label={t('geo.city')} htmlFor="locationCityId">
-          <SearchSelect
-            id="locationCityId"
-            value={cityId}
-            disabled={!provinceId}
-            onChange={setCityId}
-            placeholder={t('geo.selectCity')}
-            options={[
-              { value: '', label: t('geo.selectCity') },
-              ...(cities.data ?? []).map((city) => ({
-                value: city.id,
-                label: geoName(city),
-              })),
-            ]}
-          />
-        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField icon={MapPinned} label={t('geo.province')} htmlFor="locationProvinceId">
+            <SearchSelect
+              id="locationProvinceId"
+              value={provinceId}
+              onChange={(next) => {
+                setProvinceId(next)
+                setCityId('')
+              }}
+              placeholder={t('geo.selectProvince')}
+              options={[
+                { value: '', label: t('geo.selectProvince') },
+                ...(provinces.data ?? []).map((province) => ({
+                  value: province.id,
+                  label: geoName(province),
+                })),
+              ]}
+            />
+          </FormField>
+          <FormField icon={MapPin} label={t('geo.city')} htmlFor="locationCityId">
+            <SearchSelect
+              id="locationCityId"
+              value={cityId}
+              disabled={!provinceId}
+              onChange={setCityId}
+              placeholder={t('geo.selectCity')}
+              options={[
+                { value: '', label: t('geo.selectCity') },
+                ...(cities.data ?? []).map((city) => ({
+                  value: city.id,
+                  label: geoName(city),
+                })),
+              ]}
+            />
+          </FormField>
+        </div>
         {walkingRoute.data ? (
           <WalkingRouteProgress route={walkingRoute.data} here={here} />
         ) : null}
@@ -255,10 +273,9 @@ export function UserLocationForm({
           />
         </FormField>
         <FormActions
-          submitLabel={t('common.save')}
-          cancelLabel={t('common.cancel')}
+          submitLabel={t('location.register')}
           submitting={submitting}
-          onCancel={onCancel}
+          className="justify-center"
         />
       </AppForm>
     </FormCard>

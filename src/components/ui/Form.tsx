@@ -25,7 +25,7 @@ export const cardClassName =
 
 export const formShellClassName = 'mx-auto w-full max-w-2xl'
 export const userFormShellClassName = 'mx-auto w-full max-w-3xl'
-export const listShellClassName = 'mx-auto w-full max-w-6xl'
+export const listShellClassName = 'mx-auto w-full min-w-0 max-w-6xl'
 
 export function Button({
   variant = 'primary',
@@ -146,6 +146,7 @@ const PAGE_BACK_LEAVES = new Set([
   'import',
   'pilgrimage-history',
   'location',
+  'history',
 ])
 
 const PAGE_BACK_NESTED_LISTS = new Set(['items', 'vouchers', 'phones'])
@@ -397,14 +398,16 @@ export function FormActions({
   cancelLabel,
   submitting,
   onCancel,
+  className = '',
 }: {
   submitLabel: string
   cancelLabel?: string
   submitting?: boolean
   onCancel?: () => void
+  className?: string
 }) {
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className={`flex flex-wrap gap-3 ${className}`.trim()}>
       <Button type="submit" disabled={submitting}>
         <Check className="size-4" aria-hidden />
         {submitLabel}

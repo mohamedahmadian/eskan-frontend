@@ -34,6 +34,7 @@ import {
 } from "../../components/ui/Form";
 import { RoleBadges } from "../../components/ui/RoleBadges";
 import { SearchSelect } from "../../components/ui/SearchSelect";
+import { OpenUserPanelButton } from "../../components/auth/OpenUserPanelButton";
 import { useListParams } from "../../hooks/useListParams";
 import { useListSort } from "../../hooks/useListSort";
 import { api, getApiErrorMessage } from "../../lib/api";
@@ -422,6 +423,11 @@ export function PilgrimsListPage() {
                     showView={false}
                     extra={
                       <>
+                        <OpenUserPanelButton
+                          userId={user.id}
+                          status={user.status}
+                          iconOnly
+                        />
                         <Link
                           to={`/pilgrims/${user.id}/sms`}
                           aria-label={t("pilgrims.sendSms")}

@@ -18,7 +18,7 @@ export function PageBreadcrumb({
 
   return (
     <nav aria-label={t('nav.breadcrumb')} className="min-w-0 flex-1">
-      <ol className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1 text-sm">
+      <ol className="hidden min-w-0 flex-wrap items-center gap-x-1 gap-y-1 text-sm lg:flex">
         {crumbs.map((crumb, index) => {
           const label = crumb.label ?? t(crumb.titleKey, { year })
           const isLast = index === crumbs.length - 1

@@ -1,9 +1,10 @@
-import { UserRound } from 'lucide-react'
+import { History, UserRound } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
+  Button,
   EntityNameSubtitle,
   LoadingState,
   PageHeader,
@@ -37,12 +38,19 @@ export function RoleUserLocationPage({ scope }: { scope: RoleUserScope }) {
       <PageHeader
         title={t('location.register')}
         subtitle={<EntityNameSubtitle name={query.data.fullName} icon={UserRound} />}
+        action={
+          <Link to={`${scope.listPath}/${id}/location/history`}>
+            <Button type="button" variant="soft">
+              <History className="size-4" aria-hidden />
+              {t('location.history')}
+            </Button>
+          </Link>
+        }
       />
       <UserLocationForm
         initial={query.data}
         showWalkingRoute={isCaravanManager(query.data)}
         routeUserId={query.data.id}
-        onCancel={() => navigate(`${scope.listPath}/${id}`)}
         onSubmit={async (payload) => {
           try {
             await api.patch(`${scope.apiBase}/${id}/location`, payload)

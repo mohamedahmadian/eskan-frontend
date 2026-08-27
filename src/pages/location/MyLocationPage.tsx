@@ -1,11 +1,12 @@
+import { History } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
+import { Button, LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { useAuth } from '../../auth/AuthProvider'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { isCaravanManager } from '../../lib/roles'
+import { isCaravanManager, isPilgrim } from '../../lib/roles'
 import type { ManagedUser } from '../../types/app'
 import { UserLocationForm } from './UserLocationForm'
 
@@ -27,11 +28,22 @@ export function MyLocationPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('location.register')} backTo={false} />
+      <PageHeader
+        title={t('menus.myLocation')}
+        backTo="/"
+        action={
+          <Link to="/my-location/history">
+            <Button type="button" variant="soft">
+              <History className="size-4" aria-hidden />
+              {t('menus.myLocationHistory')}
+            </Button>
+          </Link>
+        }
+      />
       <UserLocationForm
         initial={query.data}
         showWalkingRoute={isCaravanManager(user)}
-        onCancel={() => navigate('/')}
+        showLocationHistory={isPilgrim(user)}
         onSubmit={async (payload) => {
           try {
             await api.patch('/account/location', payload)

@@ -8,12 +8,20 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "auth.changePasswordSubtitle",
     };
   }
+  if (pathname.includes("/location/history") || pathname.startsWith("/my-location/history")) {
+    return {
+      titleKey: pathname.startsWith("/my-location/history")
+        ? "menus.myLocationHistory"
+        : "location.history",
+      subtitleKey: "location.historySubtitle",
+    };
+  }
   if (pathname.startsWith("/account")) {
     return { titleKey: "account.title", subtitleKey: "account.subtitle" };
   }
   if (pathname.startsWith("/my-location")) {
     return {
-      titleKey: "location.register",
+      titleKey: "menus.myLocation",
       subtitleKey: "location.registerSubtitle",
     };
   }

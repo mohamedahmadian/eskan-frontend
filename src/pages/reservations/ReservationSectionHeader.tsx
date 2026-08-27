@@ -14,6 +14,7 @@ export function ReservationSectionHeader({
   readonly,
   badge,
   chips,
+  action,
 }: {
   icon: LucideIcon
   title: string
@@ -21,30 +22,34 @@ export function ReservationSectionHeader({
   readonly?: boolean
   badge?: ReactNode
   chips?: ReactNode
+  action?: ReactNode
 }) {
   const { t } = useTranslation()
 
   return (
     <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
       <FormCardHeaderDecor />
-      <div className="relative flex items-start gap-3">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
-          <Icon className="size-6" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold text-ink-900">{title}</h2>
-            {readonly ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-teal-800 ring-1 ring-teal-100">
-                <Lock className="size-3" aria-hidden />
-                {t('reservations.readonlyBadge')}
-              </span>
-            ) : null}
-            {badge}
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
+            <Icon className="size-6" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold text-ink-900">{title}</h2>
+              {readonly ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-teal-800 ring-1 ring-teal-100">
+                  <Lock className="size-3" aria-hidden />
+                  {t('reservations.readonlyBadge')}
+                </span>
+              ) : null}
+              {badge}
+            </div>
+            {hint ? <p className="mt-1 text-xs leading-6 text-ink-600">{hint}</p> : null}
+            {chips ? <div className="mt-3 flex flex-wrap gap-1.5">{chips}</div> : null}
           </div>
-          {hint ? <p className="mt-1 text-xs leading-6 text-ink-600">{hint}</p> : null}
-          {chips ? <div className="mt-3 flex flex-wrap gap-1.5">{chips}</div> : null}
         </div>
+        {action ? <div className="relative z-10 shrink-0">{action}</div> : null}
       </div>
     </header>
   )

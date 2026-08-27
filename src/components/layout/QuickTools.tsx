@@ -1,9 +1,10 @@
-import { FileSearch, LocateFixed, ScanSearch, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ClipboardList, FileSearch, LayoutDashboard, LocateFixed, ScanSearch, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
+import { canAccessMyReservations, isPilgrim } from '../../lib/roles'
 import { ReceptionDesk } from '../../pages/reception/ReceptionDesk'
 import { ReservationFileSearchModal } from '../../pages/reservations/ReservationFileSearchModal'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
@@ -20,22 +21,147 @@ function isLocationPath(pathname: string) {
   return pathname === '/my-location' || pathname.startsWith('/my-location/')
 }
 
+type QuickToolsUser = {
+  roles?: { code: string }[]
+  modules?: { menus: { path: string }[] }[]
+} | null | undefined
+
+function getQuickToolsFlags(pathname: string, user: QuickToolsUser) {
+  const list = user?.modules ?? []
+  const pilgrim = isPilgrim(user)
+  const canReception = hasMenuAccess('/reception', list)
+  const canLocation = hasMenuAccess('/my-location', list)
+  const canMyReservations =
+    canAccessMyReservations(user) && hasMenuAccess('/my-reservations', list)
+  const showDashboard = pilgrim
+  const showMyReservations = pilgrim && canMyReservations
+  const showSearch = !pilgrim && canReception && !isReceptionPath(pathname)
+  const showFileSearch =
+    !pilgrim &&
+    (hasMenuAccess('/reservations', list) ||
+      hasMenuAccess('/my-reservations', list) ||
+      canReception)
+  const showLocation = canLocation && (pilgrim || !isLocationPath(pathname))
+  return {
+    pilgrim,
+    canReception,
+    canFileSearch: showFileSearch,
+    showDashboard,
+    showMyReservations,
+    showSearch,
+    showFileSearch,
+    showLocation,
+    fabEnabled:
+      showDashboard || showMyReservations || showSearch || showFileSearch || showLocation,
+  }
+}
+
+export function isQuickToolsFabVisible(pathname: string, user: QuickToolsUser) {
+  return getQuickToolsFlags(pathname, user).fabEnabled
+}
+
+const FAB_POS_KEY = 'eskan.quickToolsFab.pos'
+const FAB_DESKTOP_QUERY = '(min-width: 1024px)'
+const FAB_SIZE_MOBILE = 64
+const FAB_SIZE_DESKTOP = 72
+const FAB_EDGE = 8
+const FAB_DESKTOP_MARGIN = 48
+const FAB_DRAG_THRESHOLD = 8
+
+type FabPos = { left: number; bottom: number }
+
+function isDesktopViewport() {
+  return window.matchMedia(FAB_DESKTOP_QUERY).matches
+}
+
+function fabSizeFor(desktop: boolean) {
+  return desktop ? FAB_SIZE_DESKTOP : FAB_SIZE_MOBILE
+}
+
+function clampFabPos(pos: FabPos, desktop: boolean): FabPos {
+  const size = fabSizeFor(desktop)
+  const maxLeft = Math.max(FAB_EDGE, window.innerWidth - size - FAB_EDGE)
+  const maxBottom = Math.max(FAB_EDGE, window.innerHeight - size - FAB_EDGE)
+  return {
+    left: Math.min(maxLeft, Math.max(FAB_EDGE, pos.left)),
+    bottom: Math.min(maxBottom, Math.max(FAB_EDGE, pos.bottom)),
+  }
+}
+
+function defaultFabPos(desktop: boolean): FabPos {
+  const size = fabSizeFor(desktop)
+  if (!desktop) {
+    const dock =
+      document.querySelector<HTMLElement>('[data-app-version]') ??
+      document.querySelector<HTMLElement>('[data-admin-footer]')
+    if (dock) {
+      const rect = dock.getBoundingClientRect()
+      return {
+        left: Math.round(rect.left + rect.width / 2 - size / 2),
+        bottom: Math.round(window.innerHeight - (rect.top + rect.height / 2) - size / 2),
+      }
+    }
+    return {
+      left: Math.round((window.innerWidth - size) / 2),
+      bottom: FAB_EDGE,
+    }
+  }
+  const rtl = document.documentElement.dir === 'rtl'
+  return {
+    left: rtl ? FAB_DESKTOP_MARGIN : window.innerWidth - size - FAB_DESKTOP_MARGIN,
+    bottom: FAB_DESKTOP_MARGIN,
+  }
+}
+
+function readSavedFabMap(): { desktop?: FabPos; mobile?: FabPos } {
+  try {
+    const raw = localStorage.getItem(FAB_POS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as { left?: unknown; bottom?: unknown; desktop?: FabPos; mobile?: FabPos }
+    if (typeof parsed.left === 'number' && typeof parsed.bottom === 'number') {
+      return { desktop: { left: parsed.left, bottom: parsed.bottom } }
+    }
+    const desktop =
+      parsed.desktop &&
+      typeof parsed.desktop.left === 'number' &&
+      typeof parsed.desktop.bottom === 'number'
+        ? parsed.desktop
+        : undefined
+    const mobile =
+      parsed.mobile &&
+      typeof parsed.mobile.left === 'number' &&
+      typeof parsed.mobile.bottom === 'number'
+        ? parsed.mobile
+        : undefined
+    return { desktop, mobile }
+  } catch {
+    return {}
+  }
+}
+
+function writeSavedFabPos(pos: FabPos, desktop: boolean) {
+  const current = readSavedFabMap()
+  localStorage.setItem(
+    FAB_POS_KEY,
+    JSON.stringify(desktop ? { ...current, desktop: pos } : { ...current, mobile: pos }),
+  )
+}
+
 export function QuickToolsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const canReception = hasMenuAccess('/reception', user?.modules ?? [])
-  const canLocation = hasMenuAccess('/my-location', user?.modules ?? [])
-  const canFileSearch =
-    hasMenuAccess('/reservations', user?.modules ?? []) ||
-    hasMenuAccess('/my-reservations', user?.modules ?? []) ||
-    canReception
+  const {
+    canReception,
+    canFileSearch,
+    showDashboard,
+    showMyReservations,
+    showSearch,
+    showFileSearch,
+    showLocation,
+    fabEnabled,
+  } = getQuickToolsFlags(pathname, user)
   const onReceptionPage = isReceptionPath(pathname)
-  const onLocationPage = isLocationPath(pathname)
-  const showSearch = canReception && !onReceptionPage
-  const showFileSearch = canFileSearch
-  const showLocation = canLocation && !onLocationPage
-  const fabEnabled = showSearch || showFileSearch || showLocation
   const focusFnRef = useRef<(() => void) | null>(null)
   const fileFocusFnRef = useRef<(() => void) | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -74,6 +200,18 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     cancelPendingFormEnter()
     setMenuOpen(false)
     navigate('/my-location')
+  }, [navigate])
+
+  const openDashboard = useCallback(() => {
+    cancelPendingFormEnter()
+    setMenuOpen(false)
+    navigate('/')
+  }, [navigate])
+
+  const openMyReservations = useCallback(() => {
+    cancelPendingFormEnter()
+    setMenuOpen(false)
+    navigate('/my-reservations')
   }, [navigate])
 
   useEffect(() => {
@@ -157,11 +295,15 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
           menuOpen={menuOpen}
           searchOpen={searchOpen}
           hidden={searchOpen || fileSearchOpen}
+          showDashboard={showDashboard}
+          showMyReservations={showMyReservations}
           showSearch={showSearch}
           showFileSearch={showFileSearch}
           showLocation={showLocation}
           onToggleMenu={() => setMenuOpen((open) => !open)}
           onCloseMenu={() => setMenuOpen(false)}
+          onOpenDashboard={openDashboard}
+          onOpenMyReservations={openMyReservations}
           onOpenSearch={openSearch}
           onOpenFileSearch={openFileSearch}
           onOpenLocation={openLocation}
@@ -181,11 +323,15 @@ function QuickToolsFab({
   menuOpen,
   searchOpen,
   hidden,
+  showDashboard,
+  showMyReservations,
   showSearch,
   showFileSearch,
   showLocation,
   onToggleMenu,
   onCloseMenu,
+  onOpenDashboard,
+  onOpenMyReservations,
   onOpenSearch,
   onOpenFileSearch,
   onOpenLocation,
@@ -193,17 +339,72 @@ function QuickToolsFab({
   menuOpen: boolean
   searchOpen: boolean
   hidden: boolean
+  showDashboard: boolean
+  showMyReservations: boolean
   showSearch: boolean
   showFileSearch: boolean
   showLocation: boolean
   onToggleMenu: () => void
   onCloseMenu: () => void
+  onOpenDashboard: () => void
+  onOpenMyReservations: () => void
   onOpenSearch: () => void
   onOpenFileSearch: () => void
   onOpenLocation: () => void
 }) {
   const { t } = useTranslation()
   const rootRef = useRef<HTMLDivElement>(null)
+  const posRef = useRef<FabPos>({ left: 0, bottom: 0 })
+  const skipClickRef = useRef(false)
+  const dragRef = useRef<{
+    pointerId: number
+    originX: number
+    originY: number
+    originLeft: number
+    originBottom: number
+    dragging: boolean
+  } | null>(null)
+  const [desktop, setDesktop] = useState(() =>
+    typeof window === 'undefined' ? true : isDesktopViewport(),
+  )
+  const [pos, setPos] = useState<FabPos>(() => {
+    if (typeof window === 'undefined') return { left: 0, bottom: 0 }
+    const isDesktop = isDesktopViewport()
+    const saved = isDesktop ? readSavedFabMap().desktop : readSavedFabMap().mobile
+    return saved ? clampFabPos(saved, isDesktop) : defaultFabPos(isDesktop)
+  })
+  const [dragging, setDragging] = useState(false)
+
+  posRef.current = pos
+
+  useEffect(() => {
+    const mq = window.matchMedia(FAB_DESKTOP_QUERY)
+    const syncDesktop = () => setDesktop(mq.matches)
+    syncDesktop()
+    mq.addEventListener('change', syncDesktop)
+    return () => mq.removeEventListener('change', syncDesktop)
+  }, [])
+
+  useEffect(() => {
+    function layout() {
+      if (dragRef.current?.dragging) return
+      const saved = desktop ? readSavedFabMap().desktop : readSavedFabMap().mobile
+      const next = saved ? clampFabPos(saved, desktop) : defaultFabPos(desktop)
+      posRef.current = next
+      setPos(next)
+    }
+    layout()
+    window.addEventListener('resize', layout)
+    const footer = document.querySelector('[data-admin-footer]')
+    const dock = document.querySelector('[data-app-version]')
+    const observer = footer || dock ? new ResizeObserver(layout) : null
+    if (observer && footer) observer.observe(footer)
+    if (observer && dock) observer.observe(dock)
+    return () => {
+      window.removeEventListener('resize', layout)
+      observer?.disconnect()
+    }
+  }, [desktop])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -223,19 +424,98 @@ function QuickToolsFab({
     }
   }, [menuOpen, onCloseMenu])
 
+  const onFabPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return
+    dragRef.current = {
+      pointerId: event.pointerId,
+      originX: event.clientX,
+      originY: event.clientY,
+      originLeft: posRef.current.left,
+      originBottom: posRef.current.bottom,
+      dragging: false,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }, [])
+
+  const onFabPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const drag = dragRef.current
+      if (!drag || event.pointerId !== drag.pointerId) return
+      const dx = event.clientX - drag.originX
+      const dy = event.clientY - drag.originY
+      if (!drag.dragging) {
+        if (Math.hypot(dx, dy) < FAB_DRAG_THRESHOLD) return
+        drag.dragging = true
+        skipClickRef.current = true
+        setDragging(true)
+        onCloseMenu()
+      }
+      const next = clampFabPos(
+        { left: drag.originLeft + dx, bottom: drag.originBottom - dy },
+        desktop,
+      )
+      posRef.current = next
+      setPos(next)
+    },
+    [desktop, onCloseMenu],
+  )
+
+  const onFabPointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const drag = dragRef.current
+      if (!drag || event.pointerId !== drag.pointerId) return
+      if (drag.dragging) writeSavedFabPos(posRef.current, desktop)
+      dragRef.current = null
+      setDragging(false)
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+    },
+    [desktop],
+  )
+
   if (hidden) return null
 
   return (
     <div
       ref={rootRef}
       data-quick-tools
-      className="pointer-events-none fixed bottom-10 end-10 z-[25] flex flex-col items-end gap-2 sm:bottom-12 sm:end-12 print:hidden"
+      className="pointer-events-none fixed z-[25] print:hidden"
+      style={{ left: pos.left, bottom: pos.bottom }}
     >
       {menuOpen ? (
         <div
           role="menu"
-          className="pointer-events-auto w-60 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_16px_40px_rgba(20,40,40,0.14)]"
+          className="pointer-events-auto absolute bottom-full left-1/2 mb-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_16px_40px_rgba(20,40,40,0.14)]"
         >
+          {showDashboard ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-sm text-ink-800 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-300"
+              onClick={onOpenDashboard}
+            >
+              <LayoutDashboard className="size-4 shrink-0 text-teal-600" aria-hidden />
+              <span className="min-w-0">
+                <span className="block font-medium">{t('quickTools.dashboard')}</span>
+                <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.dashboardHint')}</span>
+              </span>
+            </button>
+          ) : null}
+          {showMyReservations ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-sm text-ink-800 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-300"
+              onClick={onOpenMyReservations}
+            >
+              <ClipboardList className="size-4 shrink-0 text-teal-600" aria-hidden />
+              <span className="min-w-0">
+                <span className="block font-medium">{t('quickTools.myReservations')}</span>
+                <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.myReservationsHint')}</span>
+              </span>
+            </button>
+          ) : null}
           {showSearch ? (
             <button
               type="button"
@@ -282,11 +562,23 @@ function QuickToolsFab({
       ) : null}
       <button
         type="button"
-        className="pointer-events-auto relative size-16 overflow-hidden rounded-full bg-white shadow-[0_10px_22px_rgba(20,40,40,0.16)] ring-2 ring-white transition hover:ring-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:size-[4.5rem]"
+        className={`pointer-events-auto relative size-16 touch-none select-none overflow-hidden rounded-full bg-white shadow-[0_10px_22px_rgba(20,40,40,0.16)] ring-2 ring-white transition hover:ring-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 lg:size-[4.5rem] ${
+          dragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
         aria-label={menuOpen ? t('quickTools.close') : t('quickTools.open')}
         aria-expanded={menuOpen}
         aria-haspopup="menu"
-        onClick={onToggleMenu}
+        onPointerDown={onFabPointerDown}
+        onPointerMove={onFabPointerMove}
+        onPointerUp={onFabPointerUp}
+        onPointerCancel={onFabPointerUp}
+        onClick={() => {
+          if (skipClickRef.current) {
+            skipClickRef.current = false
+            return
+          }
+          onToggleMenu()
+        }}
       >
         <img
           src="/smalllogo.png"

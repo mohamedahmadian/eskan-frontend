@@ -107,3 +107,13 @@ export function pointBounds(lat: number, lng: number, padDeg: number) {
     east: lng + padDeg,
   }
 }
+
+/** Bounding box covering Iran, used as the default map view. */
+export const IRAN_MAP_BOUNDS = {
+  south: 24.4,
+  west: 43.9,
+  north: 40.0,
+  east: 63.5,
+}
+
+export const IRAN_MAP_CENTER = { lat: 32.4279, lng: 53.688 }

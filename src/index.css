@@ -209,6 +209,21 @@ th {
   background: #1f8f8a;
 }
 
+.eskan-history-pin {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #2ebdb6;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 3px #fff, 0 4px 10px rgba(20, 40, 40, 0.22);
+}
+
 .eskan-route-popup .leaflet-popup-content-wrapper {
   border-radius: 16px;
   box-shadow: 0 12px 28px rgba(20, 40, 40, 0.14);

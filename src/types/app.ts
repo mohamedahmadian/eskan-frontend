@@ -148,6 +148,8 @@ export type AuthUser = {
   } | null;
   roles: Pick<RoleOption, "code" | "nameKey">[];
   modules: NavModule[];
+  impersonating?: boolean;
+  impersonatedBy?: { id: string; fullName: string } | null;
 };
 
 export type Caravan = {
@@ -522,6 +524,23 @@ export type Paginated<T> = {
   total: number;
   page: number;
   pageSize: number;
+};
+
+export type UserLocationHistoryItem = {
+  id: string;
+  seq: number;
+  provinceId: string | null;
+  cityId: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  notes: string | null;
+  createdAt: string;
+  province: (GeoName & { id: string; countryId: string }) | null;
+  city: (GeoName & { id: string; provinceId: string }) | null;
+};
+
+export type UserLocationHistoryList = Paginated<UserLocationHistoryItem> & {
+  mapPoints: UserLocationHistoryItem[];
 };
 
 export type ManagedAccommodationLink = {

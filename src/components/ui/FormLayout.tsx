@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useBrandDisplay } from '../../hooks/useHeadquartersSummary'
 import { CopyableDigits, useCopyDigits } from './CopyableDigits'
 import { cardClassName } from './Form'
 
@@ -59,9 +58,8 @@ export function FormCard({
   )
 }
 
-/** Soft blobs + faded brand logo for shared teal/mint card headers. */
+/** Soft blobs for shared teal/mint card headers. */
 export function FormCardHeaderDecor() {
-  const { logoSrc } = useBrandDisplay()
   return (
     <>
       <div
@@ -72,15 +70,6 @@ export function FormCardHeaderDecor() {
         className="pointer-events-none absolute -end-6 -bottom-12 size-28 rounded-full bg-mint-100/70"
         aria-hidden
       />
-      {logoSrc ? (
-        <img
-          src={logoSrc}
-          alt=""
-          aria-hidden
-          draggable={false}
-          className="pointer-events-none absolute end-3 top-1/2 h-[4.5rem] w-auto max-h-[calc(100%-0.75rem)] max-w-[6.5rem] -translate-y-1/2 rounded-2xl object-contain opacity-30 select-none sm:end-4 sm:h-20 sm:max-w-[7.5rem]"
-        />
-      ) : null}
     </>
   )
 }

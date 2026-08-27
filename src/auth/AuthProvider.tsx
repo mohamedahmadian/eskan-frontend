@@ -9,6 +9,13 @@ import {
 } from 'react'
 import { api } from '../lib/api'
 import {
+  clearImpersonateToken,
+  clearSessionToken,
+  getAuthToken,
+  isImpersonatingSession,
+  setSessionToken,
+} from '../lib/auth-token'
+import {
   applyUiLanguage,
   getStoredPreferredLocale,
   persistPreferredLocale,
@@ -27,6 +34,16 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function endImpersonationWindow() {
+  clearImpersonateToken()
+  try {
+    window.close()
+  } catch {
+    // ignore
+  }
+  window.location.assign('/impersonate-ended')
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -34,12 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applyUser = useCallback((next: AuthUser) => {
     setUser(next)
     const lang = (next.locale as AppLanguage) || 'fa'
-    persistPreferredLocale(lang)
+    if (!next.impersonating && !isImpersonatingSession()) {
+      persistPreferredLocale(lang)
+    }
     applyUiLanguage(lang)
   }, [])
 
   const refresh = useCallback(async () => {
-    const token = localStorage.getItem('eskan_token')
+    const token = getAuthToken()
     if (!token) {
       setUser(null)
       setLoading(false)
@@ -52,7 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refresh().catch(() => {
-      localStorage.removeItem('eskan_token')
+      if (isImpersonatingSession()) {
+        endImpersonationWindow()
+        return
+      }
+      clearSessionToken()
       setUser(null)
       setLoading(false)
     })
@@ -65,17 +88,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         '/auth/login',
         { username, password, locale },
       )
-      localStorage.setItem('eskan_token', data.token)
+      setSessionToken(data.token)
       applyUser(data.user)
     },
     [applyUser],
   )
 
   const logout = useCallback(() => {
-    localStorage.removeItem('eskan_token')
+    if (isImpersonatingSession() || user?.impersonating) {
+      endImpersonationWindow()
+      return
+    }
+    clearSessionToken()
     setUser(null)
     applyUiLanguage(getStoredPreferredLocale())
-  }, [])
+  }, [user?.impersonating])
 
   const value = useMemo(
     () => ({ user, loading, login, logout, refresh }),

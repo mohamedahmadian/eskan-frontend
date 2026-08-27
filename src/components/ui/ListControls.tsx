@@ -382,7 +382,7 @@ export function TableCard({
 
   return (
     <div
-      className={`overflow-hidden rounded-[22px] border border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)] ${
+      className={`min-w-0 overflow-hidden rounded-[22px] border border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)] ${
         rowClick
           ? '[&_tbody_tr:has([data-row-view])]:cursor-pointer [&_tbody_tr:has([data-row-view])]:hover:bg-cream-50'
           : ''
@@ -390,7 +390,9 @@ export function TableCard({
       onClick={handleClick}
     >
       {hasRows ? (
-        children
+        <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [&_table]:min-w-max">
+          {children}
+        </div>
       ) : loading ? (
         <LoadingState variant="inline" />
       ) : (

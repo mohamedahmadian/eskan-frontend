@@ -75,9 +75,10 @@ export function AdminFooter({
 
   return (
     <footer
+      data-admin-footer
       aria-label={hasContacts ? t('nav.contactFooter') : versionLabel}
       className={`shrink-0 border-t border-line bg-white/90 px-4 py-2 backdrop-blur sm:px-8 ${
-        compactEnd ? 'pe-28 sm:pe-32' : ''
+        compactEnd ? 'lg:pe-32' : ''
       }`}
     >
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
@@ -146,7 +147,12 @@ export function AdminFooter({
         })}
         {hasContacts ? <span className="hidden h-4 w-px bg-line sm:block" aria-hidden /> : null}
         <span
-          className="inline-flex items-center gap-1.5 rounded-full bg-cream-50 px-2 py-1 text-[11px] text-ink-500 ring-1 ring-line"
+          data-app-version
+          className={`inline-flex items-center gap-1.5 rounded-full bg-cream-50 px-2 py-1 text-[11px] text-ink-500 ring-1 ring-line ${
+            compactEnd
+              ? 'max-lg:invisible max-lg:order-last max-lg:h-16 max-lg:basis-full max-lg:justify-center'
+              : ''
+          }`}
           title={`${versionLabel} ${APP_VERSION}`}
         >
           <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-teal-600 ring-1 ring-teal-100">

@@ -2,6 +2,7 @@ import {
   ArrowRight,
   Ban,
   CalendarClock,
+  Hash,
   Hourglass,
   RotateCcw,
   Timer,
@@ -19,6 +20,7 @@ import {
   cardClassName,
   listShellClassName,
 } from "../../components/ui/Form";
+import { CopyableDigits } from "../../components/ui/CopyableDigits";
 import { DateText } from "../../components/ui/DateText";
 import { confirmToast } from "../../components/ui/confirmToast";
 import { api, getApiErrorMessage } from "../../lib/api";
@@ -109,6 +111,12 @@ export function ReservationWizardPage() {
             }
           />
         }
+        action={
+          reservation.status !== "COMPLETED" &&
+          reservation.status !== "CANCELLED" ? (
+            <CancelFileButton reservationId={reservation.id} />
+          ) : undefined
+        }
       />
       {reservation.status === "REJECTED" ? (
         <div className={`${cardClassName} mb-4 border-red-100 p-4`}>
@@ -130,6 +138,7 @@ export function ReservationWizardPage() {
       ) : null}
       {reservation.status === "PENDING_MANAGEMENT_REVIEW" ? (
         <ReviewWaitingBanner
+          code={reservation.code}
           submittedAt={reservation.basicInfoCompletedAt ?? reservation.createdAt}
         />
       ) : null}
@@ -194,43 +203,11 @@ export function ReservationWizardPage() {
           />
         )}
       </ReservationWizardShell>
-      <div className="mt-4">
-        <ReservationTimeline reservation={reservation} />
-      </div>
-      {reservation.status !== "COMPLETED" &&
-      reservation.status !== "CANCELLED" ? (
-        <div className="mt-6 flex justify-center">
-          <Button
-            type="button"
-            variant="danger"
-            onClick={() =>
-              confirmToast({
-                title: t("reservations.confirmCancelFile"),
-                confirmLabel: t("reservations.cancelFile"),
-                cancelLabel: t("common.cancel"),
-                confirmVariant: "danger",
-                onConfirm: async () => {
-                  try {
-                    await api.post(`/reservations/${reservation.id}/cancel`);
-                    toast.success(t("reservations.cancelledOk"));
-                    void queryClient.invalidateQueries({
-                      queryKey: ["reservations", id],
-                    });
-                    void queryClient.invalidateQueries({
-                      queryKey: ["reservations", "mine"],
-                    });
-                  } catch (error) {
-                    toast.error(getApiErrorMessage(error, t("common.error")));
-                  }
-                },
-              })
-            }
-          >
-            <Ban className="size-4" aria-hidden />
-            {t("reservations.cancelFile")}
-          </Button>
+      {reservation.status === "PENDING_MANAGEMENT_REVIEW" ? null : (
+        <div className="mt-4">
+          <ReservationTimeline reservation={reservation} />
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -294,7 +271,8 @@ function ReviewStep({
   reservation: Reservation;
   onChanged: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
   return (
     <div className="space-y-4">
       <ReservationTravelSummary
@@ -303,7 +281,9 @@ function ReviewStep({
         hint={
           reservation.managementReviewedAt
             ? t("reservations.reviewAuto")
-            : t("reservations.reviewSummaryHint")
+            : t("reservations.reviewSummaryHint", {
+                year: formatNumber(reservation.year, locale),
+              })
         }
       />
       {reservation.type === "CARAVAN" ? (
@@ -374,11 +354,20 @@ function reviewWaitElapsedLabel(
   if (totalHours > 0) {
     chunks.push(t("reservations.elapsedHour", { count: n(totalHours) }));
   }
-  chunks.push(t("reservations.elapsedMinute", { count: n(parts.minutes) }));
+  if (parts.minutes > 0) {
+    chunks.push(t("reservations.elapsedMinute", { count: n(parts.minutes) }));
+  }
+  if (!chunks.length) return null;
   return chunks.join(t("reservations.elapsedJoin"));
 }
 
-function ReviewWaitingBanner({ submittedAt }: { submittedAt: string }) {
+function ReviewWaitingBanner({
+  code,
+  submittedAt,
+}: {
+  code: string;
+  submittedAt: string;
+}) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
   const elapsed = reviewWaitElapsedLabel(submittedAt, locale, t);
@@ -400,6 +389,18 @@ function ReviewWaitingBanner({ submittedAt }: { submittedAt: string }) {
             {t("reservations.reviewWaiting")}
           </p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+            <span className="inline-flex items-center gap-1.5 text-xs text-ink-800">
+              <Hash
+                className="size-3.5 shrink-0 text-gold-600"
+                aria-hidden
+              />
+              <span className="text-ink-500">
+                {t("reservations.fileCode")} :
+              </span>
+              <span className="font-semibold">
+                <CopyableDigits value={code} />
+              </span>
+            </span>
             <span className="inline-flex items-center gap-1.5 text-xs text-ink-800">
               <CalendarClock
                 className="size-3.5 shrink-0 text-gold-600"
@@ -428,6 +429,43 @@ function ReviewWaitingBanner({ submittedAt }: { submittedAt: string }) {
         </div>
       </div>
     </aside>
+  );
+}
+
+function CancelFileButton({ reservationId }: { reservationId: string }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  return (
+    <Button
+      type="button"
+      variant="danger"
+      className="self-start"
+      onClick={() =>
+        confirmToast({
+          title: t("reservations.confirmCancelFile"),
+          confirmLabel: t("reservations.cancelFile"),
+          cancelLabel: t("common.cancel"),
+          confirmVariant: "danger",
+          onConfirm: async () => {
+            try {
+              await api.post(`/reservations/${reservationId}/cancel`);
+              toast.success(t("reservations.cancelledOk"));
+              void queryClient.invalidateQueries({
+                queryKey: ["reservations", reservationId],
+              });
+              void queryClient.invalidateQueries({
+                queryKey: ["reservations", "mine"],
+              });
+            } catch (error) {
+              toast.error(getApiErrorMessage(error, t("common.error")));
+            }
+          },
+        })
+      }
+    >
+      <Ban className="size-4" aria-hidden />
+      {t("reservations.cancelFile")}
+    </Button>
   );
 }
 

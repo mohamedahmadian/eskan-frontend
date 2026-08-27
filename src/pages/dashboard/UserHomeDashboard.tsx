@@ -324,7 +324,11 @@ export function UserHomeDashboard() {
 
       <HeadquartersServiceYearsCard />
 
-      {showPilgrim || showManager ? <UserLocationCard /> : null}
+      {showPilgrim || showManager ? (
+        <div className="w-full md:w-1/2">
+          <UserLocationCard />
+        </div>
+      ) : null}
 
       {query.isLoading ? (
         <p className="text-sm text-ink-500">{t('common.loading')}</p>

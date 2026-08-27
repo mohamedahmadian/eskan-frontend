@@ -13,8 +13,12 @@ import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { DateText } from '../../components/ui/DateText'
 import { api } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
-import { isCaravanManager } from '../../lib/roles'
+import { isCaravanManager, isPilgrim } from '../../lib/roles'
 import type { ActiveWalkingRoute, ManagedUser } from '../../types/app'
+import {
+  useAccountLocationHistoryMap,
+  useLocationHistoryOverlays,
+} from '../location/locationHistoryMap'
 import { useWalkingRouteMap, WalkingRouteProgress } from '../location/WalkingRouteProgress'
 
 export function UserLocationCard() {
@@ -29,6 +33,7 @@ export function UserLocationCard() {
     },
   })
   const showRoute = isCaravanManager(actor)
+  const showHistoryTrail = isPilgrim(actor)
   const routeQuery = useQuery({
     queryKey: ['walking-routes', 'active', 'me'],
     enabled: showRoute,
@@ -37,6 +42,7 @@ export function UserLocationCard() {
       return data.route
     },
   })
+  const historyQuery = useAccountLocationHistoryMap(showHistoryTrail)
 
   const user = query.data
   const here = {
@@ -44,13 +50,16 @@ export function UserLocationCard() {
     lat: user?.latitude ?? null,
     lng: user?.longitude ?? null,
   }
-  const { overlays } = useWalkingRouteMap(routeQuery.data, here)
+  const { overlays: routeOverlays } = useWalkingRouteMap(routeQuery.data, here)
+  const historyOverlays = useLocationHistoryOverlays(historyQuery.data)
+  const overlays = routeOverlays ?? historyOverlays
   const hasPin = user?.latitude != null && user.longitude != null
   const hasPlace = Boolean(user?.locationProvince || user?.locationCity)
   const hasNotes = Boolean(user?.locationNotes)
   const hasRoute = Boolean(routeQuery.data)
+  const hasHistoryTrail = Boolean(historyOverlays?.markers.length)
   const hasMap = hasPin || Boolean(overlays?.markers.length)
-  const hasLocation = hasPin || hasPlace || hasNotes || hasRoute
+  const hasLocation = hasPin || hasPlace || hasNotes || hasRoute || hasHistoryTrail
   const empty = '—'
 
   return (
@@ -60,7 +69,7 @@ export function UserLocationCard() {
       subtitle={t('dashboard.locationHint')}
     >
       <div className="space-y-5 p-5 sm:p-6">
-        {query.isLoading || (showRoute && routeQuery.isLoading) ? (
+        {query.isLoading || (showRoute && routeQuery.isLoading) || (showHistoryTrail && historyQuery.isLoading) ? (
           <p className="text-sm text-ink-500">{t('common.loading')}</p>
         ) : !hasLocation ? (
           <FormEmptyHint>{t('location.empty')}</FormEmptyHint>
@@ -118,7 +127,7 @@ export function UserLocationCard() {
         <Link to="/my-location" className="block">
           <Button type="button" className="w-full justify-center">
             <MapPinned className="size-4" aria-hidden />
-            {t('location.register')}
+            {t('location.registerNew')}
           </Button>
         </Link>
       </div>

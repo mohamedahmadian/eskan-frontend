@@ -50,7 +50,12 @@ import {
   isOwnerCreateDraft,
   settingsEnabledKey,
 } from './reservation-steps'
-import { ReceptionRulesModal, ReceptionTypeIntro } from './ReceptionTypeContent'
+import {
+  ReceptionRulesModal,
+  ReceptionTypeIntro,
+  settingsRulesKey,
+  splitMultilineItems,
+} from './ReceptionTypeContent'
 import { ReservationCountFields } from './ReservationCountFields'
 import {
   createReservationParty,
@@ -772,6 +777,11 @@ export function ReservationCreatePage() {
         isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
       ) {
         toast.error(t('reservations.permitAwaitingHqApproval'))
+        return
+      }
+      const rules = type ? (settings.data?.[settingsRulesKey(type)] ?? '') : ''
+      if (splitMultilineItems(rules).length === 0) {
+        await finalizeReservation()
         return
       }
       setRulesModalOpen(true)

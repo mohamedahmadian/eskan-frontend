@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -26,7 +27,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useNavigationType } from 'react-router-dom'
+import { Link, useNavigate, useNavigationType, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuickTools } from '../../components/layout/quick-tools-context'
 import { DateText } from '../../components/ui/DateText'
@@ -54,6 +55,7 @@ import type {
 } from '../../types/app'
 import { ReceptionKindChips } from './ReceptionKindChips'
 import { ReceptionMatchModal } from './ReceptionMatchModal'
+import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
 import {
   ReservationStatusBadge,
   ReservationTypeBadge,
@@ -87,11 +89,15 @@ export function ReceptionDesk({
   const nameOf = useGeoName()
   const tools = useQuickTools()
   const navType = useNavigationType()
+  const [searchParams] = useSearchParams()
   const searchRef = useRef<HTMLInputElement>(null)
+  const autoQRef = useRef<string | null>(null)
   const searchInputId = variant === 'modal' ? 'reception-search-modal' : 'reception-search'
-  const cached = variant === 'page' && navType === 'POP' ? receptionPageCache : null
-  const [term, setTerm] = useState(cached?.term ?? '')
-  const [searching, setSearching] = useState(false)
+  const qParam = variant === 'page' ? searchParams.get('q')?.trim() ?? '' : ''
+  const cached =
+    variant === 'page' && navType === 'POP' && !qParam ? receptionPageCache : null
+  const [term, setTerm] = useState(qParam || (cached?.term ?? ''))
+  const [searching, setSearching] = useState(qParam.length >= 2)
   const [searched, setSearched] = useState(cached?.searched ?? false)
   const [matches, setMatches] = useState<ReceptionMatch[] | null>(cached?.matches ?? null)
   const [matchTotal, setMatchTotal] = useState(cached?.matchTotal ?? 0)
@@ -161,38 +167,54 @@ export function ReceptionDesk({
     }
   }
 
+  const runSearch = useCallback(
+    async (raw: string, options?: { preferPicker?: boolean }) => {
+      const q = raw.trim()
+      if (q.length < 2) {
+        toast.error(t('reception.queryTooShort'))
+        return
+      }
+      setSearching(true)
+      setPickerOpen(false)
+      try {
+        const { data } = await api.get<ReceptionSearchResult>('/reception/search', {
+          params: { q },
+        })
+        setSearched(true)
+        setMatchTotal(data.total)
+        if (data.matches.length === 0) {
+          setProfile(null)
+          setMatches([])
+          return
+        }
+        if (data.matches.length === 1 && data.profile && !options?.preferPicker) {
+          setMatches(null)
+          setProfile(data.profile)
+          return
+        }
+        setProfile(null)
+        setMatches(data.matches)
+        setPickerOpen(true)
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, t('common.error')))
+      } finally {
+        setSearching(false)
+      }
+    },
+    [t],
+  )
+
+  useEffect(() => {
+    if (variant !== 'page' || qParam.length < 2) return
+    if (autoQRef.current === qParam) return
+    autoQRef.current = qParam
+    setTerm(qParam)
+    void runSearch(qParam, { preferPicker: true })
+  }, [qParam, runSearch, variant])
+
   async function onSearch(event: FormEvent) {
     event.preventDefault()
-    const q = term.trim()
-    if (q.length < 2) {
-      toast.error(t('reception.queryTooShort'))
-      return
-    }
-    setSearching(true)
-    setPickerOpen(false)
-    try {
-      const { data } = await api.get<ReceptionSearchResult>('/reception/search', {
-        params: { q },
-      })
-      setSearched(true)
-      setMatchTotal(data.total)
-      if (data.matches.length === 0) {
-        setProfile(null)
-        setMatches([])
-        return
-      }
-      if (data.matches.length === 1 && data.profile) {
-        setMatches(null)
-        setProfile(data.profile)
-        return
-      }
-      setMatches(data.matches)
-      setPickerOpen(true)
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, t('common.error')))
-    } finally {
-      setSearching(false)
-    }
+    await runSearch(term)
   }
 
   const person = profile?.person
@@ -321,6 +343,12 @@ export function ReceptionDesk({
           <FormCard
             icon={UserRound}
             title={profile.person.fullName}
+            action={
+              <OpenUserPanelButton
+                userId={profile.person.id}
+                status={profile.person.status}
+              />
+            }
             chips={
               <>
                 <ReceptionKindChips kinds={profile.person.kinds} />

@@ -17,6 +17,7 @@ export type MapFocus = {
   lat: number
   lng: number
   zoom?: number
+  bounds?: MapBounds
 }
 
 export type MapBounds = {
@@ -30,7 +31,7 @@ export type MapOverlayMarker = {
   id: string
   lat: number
   lng: number
-  kind: 'previous' | 'current' | 'next'
+  kind: 'previous' | 'current' | 'next' | 'history'
   badge: string
   title: string
   popupHtml?: string
@@ -144,7 +145,18 @@ export function OsmMapPicker({
       scrollWheelZoom: true,
       dragging: true,
       doubleClickZoom: !readOnly,
-    }).setView(start ?? MASHHAD, start ? 16 : 13)
+    })
+    if (start) {
+      map.setView(start, 16)
+    } else if (maxBounds) {
+      map.fitBounds(toLeafletBounds(maxBounds), { padding: [28, 28], maxZoom: focus?.zoom ?? 13 })
+    } else if (focus?.bounds) {
+      map.fitBounds(toLeafletBounds(focus.bounds), { padding: [16, 16] })
+    } else if (focus) {
+      map.setView([focus.lat, focus.lng], focus.zoom ?? 9)
+    } else {
+      map.setView(MASHHAD, 13)
+    }
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -200,7 +212,9 @@ export function OsmMapPicker({
       return
     }
     map.setMaxBounds(undefined as unknown as L.LatLngBounds)
-    if (focus) {
+    if (focus?.bounds) {
+      map.fitBounds(toLeafletBounds(focus.bounds), { padding: [16, 16] })
+    } else if (focus) {
       map.setView([focus.lat, focus.lng], focus.zoom ?? 9)
     }
   }, [focus, maxBounds, open, overlays?.fit])
@@ -227,15 +241,18 @@ export function OsmMapPicker({
       ).addTo(layer)
     }
     for (const marker of overlays.markers) {
+      const isHistory = marker.kind === 'history'
       const icon = L.divIcon({
         className: `eskan-route-pin-wrap eskan-route-pin-${marker.kind}`,
-        html: `<span class="eskan-route-pin"><span class="eskan-route-pin-badge">${marker.badge}</span><span class="eskan-route-pin-title">${marker.title}</span></span>`,
-        iconSize: [132, 52],
-        iconAnchor: [66, 50],
+        html: isHistory
+          ? `<span class="eskan-history-pin">${marker.badge}</span>`
+          : `<span class="eskan-route-pin"><span class="eskan-route-pin-badge">${marker.badge}</span><span class="eskan-route-pin-title">${marker.title}</span></span>`,
+        iconSize: isHistory ? [28, 28] : [132, 52],
+        iconAnchor: isHistory ? [14, 14] : [66, 50],
       })
       const pin = L.marker([marker.lat, marker.lng], {
         icon,
-        zIndexOffset: marker.kind === 'current' ? 500 : 400,
+        zIndexOffset: marker.kind === 'current' ? 500 : isHistory ? 420 : 400,
         keyboard: false,
       }).addTo(layer)
       if (marker.popupHtml) {
@@ -320,32 +337,37 @@ export function OsmMapPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoGeolocate, canEdit, open])
 
+  const showMapToggle = variant === 'collapsible'
+  const showGeoButton = geolocateEnabled && open
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {variant === 'collapsible' ? (
-          <Button
-            type="button"
-            variant="soft"
-            aria-expanded={open}
-            onClick={() => setOpen((current) => !current)}
-          >
-            <MapPinned className="size-4" aria-hidden />
-            {open ? t('accommodations.hideMap') : t('accommodations.pickFromMap')}
-          </Button>
-        ) : null}
-        {geolocateEnabled && open ? (
-          <Button
-            type="button"
-            variant="soft"
-            disabled={locating}
-            onClick={() => requestGeolocation(false)}
-          >
-            <LocateFixed className="size-4" aria-hidden />
-            {locating ? t('location.locating') : t('location.useMyLocation')}
-          </Button>
-        ) : null}
-      </div>
+    <div className={showMapToggle || showGeoButton ? 'space-y-3' : undefined}>
+      {showMapToggle || showGeoButton ? (
+        <div className="flex flex-wrap gap-2">
+          {showMapToggle ? (
+            <Button
+              type="button"
+              variant="soft"
+              aria-expanded={open}
+              onClick={() => setOpen((current) => !current)}
+            >
+              <MapPinned className="size-4" aria-hidden />
+              {open ? t('accommodations.hideMap') : t('accommodations.pickFromMap')}
+            </Button>
+          ) : null}
+          {showGeoButton ? (
+            <Button
+              type="button"
+              variant="soft"
+              disabled={locating}
+              onClick={() => requestGeolocation(false)}
+            >
+              <LocateFixed className="size-4" aria-hidden />
+              {locating ? t('location.locating') : t('location.useMyLocation')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {open ? (
         <div dir="ltr" className="overflow-hidden rounded-2xl border border-line shadow-[0_8px_24px_rgba(20,40,40,0.06)]">
           <div ref={containerRef} className={`eskan-osm-map w-full ${heightClass}`} />

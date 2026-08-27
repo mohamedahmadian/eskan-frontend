@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthProvider'
-import { AuthBackButton, AuthGuestLayout, AuthNotice } from '../components/auth/AuthGuestLayout'
+import { AuthBackButton, AuthGuestLayout } from '../components/auth/AuthGuestLayout'
 import { SearchSelect } from '../components/ui/SearchSelect'
 import { AppForm, Button, FormField, ToggleField, fieldClassName } from '../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
@@ -41,7 +41,7 @@ function splitIdentifier(value: string) {
 
 export function RegisterPage() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, login } = useAuth()
   const navigate = useNavigate()
   const geoName = useGeoName()
   const { locale } = usePreferredLocale()
@@ -60,7 +60,6 @@ export function RegisterPage() {
   const [gender, setGender] = useState<UserGender>(userGenders.MALE)
   const [countryId, setCountryId] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [registered, setRegistered] = useState(false)
 
   const countries = useQuery({
     queryKey: ['countries', 'lookup', 'public'],
@@ -112,11 +111,13 @@ export function RegisterPage() {
     }
     setSubmitting(true)
     try {
+      const usernameValue = toLatinDigits(username.trim())
+      const passwordValue = toLatinDigits(password)
       await api.post('/auth/register', {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        username: toLatinDigits(username.trim()),
-        password: toLatinDigits(password),
+        username: usernameValue,
+        password: passwordValue,
         gender,
         locale,
         countryId: countryId || undefined,
@@ -127,7 +128,8 @@ export function RegisterPage() {
               email: email.trim().toLowerCase(),
             }),
       })
-      setRegistered(true)
+      await login(usernameValue, passwordValue)
+      navigate('/')
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
@@ -143,17 +145,7 @@ export function RegisterPage() {
         subtitle={t('auth.registerSubtitle')}
         action={<AuthBackButton to="/login" />}
       >
-        {registered ? (
-          <div className={`${formCardBodyClassName}`}>
-            <AuthNotice icon={UserPlus} tone="teal">
-              {t('auth.registerSuccess')}
-            </AuthNotice>
-            <Button type="button" className="w-full" onClick={() => navigate('/login')}>
-              {t('auth.login')}
-            </Button>
-          </div>
-        ) : (
-          <AppForm className={formCardBodyClassName} onSubmit={onSubmit} autoFocusFirst>
+        <AppForm className={formCardBodyClassName} onSubmit={onSubmit} autoFocusFirst>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField icon={UserRound} label={t('users.firstName')} htmlFor="firstName">
                 <input
@@ -277,7 +269,6 @@ export function RegisterPage() {
               </Link>
             </p>
           </AppForm>
-        )}
       </FormCard>
     </AuthGuestLayout>
   )
