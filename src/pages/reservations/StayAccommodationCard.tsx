@@ -1,7 +1,9 @@
 import {
   Building2,
   Check,
+  Eye,
   Hourglass,
+  MapPin,
   MapPinned,
   Mars,
   Navigation,
@@ -208,13 +210,43 @@ export function StayAccommodationCard({
 
       <div className="grid gap-2 p-4 sm:grid-cols-2 sm:gap-3 sm:p-5">
         <FormFactTile
-          icon={Building2}
-          label={t('accommodations.name')}
-          value={place?.name || ''}
-          empty={!place?.name}
+          icon={MapPin}
+          label={t('accommodations.address')}
+          value={<StayTextOrLink value={place?.address} />}
+          empty={!place?.address?.trim()}
           tone={tone}
           className="sm:col-span-2"
         />
+        <FormFactTile
+          icon={UserRoundCog}
+          label={t('reservations.placementManager')}
+          value={manager?.name || ''}
+          empty={!manager?.name}
+          tone={tone}
+        />
+        <FormFactTile
+          icon={Smartphone}
+          label={t('reservations.placementManagerPhone')}
+          value={
+            manager?.phone ? <CopyableDigits value={manager.phone} empty="" /> : ''
+          }
+          empty={!manager?.phone}
+          tone={tone === 'teal' ? 'mint' : 'teal'}
+        />
+        {canOpenDetails ? (
+          <div className="sm:col-span-2">
+            <Button
+              type="button"
+              variant="soft"
+              onClick={() => setDetailsOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={detailsOpen}
+            >
+              <Eye className="size-4" aria-hidden />
+              {t('placements.viewStayDetails')}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {detailsOpen && place ? (
@@ -252,7 +284,7 @@ function StayHeaderIdentity({
         className={`flex size-11 shrink-0 items-center justify-center rounded-2xl text-white ${
           tone === 'teal'
             ? 'bg-teal-500 shadow-[0_10px_22px_rgba(46,189,182,0.32)]'
-            : 'bg-mint-500 shadow-[0_10px_22px_rgba(95,191,122,0.28)]'
+            : 'bg-mint-500 shadow-[0_10px_22px_rgba(63,214,190,0.28)]'
         }`}
       >
         <GenderIcon className="size-5" aria-hidden />

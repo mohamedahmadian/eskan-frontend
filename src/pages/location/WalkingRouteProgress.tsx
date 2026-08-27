@@ -96,7 +96,7 @@ function StationCard({
   const tone = {
     previous: {
       wrap: 'border-mint-100 bg-gradient-to-b from-mint-50 to-white',
-      icon: 'bg-mint-500 text-white shadow-[0_8px_16px_rgba(95,191,122,0.24)]',
+      icon: 'bg-mint-500 text-white shadow-[0_8px_16px_rgba(63,214,190),0.24)]',
       chip: 'bg-mint-100 text-mint-700',
     },
     current: {

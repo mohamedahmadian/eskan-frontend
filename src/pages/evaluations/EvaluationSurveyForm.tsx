@@ -25,7 +25,7 @@ export type EvaluationSurveyAnswerPayload = {
 const scoreButtonClass: Record<string, string> = {
   excellent:
     'border-teal-300 bg-teal-50 text-teal-800 data-[selected=true]:border-teal-500 data-[selected=true]:bg-teal-500 data-[selected=true]:text-white data-[selected=true]:shadow-[0_10px_22px_rgba(46,189,182,0.35)]',
-  good: 'border-mint-300 bg-mint-50 text-mint-600 data-[selected=true]:border-mint-500 data-[selected=true]:bg-mint-500 data-[selected=true]:text-white data-[selected=true]:shadow-[0_10px_22px_rgba(95,191,122,0.32)]',
+  good: 'border-mint-300 bg-mint-50 text-mint-600 data-[selected=true]:border-mint-500 data-[selected=true]:bg-mint-500 data-[selected=true]:text-white data-[selected=true]:shadow-[0_10px_22px_rgba(63,214,190),0.32)]',
   average:
     'border-line bg-cream-50 text-ink-700 data-[selected=true]:border-ink-700 data-[selected=true]:bg-ink-700 data-[selected=true]:text-white',
   weak: 'border-gold-400/60 bg-gold-50 text-gold-600 data-[selected=true]:border-gold-500 data-[selected=true]:bg-gold-500 data-[selected=true]:text-ink-900',

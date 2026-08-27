@@ -8,7 +8,7 @@ import {
 const toneClass: Record<string, string> = {
   excellent:
     'border-teal-400 bg-gradient-to-b from-teal-50 to-white text-teal-800 shadow-[0_12px_28px_rgba(46,189,182,0.22)]',
-  good: 'border-mint-400 bg-gradient-to-b from-mint-50 to-white text-mint-800 shadow-[0_12px_28px_rgba(95,191,122,0.2)]',
+  good: 'border-mint-400 bg-gradient-to-b from-mint-50 to-white text-mint-800 shadow-[0_12px_28px_rgba(63,214,190),0.2)]',
   average:
     'border-ink-400 bg-gradient-to-b from-cream-50 to-white text-ink-800 shadow-[0_10px_22px_rgba(63,58,52,0.1)]',
   weak: 'border-gold-400 bg-gradient-to-b from-gold-50 to-white text-gold-700 shadow-[0_10px_22px_rgba(196,149,58,0.18)]',

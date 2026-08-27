@@ -183,7 +183,7 @@ export function ReservationPlacementPanel({
               <span
                 className={`mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl text-white ${
                   partial
-                    ? "bg-mint-500 shadow-[0_8px_16px_rgba(95,191,122,0.24)]"
+                    ? "bg-mint-500 shadow-[0_8px_16px_rgba(63,214,190),0.24)]"
                     : "bg-teal-500 shadow-[0_8px_16px_rgba(46,189,182,0.28)]"
                 }`}
               >
@@ -347,7 +347,7 @@ function StayCard({
             className={`flex size-11 shrink-0 items-center justify-center rounded-2xl text-white ${
               tone === "teal"
                 ? "bg-teal-500 shadow-[0_10px_22px_rgba(46,189,182,0.32)]"
-                : "bg-mint-500 shadow-[0_10px_22px_rgba(95,191,122,0.28)]"
+                : "bg-mint-500 shadow-[0_10px_22px_rgba(63,214,190),0.28)]"
             }`}
           >
             <GenderIcon className="size-5" aria-hidden />

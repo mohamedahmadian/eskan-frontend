@@ -19,12 +19,13 @@
   --color-teal-800: #0f6e6a;
   --color-teal-900: #0c4d4a;
 
-  --color-mint-50: #f1faf4;
-  --color-mint-100: #d9f2e2;
-  --color-mint-300: #9eddb0;
-  --color-mint-400: #7dce94;
-  --color-mint-500: #5fbf7a;
-  --color-mint-600: #3fa05c;
+  --color-mint-50: #eefbf9;
+  --color-mint-100: #d4f6ef;
+  --color-mint-300: #8ee8d9;
+  --color-mint-400: #61decb;
+  --color-mint-500: #3fd6be;
+  --color-mint-600: #26b8a4;
+  --color-mint-800: #178072;
 
   --color-gold-50: #fffaf0;
   --color-gold-100: #fff2d6;
@@ -197,7 +198,7 @@ th {
 }
 
 .eskan-route-pin-previous .eskan-route-pin-badge {
-  background: #5fbf7a;
+  background: #3fd6be;
 }
 
 .eskan-route-pin-current .eskan-route-pin-badge {

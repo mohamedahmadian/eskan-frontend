@@ -420,7 +420,7 @@ function IssuedLicenseViewModal({
                   href={getImageUrl(item.fileId)}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-mint-300 px-4 py-2.5 text-sm font-medium text-ink-900 shadow-sm transition hover:bg-mint-400"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-mint-500 px-[0.9rem] py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-mint-600"
                 >
                   <Eye className="size-4" aria-hidden />
                   {t('reservations.permitViewIssuedFile')}

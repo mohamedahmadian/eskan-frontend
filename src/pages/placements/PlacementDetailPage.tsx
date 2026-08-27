@@ -9,7 +9,6 @@ import {
   IdCard,
   LayoutGrid,
   LogOut,
-  MapPin,
   Mars,
   Phone,
   Sparkles,
@@ -390,12 +389,6 @@ export function PlacementDetailPage() {
                                 : t(`placements.sources.${item.source}`)
                             }
                           />
-                          {item.accommodation.address?.trim() ? (
-                            <FormMetaChip
-                              icon={MapPin}
-                              label={item.accommodation.address}
-                            />
-                          ) : null}
                           <FormMetaChip
                             icon={CalendarClock}
                             label={<DateText value={item.placedAt} withTime />}

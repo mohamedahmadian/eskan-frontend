@@ -23,7 +23,7 @@ export function HeadquartersServiceYearsCard({
   return (
     <div className={className}>
       <section
-        className={`relative flex cursor-pointer flex-col items-center justify-center rounded-full border border-white/80 bg-gradient-to-b from-white via-teal-50/90 to-mint-50 shadow-[0_10px_28px_rgba(46,189,182,0.22),0_2px_8px_rgba(20,40,40,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-teal-100/80 transition-[box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(46,189,182,0.38),0_6px_14px_rgba(95,191,122,0.22),inset_0_1px_0_rgba(255,255,255,1)] hover:ring-teal-200/90 ${
+        className={`relative flex cursor-pointer flex-col items-center justify-center rounded-full border border-white/80 bg-gradient-to-b from-white via-teal-50/90 to-mint-50 shadow-[0_10px_28px_rgba(46,189,182,0.22),0_2px_8px_rgba(20,40,40,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-teal-100/80 transition-[box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(46,189,182,0.38),0_6px_14px_rgba(63,214,190),0.22),inset_0_1px_0_rgba(255,255,255,1)] hover:ring-teal-200/90 ${
           compact ? 'size-[5.75rem]' : 'size-[7.75rem]'
         }`}
         aria-label={t('dashboard.serviceYears')}

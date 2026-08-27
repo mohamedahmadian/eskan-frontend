@@ -14,7 +14,7 @@ import { useNavigationHistory } from '../../lib/navigation-history'
 const variants = {
   primary:
     'bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-60 shadow-sm',
-  soft: 'bg-mint-300 text-ink-900 hover:bg-mint-400 disabled:opacity-60 shadow-sm',
+  soft: 'bg-mint-500 text-white hover:bg-mint-600 disabled:opacity-60 shadow-sm',
   ghost:
     'bg-white text-ink-700 hover:bg-cream-100 border border-line',
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:opacity-60',
@@ -41,7 +41,7 @@ export function Button({
   return (
     <button
       className={`inline-flex items-center justify-center gap-2 rounded-2xl text-sm font-medium transition ${
-        icon ? 'size-9 p-0' : 'px-4 py-2.5'
+        icon ? 'size-9 p-0' : 'px-[0.9rem] py-2.5'
       } ${variants[variant]} ${className}`}
       {...props}
     >

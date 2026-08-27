@@ -283,7 +283,7 @@ const countToneClass = {
   },
   mint: {
     wrap: "border-mint-100 bg-gradient-to-b from-mint-50 to-white",
-    icon: "bg-mint-500 text-white shadow-[0_8px_16px_rgba(95,191,122,0.24)]",
+    icon: "bg-mint-500 text-white shadow-[0_8px_16px_rgba(63,214,190),0.24)]",
     btn: "bg-mint-500 text-white hover:bg-mint-600 disabled:bg-mint-300",
   },
   ink: {
@@ -438,7 +438,7 @@ function GenderChoiceCard({
   const active =
     tone === "teal"
       ? "border-teal-500 bg-teal-50 shadow-[0_8px_18px_rgba(46,189,182,0.2)]"
-      : "border-mint-400 bg-mint-50 shadow-[0_8px_18px_rgba(95,191,122,0.18)]";
+      : "border-mint-400 bg-mint-50 shadow-[0_8px_18px_rgba(63,214,190),0.18)]";
   const iconWrap =
     tone === "teal" ? "bg-teal-500 text-white" : "bg-mint-500 text-white";
 

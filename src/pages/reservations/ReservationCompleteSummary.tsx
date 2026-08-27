@@ -46,7 +46,7 @@ const toneClass: Record<Tone, { wrap: string; icon: string }> = {
   },
   mint: {
     wrap: 'border-mint-100 bg-gradient-to-b from-mint-50 to-white',
-    icon: 'bg-mint-500 text-white shadow-[0_8px_16px_rgba(95,191,122,0.24)]',
+    icon: 'bg-mint-500 text-white shadow-[0_8px_16px_rgba(63,214,190),0.24)]',
   },
   ink: {
     wrap: 'border-line bg-gradient-to-b from-cream-50 to-white',

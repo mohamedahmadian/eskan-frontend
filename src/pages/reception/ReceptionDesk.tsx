@@ -378,7 +378,7 @@ export function ReceptionDesk({
                 </Button>
                 <Link
                   to={personPath(profile.person)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-line bg-white px-4 py-2.5 text-sm font-medium text-ink-700 transition hover:bg-cream-100"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-line bg-white px-[0.9rem] py-2.5 text-sm font-medium text-ink-700 transition hover:bg-cream-100"
                 >
                   <ExternalLink className="size-4" aria-hidden />
                   {t('reception.openProfile')}

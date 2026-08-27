@@ -88,7 +88,7 @@ function DatePickerActions({
     >
       <button
         type="button"
-        className="inline-flex flex-1 items-center justify-center rounded-xl bg-mint-300 px-2 py-1.5 text-xs font-medium text-ink-900 hover:bg-mint-400"
+        className="inline-flex flex-1 items-center justify-center rounded-xl bg-mint-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-mint-600"
         onClick={goToToday}
       >
         {t('common.today')}
