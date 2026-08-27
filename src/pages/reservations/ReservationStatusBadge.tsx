@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type {
+  PlacementStatus,
   ReservationMemberInsuranceStatus,
   ReservationStatus,
   ReservationType,
@@ -54,6 +55,18 @@ const typeTones: Record<ReservationType, { wrap: string; dot: string }> = {
 export function ReservationTypeBadge({ type }: { type: ReservationType }) {
   const { t } = useTranslation()
   return <StatusChip label={t(`reservations.types.${type}`)} tone={typeTones[type]} />
+}
+
+const placementStatusTones: Record<PlacementStatus, { wrap: string; dot: string }> = {
+  NOT_REQUIRED: { wrap: 'bg-cream-100 text-ink-500', dot: 'bg-ink-400' },
+  PENDING: { wrap: 'bg-amber-100 text-amber-900', dot: 'bg-amber-500' },
+  PARTIAL: { wrap: 'bg-gold-100 text-gold-600', dot: 'bg-gold-500' },
+  PLACED: { wrap: 'bg-mint-100 text-mint-600', dot: 'bg-mint-500' },
+}
+
+export function PlacementStatusBadge({ status }: { status: PlacementStatus }) {
+  const { t } = useTranslation()
+  return <StatusChip label={t(`placements.statuses.${status}`)} tone={placementStatusTones[status]} />
 }
 
 export function InsuranceStatusBadge({

@@ -38,6 +38,10 @@ import {
   FormSectionTitle,
 } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
+import {
+  parseClipboardNationalIdOrPhone,
+  readClipboardText,
+} from '../../lib/clipboard'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type {
@@ -54,6 +58,11 @@ import {
   ReservationStatusBadge,
   ReservationTypeBadge,
 } from '../reservations/ReservationStatusBadge'
+import {
+  isReservationCodeQuery,
+  normalizeReservationCode,
+  ReservationCodeBadge,
+} from '../reservations/ReservationCodeBadge'
 
 type ReceptionPageCache = {
   term: string
@@ -107,6 +116,33 @@ export function ReceptionDesk({
     if (variant !== 'page') return
     receptionPageCache = { term, searched, matches, matchTotal, profile }
   }, [variant, term, searched, matches, matchTotal, profile])
+
+  useEffect(() => {
+    if (variant !== 'modal') return
+    let cancelled = false
+    void (async () => {
+      const raw = await readClipboardText()
+      if (cancelled || raw == null) return
+      const value = parseClipboardNationalIdOrPhone(raw)
+      if (!value) return
+      let applied = false
+      setTerm((prev) => {
+        if (prev.trim()) return prev
+        applied = true
+        return value
+      })
+      if (!applied) return
+      requestAnimationFrame(() => {
+        const el = searchRef.current
+        if (!el) return
+        el.focus()
+        el.select()
+      })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [variant])
 
   useEffect(() => {
     onExpandedChange?.(Boolean(profile))
@@ -404,6 +440,9 @@ export function ReceptionDesk({
                   visits={profile.caravanManager.visits}
                   emptyText={t('reception.noCaravanVisits')}
                   showApprovedCounts
+                  highlightCode={
+                    isReservationCodeQuery(term) ? normalizeReservationCode(term) : ''
+                  }
                 />
               </div>
             </FormCard>
@@ -473,6 +512,9 @@ export function ReceptionDesk({
               <VisitList
                 visits={profile.pilgrim?.visits ?? []}
                 emptyText={t('reception.noVisits')}
+                highlightCode={
+                  isReservationCodeQuery(term) ? normalizeReservationCode(term) : ''
+                }
               />
             </div>
           </FormCard>
@@ -512,10 +554,12 @@ function VisitList({
   visits,
   emptyText,
   showApprovedCounts = false,
+  highlightCode = '',
 }: {
   visits: ReceptionVisit[]
   emptyText: string
   showApprovedCounts?: boolean
+  highlightCode?: string
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -535,9 +579,21 @@ function VisitList({
           Boolean(originName) ||
           Boolean(routeName)
         return (
-          <li key={visit.id} className="px-4 py-2.5">
+          <li
+            key={visit.id}
+            className={`px-4 py-2.5 ${
+              highlightCode && visit.code === highlightCode
+                ? 'bg-teal-50'
+                : ''
+            }`}
+          >
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-              <p className="w-16 font-semibold text-ink-900">
+              <ReservationCodeBadge
+                code={visit.code}
+                size="lg"
+                highlighted={Boolean(highlightCode && visit.code === highlightCode)}
+              />
+              <p className="text-sm font-medium text-ink-500">
                 {formatNumber(visit.year, locale)}
               </p>
               <ReservationTypeBadge type={visit.type} />

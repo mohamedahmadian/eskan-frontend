@@ -32,6 +32,7 @@ export function ReservationTravelStep({
 }) {
   const { t } = useTranslation()
   const locked = mode === 'owner' && Boolean(reservation.basicInfoLockedAt)
+  const sendForReview = reservation.status === 'DRAFT'
   const dualCounts = mode === 'admin'
   const counts = workingHeadcount(reservation)
   const requested = requestedHeadcount(reservation)
@@ -107,12 +108,12 @@ export function ReservationTravelStep({
           travelPayload(reservation.type, values, dualCounts),
         )
       }
-      if (mode === 'owner') {
+      if (sendForReview) {
         await api.post(`/reservations/${reservation.id}/submit`)
       }
     },
     onSuccess: () => {
-      toast.success(t(mode === 'admin' ? 'reservations.updated' : 'reservations.submitted'))
+      toast.success(t(sendForReview ? 'reservations.submitted' : 'reservations.updated'))
       onChanged()
     },
     onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
@@ -207,7 +208,7 @@ export function ReservationTravelStep({
 
   function runSubmit() {
     if (!assertAllForSubmit()) return
-    if (mode === 'admin') {
+    if (!sendForReview) {
       submit.mutate()
       return
     }
@@ -294,7 +295,7 @@ export function ReservationTravelStep({
             {lastStep ? (
               <>
                 <Check className="size-4" aria-hidden />
-                {t(mode === 'admin' ? 'reservations.saveTravel' : 'reservations.submitTravel')}
+                {t(sendForReview ? 'reservations.submitTravel' : 'reservations.saveTravel')}
               </>
             ) : (
               <>

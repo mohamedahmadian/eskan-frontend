@@ -2,6 +2,7 @@ import {
   Check,
   ClipboardCheck,
   Hourglass,
+  LayoutGrid,
   MapPin,
   Shield,
   UserRoundCog,
@@ -33,6 +34,7 @@ const stepIcons: Record<ReservationStepCode, LucideIcon> = {
   contacts: UserRoundCog,
   insurance: Shield,
   complete: Check,
+  placement: LayoutGrid,
 }
 
 export function ReservationWizardShell({
@@ -51,8 +53,8 @@ export function ReservationWizardShell({
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { type, status } = reservation
-  const steps = stepsForType(type)
-  const current = currentStepFromStatus(status, type)
+  const steps = stepsForType(type, reservation.requestsAccommodation)
+  const current = currentStepFromStatus(status, type, reservation)
   const stopped = status === 'CANCELLED' || status === 'REJECTED'
   const recordedIndex = steps.reduce(
     (last, step, index) => (stepHasProgress(step, reservation) ? index : last),
@@ -63,7 +65,9 @@ export function ReservationWizardShell({
     : Math.max(0, steps.indexOf(current))
   const remaining = stopped ? 0 : Math.max(0, steps.length - currentIndex - 1)
   const stepGridClass =
-    steps.length >= 6
+    steps.length >= 7
+      ? 'grid-cols-4 sm:grid-cols-7'
+      : steps.length >= 6
       ? 'grid-cols-3 sm:grid-cols-6'
       : steps.length === 5
         ? 'grid-cols-2 sm:grid-cols-5'
@@ -128,9 +132,9 @@ function chipState(
   const flow = ownerFlowSteps(type)
   if (viewedStep && flow.includes(viewedStep) && status !== 'COMPLETED') {
     if (step === viewedStep) return 'current'
-    if (isStepDone(step, status, type) || step === current) return 'done'
+    if (isStepDone(step, status, type, reservation) || step === current) return 'done'
   }
-  if (isStepDone(step, status, type)) return 'done'
+  if (isStepDone(step, status, type, reservation)) return 'done'
   if (step === current && status === 'PENDING_MANAGEMENT_REVIEW' && step === 'review') {
     return audience === 'admin' ? 'current' : 'waiting'
   }

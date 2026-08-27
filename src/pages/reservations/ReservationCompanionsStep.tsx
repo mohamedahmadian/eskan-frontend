@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  BookUser,
   Calendar,
   Check,
   FileSpreadsheet,
@@ -8,7 +9,6 @@ import {
   Mars,
   Pencil,
   Phone,
-  Search,
   SearchX,
   Trash2,
   UserPlus,
@@ -40,13 +40,13 @@ import {
 } from "../../components/ui/Form";
 import { confirmToast } from "../../components/ui/confirmToast";
 import { PersianDateField } from "../../components/ui/PersianDateField";
-import { SearchSelect } from "../../components/ui/SearchSelect";
 import { CopyableDigits } from "../../components/ui/CopyableDigits";
 import { api, getApiErrorMessage } from "../../lib/api";
 import { formatNumber } from "../../lib/datetime";
 import {
   isValidIranianNationalId,
   normalizeNationalId,
+  normalizePassportNumber,
 } from "../../lib/national-id";
 import type {
   Reservation,
@@ -67,7 +67,7 @@ import {
 type LookupResponse =
   { found: false } | { found: true; user: ReservationPerson };
 
-type CompanionTab = "manual" | "excel" | "previousCaravan";
+type CompanionPanel = "new" | "excel" | "previousCaravan";
 type Tone = "teal" | "mint" | "ink";
 type CountMatch = "ok" | "mismatch";
 
@@ -120,7 +120,7 @@ export function CompanionsStep({
     reservation.status !== "CANCELLED" &&
     reservation.status !== "REJECTED";
   const nextStep = neighborFlowStep(reservation.type, "companions", 1);
-  const [tab, setTab] = useState<CompanionTab>("manual");
+  const [panel, setPanel] = useState<CompanionPanel | null>(null);
   const [editingMember, setEditingMember] = useState<ReservationMember | null>(
     null,
   );
@@ -220,44 +220,88 @@ export function CompanionsStep({
         ) : null
       }
     >
-      <CompanionTabNav tab={tab} isCaravan={isCaravan} onChange={setTab} />
-      <div className={tab === "manual" ? "" : "hidden"}>
-        <MemberLookupForm
-          reservationId={reservation.id}
-          isCaravan={isCaravan}
-          editing={editingMember}
-          onAdded={() => {
-            setEditingMember(null);
-            onChanged();
-          }}
-          onCancelEdit={() => setEditingMember(null)}
-        />
-      </div>
-      <div className={tab === "excel" ? "" : "hidden"}>
-        <CompanionExcelImport
-          reservationId={reservation.id}
-          isCaravan={isCaravan}
-          onImported={onChanged}
-        />
-      </div>
-      {isCaravan ? (
-        <div className={tab === "previousCaravan" ? "" : "hidden"}>
-          <PreviousMembersPanel
-            reservation={reservation}
-            onImported={onChanged}
-          />
-        </div>
-      ) : null}
       <MembersList
         reservationId={reservation.id}
         members={members}
         isCaravan={isCaravan}
         onChanged={onChanged}
+        onAddNew={() => {
+          setEditingMember(null);
+          setPanel("new");
+        }}
+        onImportExcel={() => setPanel("excel")}
+        onImportPrevious={isCaravan ? () => setPanel("previousCaravan") : undefined}
         onEdit={(member) => {
-          setTab("manual");
           setEditingMember(member);
+          setPanel("new");
         }}
       />
+      {panel === "new" ? (
+        <CompanionFormModal
+          title={
+            editingMember
+              ? t(
+                  isCaravan
+                    ? "reservations.editMemberTitleCaravan"
+                    : "reservations.editMemberTitle",
+                )
+              : t("reservations.newPilgrimTitle")
+          }
+          icon={editingMember ? Pencil : UserPlus}
+          busy={false}
+          onClose={() => {
+            setPanel(null);
+            setEditingMember(null);
+          }}
+        >
+          <MemberLookupForm
+            reservationId={reservation.id}
+            isCaravan={isCaravan}
+            editing={editingMember}
+            onAdded={() => {
+              setEditingMember(null);
+              setPanel(null);
+              onChanged();
+            }}
+            onCancelEdit={() => {
+              setPanel(null);
+              setEditingMember(null);
+            }}
+          />
+        </CompanionFormModal>
+      ) : null}
+      {panel === "excel" ? (
+        <CompanionFormModal
+          title={t("reservations.companionTabs.excel")}
+          icon={FileSpreadsheet}
+          wide
+          onClose={() => setPanel(null)}
+        >
+          <CompanionExcelImport
+            reservationId={reservation.id}
+            isCaravan={isCaravan}
+            onImported={() => {
+              setPanel(null);
+              onChanged();
+            }}
+          />
+        </CompanionFormModal>
+      ) : null}
+      {panel === "previousCaravan" && isCaravan ? (
+        <CompanionFormModal
+          title={t("reservations.companionTabs.previousCaravan")}
+          icon={History}
+          onClose={() => setPanel(null)}
+        >
+          <PreviousMembersPanel
+            reservation={reservation}
+            onImported={() => {
+              setPanel(null);
+              onChanged();
+            }}
+          />
+        </CompanionFormModal>
+      ) : null}
     </CompanionsFrame>
   );
 }
@@ -353,10 +397,7 @@ function CompanionsFrame({
       />
       <div className="space-y-5 p-5 sm:p-6">
         <section>
-          <SectionTitle icon={Users}>
-            {t("reservations.createSteps.count")}
-          </SectionTitle>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <MetricTile
               icon={Mars}
               label={t("reservations.male")}
@@ -364,7 +405,6 @@ function CompanionsFrame({
                 have: n(males),
                 need: n(reservation.maleCount),
               })}
-              unit={t("reservations.people")}
               tone="teal"
               match={countMatch(males, reservation.maleCount)}
             />
@@ -375,7 +415,6 @@ function CompanionsFrame({
                 have: n(females),
                 need: n(reservation.femaleCount),
               })}
-              unit={t("reservations.people")}
               tone="mint"
               match={countMatch(females, reservation.femaleCount)}
             />
@@ -386,7 +425,6 @@ function CompanionsFrame({
                 have: n(members.length),
                 need: n(reservation.totalCount),
               })}
-              unit={t("reservations.people")}
               tone="ink"
               match={countMatch(members.length, reservation.totalCount)}
             />
@@ -400,65 +438,18 @@ function CompanionsFrame({
   );
 }
 
-function CompanionTabNav({
-  tab,
-  isCaravan,
-  onChange,
-}: {
-  tab: CompanionTab;
-  isCaravan: boolean;
-  onChange: (tab: CompanionTab) => void;
-}) {
-  const { t } = useTranslation();
-  const tabs: { id: CompanionTab; icon: LucideIcon }[] = [
-    { id: "manual", icon: UserPlus },
-    { id: "excel", icon: FileSpreadsheet },
-    ...(isCaravan ? [{ id: "previousCaravan" as const, icon: History }] : []),
-  ];
-
-  return (
-    <nav
-      className="flex flex-wrap gap-2 rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 p-1.5"
-      role="tablist"
-      aria-label={t(stepLabelKey("companions", isCaravan ? "CARAVAN" : undefined))}
-    >
-      {tabs.map((item) => {
-        const Icon = item.icon;
-        const active = tab === item.id;
-        return (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(item.id)}
-            className={`inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              active
-                ? "bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]"
-                : "bg-white/80 text-ink-700 hover:bg-white"
-            }`}
-          >
-            <Icon className="size-4 shrink-0" aria-hidden />
-            <span className="truncate">
-              {t(`reservations.companionTabs.${item.id}`)}
-            </span>
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
-
 function CompanionFormModal({
   title,
   icon: Icon,
   busy,
+  wide,
   onClose,
   children,
 }: {
   title: string;
   icon: LucideIcon;
   busy?: boolean;
+  wide?: boolean;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -494,7 +485,9 @@ function CompanionFormModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="companion-member-title"
-        className={`relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[22px] sm:max-w-3xl sm:rounded-[22px] ${cardClassName}`}
+        className={`relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[22px] sm:rounded-[22px] ${
+          wide ? "sm:max-w-6xl" : "sm:max-w-3xl"
+        } ${cardClassName}`}
       >
         <div className="flex items-start gap-3 border-b border-line px-5 py-4">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
@@ -539,26 +532,24 @@ function MemberLookupForm({
 }) {
   const { t } = useTranslation();
   const lookupRef = useRef<HTMLInputElement>(null);
-  const nationalRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const [lookupNationalId, setLookupNationalId] = useState("");
   const [nationalId, setNationalId] = useState("");
-  const [status, setStatus] = useState<"idle" | "found" | "new" | "edit">(
-    "idle",
-  );
+  const [passportNumber, setPassportNumber] = useState("");
+  const [status, setStatus] = useState<"idle" | "new" | "edit">("idle");
   const [looking, setLooking] = useState(false);
   const [missingNationalId, setMissingNationalId] = useState<string | null>(null);
   const [person, setPerson] = useState<Partial<ReservationPerson>>({});
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState("MALE");
   const [birthDate, setBirthDate] = useState("");
-  const showForm = status === "found" || status === "new" || status === "edit";
-  const editingFields = status === "new" || status === "edit";
+  const showForm = status === "new" || status === "edit";
 
   function resetForm() {
     setLookupNationalId("");
     setNationalId("");
+    setPassportNumber("");
     setPerson({});
-    setGender("");
+    setGender("MALE");
     setBirthDate("");
     setMissingNationalId(null);
     setStatus("idle");
@@ -568,6 +559,7 @@ function MemberLookupForm({
     if (!editing) return;
     setLookupNationalId("");
     setNationalId(editing.user.nationalId ?? "");
+    setPassportNumber("");
     setPerson({
       firstName: editing.user.firstName,
       lastName: editing.user.lastName,
@@ -579,27 +571,28 @@ function MemberLookupForm({
     setMissingNationalId(null);
     setStatus("edit");
     requestAnimationFrame(() => {
-      if (editing.user.nationalId) firstNameRef.current?.focus();
-      else nationalRef.current?.focus();
+      firstNameRef.current?.focus({ preventScroll: true });
     });
   }, [editing]);
 
   useEffect(() => {
-    if (status === "idle") {
-      lookupRef.current?.focus();
-      return;
-    }
-    if (!editingFields) return;
-    if (nationalRef.current?.value.trim()) {
-      firstNameRef.current?.focus();
-      return;
-    }
-    nationalRef.current?.focus();
-  }, [status, editingFields]);
+    if (status !== "idle") return;
+    lookupRef.current?.focus({ preventScroll: true });
+  }, [status]);
 
   async function lookup(event?: FormEvent) {
     event?.preventDefault();
     const id = normalizeNationalId(lookupNationalId);
+    if (!id) {
+      setMissingNationalId(null);
+      setNationalId("");
+      setPassportNumber("");
+      setPerson({});
+      setGender("MALE");
+      setBirthDate("");
+      setStatus("new");
+      return;
+    }
     if (!isValidIranianNationalId(id)) {
       toast.error(t("users.nationalIdInvalid"));
       return;
@@ -608,60 +601,50 @@ function MemberLookupForm({
     try {
       const { data } = await api.post<LookupResponse>(
         "/pilgrims/identity-lookup",
-        {
-          nationalId: id,
-        },
+        { nationalId: id },
       );
       if (data.found) {
-        setMissingNationalId(null);
-        setNationalId(id);
-        setPerson(data.user);
-        setGender(data.user.gender ?? "");
-        setBirthDate(data.user.birthDate ?? "");
-        setStatus("found");
+        await api.post(`/reservations/${reservationId}/members`, {
+          nationalId: id,
+        });
+        toast.success(
+          t(
+            isCaravan
+              ? "reservations.memberAddedCaravan"
+              : "reservations.memberAdded",
+          ),
+        );
+        resetForm();
+        onAdded();
         return;
       }
       setPerson({});
       setGender("MALE");
       setBirthDate("");
       setNationalId(id);
+      setPassportNumber("");
       setMissingNationalId(id);
       setStatus("new");
     } catch (error) {
-      if (status !== "new") {
-        setStatus("idle");
-        setMissingNationalId(null);
-      }
       toast.error(getApiErrorMessage(error, t("common.error")));
     } finally {
       setLooking(false);
     }
   }
 
-  function openNewMember() {
-    setMissingNationalId(null);
-    setPerson({});
-    setGender("MALE");
-    setBirthDate("");
-    setNationalId("");
-    setStatus("new");
-  }
-
   const save = useMutation({
     mutationFn: async () => {
       const id = normalizeNationalId(nationalId);
-      if (!isValidIranianNationalId(id)) {
+      if (id && !isValidIranianNationalId(id)) {
         throw new Error(t("users.nationalIdInvalid"));
       }
+      const passport = normalizePassportNumber(passportNumber);
       const payload = {
-        nationalId: id,
+        nationalId: id || null,
+        passportNumber: passport || null,
         firstName: person.firstName,
         lastName: person.lastName,
-        gender: editing
-          ? gender === "FEMALE"
-            ? "FEMALE"
-            : "MALE"
-          : gender || undefined,
+        gender: gender === "FEMALE" ? "FEMALE" : "MALE",
         phone: person.phone || null,
         birthDate: birthDate || null,
       };
@@ -700,252 +683,172 @@ function MemberLookupForm({
   });
 
   function closeForm() {
-    if (save.isPending) return;
+    if (save.isPending || looking) return;
     resetForm();
     onCancelEdit?.();
   }
 
-  const formTitle =
-    status === "found"
-      ? t("reservations.found", {
-          name:
-            person.fullName?.trim() ||
-            `${person.firstName ?? ""} ${person.lastName ?? ""}`.trim(),
-        })
-      : status === "edit"
-        ? t(
-            isCaravan
-              ? "reservations.editMemberTitleCaravan"
-              : "reservations.editMemberTitle",
-          )
-        : t("reservations.newPilgrimTitle");
-  const FormIcon =
-    status === "edit" ? Pencil : status === "found" ? UserRound : UserPlus;
-
   return (
-    <>
-      <article className="rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white p-4 shadow-[0_8px_20px_rgba(20,40,40,0.05)]">
-        <SectionTitle icon={UserPlus} className="mb-3">
-          {t("reservations.manualAdd")}
-        </SectionTitle>
-        <AppForm
-          autoFocusFirst={false}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void lookup();
-          }}
-        >
-          <FormField
-            icon={IdCard}
-            label={t("users.nationalId")}
-            htmlFor="companion-nid"
-          >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                id="companion-nid"
-                ref={lookupRef}
-                className={`min-w-0 flex-1 ${fieldClassName}`}
-                value={lookupNationalId}
-                onChange={(event) => setLookupNationalId(event.target.value)}
-                inputMode="numeric"
-              />
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 sm:flex-none"
-                  disabled={looking || showForm}
-                >
-                  <Search className="size-4" aria-hidden />
-                  {looking ? t("reservations.looking") : t("reservations.lookup")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="soft"
-                  className="flex-1 sm:flex-none"
-                  disabled={looking || showForm}
-                  data-enter-ignore
-                  onClick={openNewMember}
-                >
-                  <UserPlus className="size-4" aria-hidden />
-                  {t("reservations.newMember")}
-                </Button>
-              </div>
-            </div>
-          </FormField>
-        </AppForm>
-      </article>
-      {showForm ? (
-        <CompanionFormModal
-          title={formTitle}
-          icon={FormIcon}
-          busy={save.isPending}
-          onClose={closeForm}
-        >
+    <div className="space-y-4">
+      {status !== "edit" ? (
+        <article className="rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white p-4 shadow-[0_8px_20px_rgba(20,40,40,0.05)]">
+          <SectionTitle icon={UserPlus} className="mb-3">
+            {t("reservations.manualAdd")}
+          </SectionTitle>
           <AppForm
             autoFocusFirst={false}
             onSubmit={(event) => {
               event.preventDefault();
-              save.mutate();
+              void lookup();
             }}
-            className="space-y-4"
           >
-            {status === "new" && missingNationalId ? (
-              <NationalIdNotFoundNotice nationalId={missingNationalId} />
-            ) : null}
-            {editingFields ? (
-              <div className="grid gap-3 sm:grid-cols-3">
-                <FormField
-                  icon={IdCard}
-                  label={t("users.nationalId")}
-                  htmlFor="companion-nid-new"
-                >
-                  <input
-                    id="companion-nid-new"
-                    ref={nationalRef}
-                    className={fieldClassName}
-                    value={nationalId}
-                    onChange={(event) => setNationalId(event.target.value)}
-                    inputMode="numeric"
-                    required
-                  />
-                </FormField>
-                <FormField
-                  icon={UserRound}
-                  label={t("users.firstName")}
-                  htmlFor="c-first"
-                >
-                  <input
-                    id="c-first"
-                    ref={firstNameRef}
-                    className={fieldClassName}
-                    value={person.firstName ?? ""}
-                    onChange={(event) =>
-                      setPerson((current) => ({
-                        ...current,
-                        firstName: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </FormField>
-                <FormField
-                  icon={UserRound}
-                  label={t("users.lastName")}
-                  htmlFor="c-last"
-                >
-                  <input
-                    id="c-last"
-                    className={fieldClassName}
-                    value={person.lastName ?? ""}
-                    onChange={(event) =>
-                      setPerson((current) => ({
-                        ...current,
-                        lastName: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </FormField>
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <FormField
-                  icon={UserRound}
-                  label={t("users.firstName")}
-                  htmlFor="c-first"
-                >
-                  <input
-                    id="c-first"
-                    ref={firstNameRef}
-                    className={fieldClassName}
-                    value={person.firstName ?? ""}
-                    onChange={(event) =>
-                      setPerson((current) => ({
-                        ...current,
-                        firstName: event.target.value,
-                      }))
-                    }
-                    required={editingFields}
-                    disabled={status === "found"}
-                  />
-                </FormField>
-                <FormField
-                  icon={UserRound}
-                  label={t("users.lastName")}
-                  htmlFor="c-last"
-                >
-                  <input
-                    id="c-last"
-                    className={fieldClassName}
-                    value={person.lastName ?? ""}
-                    onChange={(event) =>
-                      setPerson((current) => ({
-                        ...current,
-                        lastName: event.target.value,
-                      }))
-                    }
-                    required={editingFields}
-                    disabled={status === "found"}
-                  />
-                </FormField>
-              </div>
-            )}
-            <div className="grid gap-3 sm:grid-cols-3">
-              <FormField icon={Phone} label={t("users.phone")} htmlFor="c-phone">
+            <FormField
+              icon={IdCard}
+              label={t("users.nationalId")}
+              htmlFor="companion-nid"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
-                  id="c-phone"
-                  className={fieldClassName}
-                  value={person.phone ?? ""}
-                  onChange={(event) =>
-                    setPerson((current) => ({
-                      ...current,
-                      phone: event.target.value,
-                    }))
-                  }
+                  id="companion-nid"
+                  ref={lookupRef}
+                  className={`min-w-0 flex-1 ${fieldClassName}`}
+                  value={lookupNationalId}
+                  onChange={(event) => setLookupNationalId(event.target.value)}
+                  inputMode="numeric"
                 />
-              </FormField>
-              <FormField icon={Users} label={t("users.gender")}>
-                {editingFields ? (
-                  <ToggleField
-                    checked={gender !== "FEMALE"}
-                    onChange={(male) => setGender(male ? "MALE" : "FEMALE")}
-                    onLabel={t("userGenders.MALE")}
-                    offLabel={t("userGenders.FEMALE")}
-                  />
-                ) : (
-                  <SearchSelect
-                    value={gender}
-                    onChange={setGender}
-                    placeholder={t("users.selectOptional")}
-                    options={[
-                      { value: "MALE", label: t("userGenders.MALE") },
-                      { value: "FEMALE", label: t("userGenders.FEMALE") },
-                    ]}
-                    disabled={Boolean(gender)}
-                  />
-                )}
-              </FormField>
-              <FormField icon={Calendar} label={t("users.birthDate")}>
-                <PersianDateField
-                  value={birthDate}
-                  onChange={(value) => setBirthDate(value ?? "")}
-                />
-              </FormField>
-            </div>
-            <FormActions
-              submitLabel={
-                status === "edit"
-                  ? t("reservations.saveMember")
-                  : t("reservations.addMember")
-              }
-              cancelLabel={t("common.cancel")}
-              submitting={save.isPending}
-              onCancel={closeForm}
-            />
+                <Button
+                  type="submit"
+                  className="shrink-0"
+                  disabled={looking || save.isPending}
+                >
+                  <Check className="size-4" aria-hidden />
+                  {looking
+                    ? t("reservations.looking")
+                    : t("reservations.registerPilgrim")}
+                </Button>
+              </div>
+            </FormField>
           </AppForm>
-        </CompanionFormModal>
+        </article>
       ) : null}
-    </>
+      {showForm ? (
+        <AppForm
+          autoFocusFirst={false}
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.mutate();
+          }}
+          className="space-y-4"
+        >
+          {status === "new" && missingNationalId ? (
+            <NationalIdNotFoundNotice nationalId={missingNationalId} />
+          ) : null}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FormField
+              icon={IdCard}
+              label={t("users.nationalId")}
+              htmlFor="companion-nid-new"
+            >
+              <input
+                id="companion-nid-new"
+                className={fieldClassName}
+                value={nationalId}
+                onChange={(event) => setNationalId(event.target.value)}
+                inputMode="numeric"
+              />
+            </FormField>
+            <FormField
+              icon={UserRound}
+              label={t("users.firstName")}
+              htmlFor="c-first"
+            >
+              <input
+                id="c-first"
+                ref={firstNameRef}
+                className={fieldClassName}
+                value={person.firstName ?? ""}
+                onChange={(event) =>
+                  setPerson((current) => ({
+                    ...current,
+                    firstName: event.target.value,
+                  }))
+                }
+                required
+              />
+            </FormField>
+            <FormField
+              icon={UserRound}
+              label={t("users.lastName")}
+              htmlFor="c-last"
+            >
+              <input
+                id="c-last"
+                className={fieldClassName}
+                value={person.lastName ?? ""}
+                onChange={(event) =>
+                  setPerson((current) => ({
+                    ...current,
+                    lastName: event.target.value,
+                  }))
+                }
+                required
+              />
+            </FormField>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FormField icon={Phone} label={t("users.phone")} htmlFor="c-phone">
+              <input
+                id="c-phone"
+                className={fieldClassName}
+                value={person.phone ?? ""}
+                onChange={(event) =>
+                  setPerson((current) => ({
+                    ...current,
+                    phone: event.target.value,
+                  }))
+                }
+              />
+            </FormField>
+            <FormField icon={Users} label={t("users.gender")}>
+              <ToggleField
+                checked={gender !== "FEMALE"}
+                onChange={(male) => setGender(male ? "MALE" : "FEMALE")}
+                onLabel={t("userGenders.MALE")}
+                offLabel={t("userGenders.FEMALE")}
+              />
+            </FormField>
+            <FormField icon={Calendar} label={t("users.birthDate")}>
+              <PersianDateField
+                value={birthDate}
+                onChange={(value) => setBirthDate(value ?? "")}
+              />
+            </FormField>
+          </div>
+          <FormField
+            icon={BookUser}
+            label={t("users.passportNumber")}
+            htmlFor="companion-passport"
+          >
+            <input
+              id="companion-passport"
+              className={fieldClassName}
+              value={passportNumber}
+              onChange={(event) => setPassportNumber(event.target.value)}
+            />
+          </FormField>
+          <FormActions
+            submitLabel={
+              status === "edit"
+                ? t("reservations.saveMember")
+                : t("reservations.addMember")
+            }
+            cancelLabel={t("common.cancel")}
+            submitting={save.isPending}
+            onCancel={closeForm}
+          />
+        </AppForm>
+      ) : null}
+    </div>
   );
 }
 
@@ -982,12 +885,18 @@ function MembersList({
   isCaravan = false,
   onChanged,
   onEdit,
+  onAddNew,
+  onImportExcel,
+  onImportPrevious,
 }: {
   reservationId?: string;
   members: ReservationMember[];
   isCaravan?: boolean;
   onChanged?: () => void;
   onEdit?: (member: ReservationMember) => void;
+  onAddNew?: () => void;
+  onImportExcel?: () => void;
+  onImportPrevious?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
@@ -1037,7 +946,25 @@ function MembersList({
               : "reservations.membersListTitle",
           )}
         </SectionTitle>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {onAddNew ? (
+            <Button type="button" onClick={onAddNew}>
+              <UserPlus className="size-4" aria-hidden />
+              {t("reservations.newMember")}
+            </Button>
+          ) : null}
+          {onImportExcel ? (
+            <Button type="button" variant="soft" onClick={onImportExcel}>
+              <FileSpreadsheet className="size-4" aria-hidden />
+              {t("reservations.companionTabs.excel")}
+            </Button>
+          ) : null}
+          {onImportPrevious ? (
+            <Button type="button" variant="soft" onClick={onImportPrevious}>
+              <History className="size-4" aria-hidden />
+              {t("reservations.companionTabs.previousCaravan")}
+            </Button>
+          ) : null}
           <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-800">
             <Mars className="size-3" aria-hidden />
             {n(males)} {t("reservations.male")}
@@ -1115,14 +1042,12 @@ function MetricTile({
   icon: Icon,
   label,
   value,
-  unit,
   tone,
   match,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
-  unit: string;
   tone: Tone;
   match: CountMatch;
 }) {
@@ -1130,35 +1055,36 @@ function MetricTile({
   const colors = toneClass[tone];
   const complete = match === "ok";
   const wrap = complete
-    ? "border-2 border-mint-500 bg-gradient-to-b from-mint-50 to-white shadow-[0_8px_18px_rgba(95,191,122,0.18)]"
-    : "border-2 border-red-400 bg-gradient-to-b from-red-50 to-white shadow-[0_8px_18px_rgba(239,68,68,0.14)]";
+    ? "border-mint-400 bg-mint-50"
+    : "border-red-300 bg-red-50";
 
   return (
     <article
-      className={`relative flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 pt-4 text-center ${wrap}`}
+      className={`flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-1.5 ${wrap}`}
       aria-label={`${label}: ${value}، ${
         complete
           ? t("reservations.companionsCountComplete")
           : t("reservations.companionsCountIncomplete")
       }`}
     >
-      {complete ? (
-        <span className="absolute top-1.5 end-1.5 flex size-6 items-center justify-center rounded-full bg-mint-500 text-white shadow-sm">
-          <Check className="size-3.5" strokeWidth={3} aria-hidden />
-        </span>
-      ) : null}
       <span
-        className={`flex size-9 items-center justify-center rounded-xl ${
+        className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${
           complete
             ? colors.icon
             : "bg-red-500 text-white shadow-[0_8px_16px_rgba(239,68,68,0.24)]"
         }`}
       >
-        <Icon className="size-4" aria-hidden />
+        <Icon className="size-3.5" aria-hidden />
       </span>
-      <p className="text-[11px] font-medium text-ink-500">{label}</p>
-      <p className="text-lg font-bold leading-none text-ink-900">{value}</p>
-      <p className="text-[10px] text-ink-400">{unit}</p>
+      <div className="min-w-0 flex-1 text-start">
+        <p className="text-[11px] font-medium leading-none text-ink-500">{label}</p>
+        <p className="mt-0.5 text-sm font-bold leading-tight text-ink-900">{value}</p>
+      </div>
+      {complete ? (
+        <Check className="size-4 shrink-0 text-mint-600" strokeWidth={3} aria-hidden />
+      ) : (
+        <AlertCircle className="size-4 shrink-0 text-red-500" aria-hidden />
+      )}
     </article>
   );
 }

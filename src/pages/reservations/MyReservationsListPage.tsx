@@ -29,6 +29,7 @@ import {
   listHeadcount,
   listStepProgress,
 } from './reservation-steps'
+import { ReservationCodeBadge } from './ReservationCodeBadge'
 import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { StepProgressChart } from './StepProgressChart'
 
@@ -133,6 +134,13 @@ export function MyReservationsListPage() {
           <thead className="bg-cream-50 text-ink-700">
             <tr>
               <SortableTh
+                column="code"
+                label={t('reservations.code')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
                 column="year"
                 label={t('reservations.year')}
                 sortBy={sortBy}
@@ -173,10 +181,13 @@ export function MyReservationsListPage() {
           </thead>
           <tbody>
             {rows.map((row) => {
-              const step = listStepProgress(row.status, row.type)
+              const step = listStepProgress(row.status, row.type, row)
               const headcount = listHeadcount(row)
               return (
                 <tr key={row.id}>
+                  <td className="px-4 py-3">
+                    <ReservationCodeBadge code={row.code} size="md" />
+                  </td>
                   <td className="px-4 py-3">{n(row.year)}</td>
                   <td className="px-4 py-3">{t(`reservations.types.${row.type}`)}</td>
                   <td className="px-4 py-3">

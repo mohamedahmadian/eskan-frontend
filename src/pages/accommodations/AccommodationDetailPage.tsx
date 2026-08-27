@@ -32,6 +32,7 @@ import {
   UserRound,
   Users,
   Venus,
+  Percent,
   Wifi,
   Wrench,
   type LucideIcon,
@@ -311,6 +312,24 @@ export function AccommodationDetailPage() {
                   tone="mint"
                 />
                 <FormFactTile
+                  icon={Users}
+                  label={t('accommodations.effectiveMaleCapacity')}
+                  value={n(
+                    item.maleCapacity +
+                      Math.floor((item.maleCapacity * item.overflowPercent) / 100),
+                  )}
+                  tone="teal"
+                />
+                <FormFactTile
+                  icon={Users}
+                  label={t('accommodations.effectiveFemaleCapacity')}
+                  value={n(
+                    item.femaleCapacity +
+                      Math.floor((item.femaleCapacity * item.overflowPercent) / 100),
+                  )}
+                  tone="mint"
+                />
+                <FormFactTile
                   icon={UserCheck}
                   label={t('accommodations.assignedMaleCapacity')}
                   value={n(item.assignedMaleCapacity)}
@@ -332,6 +351,12 @@ export function AccommodationDetailPage() {
                   }
                   empty={item.distanceToShrineKm == null}
                   tone="mint"
+                />
+                <FormFactTile
+                  icon={Percent}
+                  label={t('accommodations.overflowPercent')}
+                  value={`${n(item.overflowPercent)}٪`}
+                  tone="ink"
                 />
                 <FormFactTile
                   icon={Route}

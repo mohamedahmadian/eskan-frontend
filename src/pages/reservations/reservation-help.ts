@@ -13,4 +13,5 @@ export const reservationHelpMedia: Record<ReservationStepCode, ReservationHelpMe
   contacts: {},
   insurance: {},
   complete: {},
+  placement: {},
 }

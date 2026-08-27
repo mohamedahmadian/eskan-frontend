@@ -111,6 +111,9 @@ import { AccommodationDetailPage } from "./pages/accommodations/AccommodationDet
 import { AccommodationEditPage } from "./pages/accommodations/AccommodationEditPage";
 import { AccommodationYearManagementPage } from "./pages/accommodations/AccommodationYearManagementPage";
 import { AccommodationReportPage } from "./pages/accommodations/AccommodationReportPage";
+import { PlacementsListPage } from "./pages/placements/PlacementsListPage";
+import { PlacementDetailPage } from "./pages/placements/PlacementDetailPage";
+import { PlacementVacatePage } from "./pages/placements/PlacementVacatePage";
 import { AccommodationsListPage } from "./pages/accommodations/AccommodationsListPage";
 import { MyAccommodationCreatePage } from "./pages/accommodations/MyAccommodationCreatePage";
 import { MyAccommodationsListPage } from "./pages/accommodations/MyAccommodationsListPage";
@@ -876,6 +879,17 @@ export default function App() {
                   <Route
                     path="/accommodations/:id/edit"
                     element={<AccommodationEditPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/placements" />}>
+                  <Route path="/placements" element={<PlacementsListPage />} />
+                  <Route
+                    path="/placements/vacate"
+                    element={<PlacementVacatePage />}
+                  />
+                  <Route
+                    path="/placements/:reservationId"
+                    element={<PlacementDetailPage />}
                   />
                 </Route>
                 <Route

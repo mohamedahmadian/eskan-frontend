@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { Check, Mars, StickyNote, UserRound, Users, Venus, X } from 'lucide-react'
+import { Check, Mars, SlidersHorizontal, StickyNote, UserRound, Users, Venus, X } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
@@ -15,9 +15,14 @@ import {
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import type { Reservation, ReservationListItem, ReservationType } from '../../types/app'
-import { GROUP_MAX_SIZE, isInsuranceAccepted } from './reservation-steps'
+import {
+  GROUP_MAX_SIZE,
+  applicantSectionKey,
+  canAdjustApprovedCapacity,
+  isInsuranceAccepted,
+} from './reservation-steps'
 
-export type ReservationReviewMode = 'approve' | 'reject'
+export type ReservationReviewMode = 'approve' | 'reject' | 'adjustCapacity'
 
 function isGroupOrCaravan(type: ReservationType) {
   return type === 'GROUP' || type === 'CARAVAN'
@@ -47,6 +52,9 @@ export function ReservationReviewActions({
   const { t } = useTranslation()
   const [mode, setMode] = useState<ReservationReviewMode | null>(null)
   const groupReview = isGroupOrCaravan(reservation.type)
+  const showAdjustCapacity = Boolean(
+    rejectOnly && canAdjustApprovedCapacity(reservation.type, reservation.status),
+  )
 
   const approve = useMutation({
     mutationFn: async (payload?: { notes?: string; maleCount?: number; femaleCount?: number }) => {
@@ -80,7 +88,23 @@ export function ReservationReviewActions({
     onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
-  const busy = approve.isPending || reject.isPending
+  const adjustCapacity = useMutation({
+    mutationFn: async (payload: { maleCount: number; femaleCount: number }) => {
+      const { data } = await api.patch<Reservation>(`/reservations/${reservation.id}/capacity`, {
+        maleCount: payload.maleCount,
+        femaleCount: payload.femaleCount,
+      })
+      return data
+    },
+    onSuccess: () => {
+      toast.success(t('reservations.adjustCapacitySaved'))
+      setMode(null)
+      onChanged()
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
+  })
+
+  const busy = approve.isPending || reject.isPending || adjustCapacity.isPending
 
   function askApprove() {
     if (groupReview) {
@@ -160,6 +184,18 @@ export function ReservationReviewActions({
           <X className={compact ? 'size-3.5' : 'size-4'} aria-hidden />
           {t('reservations.rejectFile')}
         </Button>
+        {showAdjustCapacity ? (
+          <Button
+            type="button"
+            variant="soft"
+            className={buttonClass}
+            disabled={busy}
+            onClick={() => setMode('adjustCapacity')}
+          >
+            <SlidersHorizontal className={compact ? 'size-3.5' : 'size-4'} aria-hidden />
+            {t('reservations.adjustCapacity')}
+          </Button>
+        ) : null}
       </div>
       {mode ? (
         <ReservationReviewModal
@@ -177,6 +213,13 @@ export function ReservationReviewActions({
                 return
               }
               reject.mutate(payload.note)
+              return
+            }
+            if (mode === 'adjustCapacity') {
+              adjustCapacity.mutate({
+                maleCount: payload.maleCount,
+                femaleCount: payload.femaleCount,
+              })
               return
             }
             approve.mutate({
@@ -215,12 +258,18 @@ export function ReservationReviewModal({
   const n = (value: number) => formatNumber(value, locale)
   const requestedMale = reservation.requestedMaleCount ?? reservation.maleCount
   const requestedFemale = reservation.requestedFemaleCount ?? reservation.femaleCount
-  const [maleCount, setMaleCount] = useState(String(requestedMale))
-  const [femaleCount, setFemaleCount] = useState(String(requestedFemale))
+  const adjusting = mode === 'adjustCapacity'
+  const initialMale = adjusting ? reservation.maleCount : requestedMale
+  const initialFemale = adjusting ? reservation.femaleCount : requestedFemale
+  const [maleCount, setMaleCount] = useState(String(initialMale))
+  const [femaleCount, setFemaleCount] = useState(String(initialFemale))
   const [note, setNote] = useState(initialNote ?? '')
   const rejecting = mode === 'reject'
   const partyName = reservation.caravan?.name?.trim() || reservation.group?.name?.trim() || '—'
-  const applicantName = reservation.createdBy?.fullName || '—'
+  const applicantName =
+    reservation.type === 'CARAVAN'
+      ? reservation.caravanManager?.fullName || reservation.createdBy?.fullName || '—'
+      : reservation.createdBy?.fullName || '—'
   const approvedMale = Number(maleCount) || 0
   const approvedFemale = Number(femaleCount) || 0
   const maxCount = reservation.type === 'GROUP' ? GROUP_MAX_SIZE : undefined
@@ -240,11 +289,22 @@ export function ReservationReviewModal({
     if (approvedMale < 0 || approvedFemale < 0 || approvedMale + approvedFemale <= 0) return
     if (maxCount && approvedMale + approvedFemale > maxCount) return
     onConfirm({
-      note: trimmed.length >= 2 ? trimmed : undefined,
+      note: adjusting ? undefined : trimmed.length >= 2 ? trimmed : undefined,
       maleCount: approvedMale,
       femaleCount: approvedFemale,
     })
   }
+
+  const title = rejecting
+    ? t('reservations.rejectConfirm')
+    : adjusting
+      ? t('reservations.adjustCapacityTitle')
+      : t('reservations.reviewContinueConfirm')
+  const confirmLabel = rejecting
+    ? t('reservations.rejectFile')
+    : adjusting
+      ? t('reservations.adjustCapacity')
+      : t('reservations.approveFile')
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -264,13 +324,13 @@ export function ReservationReviewModal({
         className={`relative z-10 w-full max-w-lg p-6 ${cardClassName}`}
       >
         <h2 id="reservation-review-title" className="mb-4 text-lg font-semibold text-ink-900">
-          {rejecting ? t('reservations.rejectConfirm') : t('reservations.reviewContinueConfirm')}
+          {title}
         </h2>
         <AppForm onSubmit={submit} className="space-y-4" autoFocusFirst={false}>
           <dl className="grid gap-2 sm:grid-cols-2">
             <ReviewFact
               icon={UserRound}
-              label={t('users.fullName')}
+              label={t(applicantSectionKey(reservation.type))}
               value={applicantName}
             />
             <ReviewFact icon={Users} label={t('reservations.partyName')} value={partyName} />
@@ -334,27 +394,33 @@ export function ReservationReviewModal({
             </div>
           </section>
 
-          <FormField
-            icon={StickyNote}
-            label={rejecting ? t('reservations.rejectReason') : t('reservations.reviewNotes')}
-            htmlFor="review-note"
-          >
-            <textarea
-              id="review-note"
-              className={fieldClassName}
-              rows={2}
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder={t('reservations.reviewNotesPlaceholder')}
-              required={rejecting}
-              minLength={rejecting ? 2 : undefined}
-              disabled={busy}
-            />
-          </FormField>
-          {rejecting ? (
-            <p className="text-xs text-ink-500">{t('reservations.rejectReasonRequired')}</p>
+          {adjusting ? (
+            <p className="text-xs text-ink-500">{t('reservations.adjustCapacityHint')}</p>
           ) : (
-            <p className="text-xs text-ink-500">{t('reservations.reviewNotesHint')}</p>
+            <>
+              <FormField
+                icon={StickyNote}
+                label={rejecting ? t('reservations.rejectReason') : t('reservations.reviewNotes')}
+                htmlFor="review-note"
+              >
+                <textarea
+                  id="review-note"
+                  className={fieldClassName}
+                  rows={2}
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  placeholder={t('reservations.reviewNotesPlaceholder')}
+                  required={rejecting}
+                  minLength={rejecting ? 2 : undefined}
+                  disabled={busy}
+                />
+              </FormField>
+              {rejecting ? (
+                <p className="text-xs text-ink-500">{t('reservations.rejectReasonRequired')}</p>
+              ) : (
+                <p className="text-xs text-ink-500">{t('reservations.reviewNotesHint')}</p>
+              )}
+            </>
           )}
 
           <div className="flex flex-wrap justify-end gap-2">
@@ -364,7 +430,7 @@ export function ReservationReviewModal({
             </Button>
             <Button type="submit" variant={rejecting ? 'danger' : 'primary'} disabled={busy}>
               {rejecting ? <X className="size-4" aria-hidden /> : <Check className="size-4" aria-hidden />}
-              {rejecting ? t('reservations.rejectFile') : t('reservations.approveFile')}
+              {confirmLabel}
             </Button>
           </div>
         </AppForm>

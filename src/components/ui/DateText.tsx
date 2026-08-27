@@ -4,9 +4,11 @@ import { formatDate, formatDateTimeDate, formatHijriDate, formatTime } from '../
 export function DateText({
   value,
   withTime,
+  stacked,
 }: {
   value?: string | null
   withTime?: boolean
+  stacked?: boolean
 }) {
   const { i18n } = useTranslation()
   if (!value) {
@@ -17,7 +19,14 @@ export function DateText({
     return formatDate(value, locale)
   }
   return (
-    <span className="inline-flex items-baseline gap-2 whitespace-nowrap" dir="ltr">
+    <span
+      className={
+        stacked
+          ? 'flex flex-col items-start gap-0.5'
+          : 'inline-flex max-w-full flex-wrap items-baseline gap-x-2 gap-y-0.5'
+      }
+      dir="ltr"
+    >
       <span>{formatDateTimeDate(value, locale)}</span>
       <span>{formatTime(value, locale)}</span>
     </span>

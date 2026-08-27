@@ -38,6 +38,7 @@ import { ReservationContactsStep } from "./ReservationContactsStep";
 import { ReservationTravelStep } from "./ReservationTravelStep";
 import { ReservationStepReadonly } from "./ReservationStepReadonly";
 import { ReservationCompleteSummary } from "./ReservationCompleteSummary";
+import { ReservationPlacementPanel } from "./ReservationPlacementPanel";
 import { ReservationTravelSummary } from "./ReservationTravelSummary";
 import { ReservationTimeline } from "./ReservationTimeline";
 import { ReservationWizardShell } from "./ReservationWizardShell";
@@ -62,7 +63,7 @@ export function ReservationWizardPage() {
 
   const reservation = query.data;
   const currentStep = reservation
-    ? currentStepFromStatus(reservation.status, reservation.type)
+    ? currentStepFromStatus(reservation.status, reservation.type, reservation)
     : "travel";
   const [viewedStep, setViewedStep] = useState<ReservationStepCode | null>(
     reservation?.status === "CANCELLED" ? null : currentStep,
@@ -247,7 +248,7 @@ function ActiveStep({
   step?: ReservationStepCode;
   footer?: ReactNode;
 }) {
-  const active = step ?? currentStepFromStatus(reservation.status, reservation.type);
+  const active = step ?? currentStepFromStatus(reservation.status, reservation.type, reservation);
   const body =
     active === "travel" ? (
       <ReservationTravelStep reservation={reservation} onChanged={onChanged} />
@@ -271,6 +272,8 @@ function ActiveStep({
         onChanged={onChanged}
         onGoToStep={onGoToStep}
       />
+    ) : active === "placement" ? (
+      <ReservationPlacementPanel reservation={reservation} />
     ) : (
       <ReservationCompleteSummary reservation={reservation} />
     );

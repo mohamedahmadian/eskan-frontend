@@ -25,6 +25,7 @@ import type {
   UserHomePilgrim,
   UserHomeReservationTotals,
 } from '../../types/app'
+import { ReservationCodeBadge } from '../reservations/ReservationCodeBadge'
 import { ReservationStatusBadge } from '../reservations/ReservationStatusBadge'
 import { HeadquartersServiceYearsCard } from './HeadquartersServiceYearsCard'
 import { UserLocationCard } from './UserLocationCard'
@@ -115,9 +116,12 @@ function ReservationRow({ row }: { row: ReservationListItem }) {
   return (
     <li className="flex flex-col gap-3 border-t border-line py-3 first:border-t-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 space-y-1">
-        <p className="font-medium text-ink-900">
-          {t(`reservations.types.${row.type}`)} · {formatNumber(row.year, locale)}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <ReservationCodeBadge code={row.code} size="md" />
+          <p className="font-medium text-ink-900">
+            {t(`reservations.types.${row.type}`)} · {formatNumber(row.year, locale)}
+          </p>
+        </div>
         <p className="text-xs text-ink-500">
           {nameOf(row.originCity)}
           {row.stayStartDate ? (

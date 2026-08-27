@@ -353,6 +353,7 @@ export function handleFormEnter(event: KeyboardEvent<HTMLFormElement>) {
 
 export function AppForm({
   onKeyDown,
+  onSubmit,
   children,
   autoFocusFirst,
   ...props
@@ -376,6 +377,10 @@ export function AppForm({
     <form
       {...props}
       ref={formRef}
+      onSubmit={(event) => {
+        event.preventDefault()
+        onSubmit?.(event)
+      }}
       onKeyDown={(event) => {
         onKeyDown?.(event)
         if (event.defaultPrevented) return

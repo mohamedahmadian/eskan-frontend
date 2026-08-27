@@ -5,6 +5,7 @@ import { EntityNameSubtitle } from '../../components/ui/Form'
 import { FormCardHeaderDecor } from '../../components/ui/FormLayout'
 import { formatNumber } from '../../lib/datetime'
 import type { ReservationListItem } from '../../types/app'
+import { ReservationCodeBadge } from './ReservationCodeBadge'
 
 export function ReservationSectionHeader({
   icon: Icon,
@@ -93,7 +94,7 @@ export function ReservationTitleMeta({
   reservation,
   extra,
 }: {
-  reservation: Pick<ReservationListItem, 'type' | 'group' | 'caravan'>
+  reservation: Pick<ReservationListItem, 'code' | 'type' | 'group' | 'caravan'>
   extra?: ReactNode
 }) {
   const { t } = useTranslation()
@@ -102,6 +103,7 @@ export function ReservationTitleMeta({
   const PartyIcon = reservation.type === 'CARAVAN' ? Footprints : Users
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <ReservationCodeBadge code={reservation.code} size="lg" />
       {partyName ? (
         <span className="inline-flex max-w-full items-center gap-2 rounded-2xl border-2 border-teal-500 bg-teal-50 px-3 py-1.5 text-sm font-bold text-teal-900">
           <PartyIcon className="size-4 shrink-0" aria-hidden />
@@ -123,7 +125,7 @@ export function ReservationIdentityChips({
   reservation,
   extra,
 }: {
-  reservation: Pick<ReservationListItem, 'year' | 'type' | 'group' | 'caravan'>
+  reservation: Pick<ReservationListItem, 'code' | 'year' | 'type' | 'group' | 'caravan'>
   extra?: ReactNode
 }) {
   const { t, i18n } = useTranslation()
@@ -133,6 +135,7 @@ export function ReservationIdentityChips({
   const PartyIcon = reservation.type === 'CARAVAN' ? Footprints : Users
   return (
     <>
+      <ReservationCodeBadge code={reservation.code} size="md" />
       {partyName ? (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-ink-900 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-2 ring-teal-500">
           <PartyIcon className="size-3 text-teal-600" aria-hidden />

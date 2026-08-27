@@ -1,5 +1,6 @@
 import {
   reservationStatuses,
+  type PlacementStatus,
   type ReservationMemberInsurancePaidMethod,
   type ReservationMemberInsuranceStatus,
   type ReservationPerson,
@@ -23,6 +24,7 @@ type ReservationStepDates = {
   caravanContactsCompletedAt: string | null
   insuranceCompletedAt: string | null
   completedAt: string | null
+  placementCompletedAt?: string | null
   createdBy?: ReservationPerson
   basicInfoCompletedBy?: ReservationPerson | null
   managementReviewedBy?: ReservationPerson | null
@@ -30,6 +32,7 @@ type ReservationStepDates = {
   caravanContactsCompletedBy?: ReservationPerson | null
   insuranceCompletedBy?: ReservationPerson | null
   completedBy?: ReservationPerson | null
+  placementCompletedBy?: ReservationPerson | null
 }
 
 export const GROUP_MAX_SIZE = 20
@@ -83,6 +86,7 @@ export const reservationStepCodes = [
   'contacts',
   'insurance',
   'complete',
+  'placement',
 ] as const
 
 export type ReservationStepCode = (typeof reservationStepCodes)[number]
@@ -113,40 +117,59 @@ export const selfAssignableContactRoles = [
   'RECEPTION',
 ] as const
 
-export function stepsForType(type: ReservationType): ReservationStepCode[] {
-  if (type === 'INDIVIDUAL') {
-    return ['travel', 'review', 'insurance', 'complete']
-  }
-  if (type === 'GROUP') {
-    return ['travel', 'review', 'companions', 'insurance', 'complete']
-  }
-  return ['travel', 'review', 'companions', 'contacts', 'insurance', 'complete']
+export type ReservationStepSource = {
+  requestsAccommodation?: boolean
+  placementStatus?: PlacementStatus | null
+}
+
+export function stepsForType(
+  type: ReservationType,
+  source?: ReservationStepSource | boolean,
+): ReservationStepCode[] {
+  const requestsAccommodation =
+    typeof source === 'boolean' ? source : Boolean(source?.requestsAccommodation)
+  const base: ReservationStepCode[] =
+    type === 'INDIVIDUAL'
+      ? ['travel', 'review', 'insurance', 'complete']
+      : type === 'GROUP'
+        ? ['travel', 'review', 'companions', 'insurance', 'complete']
+        : ['travel', 'review', 'companions', 'contacts', 'insurance', 'complete']
+  if (requestsAccommodation) return [...base, 'placement']
+  return base
 }
 
 export function currentStepFromStatus(
   status: ReservationStatus,
   type: ReservationType,
+  source?: ReservationStepSource,
 ): ReservationStepCode {
   if (status === 'DRAFT') return 'travel'
   if (status === 'PENDING_MANAGEMENT_REVIEW') return 'review'
   if (status === 'COMPANIONS') return 'companions'
   if (status === 'CARAVAN_CONTACTS') return 'contacts'
   if (status === 'INSURANCE') return 'insurance'
-  if (status === 'COMPLETED') return 'complete'
-  return stepsForType(type)[0]
+  if (status === 'COMPLETED') {
+    if (source?.requestsAccommodation) return 'placement'
+    return 'complete'
+  }
+  return stepsForType(type, source)[0]
 }
 
 export function isStepDone(
   step: ReservationStepCode,
   status: ReservationStatus,
   type: ReservationType,
+  source?: ReservationStepSource,
 ) {
-  const steps = stepsForType(type)
-  const current = currentStepFromStatus(status, type)
+  const steps = stepsForType(type, source)
+  const current = currentStepFromStatus(status, type, source)
   if (status === 'REJECTED' || status === 'CANCELLED') {
     return false
   }
-  if (status === 'COMPLETED') return true
+  if (status === 'COMPLETED') {
+    if (step === 'placement') return source?.placementStatus === 'PLACED'
+    return true
+  }
   return steps.indexOf(step) < steps.indexOf(current)
 }
 
@@ -197,6 +220,7 @@ export function stepCompletedAt(step: ReservationStepCode, reservation: Reservat
   if (step === 'companions') return reservation.companionsCompletedAt
   if (step === 'contacts') return reservation.caravanContactsCompletedAt
   if (step === 'insurance') return reservation.insuranceCompletedAt
+  if (step === 'placement') return reservation.placementCompletedAt ?? null
   return reservation.completedAt
 }
 
@@ -218,6 +242,7 @@ export function stepCompletedBy(
   if (step === 'companions') return reservation.companionsCompletedBy
   if (step === 'contacts') return reservation.caravanContactsCompletedBy
   if (step === 'insurance') return reservation.insuranceCompletedBy
+  if (step === 'placement') return reservation.placementCompletedBy
   return reservation.completedBy
 }
 
@@ -225,23 +250,35 @@ export function stepCardDate(step: ReservationStepCode, reservation: Reservation
   return stepCompletedAt(step, reservation) ?? (step === 'travel' ? reservation.createdAt : null)
 }
 
-export function progressPercent(status: ReservationStatus, type: ReservationType) {
-  if (status === 'COMPLETED') return 100
+export function progressPercent(
+  status: ReservationStatus,
+  type: ReservationType,
+  source?: ReservationStepSource,
+) {
+  if (status === 'COMPLETED') {
+    if (!source?.requestsAccommodation || source.placementStatus === 'PLACED') {
+      return 100
+    }
+  }
   if (status === 'REJECTED' || status === 'CANCELLED' || status === 'DRAFT') {
     return status === 'DRAFT' ? 10 : 0
   }
-  const steps = stepsForType(type)
-  const current = currentStepFromStatus(status, type)
+  const steps = stepsForType(type, source)
+  const current = currentStepFromStatus(status, type, source)
   const index = Math.max(0, steps.indexOf(current))
   return Math.round((index / steps.length) * 100)
 }
 
-export function listStepProgress(status: ReservationStatus, type: ReservationType) {
-  const steps = stepsForType(type)
+export function listStepProgress(
+  status: ReservationStatus,
+  type: ReservationType,
+  source?: ReservationStepSource,
+) {
+  const steps = stepsForType(type, source)
   if (status === 'REJECTED' || status === 'CANCELLED') {
     return { currentIndex: -1, total: steps.length, remaining: 0, showRemaining: false }
   }
-  const current = currentStepFromStatus(status, type)
+  const current = currentStepFromStatus(status, type, source)
   const currentIndex = Math.max(0, steps.indexOf(current))
   const remaining = Math.max(0, steps.length - currentIndex - 1)
   return { currentIndex, total: steps.length, remaining, showRemaining: remaining > 0 }
@@ -350,6 +387,30 @@ export function isOwnerCreateDraft(reservation: {
   returnedToStatus?: ReservationStatus | null
 }) {
   return reservation.status === 'DRAFT' && !reservation.returnedToStatus
+}
+
+export function canAdjustApprovedCapacity(
+  type: ReservationType,
+  status: ReservationStatus,
+) {
+  if (type === 'INDIVIDUAL') return false
+  return (
+    status === 'COMPANIONS' ||
+    status === 'CARAVAN_CONTACTS' ||
+    status === 'INSURANCE'
+  )
+}
+
+export function applicantSectionKey(type: ReservationType) {
+  if (type === 'CARAVAN') return 'reservations.applicantSectionCaravan'
+  if (type === 'GROUP') return 'reservations.applicantSectionGroup'
+  return 'reservations.applicantSectionIndividual'
+}
+
+export function applicantHintKey(type: ReservationType) {
+  if (type === 'CARAVAN') return 'reservations.applicantHintCaravan'
+  if (type === 'GROUP') return 'reservations.applicantHintGroup'
+  return 'reservations.applicantHintIndividual'
 }
 
 export function createWizardPath(

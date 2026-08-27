@@ -2,7 +2,9 @@ import {
   CalendarDays,
   Filter,
   Footprints,
+  IdCard,
   MapPin,
+  Phone,
   Plus,
   Tent,
   Trash2,
@@ -28,6 +30,7 @@ import {
   listShellClassName,
 } from "../../components/ui/Form";
 import { confirmToast } from "../../components/ui/confirmToast";
+import { FormMetaChip } from "../../components/ui/FormLayout";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
 import { useListParams } from "../../hooks/useListParams";
@@ -62,6 +65,7 @@ import {
 import { HeadcountPills } from "./HeadcountPills";
 import { inProgressFilter, listHeadcount, listStepProgress } from "./reservation-steps";
 import { ReservationApplicantPickerModal } from "./ReservationApplicantPickerModal";
+import { ReservationCodeBadge } from "./ReservationCodeBadge";
 import { ReservationDashboardStats } from "./ReservationDashboardStats";
 import { ReservationReviewActions } from "./ReservationReviewModal";
 import { ReservationStatusBadge, ReservationTypeBadge } from "./ReservationStatusBadge";
@@ -556,8 +560,8 @@ export function ReservationsAdminListPage() {
           <thead className="bg-cream-50 text-ink-700">
             <tr>
               <SortableTh
-                column="year"
-                label={t("reservations.year")}
+                column="code"
+                label={t("reservations.code")}
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={onSort}
@@ -604,21 +608,34 @@ export function ReservationsAdminListPage() {
           </thead>
           <tbody>
             {rows.map((row) => {
-              const step = listStepProgress(row.status, row.type);
+              const step = listStepProgress(row.status, row.type, row)
               const headcount = listHeadcount(row);
               return (
                 <tr key={row.id}>
-                  <td className="px-4 py-3">{n(row.year)}</td>
+                  <td className="px-4 py-3">
+                    <ReservationCodeBadge code={row.code} size="md" />
+                  </td>
                   <td className="px-4 py-3">
                     {row.createdBy?.fullName ? (
-                      <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <div className="flex flex-col items-start gap-1.5">
                         <span>{row.createdBy.fullName}</span>
-                        {row.createdBy.nationalId ? (
-                          <span className="text-xs text-ink-500" dir="ltr">
-                            {localizeDigits(row.createdBy.nationalId, locale)}
-                          </span>
+                        {row.createdBy.nationalId || row.createdBy.phone ? (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {row.createdBy.nationalId ? (
+                              <FormMetaChip
+                                icon={IdCard}
+                                copyValue={row.createdBy.nationalId}
+                              />
+                            ) : null}
+                            {row.createdBy.phone ? (
+                              <FormMetaChip
+                                icon={Phone}
+                                copyValue={row.createdBy.phone}
+                              />
+                            ) : null}
+                          </div>
                         ) : null}
-                      </span>
+                      </div>
                     ) : (
                       "—"
                     )}

@@ -6,7 +6,9 @@ import {
   Phone,
   RotateCcw,
   StickyNote,
+  Tent,
   UserRound,
+  Users,
   X,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
@@ -35,6 +37,8 @@ import {
   isInsuranceAccepted,
   ownerFlowSteps,
   validRewindStatuses,
+  applicantHintKey,
+  applicantSectionKey,
   type ReservationStepCode,
 } from './reservation-steps'
 import { ReservationReviewActions } from './ReservationReviewModal'
@@ -48,6 +52,7 @@ import { ReservationContactsStep } from './ReservationContactsStep'
 import { CompanionsStep } from './ReservationCompanionsStep'
 import { ReservationStepReadonly } from './ReservationStepReadonly'
 import { ReservationCompleteSummary } from './ReservationCompleteSummary'
+import { ReservationPlacementPanel } from './ReservationPlacementPanel'
 import { InsuranceStep } from './ReservationInsuranceStep'
 import { ReservationPermitPanel } from './ReservationPermitPanel'
 import { ReservationIssuedServicesPanel } from './ReservationIssuedServicesPanel'
@@ -73,7 +78,7 @@ export function ReservationAdminDetailPage() {
 
   const reservation = query.data
   const currentStep = reservation
-    ? currentStepFromStatus(reservation.status, reservation.type)
+    ? currentStepFromStatus(reservation.status, reservation.type, reservation)
     : 'travel'
   const cancelled = reservation?.status === 'CANCELLED'
   const [viewedStep, setViewedStep] = useState<ReservationStepCode | null>(
@@ -186,7 +191,7 @@ export function ReservationAdminDetailPage() {
             ? reservation.caravanManager
             : reservation.createdBy
         }
-        caravanApplicant={reservation.type === 'CARAVAN' && Boolean(reservation.caravanManager)}
+        type={reservation.type}
       />
 
       <ReservationIssuedServicesPanel reservation={reservation} onChanged={refresh} />
@@ -272,22 +277,19 @@ export function ReservationAdminDetailPage() {
 
 function ApplicantCard({
   person,
-  caravanApplicant,
+  type,
 }: {
   person: ReservationPerson
-  caravanApplicant?: boolean
+  type: Reservation['type']
 }) {
   const { t } = useTranslation()
+  const Icon = type === 'CARAVAN' ? Tent : type === 'GROUP' ? Users : UserRound
   return (
     <section className={`${cardClassName} mb-4 overflow-hidden`}>
       <ReservationSectionHeader
-        icon={UserRound}
-        title={t('reservations.applicantSection')}
-        hint={t(
-          caravanApplicant
-            ? 'reservations.applicantHintCaravan'
-            : 'reservations.applicantHint',
-        )}
+        icon={Icon}
+        title={t(applicantSectionKey(type))}
+        hint={t(applicantHintKey(type))}
       />
       <dl className="grid gap-2 p-5 sm:grid-cols-3 sm:gap-3 sm:p-6">
         <ApplicantTile icon={UserRound} label={t('users.fullName')} value={personName(person)} />
@@ -410,6 +412,9 @@ function AdminEditableStep({
         {back}
       </div>
     )
+  }
+  if (step === 'placement') {
+    return <ReservationPlacementPanel reservation={reservation} footer={footer} />
   }
   return <ReservationCompleteSummary reservation={reservation} audience="admin" footer={footer} />
 }

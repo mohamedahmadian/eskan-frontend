@@ -15,6 +15,7 @@ import type {
   Reservation,
 } from "../../types/app";
 import { HeadcountPills } from "./HeadcountPills";
+import { ReservationCodeBadge } from "./ReservationCodeBadge";
 import { ReservationStatusBadge } from "./ReservationStatusBadge";
 
 export function PreviousMembersPanel({
@@ -101,9 +102,12 @@ export function PreviousMembersPanel({
             className="space-y-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50 to-white p-4"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-ink-900">
-                {t("reservations.previousMembersYear", { year: n(item.year) })}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <ReservationCodeBadge code={item.code} size="md" />
+                <p className="text-sm font-semibold text-ink-900">
+                  {t("reservations.previousMembersYear", { year: n(item.year) })}
+                </p>
+              </div>
               <ReservationStatusBadge status={item.status} />
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-600">

@@ -176,7 +176,15 @@ export function ReservationCompleteSummary({
       <div className="space-y-5 p-5 sm:p-6">
         {cancelled || audience === 'admin' ? null : (
           <p className="rounded-2xl border border-teal-100 bg-gradient-to-e from-white to-teal-50 px-4 py-3 text-sm leading-7 text-ink-700">
-            {t('reservations.completedBody')}
+            {t(
+              !reservation.requestsAccommodation
+                ? 'reservations.completedBodyNoStay'
+                : reservation.placementStatus === 'PLACED'
+                  ? 'reservations.completedBodyPlaced'
+                  : reservation.placementStatus === 'PARTIAL'
+                    ? 'reservations.completedBodyPartial'
+                    : 'reservations.completedBodyPending',
+            )}
           </p>
         )}
         <section>

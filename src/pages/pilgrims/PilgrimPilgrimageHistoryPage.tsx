@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   CreditCard,
   Footprints,
+  Hash,
   History,
   MapPin,
   Phone,
@@ -52,6 +53,7 @@ import {
   ReservationStatusBadge,
   ReservationTypeBadge,
 } from '../reservations/ReservationStatusBadge'
+import { ReservationCodeBadge } from '../reservations/ReservationCodeBadge'
 import { RoleUserProfileHeader } from '../users/RoleUserProfileHeader'
 
 function stayNightCount(start: string | null, end: string | null) {
@@ -183,6 +185,7 @@ export function PilgrimPilgrimageHistoryPage() {
               subtitle={t('reservations.year') + ' ' + n(item.year)}
               chips={
                 <>
+                  <ReservationCodeBadge code={item.code} size="md" />
                   <ReservationTypeBadge type={item.type} />
                   <ReservationStatusBadge status={item.status} />
                   {item.insuranceStatus ? (
@@ -271,17 +274,23 @@ export function PilgrimPilgrimageHistoryPage() {
                   </FormSectionTitle>
                   <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
                     <FormFactTile
+                      icon={Hash}
+                      label={t('reservations.code')}
+                      copyValue={item.code}
+                      tone="teal"
+                    />
+                    <FormFactTile
                       icon={CalendarCheck}
                       label={t('reservations.year')}
                       value={n(item.year)}
-                      tone="teal"
+                      tone="mint"
                     />
                     <FormFactTile
                       icon={MapPin}
                       label={t('reservations.originCity')}
                       value={item.originCity ? geoName(item.originCity) : empty}
                       empty={!item.originCity}
-                      tone="mint"
+                      tone="ink"
                     />
                     <FormFactTile
                       icon={CalendarRange}

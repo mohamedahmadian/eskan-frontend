@@ -77,7 +77,7 @@ export function AdminFooter({
     <footer
       aria-label={hasContacts ? t('nav.contactFooter') : versionLabel}
       className={`shrink-0 border-t border-line bg-white/90 px-4 py-2 backdrop-blur sm:px-8 ${
-        compactEnd ? 'pe-20 sm:pe-24' : ''
+        compactEnd ? 'pe-28 sm:pe-32' : ''
       }`}
     >
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">

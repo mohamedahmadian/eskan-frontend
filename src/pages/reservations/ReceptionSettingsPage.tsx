@@ -6,6 +6,7 @@ import {
   CalendarDays,
   FileText,
   Info,
+  LayoutGrid,
   Plus,
   ScrollText,
   Shield,
@@ -31,7 +32,7 @@ import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { addDaysIso, currentPersianYear, persianYearOptions } from '../../lib/datetime'
-import type { ReceptionSettings, ReservationType } from '../../types/app'
+import type { PlacementGenderPolicy, ReceptionSettings, ReservationType } from '../../types/app'
 import { ReceptionMultilineItems } from './ReceptionTypeContent'
 
 type DraftPlan = {
@@ -45,7 +46,7 @@ type DraftPlan = {
 type Draft = Omit<ReceptionSettings, 'year' | 'exists' | 'insurancePlans'> & {
   insurancePlans: DraftPlan[]
 }
-type ReceptionTab = ReservationType | 'INSURANCE' | 'OCCASIONS'
+type ReceptionTab = ReservationType | 'PLACEMENT' | 'INSURANCE' | 'OCCASIONS'
 
 let planKeySeq = 0
 function nextPlanKey() {
@@ -67,12 +68,14 @@ const emptyDraft = (): Draft => ({
   individualMaleCapacity: 0,
   individualFemaleCapacity: 0,
   individualAutoApprove: false,
+  individualPlacementMode: 'MANUAL',
   individualIntro: '',
   individualRules: '',
   groupEnabled: false,
   groupMaleCapacity: 0,
   groupFemaleCapacity: 0,
   groupAutoApprove: false,
+  groupPlacementMode: 'MANUAL',
   groupIntro: '',
   groupRules: '',
   caravanEnabled: false,
@@ -80,8 +83,10 @@ const emptyDraft = (): Draft => ({
   caravanFemaleCapacity: 0,
   caravanAutoApprove: false,
   caravanAutoApproveLicenses: false,
+  caravanPlacementMode: 'MANUAL',
   caravanIntro: '',
   caravanRules: '',
+  placementGenderPolicy: 'SINGLE_GENDER',
   insuranceOrganization: '',
   insurancePlans: [],
   imamRezaMartyrdomDate: null,
@@ -94,12 +99,14 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     individualMaleCapacity: data.individualMaleCapacity,
     individualFemaleCapacity: data.individualFemaleCapacity,
     individualAutoApprove: data.individualAutoApprove,
+    individualPlacementMode: data.individualPlacementMode ?? 'MANUAL',
     individualIntro: data.individualIntro ?? '',
     individualRules: data.individualRules ?? '',
     groupEnabled: data.groupEnabled,
     groupMaleCapacity: data.groupMaleCapacity,
     groupFemaleCapacity: data.groupFemaleCapacity,
     groupAutoApprove: data.groupAutoApprove,
+    groupPlacementMode: data.groupPlacementMode ?? 'MANUAL',
     groupIntro: data.groupIntro ?? '',
     groupRules: data.groupRules ?? '',
     caravanEnabled: data.caravanEnabled,
@@ -107,8 +114,10 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     caravanFemaleCapacity: data.caravanFemaleCapacity,
     caravanAutoApprove: data.caravanAutoApprove,
     caravanAutoApproveLicenses: data.caravanAutoApproveLicenses ?? false,
+    caravanPlacementMode: data.caravanPlacementMode ?? 'MANUAL',
     caravanIntro: data.caravanIntro ?? '',
     caravanRules: data.caravanRules ?? '',
+    placementGenderPolicy: data.placementGenderPolicy ?? 'SINGLE_GENDER',
     insuranceOrganization: data.insuranceOrganization ?? '',
     insurancePlans: (data.insurancePlans ?? []).map((plan) => ({
       key: 'id' in plan && plan.id ? plan.id : nextPlanKey(),
@@ -136,7 +145,7 @@ function toPayload(draft: Draft) {
 }
 
 const types: ReservationType[] = ['INDIVIDUAL', 'GROUP', 'CARAVAN']
-const tabs: ReceptionTab[] = [...types, 'INSURANCE', 'OCCASIONS']
+const tabs: ReceptionTab[] = [...types, 'PLACEMENT', 'INSURANCE', 'OCCASIONS']
 
 function typeKeys(type: ReservationType) {
   if (type === 'INDIVIDUAL') {
@@ -145,6 +154,7 @@ function typeKeys(type: ReservationType) {
       male: 'individualMaleCapacity',
       female: 'individualFemaleCapacity',
       auto: 'individualAutoApprove',
+      placement: 'individualPlacementMode',
       intro: 'individualIntro',
       rules: 'individualRules',
       hint: 'autoApproveHintIndividual',
@@ -157,6 +167,7 @@ function typeKeys(type: ReservationType) {
       male: 'groupMaleCapacity',
       female: 'groupFemaleCapacity',
       auto: 'groupAutoApprove',
+      placement: 'groupPlacementMode',
       intro: 'groupIntro',
       rules: 'groupRules',
       hint: 'autoApproveHintGroup',
@@ -168,6 +179,7 @@ function typeKeys(type: ReservationType) {
     male: 'caravanMaleCapacity',
     female: 'caravanFemaleCapacity',
     auto: 'caravanAutoApprove',
+    placement: 'caravanPlacementMode',
     intro: 'caravanIntro',
     rules: 'caravanRules',
     hint: 'autoApproveHintCaravan',
@@ -176,6 +188,7 @@ function typeKeys(type: ReservationType) {
 }
 
 function tabLabel(item: ReceptionTab, t: (key: string) => string) {
+  if (item === 'PLACEMENT') return t('receptionSettings.placement')
   if (item === 'INSURANCE') return t('receptionSettings.insurance')
   if (item === 'OCCASIONS') return t('receptionSettings.occasions')
   return t(`receptionSettings.${typeKeys(item).title}`)
@@ -403,6 +416,17 @@ export function ReceptionSettingsPage() {
                 />
               </FormField>
               <p className="text-sm leading-7 text-ink-500">{t(`receptionSettings.${keys.hint}`)}</p>
+              <FormField icon={LayoutGrid} label={t('receptionSettings.placement')}>
+                <ToggleField
+                  checked={draft[keys.placement] === 'SYSTEM'}
+                  onChange={(checked) =>
+                    patch(keys.placement, checked ? 'SYSTEM' : 'MANUAL')
+                  }
+                  onLabel={t('receptionSettings.placementSystem')}
+                  offLabel={t('receptionSettings.placementManual')}
+                />
+              </FormField>
+              <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.placementHint')}</p>
               {type === 'CARAVAN' ? (
                 <>
                   <FormField
@@ -466,6 +490,22 @@ export function ReceptionSettingsPage() {
             </section>
           )
         })}
+        <section data-tab="PLACEMENT" className={panelClass('PLACEMENT')}>
+          <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.placementGenderHint')}</p>
+          <FormField icon={LayoutGrid} label={t('receptionSettings.placementGender')}>
+            <ToggleField
+              checked={draft.placementGenderPolicy === 'MIXED'}
+              onChange={(checked) =>
+                patch(
+                  'placementGenderPolicy',
+                  (checked ? 'MIXED' : 'SINGLE_GENDER') satisfies PlacementGenderPolicy,
+                )
+              }
+              onLabel={t('receptionSettings.placementGenderMixed')}
+              offLabel={t('receptionSettings.placementGenderSingle')}
+            />
+          </FormField>
+        </section>
         <section data-tab="INSURANCE" className={panelClass('INSURANCE')}>
           <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.insuranceHint')}</p>
           <FormField

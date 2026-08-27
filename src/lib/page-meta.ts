@@ -909,6 +909,24 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "accommodations.detailsSubtitle",
     };
   }
+  if (pathname.startsWith("/placements/vacate")) {
+    return {
+      titleKey: "placements.vacate",
+      subtitleKey: "placements.vacateSubtitle",
+    };
+  }
+  if (pathname.startsWith("/placements/") && pathname !== "/placements") {
+    return {
+      titleKey: "placements.details",
+      subtitleKey: "placements.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/placements")) {
+    return {
+      titleKey: "menus.placement",
+      subtitleKey: "placements.subtitle",
+    };
+  }
   if (pathname.startsWith("/accommodations")) {
     return {
       titleKey: "menus.accommodations",

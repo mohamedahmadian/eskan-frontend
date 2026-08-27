@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ClipboardCheck,
   History,
+  LayoutGrid,
   MapPin,
   Shield,
   Undo2,
@@ -35,6 +36,7 @@ const stepIcons: Record<ReservationStepCode, LucideIcon> = {
   contacts: UserRoundCog,
   insurance: Shield,
   complete: Check,
+  placement: LayoutGrid,
 }
 
 type TimelineState = 'done' | 'current' | 'pending' | 'rejected' | 'cancelled' | 'returned'
@@ -234,17 +236,26 @@ function buildTimelineItems(
   reservation: Reservation,
   t: (key: string, opts?: Record<string, string>) => string,
 ): TimelineItem[] {
-  const steps = stepsForType(reservation.type)
-  const current = currentStepFromStatus(reservation.status, reservation.type)
+  const steps = stepsForType(reservation.type, reservation.requestsAccommodation)
+  const current = currentStepFromStatus(reservation.status, reservation.type, reservation)
   const items: TimelineItem[] = steps.map((step) => {
     const at = stepCompletedAt(step, reservation)
-    const done = Boolean(at) || isStepDone(step, reservation.status, reservation.type)
+    const done = Boolean(at) || isStepDone(step, reservation.status, reservation.type, reservation)
     const state: TimelineState = done ? 'done' : step === current ? 'current' : 'pending'
     const actor = stepCompletedBy(step, reservation)
+    const detail =
+      step === 'placement' && reservation.requestsAccommodation
+        ? reservation.placementStatus === 'PLACED'
+          ? t('reservations.timelinePlacementPlaced')
+          : reservation.placementStatus === 'PARTIAL'
+            ? t('reservations.timelinePlacementPartial')
+            : t('reservations.timelinePlacementPending')
+        : undefined
     return {
       key: step,
       label: t(stepLabelKey(step, reservation.type)),
       at: at ?? (step === 'travel' ? reservation.createdAt : null),
+      detail,
       actorName: state === 'pending' && step !== 'travel' ? null : personName(actor),
       state,
       Icon: stepIcons[step],

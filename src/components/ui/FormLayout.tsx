@@ -109,7 +109,7 @@ export function FormCardHeader({
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold leading-snug text-ink-900">{title}</h2>
             {subtitle ? (
-              <p className="mt-1 text-xs leading-6 text-ink-600">{subtitle}</p>
+              <div className="mt-1 text-xs leading-6 text-ink-600">{subtitle}</div>
             ) : null}
             {chips ? <div className="mt-3 flex flex-wrap gap-1.5">{chips}</div> : null}
           </div>
@@ -192,7 +192,7 @@ export function FormFactTile({
   const display = usingCopy ? <CopyableDigits value={copyValue} /> : value
   return (
     <article
-      className={`relative z-10 flex items-start rounded-2xl border ${colors.wrap} ${
+      className={`relative z-10 flex min-w-0 items-start overflow-hidden rounded-2xl border ${colors.wrap} ${
         compact ? 'gap-2 px-2.5 py-1.5' : 'gap-3 px-3 py-3'
       } ${canCopy ? 'cursor-pointer' : ''} ${className}`}
       onClick={canCopy ? () => copyDigits(copyValue) : undefined}

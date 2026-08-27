@@ -41,12 +41,16 @@ export function SortableTh({
   sortBy,
   sortDir,
   onSort,
+  align = 'start',
+  className = '',
 }: {
   column: string
   label: string
   sortBy: string
   sortDir: SortDir | ''
   onSort: (column: string) => void
+  align?: 'start' | 'center'
+  className?: string
 }) {
   const { t } = useTranslation()
   const active = sortBy === column && (sortDir === 'asc' || sortDir === 'desc')
@@ -55,15 +59,18 @@ export function SortableTh({
     !active ? t('common.sortAsc') : sortDir === 'asc' ? t('common.sortDesc') : t('common.sortClear')
 
   return (
-    <th className="px-4 py-3 text-start font-medium" aria-sort={ariaSort}>
+    <th
+      className={`px-4 py-3 font-medium ${align === 'center' ? 'text-center' : 'text-start'} ${className}`}
+      aria-sort={ariaSort}
+    >
       <button
         type="button"
         onClick={() => onSort(column)}
         title={nextHint}
         aria-label={`${label} — ${nextHint}`}
-        className={`inline-flex items-center gap-1.5 rounded-lg px-1 py-0.5 -mx-1 text-start font-medium transition hover:bg-cream-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${
-          active ? 'text-teal-800' : 'text-ink-700'
-        }`}
+        className={`inline-flex items-center gap-1.5 rounded-lg px-1 py-0.5 font-medium transition hover:bg-cream-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${
+          align === 'center' ? '-mx-1 justify-center' : '-mx-1 text-start'
+        } ${active ? 'text-teal-800' : 'text-ink-700'}`}
       >
         <span>{label}</span>
         {active && sortDir === 'asc' ? (

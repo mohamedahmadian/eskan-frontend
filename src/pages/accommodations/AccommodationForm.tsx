@@ -13,6 +13,7 @@ import {
   MapPinned,
   MessageCircle,
   Navigation,
+  Percent,
   Phone,
   Route,
   Share2,
@@ -73,6 +74,7 @@ export type AccommodationPayload = {
   managementType: ManagementType
   maleCapacity: number
   femaleCapacity: number
+  overflowPercent: number
   phone: string | null
   address: string | null
   neshanAddress: string | null
@@ -157,6 +159,7 @@ export function AccommodationForm({
     managementType: initial?.managementType ?? managementTypes.SELF_SUFFICIENT,
     maleCapacity: String(initial?.maleCapacity ?? 0),
     femaleCapacity: String(initial?.femaleCapacity ?? 0),
+    overflowPercent: String(initial?.overflowPercent ?? 10),
     phone: initial?.phone ?? '',
     address: initial?.address ?? '',
     neshanAddress: initial?.neshanAddress ?? '',
@@ -258,6 +261,7 @@ export function AccommodationForm({
         managementType: values.managementType,
         maleCapacity: maleCapacityDisabled ? 0 : toNumber(values.maleCapacity),
         femaleCapacity: femaleCapacityDisabled ? 0 : toNumber(values.femaleCapacity),
+        overflowPercent: Math.min(100, Math.max(0, toNumber(values.overflowPercent, 10))),
         phone: emptyToNull(values.phone),
         address: emptyToNull(values.address),
         neshanAddress: emptyToNull(values.neshanAddress),
@@ -560,6 +564,60 @@ export function AccommodationForm({
               className={capacityFieldClassName}
               value={values.femaleCapacity}
               onChange={(e) => set('femaleCapacity', e.target.value)}
+            />
+          </FormField>
+          <FormField
+            icon={Percent}
+            label={t('accommodations.overflowPercent')}
+            htmlFor="overflowPercent"
+          >
+            <input
+              id="overflowPercent"
+              type="number"
+              min={0}
+              max={100}
+              className={capacityFieldClassName}
+              value={values.overflowPercent}
+              onChange={(e) => set('overflowPercent', e.target.value)}
+            />
+          </FormField>
+          <p className="sm:col-span-2 text-sm leading-7 text-ink-500">
+            {t('accommodations.overflowHint')}
+          </p>
+          <FormField
+            icon={Users}
+            label={t('accommodations.effectiveMaleCapacity')}
+            htmlFor="effectiveMaleCapacity"
+          >
+            <input
+              id="effectiveMaleCapacity"
+              readOnly
+              tabIndex={-1}
+              className={assignedFieldClassName}
+              value={formatNumber(
+                toNumber(values.maleCapacity) +
+                  Math.floor((toNumber(values.maleCapacity) * toNumber(values.overflowPercent, 10)) / 100),
+                locale,
+              )}
+            />
+          </FormField>
+          <FormField
+            icon={Users}
+            label={t('accommodations.effectiveFemaleCapacity')}
+            htmlFor="effectiveFemaleCapacity"
+          >
+            <input
+              id="effectiveFemaleCapacity"
+              readOnly
+              tabIndex={-1}
+              className={assignedFieldClassName}
+              value={formatNumber(
+                toNumber(values.femaleCapacity) +
+                  Math.floor(
+                    (toNumber(values.femaleCapacity) * toNumber(values.overflowPercent, 10)) / 100,
+                  ),
+                locale,
+              )}
             />
           </FormField>
           <FormField

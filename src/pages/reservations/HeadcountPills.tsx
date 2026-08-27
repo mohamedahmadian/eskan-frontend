@@ -10,6 +10,7 @@ export function HeadcountPills({
   maleLabel,
   femaleLabel,
   totalLabel,
+  showTotal: showTotalProp,
 }: {
   type: ReservationType
   male: number
@@ -19,11 +20,12 @@ export function HeadcountPills({
   maleLabel: string
   femaleLabel: string
   totalLabel: string
+  showTotal?: boolean
 }) {
   const individual = type === reservationTypes.INDIVIDUAL
   const showMale = !individual || male >= 1
   const showFemale = !individual || male < 1
-  const showTotal = !individual
+  const showTotal = showTotalProp ?? !individual
 
   return (
     <div className="inline-flex flex-wrap items-center gap-1">

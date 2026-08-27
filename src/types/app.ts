@@ -748,6 +748,7 @@ export type Accommodation = {
   managementType: ManagementType;
   maleCapacity: number;
   femaleCapacity: number;
+  overflowPercent: number;
   assignedMaleCapacity: number;
   assignedFemaleCapacity: number;
   phone: string | null;
@@ -1560,6 +1561,40 @@ export const reservationTypes = {
 export type ReservationType =
   (typeof reservationTypes)[keyof typeof reservationTypes];
 
+export const placementModes = {
+  MANUAL: "MANUAL",
+  SYSTEM: "SYSTEM",
+} as const;
+
+export type PlacementMode = (typeof placementModes)[keyof typeof placementModes];
+
+export const placementGenderPolicies = {
+  SINGLE_GENDER: "SINGLE_GENDER",
+  MIXED: "MIXED",
+} as const;
+
+export type PlacementGenderPolicy =
+  (typeof placementGenderPolicies)[keyof typeof placementGenderPolicies];
+
+export const placementStatuses = {
+  NOT_REQUIRED: "NOT_REQUIRED",
+  PENDING: "PENDING",
+  PARTIAL: "PARTIAL",
+  PLACED: "PLACED",
+} as const;
+
+export type PlacementStatus =
+  (typeof placementStatuses)[keyof typeof placementStatuses];
+
+export const allocationSources = {
+  SYSTEM: "SYSTEM",
+  MANUAL: "MANUAL",
+  HYBRID: "HYBRID",
+} as const;
+
+export type AllocationSource =
+  (typeof allocationSources)[keyof typeof allocationSources];
+
 export const reservationStatuses = {
   DRAFT: "DRAFT",
   PENDING_MANAGEMENT_REVIEW: "PENDING_MANAGEMENT_REVIEW",
@@ -1723,6 +1758,7 @@ export type PilgrimHistoryParty = {
 
 export type PilgrimPilgrimageHistoryItem = {
   id: string;
+  code: string;
   year: number;
   type: ReservationType;
   status: ReservationStatus;
@@ -1755,6 +1791,7 @@ export type PilgrimPilgrimageHistoryItem = {
 
 export type CaravanPilgrimageHistoryItem = {
   id: string;
+  code: string;
   year: number;
   type: ReservationType;
   status: ReservationStatus;
@@ -1784,6 +1821,7 @@ export type CaravanPilgrimageHistoryItem = {
 
 export type PreviousCaravanReservation = {
   id: string;
+  code: string;
   year: number;
   status: ReservationStatus;
   stayStartDate: string | null;
@@ -1823,9 +1861,12 @@ export type ReservationCaravanContact = {
 
 export type ReservationListItem = {
   id: string;
+  code: string;
   year: number;
   type: ReservationType;
   status: ReservationStatus;
+  placementMode: PlacementMode;
+  placementStatus: PlacementStatus;
   originCity: (GeoName & { id: string; provinceId: string }) | null;
   stayStartDate: string | null;
   stayEndDate: string | null;
@@ -1903,6 +1944,7 @@ export type Reservation = ReservationListItem & {
   companionsCompletedAt: string | null;
   caravanContactsCompletedAt: string | null;
   insuranceCompletedAt: string | null;
+  placementCompletedAt: string | null;
   cancelledAt: string | null;
   rejectedAt: string | null;
   returnedToStatus?: ReservationStatus | null;
@@ -1912,10 +1954,117 @@ export type Reservation = ReservationListItem & {
   caravanContactsCompletedBy?: ReservationPerson | null;
   insuranceCompletedBy?: ReservationPerson | null;
   completedBy?: ReservationPerson | null;
+  placementCompletedBy?: ReservationPerson | null;
   rejectedBy?: ReservationPerson | null;
   cancelledBy?: ReservationPerson | null;
   members?: ReservationMember[];
   caravanContacts?: ReservationCaravanContact[];
+  allocations?: ReservationAllocationSummary[];
+};
+
+export type ReservationStayManager = {
+  id: string;
+  userId: string | null;
+  isPrimary: boolean;
+  year: number;
+  user: { id: string; fullName: string; phone?: string | null } | null;
+};
+
+export type ReservationStayAccommodation = {
+  id: string;
+  name: string;
+  genderType: GenderType;
+  phone?: string | null;
+  address?: string | null;
+  neshanAddress?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceToShrineKm?: number | null;
+  eitaa?: string | null;
+  bale?: string | null;
+  otherSocial?: string | null;
+  managers?: ReservationStayManager[];
+};
+
+export type ReservationAllocationSummary = {
+  id: string;
+  accommodationId: string;
+  accommodation: ReservationStayAccommodation;
+  gender: UserGender;
+  headcount: number;
+  source: AllocationSource;
+  genderOverride: boolean;
+  overrideNote: string | null;
+  placedAt: string;
+  placedBy: ReservationPerson;
+};
+
+export type PlacementQueueItem = {
+  id: string;
+  code: string;
+  year: number;
+  type: ReservationType;
+  status: ReservationStatus;
+  placementMode: PlacementMode;
+  placementStatus: PlacementStatus;
+  stayStartDate: string | null;
+  stayEndDate: string | null;
+  maleCount: number;
+  femaleCount: number;
+  totalCount: number;
+  allocatedMale: number;
+  allocatedFemale: number;
+  partyName: string;
+  caravan: { id: string; name: string } | null;
+  group: { id: string; name: string } | null;
+  createdBy: ReservationPerson;
+  caravanManager: ReservationPerson | null;
+  createdAt: string;
+};
+
+export type PlacementAllocation = ReservationAllocationSummary & {
+  status: "ACTIVE" | "VACATED";
+  notes: string | null;
+  usesOverflow?: boolean;
+};
+
+export type PlacementReservationDetail = PlacementQueueItem & {
+  placementGenderPolicy: PlacementGenderPolicy;
+  allocations: PlacementAllocation[];
+};
+
+export type PlacementAvailability = {
+  id: string;
+  name: string;
+  genderType: GenderType;
+  maleCapacity: number;
+  femaleCapacity: number;
+  overflowPercent: number;
+  effectiveMale: number;
+  effectiveFemale: number;
+  remainingMale: number;
+  remainingFemale: number;
+  remainingNominalMale: number;
+  remainingNominalFemale: number;
+  otherGenders: UserGender[];
+};
+
+export type PlacementDueItem = {
+  id: string;
+  gender: UserGender;
+  headcount: number;
+  source: AllocationSource;
+  placedAt: string;
+  accommodation: { id: string; name: string; genderType: GenderType };
+  reservation: {
+    id: string;
+    code: string;
+    type: ReservationType;
+    year: number;
+    stayStartDate: string | null;
+    stayEndDate: string | null;
+    partyName: string;
+  };
 };
 
 export type ReceptionInsurancePlan = {
@@ -1933,12 +2082,14 @@ export type ReceptionSettings = {
   individualMaleCapacity: number;
   individualFemaleCapacity: number;
   individualAutoApprove: boolean;
+  individualPlacementMode: PlacementMode;
   individualIntro: string;
   individualRules: string;
   groupEnabled: boolean;
   groupMaleCapacity: number;
   groupFemaleCapacity: number;
   groupAutoApprove: boolean;
+  groupPlacementMode: PlacementMode;
   groupIntro: string;
   groupRules: string;
   caravanEnabled: boolean;
@@ -1946,8 +2097,10 @@ export type ReceptionSettings = {
   caravanFemaleCapacity: number;
   caravanAutoApprove: boolean;
   caravanAutoApproveLicenses: boolean;
+  caravanPlacementMode: PlacementMode;
   caravanIntro: string;
   caravanRules: string;
+  placementGenderPolicy: PlacementGenderPolicy;
   insuranceOrganization: string;
   insurancePlans: ReceptionInsurancePlan[];
   imamRezaMartyrdomDate: string | null;
@@ -2058,6 +2211,7 @@ export type ReceptionMatch = {
 
 export type ReceptionVisit = {
   id: string;
+  code: string;
   year: number;
   type: ReservationType;
   status: ReservationStatus;
