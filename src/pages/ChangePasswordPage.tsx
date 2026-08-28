@@ -1,7 +1,8 @@
-import { KeyRound, Lock } from 'lucide-react'
+import { CircleHelp, KeyRound, Lock } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { useAuth } from '../auth/AuthProvider'
 import {
   AppForm,
   FormField,
@@ -11,14 +12,19 @@ import {
   formShellClassName,
 } from '../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
+import { useRecoverPilgrimPassword } from '../hooks/useRecoverPilgrimPassword'
 import { api, getApiErrorMessage } from '../lib/api'
+import { isPilgrim } from '../lib/roles'
 
 export function ChangePasswordPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const { recoverPassword } = useRecoverPilgrimPassword()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
+  const pilgrim = isPilgrim(user)
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -59,6 +65,16 @@ export function ChangePasswordPage() {
               required
               minLength={8}
             />
+            {pilgrim ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 self-start rounded-lg text-sm text-teal-700 transition hover:text-teal-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+                onClick={() => recoverPassword()}
+              >
+                <CircleHelp className="size-4" aria-hidden />
+                {t('auth.forgotPassword')}
+              </button>
+            ) : null}
           </FormField>
           <FormField icon={KeyRound} label={t('auth.newPassword')} htmlFor="newPassword">
             <input
