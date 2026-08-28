@@ -25,7 +25,9 @@ import {
   canAccessMyCaravans,
   canAccessMyGroups,
   canAccessMyReservations,
+  isAccommodationManager,
   isAdmin,
+  isCaravanManager,
   isPilgrim,
 } from "../../lib/roles";
 import type {
@@ -127,11 +129,13 @@ function withAccommodationsDirectoryMenu(mod: NavModule): NavModule {
   return { ...mod, menus: [extra, ...mod.menus] };
 }
 
-const pilgrimHiddenModuleCodes = new Set(["caravanManagement", "accommodation"]);
-const pilgrimHiddenModuleNameKeys = new Set([
-  "modules.caravanManagement",
-  "modules.accommodation",
-]);
+function isLogisticsModule(mod: NavModule) {
+  return mod.code === "logistics" || mod.nameKey === "modules.logistics";
+}
+
+function isHeadquartersModule(mod: NavModule) {
+  return mod.code === "headquarters" || mod.nameKey === "modules.headquarters";
+}
 
 function isHeadquartersInfoMenu(item: SidebarNavMenu) {
   return (
@@ -141,37 +145,27 @@ function isHeadquartersInfoMenu(item: SidebarNavMenu) {
   );
 }
 
-function isHeadquartersModule(mod: NavModule) {
-  return mod.code === "headquarters" || mod.nameKey === "modules.headquarters";
-}
-
-function isPilgrimHiddenModule(mod: NavModule) {
+function hidesLogisticsModule(
+  user: { roles?: { code: string }[] } | null | undefined,
+) {
   return (
-    pilgrimHiddenModuleCodes.has(mod.code) ||
-    pilgrimHiddenModuleNameKeys.has(mod.nameKey)
+    !isAdmin(user) &&
+    (isPilgrim(user) || isCaravanManager(user) || isAccommodationManager(user))
   );
 }
 
-function isPilgrimHiddenMenu(item: SidebarNavMenu) {
-  return (
-    item.path === "/caravan-managers" ||
-    item.path.startsWith("/caravan-managers/") ||
-    item.code === "accommodation.list" ||
-    item.path === "/accommodations" ||
-    item.nameKey === "menus.caravanManagers" ||
-    item.nameKey === "menus.accommodations"
-  );
-}
-
-function filterModulesForPilgrim(modules: NavModule[]): NavModule[] {
+function filterSidebarModules(
+  modules: NavModule[],
+  user: { roles?: { code: string }[] } | null | undefined,
+): NavModule[] {
+  const hideLogistics = hidesLogisticsModule(user);
+  const pilgrimHqOnly = isPilgrim(user) && !isAdmin(user);
+  if (!hideLogistics && !pilgrimHqOnly) return modules;
   return modules
-    .filter((mod) => !isPilgrimHiddenModule(mod))
+    .filter((mod) => !(hideLogistics && isLogisticsModule(mod)))
     .map((mod) => {
-      const menus = mod.menus.filter((item) => !isPilgrimHiddenMenu(item));
-      if (!isHeadquartersModule(mod)) {
-        return { ...mod, menus };
-      }
-      return { ...mod, menus: menus.filter(isHeadquartersInfoMenu) };
+      if (!pilgrimHqOnly || !isHeadquartersModule(mod)) return mod;
+      return { ...mod, menus: mod.menus.filter(isHeadquartersInfoMenu) };
     })
     .filter((mod) => mod.menus.length > 0);
 }
@@ -305,11 +299,8 @@ export function DashboardLayout() {
     const showMyGroups = canAccessMyGroups(user);
     const showMyReservations = canAccessMyReservations(user);
     const showMyAccommodations = canAccessMyAccommodations(user);
-    const hidePilgrimAdminMenus = pilgrim && !isAdmin(user);
     const next = (user?.modules ?? [])
-      .map((mod) =>
-        hidePilgrimAdminMenus ? mod : withAccommodationsDirectoryMenu(mod),
-      )
+      .map(withAccommodationsDirectoryMenu)
       .map((mod) => {
         const menus = mod.menus.filter(
           (item) =>
@@ -331,8 +322,8 @@ export function DashboardLayout() {
         };
       })
       .filter((mod) => mod.menus.length > 0);
-    return hidePilgrimAdminMenus ? filterModulesForPilgrim(next) : next;
-  }, [pilgrim, pilgrimageYearMenus, user]);
+    return filterSidebarModules(next, user);
+  }, [pilgrimageYearMenus, user]);
 
   const modules = useMemo(() => {
     const needle = query.trim();

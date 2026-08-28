@@ -20,6 +20,12 @@ export function isCaravanManager(user: { roles?: { code: string }[] } | null | u
   return hasRole(user, 'CARAVAN_MANAGER')
 }
 
+export function isAccommodationManager(
+  user: { roles?: { code: string }[] } | null | undefined,
+) {
+  return hasRole(user, 'ACCOMMODATION_MANAGER')
+}
+
 export function isGroupManager(user: { roles?: { code: string }[] } | null | undefined) {
   return hasRole(user, 'GROUP_MANAGER')
 }

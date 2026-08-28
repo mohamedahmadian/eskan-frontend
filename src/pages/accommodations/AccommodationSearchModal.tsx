@@ -9,6 +9,7 @@ import { AppForm, Button, cardClassName } from '../../components/ui/Form'
 import { FormEmptyHint } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
+import { isPilgrim } from '../../lib/roles'
 import { hasMenuAccess, hasModuleAccess } from '../../routes/RequireMenuAccess'
 import type { Accommodation, Paginated } from '../../types/app'
 
@@ -25,6 +26,7 @@ export function AccommodationSearchModal({ onClose }: { onClose: () => void }) {
   const canBrowseAll =
     hasMenuAccess('/accommodations', user?.modules ?? []) ||
     hasModuleAccess('accommodation', user?.modules ?? [])
+  const showViewAll = isPilgrim(user)
 
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -139,10 +141,12 @@ export function AccommodationSearchModal({ onClose }: { onClose: () => void }) {
               </Button>
             </div>
           </AppForm>
-          <Button type="button" variant="ghost" className="w-full" onClick={openAll}>
-            <List className="size-4" aria-hidden />
-            {t('quickTools.viewAllAccommodations')}
-          </Button>
+          {showViewAll ? (
+            <Button type="button" variant="ghost" className="w-full" onClick={openAll}>
+              <List className="size-4" aria-hidden />
+              {t('quickTools.viewAllAccommodations')}
+            </Button>
+          ) : null}
           {searched && !searching && rows.length === 0 ? (
             <FormEmptyHint>{t('accommodations.noResults')}</FormEmptyHint>
           ) : null}

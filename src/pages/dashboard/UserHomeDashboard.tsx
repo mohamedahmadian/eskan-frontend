@@ -342,7 +342,7 @@ export function UserHomeDashboard() {
             <h2 className="text-lg font-semibold text-ink-900">
               {t('dashboard.welcomeUser', { name: user?.fullName ?? '' })}
             </h2>
-            <RoleBadges roles={user?.roles} />
+            {showPilgrim ? <RoleBadges roles={user?.roles} /> : null}
             <p className="mt-1 text-sm text-ink-500">{t('dashboard.userSubtitle')}</p>
           </div>
         </div>
