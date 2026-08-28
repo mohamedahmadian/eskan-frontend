@@ -4,6 +4,7 @@ import {
   Plus,
   ScrollText,
   Tent,
+  Trash2,
   UserRound,
   type LucideIcon,
 } from 'lucide-react'
@@ -25,8 +26,10 @@ import type {
   UserHomePilgrim,
   UserHomeReservationTotals,
 } from '../../types/app'
+import { createWizardPath, isOwnerCreateDraft } from '../reservations/reservation-steps'
 import { ReservationCodeBadge } from '../reservations/ReservationCodeBadge'
 import { ReservationStatusBadge } from '../reservations/ReservationStatusBadge'
+import { useDeleteOwnerDraft } from '../reservations/useDeleteOwnerDraft'
 import { HeadquartersServiceYearsCard } from './HeadquartersServiceYearsCard'
 import { UserLocationCard } from './UserLocationCard'
 
@@ -112,7 +115,11 @@ function ReservationRow({ row }: { row: ReservationListItem }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const nameOf = useGeoName()
-  const canContinue = row.status !== 'COMPLETED' && row.status !== 'CANCELLED' && row.status !== 'REJECTED'
+  const deleteDraft = useDeleteOwnerDraft()
+  const isDraft = isOwnerCreateDraft(row)
+  const canContinue =
+    row.status !== 'COMPLETED' && row.status !== 'CANCELLED' && row.status !== 'REJECTED'
+  const continueTo = isDraft ? createWizardPath(row.id) : `/my-reservations/${row.id}`
   return (
     <li className="flex flex-col gap-3 border-t border-line py-3 first:border-t-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 space-y-1">
@@ -133,12 +140,29 @@ function ReservationRow({ row }: { row: ReservationListItem }) {
         </p>
         <ReservationStatusBadge status={row.status} />
       </div>
-      <Link to={`/my-reservations/${row.id}`} className="shrink-0">
-        <Button type="button" variant={canContinue ? 'primary' : 'ghost'}>
-          <ScrollText className="size-4" aria-hidden />
-          {canContinue ? t('dashboard.continueFile') : t('common.view')}
-        </Button>
-      </Link>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <Link to={continueTo}>
+          <Button type="button" variant={canContinue ? 'primary' : 'ghost'}>
+            <ScrollText className="size-4" aria-hidden />
+            {isDraft
+              ? t('reservations.draftResume')
+              : canContinue
+                ? t('dashboard.continueFile')
+                : t('common.view')}
+          </Button>
+        </Link>
+        {isDraft ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={() => deleteDraft(row.id)}
+          >
+            <Trash2 className="size-4" aria-hidden />
+            {t('reservations.deleteDraft')}
+          </Button>
+        ) : null}
+      </div>
     </li>
   )
 }

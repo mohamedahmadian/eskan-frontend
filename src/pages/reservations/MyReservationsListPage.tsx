@@ -29,6 +29,7 @@ import {
   listHeadcount,
   listStepProgress,
 } from './reservation-steps'
+import { useDeleteOwnerDraft } from './useDeleteOwnerDraft'
 import { ReservationCodeBadge } from './ReservationCodeBadge'
 import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { StepProgressChart } from './StepProgressChart'
@@ -46,6 +47,7 @@ export function MyReservationsListPage() {
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } =
     useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
+  const deleteDraft = useDeleteOwnerDraft()
   const year = searchParams.get('year') ?? ''
   const type = searchParams.get('type') ?? ''
 
@@ -241,6 +243,9 @@ export function MyReservationsListPage() {
                           isOwnerCreateDraft(row)
                             ? createWizardPath(row.id)
                             : `/my-reservations/${row.id}`
+                        }
+                        onDelete={
+                          isOwnerCreateDraft(row) ? () => deleteDraft(row.id) : undefined
                         }
                       />
                     </div>
