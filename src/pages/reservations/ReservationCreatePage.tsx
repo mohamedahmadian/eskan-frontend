@@ -14,6 +14,7 @@ import {
   Venus,
   Footprints,
   MapPin,
+  Trash2,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
@@ -77,6 +78,7 @@ import {
 import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
 import { StepBlockedNotice } from './ReservationStepNav'
 import { StepProgressChart } from './StepProgressChart'
+import { useDeleteOwnerDraft } from './useDeleteOwnerDraft'
 
 const defaultTypes: ReservationType[] = ['INDIVIDUAL', 'GROUP', 'CARAVAN']
 const caravanManagerTypes: ReservationType[] = ['CARAVAN', 'INDIVIDUAL', 'GROUP']
@@ -268,6 +270,7 @@ export function ReservationCreatePage() {
   const [rulesModalOpen, setRulesModalOpen] = useState(false)
   const [draftHydrated, setDraftHydrated] = useState(!draftParam)
   const queryClient = useQueryClient()
+  const deleteDraft = useDeleteOwnerDraft()
   const reservationYear = draftId ? draftYear : year
   const steps = stepsForCreateType(type)
   const stepIndex = steps.indexOf(step)
@@ -910,6 +913,23 @@ export function ReservationCreatePage() {
             </span>
           ) : draftId ? (
             t('reservations.draftResume')
+          ) : undefined
+        }
+        action={
+          draftId ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={() =>
+                deleteDraft(draftId, () =>
+                  navigate(createBase === '/reservations' ? '/reservations' : '/my-reservations'),
+                )
+              }
+            >
+              <Trash2 className="size-4" aria-hidden />
+              {t('reservations.deleteDraft')}
+            </Button>
           ) : undefined
         }
       />
