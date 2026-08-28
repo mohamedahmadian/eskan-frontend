@@ -79,6 +79,8 @@ export function RegisterPage() {
   }, [countryId, iranCountryId])
 
   const isIranian = !countryId || countryId === iranCountryId
+  const phoneRequired = locale === 'fa'
+  const phoneDigits = parseDigitString(phone)
 
   if (user) {
     return <Navigate to="/" replace />
@@ -94,12 +96,16 @@ export function RegisterPage() {
       toast.error(t('users.passwordMin'))
       return
     }
-    if (isIranian) {
-      if (!/^09\d{9}$/.test(parseDigitString(phone))) {
+    if (phoneRequired) {
+      if (!/^09\d{9}$/.test(phoneDigits)) {
         toast.error(t('users.phoneRequired'))
         return
       }
-    } else {
+    } else if (phoneDigits && phoneDigits.length < 8) {
+      toast.error(t('users.phoneRequired'))
+      return
+    }
+    if (!isIranian) {
       if (normalizePassportNumber(passportNumber).length < 5) {
         toast.error(t('users.passportRequired'))
         return
@@ -121,12 +127,13 @@ export function RegisterPage() {
         gender,
         locale,
         countryId: countryId || undefined,
-        ...(isIranian
-          ? { phone: parseDigitString(phone) }
-          : {
+        ...(phoneDigits ? { phone: phoneDigits } : {}),
+        ...(!isIranian
+          ? {
               passportNumber: normalizePassportNumber(passportNumber),
               email: email.trim().toLowerCase(),
-            }),
+            }
+          : {}),
       })
       await login(usernameValue, passwordValue)
       navigate('/')
@@ -190,21 +197,22 @@ export function RegisterPage() {
                   minLength={8}
                 />
               </FormField>
-              {isIranian ? (
-                <FormField icon={Phone} label={t('users.phone')} htmlFor="phone">
-                  <input
-                    id="phone"
-                    className={fieldClassName}
-                    value={phone}
-                    onChange={(e) => setPhone(parseDigitString(e.target.value).slice(0, 11))}
-                    inputMode="tel"
-                    autoComplete="tel"
-                    required
-                    minLength={11}
-                    maxLength={11}
-                  />
-                </FormField>
-              ) : (
+              <FormField icon={Phone} label={t('users.phone')} htmlFor="phone">
+                <input
+                  id="phone"
+                  className={fieldClassName}
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(parseDigitString(e.target.value).slice(0, phoneRequired ? 11 : 15))
+                  }
+                  inputMode="tel"
+                  autoComplete="tel"
+                  required={phoneRequired}
+                  minLength={phoneRequired ? 11 : undefined}
+                  maxLength={phoneRequired ? 11 : 15}
+                />
+              </FormField>
+              {isIranian ? null : (
                 <>
                   <FormField icon={IdCard} label={t('users.passportNumber')} htmlFor="passportNumber">
                     <input
