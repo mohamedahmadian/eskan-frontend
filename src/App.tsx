@@ -888,18 +888,27 @@ export default function App() {
                     element={<AccommodationEditPage />}
                   />
                 </Route>
-                <Route element={<RequireMenuAccess path="/accommodations" />}>
+                <Route
+                  element={
+                    <RequireMenuAccess
+                      path="/accommodations"
+                      allowModule="accommodation"
+                    />
+                  }
+                >
                   <Route
                     path="/accommodations"
                     element={<AccommodationsListPage />}
                   />
                   <Route
-                    path="/accommodations/new"
-                    element={<AccommodationCreatePage />}
-                  />
-                  <Route
                     path="/accommodations/:id"
                     element={<AccommodationDetailPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/accommodations" />}>
+                  <Route
+                    path="/accommodations/new"
+                    element={<AccommodationCreatePage />}
                   />
                   <Route
                     path="/accommodations/:id/edit"

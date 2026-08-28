@@ -62,6 +62,8 @@ import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
+import { hasMenuAccess } from '../../routes/RequireMenuAccess'
+import { useAuth } from '../../auth/AuthProvider'
 import type { Accommodation, AccommodationStatus } from '../../types/app'
 import {
   accommodationContactRoles,
@@ -86,10 +88,13 @@ export function AccommodationDetailPage() {
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const n = (value: number) => formatNumber(value, locale)
   const nameOf = useGeoName()
+  const { user } = useAuth()
   const { id } = useParams()
   const navigate = useNavigate()
   const fromMine = useLocation().pathname.startsWith('/my-accommodations')
   const listPath = fromMine ? '/my-accommodations' : '/accommodations'
+  const canManage =
+    fromMine || hasMenuAccess('/accommodations', user?.modules ?? [])
   const { confirmDelete } = useConfirmDelete()
   const [tab, setTab] = useState<AccommodationTab>('general')
   const query = useQuery({
@@ -632,23 +637,25 @@ export function AccommodationDetailPage() {
             </div>
           </div>
 
-          <div className="border-t border-line px-5 py-4 sm:px-6">
-            <DetailActions
-              className=""
-              editTo={`${listPath}/${item.id}/edit`}
-              editLabel={t('common.edit')}
-              deleteLabel={t('accommodations.delete')}
-              onDelete={() =>
-                confirmDelete({
-                  message: t('accommodations.confirmDelete'),
-                  successMessage: t('accommodations.deleted'),
-                  path: `/accommodations/${item.id}`,
-                  queryKey: fromMine ? ['accommodations', 'mine'] : ['accommodations'],
-                  onDeleted: () => navigate(listPath),
-                })
-              }
-            />
-          </div>
+          {canManage ? (
+            <div className="border-t border-line px-5 py-4 sm:px-6">
+              <DetailActions
+                className=""
+                editTo={`${listPath}/${item.id}/edit`}
+                editLabel={t('common.edit')}
+                deleteLabel={t('accommodations.delete')}
+                onDelete={() =>
+                  confirmDelete({
+                    message: t('accommodations.confirmDelete'),
+                    successMessage: t('accommodations.deleted'),
+                    path: `/accommodations/${item.id}`,
+                    queryKey: fromMine ? ['accommodations', 'mine'] : ['accommodations'],
+                    onDeleted: () => navigate(listPath),
+                  })
+                }
+              />
+            </div>
+          ) : null}
         </FormCard>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { ClipboardList, FileSearch, LayoutDashboard, LocateFixed, ScanSearch, X } from 'lucide-react'
+import { Building2, ClipboardList, FileSearch, LayoutDashboard, LocateFixed, ScanSearch, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
@@ -6,8 +6,9 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { canAccessMyReservations, isPilgrim } from '../../lib/roles'
 import { ReceptionDesk } from '../../pages/reception/ReceptionDesk'
+import { AccommodationSearchModal } from '../../pages/accommodations/AccommodationSearchModal'
 import { ReservationFileSearchModal } from '../../pages/reservations/ReservationFileSearchModal'
-import { hasMenuAccess } from '../../routes/RequireMenuAccess'
+import { hasMenuAccess, hasModuleAccess } from '../../routes/RequireMenuAccess'
 import { Button, cardClassName, cancelPendingFormEnter } from '../ui/Form'
 import { QuickToolsContext } from './quick-tools-context'
 
@@ -23,7 +24,7 @@ function isLocationPath(pathname: string) {
 
 type QuickToolsUser = {
   roles?: { code: string }[]
-  modules?: { menus: { path: string }[] }[]
+  modules?: { code?: string; menus: { path: string }[] }[]
 } | null | undefined
 
 function getQuickToolsFlags(pathname: string, user: QuickToolsUser) {
@@ -41,6 +42,10 @@ function getQuickToolsFlags(pathname: string, user: QuickToolsUser) {
     (hasMenuAccess('/reservations', list) ||
       hasMenuAccess('/my-reservations', list) ||
       canReception)
+  const showAccommodationSearch =
+    hasMenuAccess('/accommodations', list) ||
+    hasMenuAccess('/my-accommodations', list) ||
+    hasModuleAccess('accommodation', list)
   const showLocation = canLocation && (pilgrim || !isLocationPath(pathname))
   return {
     pilgrim,
@@ -50,9 +55,15 @@ function getQuickToolsFlags(pathname: string, user: QuickToolsUser) {
     showMyReservations,
     showSearch,
     showFileSearch,
+    showAccommodationSearch,
     showLocation,
     fabEnabled:
-      showDashboard || showMyReservations || showSearch || showFileSearch || showLocation,
+      showDashboard ||
+      showMyReservations ||
+      showSearch ||
+      showFileSearch ||
+      showAccommodationSearch ||
+      showLocation,
   }
 }
 
@@ -158,6 +169,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     showMyReservations,
     showSearch,
     showFileSearch,
+    showAccommodationSearch,
     showLocation,
     fabEnabled,
   } = getQuickToolsFlags(pathname, user)
@@ -167,6 +179,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [fileSearchOpen, setFileSearchOpen] = useState(false)
+  const [accommodationSearchOpen, setAccommodationSearchOpen] = useState(false)
 
   const registerFocus = useCallback((fn: () => void) => {
     focusFnRef.current = fn
@@ -186,6 +199,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     cancelPendingFormEnter()
     setMenuOpen(false)
     setFileSearchOpen(false)
+    setAccommodationSearchOpen(false)
     setSearchOpen(true)
   }, [])
 
@@ -193,7 +207,16 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     cancelPendingFormEnter()
     setMenuOpen(false)
     setSearchOpen(false)
+    setAccommodationSearchOpen(false)
     setFileSearchOpen(true)
+  }, [])
+
+  const openAccommodationSearch = useCallback(() => {
+    cancelPendingFormEnter()
+    setMenuOpen(false)
+    setSearchOpen(false)
+    setFileSearchOpen(false)
+    setAccommodationSearchOpen(true)
   }, [])
 
   const openLocation = useCallback(() => {
@@ -218,6 +241,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     setMenuOpen(false)
     setSearchOpen(false)
     setFileSearchOpen(false)
+    setAccommodationSearchOpen(false)
   }, [pathname])
 
   useEffect(() => {
@@ -294,11 +318,12 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
         <QuickToolsFab
           menuOpen={menuOpen}
           searchOpen={searchOpen}
-          hidden={searchOpen || fileSearchOpen}
+          hidden={searchOpen || fileSearchOpen || accommodationSearchOpen}
           showDashboard={showDashboard}
           showMyReservations={showMyReservations}
           showSearch={showSearch}
           showFileSearch={showFileSearch}
+          showAccommodationSearch={showAccommodationSearch}
           showLocation={showLocation}
           onToggleMenu={() => setMenuOpen((open) => !open)}
           onCloseMenu={() => setMenuOpen(false)}
@@ -306,6 +331,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
           onOpenMyReservations={openMyReservations}
           onOpenSearch={openSearch}
           onOpenFileSearch={openFileSearch}
+          onOpenAccommodationSearch={openAccommodationSearch}
           onOpenLocation={openLocation}
         />
       ) : null}
@@ -314,6 +340,9 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
       ) : null}
       {fileSearchOpen ? (
         <ReservationFileSearchModal onClose={() => setFileSearchOpen(false)} />
+      ) : null}
+      {accommodationSearchOpen ? (
+        <AccommodationSearchModal onClose={() => setAccommodationSearchOpen(false)} />
       ) : null}
     </QuickToolsContext.Provider>
   )
@@ -327,6 +356,7 @@ function QuickToolsFab({
   showMyReservations,
   showSearch,
   showFileSearch,
+  showAccommodationSearch,
   showLocation,
   onToggleMenu,
   onCloseMenu,
@@ -334,6 +364,7 @@ function QuickToolsFab({
   onOpenMyReservations,
   onOpenSearch,
   onOpenFileSearch,
+  onOpenAccommodationSearch,
   onOpenLocation,
 }: {
   menuOpen: boolean
@@ -343,6 +374,7 @@ function QuickToolsFab({
   showMyReservations: boolean
   showSearch: boolean
   showFileSearch: boolean
+  showAccommodationSearch: boolean
   showLocation: boolean
   onToggleMenu: () => void
   onCloseMenu: () => void
@@ -350,6 +382,7 @@ function QuickToolsFab({
   onOpenMyReservations: () => void
   onOpenSearch: () => void
   onOpenFileSearch: () => void
+  onOpenAccommodationSearch: () => void
   onOpenLocation: () => void
 }) {
   const { t } = useTranslation()
@@ -541,6 +574,22 @@ function QuickToolsFab({
               <span className="min-w-0">
                 <span className="block font-medium">{t('quickTools.searchFile')}</span>
                 <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.searchFileHint')}</span>
+              </span>
+            </button>
+          ) : null}
+          {showAccommodationSearch ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-sm text-ink-800 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-300"
+              onClick={onOpenAccommodationSearch}
+            >
+              <Building2 className="size-4 shrink-0 text-teal-600" aria-hidden />
+              <span className="min-w-0">
+                <span className="block font-medium">{t('quickTools.searchAccommodation')}</span>
+                <span className="mt-0.5 block text-xs text-ink-400">
+                  {t('quickTools.searchAccommodationHint')}
+                </span>
               </span>
             </button>
           ) : null}

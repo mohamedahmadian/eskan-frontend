@@ -2,6 +2,7 @@ import {
   BadgeCheck,
   CalendarDays,
   Download,
+  Flag,
   Landmark,
   MapPin,
   MapPinned,
@@ -16,6 +17,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { useAuth } from '../../auth/AuthProvider'
 import {
   PaginationBar,
   SearchBar,
@@ -32,6 +34,7 @@ import { useListSort } from '../../hooks/useListSort'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber, persianYearOptions } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
+import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import {
   accommodationTypes,
   genderTypes,
@@ -39,6 +42,7 @@ import {
   type Accommodation,
   type AccommodationType,
   type City,
+  type Country,
   type GenderType,
   type ManagementType,
   type Paginated,
@@ -47,8 +51,10 @@ import {
 
 export function AccommodationsListPage() {
   const { t, i18n } = useTranslation()
+  const { user } = useAuth()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
+  const canManage = hasMenuAccess('/accommodations', user?.modules ?? [])
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
@@ -56,15 +62,27 @@ export function AccommodationsListPage() {
   const type = (searchParams.get('type') ?? '') as AccommodationType | ''
   const genderType = (searchParams.get('genderType') ?? '') as GenderType | ''
   const managementType = (searchParams.get('managementType') ?? '') as ManagementType | ''
+  const countryId = searchParams.get('countryId') ?? ''
   const provinceId = searchParams.get('provinceId') ?? ''
   const cityId = searchParams.get('cityId') ?? ''
   const year = searchParams.get('year') ?? ''
   const hasManagerThisYear = searchParams.get('hasManagerThisYear') ?? ''
 
-  const provinces = useQuery({
-    queryKey: ['provinces', 'lookup'],
+  const countries = useQuery({
+    queryKey: ['countries', 'lookup'],
     queryFn: async () => {
-      const { data } = await api.get<Province[]>('/provinces')
+      const { data } = await api.get<Country[]>('/countries')
+      return data
+    },
+  })
+
+  const provinces = useQuery({
+    queryKey: ['provinces', 'lookup', countryId],
+    enabled: Boolean(countryId),
+    queryFn: async () => {
+      const { data } = await api.get<Province[]>('/provinces', {
+        params: { countryId },
+      })
       return data
     },
   })
@@ -86,6 +104,7 @@ export function AccommodationsListPage() {
     ...(type ? { type } : {}),
     ...(genderType ? { genderType } : {}),
     ...(managementType ? { managementType } : {}),
+    ...(countryId ? { countryId } : {}),
     ...(provinceId ? { provinceId } : {}),
     ...(cityId ? { cityId } : {}),
     ...(year ? { year } : {}),
@@ -100,6 +119,7 @@ export function AccommodationsListPage() {
       type,
       genderType,
       managementType,
+      countryId,
       provinceId,
       cityId,
       year,
@@ -129,6 +149,7 @@ export function AccommodationsListPage() {
           ...(type ? { type } : {}),
           ...(genderType ? { genderType } : {}),
           ...(managementType ? { managementType } : {}),
+          ...(countryId ? { countryId } : {}),
           ...(provinceId ? { provinceId } : {}),
           ...(cityId ? { cityId } : {}),
           ...(year ? { year } : {}),
@@ -162,7 +183,7 @@ export function AccommodationsListPage() {
 
   const rows = query.data?.items ?? []
   const filtersActive = Boolean(
-    type || genderType || managementType || provinceId || cityId || year || hasManagerThisYear,
+    type || genderType || managementType || countryId || provinceId || cityId || year || hasManagerThisYear,
   )
   const emptyMessage =
     q || filtersActive ? t('accommodations.noResults') : t('accommodations.empty')
@@ -173,12 +194,14 @@ export function AccommodationsListPage() {
         title={t('menus.accommodations')}
         subtitle={t('accommodations.subtitle')}
         action={
-          <Link to="/accommodations/new">
-            <Button>
-              <Plus className="size-4" />
-              {t('accommodations.create')}
-            </Button>
-          </Link>
+          canManage ? (
+            <Link to="/accommodations/new">
+              <Button>
+                <Plus className="size-4" />
+                {t('accommodations.create')}
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
       <SearchBar
@@ -187,20 +210,32 @@ export function AccommodationsListPage() {
         onTermChange={setTerm}
         onSubmit={onSearch}
         label={t('common.search')}
-        placeholder={t('accommodations.searchPlaceholder')}
+        placeholder={t('accommodations.searchNamePlaceholder')}
         filtersActive={filtersActive}
         extra={
           <>
             <FilterPair columns={3}>
-              <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor="accommodation-year">
+              <FormField icon={Flag} label={t('geo.country')} htmlFor="accommodation-country">
                 <SearchSelect
-                  id="accommodation-year"
-                  value={year}
-                  placeholder={t('accommodations.allYears')}
-                  onChange={(next) => setParams({ year: next || undefined }, { resetPage: true })}
+                  id="accommodation-country"
+                  value={countryId}
+                  placeholder={t('geo.allCountries')}
+                  onChange={(next) =>
+                    setParams(
+                      {
+                        countryId: next || undefined,
+                        provinceId: undefined,
+                        cityId: undefined,
+                      },
+                      { resetPage: true },
+                    )
+                  }
                   options={[
-                    { value: '', label: t('accommodations.allYears') },
-                    ...persianYearOptions(locale, year ? Number(year) : undefined),
+                    { value: '', label: t('geo.allCountries') },
+                    ...(countries.data ?? []).map((country) => ({
+                      value: country.id,
+                      label: name(country),
+                    })),
                   ]}
                 />
               </FormField>
@@ -208,6 +243,7 @@ export function AccommodationsListPage() {
                 <SearchSelect
                   id="accommodation-province"
                   value={provinceId}
+                  disabled={!countryId}
                   placeholder={t('geo.allProvinces')}
                   onChange={(next) =>
                     setParams({ provinceId: next || undefined, cityId: undefined }, { resetPage: true })
@@ -238,7 +274,19 @@ export function AccommodationsListPage() {
                 />
               </FormField>
             </FilterPair>
-            <FilterPair columns={2}>
+            <FilterPair columns={3}>
+              <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor="accommodation-year">
+                <SearchSelect
+                  id="accommodation-year"
+                  value={year}
+                  placeholder={t('accommodations.allYears')}
+                  onChange={(next) => setParams({ year: next || undefined }, { resetPage: true })}
+                  options={[
+                    { value: '', label: t('accommodations.allYears') },
+                    ...persianYearOptions(locale, year ? Number(year) : undefined),
+                  ]}
+                />
+              </FormField>
               <FormField icon={Landmark} label={t('accommodations.type')} htmlFor="accommodation-type">
                 <SearchSelect
                   id="accommodation-type"
@@ -322,6 +370,9 @@ export function AccommodationsListPage() {
                 sortDir={sortDir}
                 onSort={onSort}
               />
+              <th className="px-4 py-3 text-start font-medium">{t('geo.country')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.province')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('geo.city')}</th>
               <SortableTh
                 column="type"
                 label={t('accommodations.type')}
@@ -349,7 +400,17 @@ export function AccommodationsListPage() {
           <tbody>
             {rows.map((item) => (
               <tr key={item.id} className="border-t border-line">
-                <td className="px-4 py-3">{item.name}</td>
+                <td className="px-4 py-3">
+                  <Link
+                    to={`/accommodations/${item.id}`}
+                    className="font-medium text-teal-700 hover:underline"
+                  >
+                    {item.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-3">{item.country ? name(item.country) : '—'}</td>
+                <td className="px-4 py-3">{item.province ? name(item.province) : '—'}</td>
+                <td className="px-4 py-3">{item.city ? name(item.city) : '—'}</td>
                 <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
                 <td className="px-4 py-3">{t(`managementTypes.${item.managementType}`)}</td>
                 <td className="px-4 py-3">
@@ -374,14 +435,17 @@ export function AccommodationsListPage() {
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/accommodations/${item.id}`}
-                    editTo={`/accommodations/${item.id}/edit`}
-                    onDelete={() =>
-                      confirmDelete({
-                        message: t('accommodations.confirmDelete'),
-                        successMessage: t('accommodations.deleted'),
-                        path: `/accommodations/${item.id}`,
-                        queryKey: ['accommodations'],
-                      })
+                    editTo={canManage ? `/accommodations/${item.id}/edit` : undefined}
+                    onDelete={
+                      canManage
+                        ? () =>
+                            confirmDelete({
+                              message: t('accommodations.confirmDelete'),
+                              successMessage: t('accommodations.deleted'),
+                              path: `/accommodations/${item.id}`,
+                              queryKey: ['accommodations'],
+                            })
+                        : undefined
                     }
                   />
                 </td>
@@ -396,10 +460,12 @@ export function AccommodationsListPage() {
         total={query.data?.total ?? 0}
         onPageChange={setPage}
         startExtra={
-          <Button type="button" variant="ghost" onClick={() => void downloadExcel()} disabled={exporting}>
-            <Download className="size-4" />
-            {exporting ? t('accommodations.downloadingExcel') : t('accommodations.downloadExcel')}
-          </Button>
+          canManage ? (
+            <Button type="button" variant="ghost" onClick={() => void downloadExcel()} disabled={exporting}>
+              <Download className="size-4" />
+              {exporting ? t('accommodations.downloadingExcel') : t('accommodations.downloadExcel')}
+            </Button>
+          ) : undefined
         }
       />
     </div>

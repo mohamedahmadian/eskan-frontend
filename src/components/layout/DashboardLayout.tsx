@@ -110,6 +110,22 @@ function insertAfterMenu(
   return [...menus.slice(0, index + 1), ...extra, ...menus.slice(index + 1)];
 }
 
+function withAccommodationsDirectoryMenu(mod: NavModule): NavModule {
+  if (mod.code !== "accommodation") return mod;
+  const hasList = mod.menus.some(
+    (item) => item.path === "/accommodations" || item.code === "accommodation.list",
+  );
+  if (hasList) return mod;
+  const extra: SidebarNavMenu = {
+    code: "accommodation.list",
+    nameKey: "menus.accommodations",
+    path: "/accommodations",
+    icon: "building-2",
+    sortOrder: 0,
+  };
+  return { ...mod, menus: [extra, ...mod.menus] };
+}
+
 function splitMenus(mod: NavModule) {
   const sections = menuSections[mod.code] ?? [];
   const groupedCodes = new Set(sections.flatMap((section) => section.codes));
@@ -240,6 +256,7 @@ export function DashboardLayout() {
     const showMyReservations = canAccessMyReservations(user);
     const showMyAccommodations = canAccessMyAccommodations(user);
     return (user?.modules ?? [])
+      .map(withAccommodationsDirectoryMenu)
       .map((mod) => {
         const menus = mod.menus.filter(
           (item) =>

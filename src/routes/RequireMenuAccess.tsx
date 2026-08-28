@@ -16,10 +16,29 @@ export function hasMenuAccess(path: string, modules: { menus: { path: string }[]
   )
 }
 
-export function RequireMenuAccess({ path }: { path: string }) {
+export function hasModuleAccess(
+  code: string,
+  modules: { code?: string }[],
+) {
+  return modules.some((mod) => mod.code === code)
+}
+
+export function RequireMenuAccess({
+  path,
+  allowModule,
+}: {
+  path: string
+  allowModule?: string
+}) {
   const { user } = useAuth()
 
-  if (!user || !hasMenuAccess(path, user.modules)) {
+  const allowed = Boolean(
+    user &&
+      (hasMenuAccess(path, user.modules) ||
+        (allowModule ? hasModuleAccess(allowModule, user.modules) : false)),
+  )
+
+  if (!user || !allowed) {
     return <Navigate to="/" replace />
   }
 
