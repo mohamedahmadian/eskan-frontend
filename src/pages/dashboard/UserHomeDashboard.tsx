@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { Button, cardClassName, listShellClassName } from '../../components/ui/Form'
+import { RoleBadges } from '../../components/ui/RoleBadges'
 import { DateText } from '../../components/ui/DateText'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
@@ -341,6 +342,7 @@ export function UserHomeDashboard() {
             <h2 className="text-lg font-semibold text-ink-900">
               {t('dashboard.welcomeUser', { name: user?.fullName ?? '' })}
             </h2>
+            {showPilgrim ? <RoleBadges roles={user?.roles} /> : null}
             <p className="mt-1 text-sm text-ink-500">{t('dashboard.userSubtitle')}</p>
           </div>
         </div>

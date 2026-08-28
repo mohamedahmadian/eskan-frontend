@@ -25,6 +25,9 @@ import {
   canAccessMyCaravans,
   canAccessMyGroups,
   canAccessMyReservations,
+  isAccommodationManager,
+  isAdmin,
+  isCaravanManager,
   isPilgrim,
 } from "../../lib/roles";
 import type {
@@ -124,6 +127,47 @@ function withAccommodationsDirectoryMenu(mod: NavModule): NavModule {
     sortOrder: 0,
   };
   return { ...mod, menus: [extra, ...mod.menus] };
+}
+
+function isLogisticsModule(mod: NavModule) {
+  return mod.code === "logistics" || mod.nameKey === "modules.logistics";
+}
+
+function isHeadquartersModule(mod: NavModule) {
+  return mod.code === "headquarters" || mod.nameKey === "modules.headquarters";
+}
+
+function isHeadquartersInfoMenu(item: SidebarNavMenu) {
+  return (
+    item.code === "headquarters.info" ||
+    item.path === "/headquarters/info" ||
+    item.nameKey === "menus.headquartersInfo"
+  );
+}
+
+function hidesLogisticsModule(
+  user: { roles?: { code: string }[] } | null | undefined,
+) {
+  return (
+    !isAdmin(user) &&
+    (isPilgrim(user) || isCaravanManager(user) || isAccommodationManager(user))
+  );
+}
+
+function filterSidebarModules(
+  modules: NavModule[],
+  user: { roles?: { code: string }[] } | null | undefined,
+): NavModule[] {
+  const hideLogistics = hidesLogisticsModule(user);
+  const pilgrimHqOnly = isPilgrim(user) && !isAdmin(user);
+  if (!hideLogistics && !pilgrimHqOnly) return modules;
+  return modules
+    .filter((mod) => !(hideLogistics && isLogisticsModule(mod)))
+    .map((mod) => {
+      if (!pilgrimHqOnly || !isHeadquartersModule(mod)) return mod;
+      return { ...mod, menus: mod.menus.filter(isHeadquartersInfoMenu) };
+    })
+    .filter((mod) => mod.menus.length > 0);
 }
 
 function splitMenus(mod: NavModule) {
@@ -255,7 +299,7 @@ export function DashboardLayout() {
     const showMyGroups = canAccessMyGroups(user);
     const showMyReservations = canAccessMyReservations(user);
     const showMyAccommodations = canAccessMyAccommodations(user);
-    return (user?.modules ?? [])
+    const next = (user?.modules ?? [])
       .map(withAccommodationsDirectoryMenu)
       .map((mod) => {
         const menus = mod.menus.filter(
@@ -278,6 +322,7 @@ export function DashboardLayout() {
         };
       })
       .filter((mod) => mod.menus.length > 0);
+    return filterSidebarModules(next, user);
   }, [pilgrimageYearMenus, user]);
 
   const modules = useMemo(() => {
