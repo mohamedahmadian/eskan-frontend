@@ -18,7 +18,7 @@ export function hasMenuAccess(path: string, modules: { menus: { path: string }[]
 
 export function hasModuleAccess(
   code: string,
-  modules: { code: string }[],
+  modules: { code?: string }[],
 ) {
   return modules.some((mod) => mod.code === code)
 }

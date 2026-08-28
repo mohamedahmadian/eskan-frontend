@@ -72,6 +72,11 @@
     "searchFilePlaceholder": "أدخل رمز الحجز",
     "searchFileNumber": "الرقم",
     "searchFileNumberRequired": "أدخل رقم الملف",
+    "searchAccommodation": "بحث عن أماكن الإسكان",
+    "searchAccommodationTitle": "بحث الإسكان",
+    "searchAccommodationHint": "البحث باسم مكان الإسكان",
+    "searchAccommodationPlaceholder": "أدخل اسم مكان الإسكان",
+    "searchAccommodationRequired": "أدخل اسم مكان الإسكان",
     "myLocation": "تسجيل الموقع الجغرافي",
     "myLocationHint": "المحافظة والمدينة والموقع على الخريطة"
   },

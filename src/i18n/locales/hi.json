@@ -65,6 +65,11 @@
     "searchInfo": "जानकारी खोजें",
     "searchInfoTitle": "जानकारी तक त्वरित और स्मार्ट पहुंच",
     "searchInfoHint": "या दो बार Enter दबाएं",
+    "searchAccommodation": "आवास खोजें",
+    "searchAccommodationTitle": "आवास खोज",
+    "searchAccommodationHint": "आवास नाम से खोजें",
+    "searchAccommodationPlaceholder": "आवास का नाम दर्ज करें",
+    "searchAccommodationRequired": "आवास का नाम दर्ज करें",
     "myLocation": "स्थान पंजीकृत करें",
     "myLocationHint": "प्रांत, शहर और मानचित्र पर स्थान"
   },

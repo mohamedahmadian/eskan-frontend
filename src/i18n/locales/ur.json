@@ -66,6 +66,11 @@
     "searchInfo": "معلومات تلاش کریں",
     "searchInfoTitle": "معلومات تک فوری اور ہوشیار رسائی",
     "searchInfoHint": "یا دو بار Enter کلید دبائیں",
+    "searchAccommodation": "رہائشیں تلاش کریں",
+    "searchAccommodationTitle": "رہائش تلاش",
+    "searchAccommodationHint": "رہائش کے نام سے تلاش کریں",
+    "searchAccommodationPlaceholder": "رہائش کا نام درج کریں",
+    "searchAccommodationRequired": "رہائش کا نام درج کریں",
     "myLocation": "مقام رجسٹر کریں",
     "myLocationHint": "صوبہ، شہر اور نقشے پر مقام"
   },

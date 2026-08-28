@@ -65,6 +65,11 @@
     "searchInfo": "Search Info",
     "searchInfoTitle": "Quick and smart access to information",
     "searchInfoHint": "or double-press Enter",
+    "searchAccommodation": "Search accommodations",
+    "searchAccommodationTitle": "Search accommodations",
+    "searchAccommodationHint": "Search by accommodation name",
+    "searchAccommodationPlaceholder": "Enter the accommodation name",
+    "searchAccommodationRequired": "Please enter the accommodation name",
     "myLocation": "Register Location",
     "myLocationHint": "Province, city, and location on map"
   },
