@@ -1,4 +1,4 @@
-import { ChevronDown, CircleHelp, KeyRound, LogOut, Settings, UserRound } from 'lucide-react'
+import { ChevronDown, CircleHelp, Globe, KeyRound, LogOut, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -94,8 +94,8 @@ export function UserMenu() {
                 className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                 onClick={() => setOpen(false)}
               >
-                <Settings className="size-4 text-teal-600" />
-                {t('nav.settings')}
+                <Globe className="size-4 text-teal-600" />
+                {t('nav.language')}
               </Link>
               <button
                 type="button"

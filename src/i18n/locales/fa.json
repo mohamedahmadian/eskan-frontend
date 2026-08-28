@@ -61,6 +61,7 @@
     "breadcrumb": "مسیر صفحه",
     "account": "حساب کاربری",
     "settings": "تنظیمات",
+    "language": "زبان",
     "changePassword": "تغییر رمز عبور",
     "forgotPassword": "فراموشی رمز عبور",
     "openMenu": "باز کردن منو",
@@ -232,7 +233,7 @@
     "supportRequestsSection": "درخواست‌های پشتیبانی"
   },
   "settings": {
-    "title": "تنظیمات",
+    "title": "زبان",
     "subtitle": "تغییر زبان سامانه",
     "locale": "زبان سامانه",
     "save": "ذخیره تنظیمات",

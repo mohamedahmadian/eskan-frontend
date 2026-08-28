@@ -49,6 +49,7 @@
     "breadcrumb": "صفحے کا راستہ",
     "account": "اکاؤنٹ",
     "settings": "ترتیبات",
+    "language": "زبان",
     "changePassword": "پاس ورڈ تبدیل کریں",
     "forgotPassword": "پاس ورڈ بھول گئے؟",
     "openMenu": "مینو کھولیں",
@@ -197,7 +198,7 @@
     "supportRequestsSection": "معاونت کی درخواستیں"
   },
   "settings": {
-    "title": "ترتیبات",
+    "title": "زبان",
     "subtitle": "سسٹم کی زبان تبدیل کریں",
     "locale": "سسٹم کی زبان",
     "save": "ترتیبات محفوظ کریں",

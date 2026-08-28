@@ -49,6 +49,7 @@
     "breadcrumb": "Page path",
     "account": "Account",
     "settings": "Settings",
+    "language": "Language",
     "changePassword": "Change password",
     "forgotPassword": "Forgot Password",
     "openMenu": "Open menu",
@@ -196,7 +197,7 @@
     "supportRequestsSection": "Support Requests"
   },
   "settings": {
-    "title": "Settings",
+    "title": "Language",
     "subtitle": "Change system language",
     "fullName": "Full name",
     "locale": "Language",
