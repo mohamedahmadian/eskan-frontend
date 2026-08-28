@@ -7,6 +7,7 @@ export function CheckboxField({
   onChange,
   label,
   disabled,
+  readOnly,
   compact,
 }: {
   id?: string
@@ -14,8 +15,10 @@ export function CheckboxField({
   onChange: (checked: boolean) => void
   label: ReactNode
   disabled?: boolean
+  readOnly?: boolean
   compact?: boolean
 }) {
+  const inactive = Boolean(disabled || readOnly)
   return (
     <label
       className={`relative flex items-center transition ${
@@ -26,14 +29,14 @@ export function CheckboxField({
                 ? 'border-teal-200 bg-teal-50 text-ink-900'
                 : 'border-line bg-cream-50 text-ink-800 hover:border-teal-200 hover:bg-white'
             }`
-      } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+      } ${inactive ? 'cursor-not-allowed' : 'cursor-pointer'} ${disabled ? 'opacity-60' : ''}`}
     >
       <input
         id={id}
         type="checkbox"
         className="peer sr-only"
         checked={checked}
-        disabled={disabled}
+        disabled={inactive}
         onChange={(event) => onChange(event.target.checked)}
       />
       <span
