@@ -16,6 +16,7 @@ import {
 import { OsmMapPicker, type MapBounds, type MapFocus } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api } from '../../lib/api'
+import { geoErrorI18nKey } from '../../lib/geolocation'
 import { IRAN_MAP_BOUNDS, IRAN_MAP_CENTER, nearestGeoItem, pointBounds, useGeoName } from '../../lib/geo'
 import type {
   ActiveWalkingRoute,
@@ -258,7 +259,7 @@ export function UserLocationForm({
             onGeolocate={(nextLat, nextLng) => {
               void matchCityFromGps(nextLat, nextLng)
             }}
-            onGeoError={() => toast.error(t('location.geoUnavailable'))}
+            onGeoError={(kind) => toast.error(t(geoErrorI18nKey(kind)))}
             onGeoOutside={() => toast.error(t('location.outsideSelectedArea'))}
           />
         </div>

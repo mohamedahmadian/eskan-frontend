@@ -3,6 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import {
+  queryGeolocationPermission,
+  requestBrowserGeolocation,
+  type GeoErrorKind,
+} from '../../lib/geolocation'
 import { Button } from './Form'
 
 const MASHHAD: L.LatLngTuple = [36.2878, 59.6154]
@@ -92,7 +97,7 @@ export function OsmMapPicker({
   heightClass?: string
   overlays?: MapOverlays | null
   onGeolocate?: (latitude: string, longitude: string) => void
-  onGeoError?: () => void
+  onGeoError?: (kind: GeoErrorKind) => void
   onGeoOutside?: () => void
 }) {
   const { t } = useTranslation()
@@ -109,6 +114,7 @@ export function OsmMapPicker({
   const onGeoOutsideRef = useRef(onGeoOutside)
   const maxBoundsRef = useRef(maxBounds)
   const autoGeoDoneRef = useRef(false)
+  const stopGeoRef = useRef<(() => void) | null>(null)
   onChangeRef.current = onChange
   onGeolocateRef.current = onGeolocate
   onGeoErrorRef.current = onGeoError
@@ -304,27 +310,42 @@ export function OsmMapPicker({
   }
 
   function requestGeolocation(fromAuto: boolean) {
-    if (!canEdit || typeof navigator === 'undefined' || !navigator.geolocation) {
-      return
-    }
+    if (!canEdit) return
+    stopGeoRef.current?.()
     setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocating(false)
-        const result = applyPosition(position.coords.latitude, position.coords.longitude, true)
-        if (result === 'outside' && !fromAuto) {
-          onGeoOutsideRef.current?.()
+    let applied = false
+    let lastOutside = false
+
+    stopGeoRef.current = requestBrowserGeolocation({
+      onPosition(coords) {
+        const result = applyPosition(coords.latitude, coords.longitude, !applied)
+        if (result === 'ok') {
+          applied = true
+          lastOutside = false
+          setLocating(false)
+          return
         }
+        lastOutside = true
       },
-      () => {
+      onError(kind) {
+        if (fromAuto) return
+        onGeoErrorRef.current?.(kind)
+      },
+      onSettled(reason) {
+        stopGeoRef.current = null
         setLocating(false)
-        if (!fromAuto) {
-          onGeoErrorRef.current?.()
-        }
+        if (reason === 'cancel' || fromAuto || applied) return
+        if (lastOutside) onGeoOutsideRef.current?.()
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 20000 },
-    )
+    })
   }
+
+  useEffect(() => {
+    return () => {
+      stopGeoRef.current?.()
+      stopGeoRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (!open || !autoGeolocate || !canEdit || autoGeoDoneRef.current) return
@@ -333,7 +354,14 @@ export function OsmMapPicker({
       return
     }
     autoGeoDoneRef.current = true
-    requestGeolocation(true)
+    let cancelled = false
+    void queryGeolocationPermission().then((state) => {
+      if (cancelled || state !== 'granted') return
+      requestGeolocation(true)
+    })
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoGeolocate, canEdit, open])
 
