@@ -49,6 +49,7 @@
     "breadcrumb": "مسار الصفحة",
     "account": "الحساب",
     "settings": "الإعدادات",
+    "language": "اللغة",
     "changePassword": "تغيير كلمة المرور",
     "forgotPassword": "نسيت كلمة المرور",
     "openMenu": "فتح القائمة",
@@ -204,7 +205,7 @@
     "supportRequestsSection": "طلبات الدعم"
   },
   "settings": {
-    "title": "الإعدادات",
+    "title": "اللغة",
     "subtitle": "تغيير لغة النظام",
     "locale": "لغة النظام",
     "save": "حفظ الإعدادات",
