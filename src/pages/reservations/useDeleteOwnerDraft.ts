@@ -5,11 +5,12 @@ export function useDeleteOwnerDraft() {
   const { t } = useTranslation()
   const { confirmDelete } = useConfirmDelete()
 
-  return (id: string) =>
+  return (id: string, onDeleted?: () => void) =>
     confirmDelete({
       message: t('reservations.confirmDeleteDraft'),
       successMessage: t('reservations.draftDeleted'),
       path: `/reservations/${id}`,
       queryKey: ['reservations'],
+      onDeleted,
     })
 }
