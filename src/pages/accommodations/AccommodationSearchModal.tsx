@@ -1,4 +1,4 @@
-import { Building2, Search, X } from 'lucide-react'
+import { Building2, List, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
@@ -46,6 +46,11 @@ export function AccommodationSearchModal({ onClose }: { onClose: () => void }) {
   function openItem(item: Accommodation) {
     onClose()
     navigate(canBrowseAll ? `/accommodations/${item.id}` : `/my-accommodations/${item.id}`)
+  }
+
+  function openAll() {
+    onClose()
+    navigate(canBrowseAll ? '/accommodations' : '/my-accommodations')
   }
 
   async function onSearch(event: FormEvent) {
@@ -134,6 +139,10 @@ export function AccommodationSearchModal({ onClose }: { onClose: () => void }) {
               </Button>
             </div>
           </AppForm>
+          <Button type="button" variant="ghost" className="w-full" onClick={openAll}>
+            <List className="size-4" aria-hidden />
+            {t('quickTools.viewAllAccommodations')}
+          </Button>
           {searched && !searching && rows.length === 0 ? (
             <FormEmptyHint>{t('accommodations.noResults')}</FormEmptyHint>
           ) : null}
