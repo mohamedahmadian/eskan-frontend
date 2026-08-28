@@ -6,7 +6,7 @@ export type TravelSubStep = (typeof travelSubSteps)[number]
 
 export function travelSubStepsForType(type: ReservationType): TravelSubStep[] {
   if (type === 'INDIVIDUAL') {
-    return ['count', 'dates', 'services', 'optional']
+    return ['dates', 'services', 'optional']
   }
   return ['count', 'party', 'dates', 'services']
 }
