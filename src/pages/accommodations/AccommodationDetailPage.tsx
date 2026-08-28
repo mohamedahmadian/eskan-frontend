@@ -63,7 +63,7 @@ import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
-import { useAuth } from '../../auth/AuthProvider
+import { useAuth } from '../../auth/AuthProvider'
 import type { Accommodation, AccommodationStatus } from '../../types/app'
 import {
   accommodationContactRoles,
