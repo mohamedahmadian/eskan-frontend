@@ -1615,6 +1615,7 @@
     "empty": "अभी तक कोई आवास पंजीकृत नहीं है",
     "noResults": "इस खोज से कोई आवास नहीं मिला",
     "searchPlaceholder": "नाम, पता, फोन या शहर",
+    "searchNamePlaceholder": "आवास का नाम खोजें",
     "allTypes": "सभी प्रकार के आवास",
     "allManagementTypes": "सभी प्रकार के प्रबंधन",
     "allGenderTypes": "सभी प्रकार के स्वागत",

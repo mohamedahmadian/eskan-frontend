@@ -1616,6 +1616,7 @@
     "empty": "هنوز اسکان ثبت نشده است",
     "noResults": "اسکانی با این جستجو یافت نشد",
     "searchPlaceholder": "نام، آدرس، تلفن یا شهر",
+    "searchNamePlaceholder": "Search accommodation name",
     "allTypes": "همه انواع اسکان",
     "allManagementTypes": "همه انواع مدیریت",
     "allGenderTypes": "همه انواع پذیرش",

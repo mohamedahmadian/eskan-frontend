@@ -1624,6 +1624,7 @@
     "empty": "لم يتم تسجيل أي إسكان بعد",
     "noResults": "لم يُعثر على إسكان بهذا البحث",
     "searchPlaceholder": "الاسم أو العنوان أو الهاتف أو المدينة",
+    "searchNamePlaceholder": "بحث باسم الإسكان",
     "allTypes": "كل أنواع الإسكان",
     "allManagementTypes": "كل أنواع الإدارة",
     "allGenderTypes": "كل أنواع القبول",

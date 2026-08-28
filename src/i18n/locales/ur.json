@@ -1616,6 +1616,7 @@
     "empty": "ابھی تک کوئی رہائش رجسٹر نہیں کی گئی",
     "noResults": "اس تلاش سے کوئی رہائش نہیں ملی",
     "searchPlaceholder": "نام، پتہ، فون یا شہر",
+    "searchNamePlaceholder": "رہائش کا نام تلاش کریں",
     "allTypes": "رہائش کی تمام اقسام",
     "allManagementTypes": "انتظام کی تمام اقسام",
     "allGenderTypes": "پذیرش کی تمام اقسام",
