@@ -13,6 +13,7 @@ import {
   Users,
   Venus,
   Footprints,
+  MapPin,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
@@ -84,14 +85,14 @@ const typeCardHoverClass =
 const typeIcons = { INDIVIDUAL: User, GROUP: Users, CARAVAN: Footprints }
 
 type CreateStep = 'type' | 'party' | 'count' | 'dates' | 'services' | 'license'
-const defaultCreateSteps: CreateStep[] = ['type', 'count', 'dates', 'services']
+const individualCreateSteps: CreateStep[] = ['type', 'dates', 'services']
 const groupCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'services']
 const caravanCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'services', 'license']
 
 function stepsForCreateType(type: ReservationType | ''): CreateStep[] {
   if (type === 'CARAVAN') return caravanCreateSteps
   if (type === 'GROUP') return groupCreateSteps
-  return defaultCreateSteps
+  return individualCreateSteps
 }
 
 const createStepIcons: Record<CreateStep, LucideIcon> = {
@@ -193,8 +194,10 @@ function inferCreateStep(
   savedStep?: string | null,
 ): CreateStep {
   const steps = stepsForCreateType(type)
-  if (savedStep && steps.includes(savedStep as CreateStep)) {
-    return savedStep as CreateStep
+  const requestedStep =
+    savedStep === 'count' && !steps.includes('count') ? 'dates' : savedStep
+  if (requestedStep && steps.includes(requestedStep as CreateStep)) {
+    return requestedStep as CreateStep
   }
   for (const item of steps) {
     if (item === 'type') continue
@@ -559,7 +562,7 @@ export function ReservationCreatePage() {
 
   async function goAfterType(next: ReservationType) {
     selectType(next)
-    const nextStep: CreateStep = next === 'GROUP' || next === 'CARAVAN' ? 'party' : 'count'
+    const nextStep: CreateStep = next === 'GROUP' || next === 'CARAVAN' ? 'party' : 'dates'
     const nextValues =
       next === 'INDIVIDUAL'
         ? {
@@ -826,27 +829,6 @@ export function ReservationCreatePage() {
   const patchValues = (patch: Partial<TravelValues>) =>
     setValues((current) => ({ ...current, ...patch }))
 
-  async function onIndividualCountChosen(patch: Partial<TravelValues>) {
-    const nextValues = { ...values, ...patch }
-    patchValues(patch)
-    if (type !== 'INDIVIDUAL') return
-    const male = Number(nextValues.maleCount) || 0
-    const female = Number(nextValues.femaleCount) || 0
-    if (male + female <= 0) return
-    setSubmitting(true)
-    try {
-      const id = await persistDraft({
-        nextType: 'INDIVIDUAL',
-        nextValues,
-        wizardStep: 'dates',
-        silent: Boolean(draftId),
-      })
-      if (id) setStep('dates')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   async function selectPartyAndAdvance(item: { id: string }) {
     if (!type || (type !== 'CARAVAN' && type !== 'GROUP')) return
     const nextValues: TravelValues = {
@@ -1047,13 +1029,7 @@ export function ReservationCreatePage() {
             ) : null}
             <ReservationCountFields
               values={values}
-              onChange={(patch) => {
-                if (type === 'INDIVIDUAL') {
-                  void onIndividualCountChosen(patch)
-                  return
-                }
-                patchValues(patch)
-              }}
+              onChange={patchValues}
               type={type}
             />
           </>
@@ -1139,6 +1115,12 @@ function CreateStepBar({
   const total = steps.length
   return (
     <div className={`${cardClassName} mb-4 p-4`}>
+      <div className="mb-3 flex items-center justify-start">
+        <span className="inline-flex items-center gap-2 rounded-2xl bg-teal-50 px-3 py-1.5 text-sm font-semibold text-teal-800">
+          <MapPin className="size-4 shrink-0" aria-hidden />
+          {t('reservations.steps.travel')}
+        </span>
+      </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
         <StepProgressChart
           currentIndex={currentIndex}
@@ -1151,7 +1133,13 @@ function CreateStepBar({
         />
         <div
           className={`grid min-w-0 w-full flex-1 gap-2 sm:order-first ${
-            total >= 6 ? 'grid-cols-3 sm:grid-cols-6' : total === 5 ? 'grid-cols-5' : 'grid-cols-4'
+            total >= 6
+              ? 'grid-cols-3 sm:grid-cols-6'
+              : total === 5
+                ? 'grid-cols-5'
+                : total === 3
+                  ? 'grid-cols-3'
+                  : 'grid-cols-4'
           }`}
         >
           {steps.map((item, index) => {
