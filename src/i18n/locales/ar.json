@@ -73,7 +73,9 @@
     "searchFileNumber": "الرقم",
     "searchFileNumberRequired": "أدخل رقم الملف",
     "myLocation": "تسجيل الموقع الجغرافي",
-    "myLocationHint": "المحافظة والمدينة والموقع على الخريطة"
+    "myLocationHint": "المحافظة والمدينة والموقع على الخريطة",
+    "newFile": "ملف زيارة جديد لسنة {{year}}",
+    "newFileHint": "بدء تسجيل ملف الزيارة"
   },
   "account": {
     "title": "الحساب",

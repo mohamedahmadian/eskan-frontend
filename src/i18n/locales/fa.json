@@ -89,6 +89,8 @@
     "myLocationHint": "استان، شهر و موقعیت روی نقشه",
     "dashboard": "داشبورد",
     "dashboardHint": "خلاصه وضعیت زیارت شما",
+    "newFile": "پرونده زیارتی جدید سال {{year}}",
+    "newFileHint": "شروع ثبت پرونده زیارتی",
     "myReservations": "پرونده‌های زیارتی من",
     "myReservationsHint": "مشاهده و پیگیری پرونده‌های زیارتی"
   },

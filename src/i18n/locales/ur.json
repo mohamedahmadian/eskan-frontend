@@ -67,7 +67,9 @@
     "searchInfoTitle": "معلومات تک فوری اور ہوشیار رسائی",
     "searchInfoHint": "یا دو بار Enter کلید دبائیں",
     "myLocation": "مقام رجسٹر کریں",
-    "myLocationHint": "صوبہ، شہر اور نقشے پر مقام"
+    "myLocationHint": "صوبہ، شہر اور نقشے پر مقام",
+    "newFile": "سال {{year}} کی نئی زیارتی فائل",
+    "newFileHint": "زیارتی فائل کا آغاز"
   },
   "account": {
     "title": "اکاؤنٹ",

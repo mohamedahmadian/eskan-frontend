@@ -66,7 +66,9 @@
     "searchInfoTitle": "जानकारी तक त्वरित और स्मार्ट पहुंच",
     "searchInfoHint": "या दो बार Enter दबाएं",
     "myLocation": "स्थान पंजीकृत करें",
-    "myLocationHint": "प्रांत, शहर और मानचित्र पर स्थान"
+    "myLocationHint": "प्रांत, शहर और मानचित्र पर स्थान",
+    "newFile": "{{year}} के लिए नई यात्रा फ़ाइल",
+    "newFileHint": "यात्रा फ़ाइल शुरू करें"
   },
   "account": {
     "title": "खाता",

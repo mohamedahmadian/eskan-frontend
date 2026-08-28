@@ -1,9 +1,10 @@
-import { ClipboardList, FileSearch, LayoutDashboard, LocateFixed, ScanSearch, X } from 'lucide-react'
+import { ClipboardList, FileSearch, LayoutDashboard, LocateFixed, Plus, ScanSearch, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
+import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { canAccessMyReservations, isPilgrim } from '../../lib/roles'
 import { ReceptionDesk } from '../../pages/reception/ReceptionDesk'
 import { ReservationFileSearchModal } from '../../pages/reservations/ReservationFileSearchModal'
@@ -34,6 +35,7 @@ function getQuickToolsFlags(pathname: string, user: QuickToolsUser) {
   const canMyReservations =
     canAccessMyReservations(user) && hasMenuAccess('/my-reservations', list)
   const showDashboard = pilgrim
+  const showNewFile = pilgrim && canMyReservations
   const showMyReservations = pilgrim && canMyReservations
   const showSearch = !pilgrim && canReception && !isReceptionPath(pathname)
   const showFileSearch =
@@ -42,17 +44,23 @@ function getQuickToolsFlags(pathname: string, user: QuickToolsUser) {
       hasMenuAccess('/my-reservations', list) ||
       canReception)
   const showLocation = canLocation && (pilgrim || !isLocationPath(pathname))
-  return {
+    return {
     pilgrim,
     canReception,
     canFileSearch: showFileSearch,
     showDashboard,
+    showNewFile,
     showMyReservations,
     showSearch,
     showFileSearch,
     showLocation,
     fabEnabled:
-      showDashboard || showMyReservations || showSearch || showFileSearch || showLocation,
+      showDashboard ||
+      showNewFile ||
+      showMyReservations ||
+      showSearch ||
+      showFileSearch ||
+      showLocation,
   }
 }
 
@@ -155,6 +163,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     canReception,
     canFileSearch,
     showDashboard,
+    showNewFile,
     showMyReservations,
     showSearch,
     showFileSearch,
@@ -206,6 +215,12 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     cancelPendingFormEnter()
     setMenuOpen(false)
     navigate('/')
+  }, [navigate])
+
+  const openNewFile = useCallback(() => {
+    cancelPendingFormEnter()
+    setMenuOpen(false)
+    navigate('/my-reservations/new')
   }, [navigate])
 
   const openMyReservations = useCallback(() => {
@@ -296,6 +311,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
           searchOpen={searchOpen}
           hidden={searchOpen || fileSearchOpen}
           showDashboard={showDashboard}
+          showNewFile={showNewFile}
           showMyReservations={showMyReservations}
           showSearch={showSearch}
           showFileSearch={showFileSearch}
@@ -303,6 +319,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
           onToggleMenu={() => setMenuOpen((open) => !open)}
           onCloseMenu={() => setMenuOpen(false)}
           onOpenDashboard={openDashboard}
+          onOpenNewFile={openNewFile}
           onOpenMyReservations={openMyReservations}
           onOpenSearch={openSearch}
           onOpenFileSearch={openFileSearch}
@@ -324,6 +341,7 @@ function QuickToolsFab({
   searchOpen,
   hidden,
   showDashboard,
+  showNewFile,
   showMyReservations,
   showSearch,
   showFileSearch,
@@ -331,6 +349,7 @@ function QuickToolsFab({
   onToggleMenu,
   onCloseMenu,
   onOpenDashboard,
+  onOpenNewFile,
   onOpenMyReservations,
   onOpenSearch,
   onOpenFileSearch,
@@ -340,6 +359,7 @@ function QuickToolsFab({
   searchOpen: boolean
   hidden: boolean
   showDashboard: boolean
+  showNewFile: boolean
   showMyReservations: boolean
   showSearch: boolean
   showFileSearch: boolean
@@ -347,12 +367,15 @@ function QuickToolsFab({
   onToggleMenu: () => void
   onCloseMenu: () => void
   onOpenDashboard: () => void
+  onOpenNewFile: () => void
   onOpenMyReservations: () => void
   onOpenSearch: () => void
   onOpenFileSearch: () => void
   onOpenLocation: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const newFileYear = formatNumber(currentPersianYear(), locale)
   const rootRef = useRef<HTMLDivElement>(null)
   const posRef = useRef<FabPos>({ left: 0, bottom: 0 })
   const skipClickRef = useRef(false)
@@ -486,7 +509,7 @@ function QuickToolsFab({
       {menuOpen ? (
         <div
           role="menu"
-          className="pointer-events-auto absolute bottom-full left-1/2 mb-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_16px_40px_rgba(20,40,40,0.14)]"
+          className="pointer-events-auto absolute bottom-full left-1/2 mb-2 w-72 -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_16px_40px_rgba(20,40,40,0.14)]"
         >
           {showDashboard ? (
             <button
@@ -499,6 +522,22 @@ function QuickToolsFab({
               <span className="min-w-0">
                 <span className="block font-medium">{t('quickTools.dashboard')}</span>
                 <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.dashboardHint')}</span>
+              </span>
+            </button>
+          ) : null}
+          {showNewFile ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-sm text-ink-800 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-300"
+              onClick={onOpenNewFile}
+            >
+              <Plus className="size-4 shrink-0 text-teal-600" aria-hidden />
+              <span className="min-w-0">
+                <span className="block font-medium">
+                  {t('quickTools.newFile', { year: newFileYear })}
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.newFileHint')}</span>
               </span>
             </button>
           ) : null}
