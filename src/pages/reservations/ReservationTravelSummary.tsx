@@ -184,6 +184,12 @@ export function ReservationTravelSummary({
           <SectionTitle icon={HeartHandshake}>{t('reservations.createSteps.services')}</SectionTitle>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
             <FactTile
+              icon={Shield}
+              label={t('reservations.requestsInsuranceShort')}
+              value={t('common.yes')}
+              tone="ink"
+            />
+            <FactTile
               icon={Building2}
               label={t('reservations.requestsAccommodationShort')}
               value={reservation.requestsAccommodation ? t('common.yes') : t('common.no')}
@@ -194,16 +200,6 @@ export function ReservationTravelSummary({
               label={t('reservations.requestsBusShort')}
               value={reservation.requestsBus ? t('common.yes') : t('common.no')}
               tone="mint"
-            />
-            <FactTile
-              icon={Shield}
-              label={t('reservations.requestsInsuranceOnlyShort')}
-              value={
-                !reservation.requestsAccommodation && !reservation.requestsBus
-                  ? t('common.yes')
-                  : t('common.no')
-              }
-              tone="ink"
             />
             <FactTile
               icon={Smartphone}

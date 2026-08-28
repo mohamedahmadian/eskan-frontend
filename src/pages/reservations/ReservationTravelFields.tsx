@@ -198,9 +198,20 @@ export function ReservationApplicantFields({
   locked?: boolean;
 }) {
   const { t } = useTranslation();
-  const insuranceOnly = !values.requestsAccommodation && !values.requestsBus;
   return (
     <div className="grid gap-3">
+      <CheckboxField
+        id="requestsInsurance"
+        checked
+        readOnly
+        onChange={() => {}}
+        label={
+          <span className="flex items-center gap-2">
+            <Shield className="size-4 shrink-0 text-teal-600" aria-hidden />
+            {t("reservations.requestsInsurance")}
+          </span>
+        }
+      />
       <CheckboxField
         id="requestsAccommodation"
         checked={values.requestsAccommodation}
@@ -222,21 +233,6 @@ export function ReservationApplicantFields({
           <span className="flex items-center gap-2">
             <Bus className="size-4 shrink-0 text-teal-600" aria-hidden />
             {t("reservations.requestsBus")}
-          </span>
-        }
-      />
-      <CheckboxField
-        id="requestsInsuranceOnly"
-        checked={insuranceOnly}
-        disabled={locked}
-        onChange={(checked) => {
-          if (checked)
-            onChange({ requestsAccommodation: false, requestsBus: false });
-        }}
-        label={
-          <span className="flex items-center gap-2">
-            <Shield className="size-4 shrink-0 text-teal-600" aria-hidden />
-            {t("reservations.requestsInsuranceOnly")}
           </span>
         }
       />
