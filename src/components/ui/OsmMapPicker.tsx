@@ -10,7 +10,6 @@ import {
 } from '../../lib/geolocation'
 import { Button } from './Form'
 
-const MASHHAD: L.LatLngTuple = [36.2878, 59.6154]
 const pinIcon = L.divIcon({
   className: 'eskan-map-pin',
   html: '<span class="eskan-map-pin-dot"></span>',
@@ -32,25 +31,68 @@ export type MapBounds = {
   east: number
 }
 
+const IRAN_BOUNDS: MapBounds = {
+  south: 25.06,
+  west: 44.03,
+  north: 39.78,
+  east: 63.33,
+}
+
 export type MapOverlayMarker = {
   id: string
   lat: number
   lng: number
-  kind: 'previous' | 'current' | 'next' | 'history'
+  kind: 'previous' | 'current' | 'next' | 'history' | 'station'
   badge: string
   title: string
   popupHtml?: string
+}
+
+export type MapOverlayClickPoint = {
+  x: number
+  y: number
 }
 
 export type MapOverlays = {
   markers: MapOverlayMarker[]
   path?: { lat: number; lng: number }[]
   fit?: boolean
+  fitMaxZoom?: number
+}
+
+function overlayLatLngs(overlays: MapOverlays | null, extra?: L.LatLng | null) {
+  if (!overlays) return []
+  const points = [
+    ...overlays.markers.map((marker) => L.latLng(marker.lat, marker.lng)),
+    ...(overlays.path ?? []).map((point) => L.latLng(point.lat, point.lng)),
+  ]
+  if (extra) points.push(extra)
+  return points
+}
+
+function overlayFitKey(points: L.LatLng[]) {
+  return points.map((point) => `${point.lat.toFixed(5)},${point.lng.toFixed(5)}`).join('|')
+}
+
+function fitOverlayBounds(map: L.Map, overlays: MapOverlays | null, extra?: L.LatLng | null) {
+  const points = overlayLatLngs(overlays, extra)
+  if (!points.length) return
+  const bounds = L.latLngBounds(points)
+  if (!bounds.isValid()) return
+  const maxZoom = overlays?.fitMaxZoom ?? 16
+  if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
+    map.setView(bounds.getCenter(), Math.min(maxZoom, 14))
+    return
+  }
+  map.fitBounds(bounds, { padding: [56, 56], maxZoom })
 }
 
 function parseLatLng(latitude: string, longitude: string) {
-  const lat = Number(latitude)
-  const lng = Number(longitude)
+  const latText = latitude.trim()
+  const lngText = longitude.trim()
+  if (!latText || !lngText) return null
+  const lat = Number(latText)
+  const lng = Number(lngText)
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
   return L.latLng(lat, lng)
@@ -80,6 +122,9 @@ export function OsmMapPicker({
   maxBounds = null,
   heightClass = 'h-72',
   overlays = null,
+  fill = false,
+  keepInView = null,
+  onMarkerClick,
   onGeolocate,
   onGeoError,
   onGeoOutside,
@@ -96,6 +141,12 @@ export function OsmMapPicker({
   maxBounds?: MapBounds | null
   heightClass?: string
   overlays?: MapOverlays | null
+  fill?: boolean
+  keepInView?: {
+    id: string
+    padding: { top: number; right: number; bottom: number; left: number }
+  } | null
+  onMarkerClick?: (id: string, point: MapOverlayClickPoint) => void
   onGeolocate?: (latitude: string, longitude: string) => void
   onGeoError?: (kind: GeoErrorKind) => void
   onGeoOutside?: () => void
@@ -108,10 +159,13 @@ export function OsmMapPicker({
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
   const overlayLayerRef = useRef<L.LayerGroup | null>(null)
+  const overlayFitKeyRef = useRef<string>('')
+  const overlaysRef = useRef(overlays)
   const onChangeRef = useRef(onChange)
   const onGeolocateRef = useRef(onGeolocate)
   const onGeoErrorRef = useRef(onGeoError)
   const onGeoOutsideRef = useRef(onGeoOutside)
+  const onMarkerClickRef = useRef(onMarkerClick)
   const maxBoundsRef = useRef(maxBounds)
   const autoGeoDoneRef = useRef(false)
   const stopGeoRef = useRef<(() => void) | null>(null)
@@ -119,6 +173,8 @@ export function OsmMapPicker({
   onGeolocateRef.current = onGeolocate
   onGeoErrorRef.current = onGeoError
   onGeoOutsideRef.current = onGeoOutside
+  onMarkerClickRef.current = onMarkerClick
+  overlaysRef.current = overlays
   maxBoundsRef.current = maxBounds
 
   const canEdit = !readOnly
@@ -152,16 +208,19 @@ export function OsmMapPicker({
       dragging: true,
       doubleClickZoom: !readOnly,
     })
+    const currentOverlays = overlaysRef.current
     if (start) {
       map.setView(start, 16)
+    } else if (currentOverlays?.fit && overlayLatLngs(currentOverlays).length) {
+      fitOverlayBounds(map, currentOverlays)
     } else if (maxBounds) {
       map.fitBounds(toLeafletBounds(maxBounds), { padding: [28, 28], maxZoom: focus?.zoom ?? 13 })
     } else if (focus?.bounds) {
-      map.fitBounds(toLeafletBounds(focus.bounds), { padding: [16, 16] })
+      map.fitBounds(toLeafletBounds(focus.bounds), { padding: [56, 56], maxZoom: focus.zoom ?? 16 })
     } else if (focus) {
       map.setView([focus.lat, focus.lng], focus.zoom ?? 9)
     } else {
-      map.setView(MASHHAD, 13)
+      map.fitBounds(toLeafletBounds(IRAN_BOUNDS), { padding: [28, 28], maxZoom: 6 })
     }
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
@@ -230,7 +289,10 @@ export function OsmMapPicker({
     if (!open || !map) return
     overlayLayerRef.current?.remove()
     overlayLayerRef.current = null
-    if (!overlays?.markers.length && !overlays?.path?.length) return
+    if (!overlays?.markers.length && !overlays?.path?.length) {
+      overlayFitKeyRef.current = ''
+      return
+    }
 
     const layer = L.layerGroup().addTo(map)
     overlayLayerRef.current = layer
@@ -261,6 +323,10 @@ export function OsmMapPicker({
         zIndexOffset: marker.kind === 'current' ? 500 : isHistory ? 420 : 400,
         keyboard: false,
       }).addTo(layer)
+      pin.on('click', (event: L.LeafletMouseEvent) => {
+        const point = map.latLngToContainerPoint(event.latlng)
+        onMarkerClickRef.current?.(marker.id, { x: point.x, y: point.y })
+      })
       if (marker.popupHtml) {
         pin.bindPopup(marker.popupHtml, {
           className: 'eskan-route-popup',
@@ -270,15 +336,15 @@ export function OsmMapPicker({
       }
     }
     if (overlays.fit) {
-      const points = [
-        ...overlays.markers.map((marker) => L.latLng(marker.lat, marker.lng)),
-        ...((overlays.path ?? []).map((point) => L.latLng(point.lat, point.lng))),
-      ]
       const here = parseLatLng(latitude, longitude)
-      if (here) points.push(here)
-      if (points.length) {
-        map.fitBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 12 })
+      const points = overlayLatLngs(overlays, here)
+      const fitKey = overlayFitKey(points)
+      if (points.length && overlayFitKeyRef.current !== fitKey) {
+        overlayFitKeyRef.current = fitKey
+        fitOverlayBounds(map, overlays, here)
       }
+    } else {
+      overlayFitKeyRef.current = ''
     }
     return () => {
       layer.remove()
@@ -289,9 +355,36 @@ export function OsmMapPicker({
   useEffect(() => {
     if (!open || !active || !mapRef.current) return
     const map = mapRef.current
-    const timer = window.setTimeout(() => map.invalidateSize(), 50)
+    function resizeAndFit() {
+      map.invalidateSize()
+      const current = overlaysRef.current
+      if (!current?.fit) return
+      const here = parseLatLng(latitude, longitude)
+      overlayFitKeyRef.current = overlayFitKey(overlayLatLngs(current, here))
+      fitOverlayBounds(map, current, here)
+    }
+    const first = window.setTimeout(resizeAndFit, 50)
+    const second = window.setTimeout(resizeAndFit, 220)
+    return () => {
+      window.clearTimeout(first)
+      window.clearTimeout(second)
+    }
+  }, [active, latitude, longitude, open])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!open || !map || !keepInView) return
+    const marker = overlaysRef.current?.markers.find((item) => item.id === keepInView.id)
+    if (!marker) return
+    const timer = window.setTimeout(() => {
+      map.panInside(L.latLng(marker.lat, marker.lng), {
+        paddingTopLeft: [keepInView.padding.left, keepInView.padding.top],
+        paddingBottomRight: [keepInView.padding.right, keepInView.padding.bottom],
+        animate: true,
+      })
+    }, 40)
     return () => window.clearTimeout(timer)
-  }, [open, active])
+  }, [keepInView, open])
 
   function applyPosition(lat: number, lng: number, fromGeo: boolean) {
     const map = mapRef.current
@@ -369,7 +462,11 @@ export function OsmMapPicker({
   const showGeoButton = geolocateEnabled && open
 
   return (
-    <div className={showMapToggle || showGeoButton ? 'space-y-3' : undefined}>
+    <div
+      className={
+        showMapToggle || showGeoButton ? 'space-y-3' : fill ? 'h-full min-h-0' : undefined
+      }
+    >
       {showMapToggle || showGeoButton ? (
         <div className="flex flex-wrap gap-2">
           {showMapToggle ? (
@@ -397,8 +494,16 @@ export function OsmMapPicker({
         </div>
       ) : null}
       {open ? (
-        <div dir="ltr" className="overflow-hidden rounded-2xl border border-line shadow-[0_8px_24px_rgba(20,40,40,0.06)]">
-          <div ref={containerRef} className={`eskan-osm-map w-full ${heightClass}`} />
+        <div
+          dir="ltr"
+          className={`overflow-hidden rounded-2xl border border-line shadow-[0_8px_24px_rgba(20,40,40,0.06)] ${
+            fill ? 'h-full' : ''
+          }`}
+        >
+          <div
+            ref={containerRef}
+            className={`eskan-osm-map w-full ${fill ? 'h-full' : heightClass}`}
+          />
         </div>
       ) : null}
     </div>

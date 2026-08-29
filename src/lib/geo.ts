@@ -52,20 +52,32 @@ export function nearestGeoItem<
   return best
 }
 
+function toCoord(value: unknown): number | null {
+  if (value == null || value === '') return null
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
 export function stageCoordinates(stage: {
-  city?: { latitude?: number | null; longitude?: number | null } | null
+  latitude?: number | string | null
+  longitude?: number | string | null
+  city?: { latitude?: number | string | null; longitude?: number | string | null } | null
 }) {
-  const lat = stage.city?.latitude
-  const lng = stage.city?.longitude
-  if (lat == null || lng == null) return null
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-  return { lat, lng }
+  const stageLat = toCoord(stage.latitude)
+  const stageLng = toCoord(stage.longitude)
+  if (stageLat != null && stageLng != null) return { lat: stageLat, lng: stageLng }
+  const cityLat = toCoord(stage.city?.latitude)
+  const cityLng = toCoord(stage.city?.longitude)
+  if (cityLat != null && cityLng != null) return { lat: cityLat, lng: cityLng }
+  return null
 }
 
 export function resolveWalkingProgress<
   T extends {
     cityId: string
     stageNumber: number
+    latitude?: number | null
+    longitude?: number | null
     city?: { latitude?: number | null; longitude?: number | null } | null
   },
 >(

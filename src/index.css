@@ -209,6 +209,15 @@ th {
   background: #1f8f8a;
 }
 
+.eskan-route-pin-station .eskan-route-pin-badge {
+  background: #2ebdb6;
+}
+
+.eskan-route-pin-current .eskan-route-pin {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 10px 18px rgba(46, 189, 182, 0.32));
+}
+
 .eskan-history-pin {
   display: flex;
   width: 28px;

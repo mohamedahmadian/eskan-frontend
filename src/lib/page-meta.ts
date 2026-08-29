@@ -445,66 +445,6 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "foodSuppliers.subtitle",
     };
   }
-  if (pathname.startsWith("/base-info/medical-centers/new")) {
-    return {
-      titleKey: "medicalCenters.create",
-      subtitleKey: "medicalCenters.createSubtitle",
-    };
-  }
-  if (
-    pathname.includes("/edit") &&
-    pathname.startsWith("/base-info/medical-centers/")
-  ) {
-    return {
-      titleKey: "medicalCenters.edit",
-      subtitleKey: "medicalCenters.editSubtitle",
-    };
-  }
-  if (
-    pathname.startsWith("/base-info/medical-centers/") &&
-    pathname !== "/base-info/medical-centers"
-  ) {
-    return {
-      titleKey: "medicalCenters.details",
-      subtitleKey: "medicalCenters.detailsSubtitle",
-    };
-  }
-  if (pathname.startsWith("/base-info/medical-centers")) {
-    return {
-      titleKey: "menus.medicalCenters",
-      subtitleKey: "medicalCenters.subtitle",
-    };
-  }
-  if (pathname.startsWith("/base-info/red-crescents/new")) {
-    return {
-      titleKey: "redCrescents.create",
-      subtitleKey: "redCrescents.createSubtitle",
-    };
-  }
-  if (
-    pathname.includes("/edit") &&
-    pathname.startsWith("/base-info/red-crescents/")
-  ) {
-    return {
-      titleKey: "redCrescents.edit",
-      subtitleKey: "redCrescents.editSubtitle",
-    };
-  }
-  if (
-    pathname.startsWith("/base-info/red-crescents/") &&
-    pathname !== "/base-info/red-crescents"
-  ) {
-    return {
-      titleKey: "redCrescents.details",
-      subtitleKey: "redCrescents.detailsSubtitle",
-    };
-  }
-  if (pathname.startsWith("/base-info/red-crescents")) {
-    return {
-      titleKey: "menus.redCrescents",
-      subtitleKey: "redCrescents.subtitle",
-    };
-  }
   if (pathname.startsWith("/base-info/benefactors/new")) {
     return {
       titleKey: "benefactors.create",
@@ -563,6 +503,63 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.governmentOrganizations",
       subtitleKey: "governmentOrganizations.subtitle",
+    };
+  }
+  if (pathname.startsWith("/base-info/places/types/new")) {
+    return {
+      titleKey: "placeTypes.create",
+      subtitleKey: "placeTypes.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/base-info/places/types/")
+  ) {
+    return {
+      titleKey: "placeTypes.edit",
+      subtitleKey: "placeTypes.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/base-info/places/types/") &&
+    pathname !== "/base-info/places/types"
+  ) {
+    return {
+      titleKey: "placeTypes.details",
+      subtitleKey: "placeTypes.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/base-info/places/types")) {
+    return {
+      titleKey: "menus.placeTypes",
+      subtitleKey: "placeTypes.subtitle",
+    };
+  }
+  if (pathname.startsWith("/base-info/places/new")) {
+    return {
+      titleKey: "places.create",
+      subtitleKey: "places.createSubtitle",
+    };
+  }
+  if (pathname.includes("/edit") && pathname.startsWith("/base-info/places/")) {
+    return {
+      titleKey: "places.edit",
+      subtitleKey: "places.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/base-info/places/") &&
+    pathname !== "/base-info/places"
+  ) {
+    return {
+      titleKey: "places.details",
+      subtitleKey: "places.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/base-info/places")) {
+    return {
+      titleKey: "menus.places",
+      subtitleKey: "places.subtitle",
     };
   }
   if (pathname.startsWith("/licenses/new")) {

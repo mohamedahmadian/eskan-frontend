@@ -1,22 +1,28 @@
+import { Landmark } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
+import {
+  EntityNameSubtitle,
+  LoadingState,
+  PageHeader,
+  formShellClassName,
+} from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import type { City, Province, RedCrescent } from '../../types/app'
-import { RedCrescentForm } from './RedCrescentForm'
+import type { City, Place, PlaceType, PlaceTypeRef, Province } from '../../types/app'
+import { PlaceForm } from './PlaceForm'
 
-export function RedCrescentEditPage() {
+export function PlaceEditPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
   const item = useQuery({
-    queryKey: ['red-crescent', id],
+    queryKey: ['place', id],
     enabled: Boolean(id),
     queryFn: async () => {
-      const { data } = await api.get<RedCrescent>(`/red-crescents/${id}`)
+      const { data } = await api.get<Place>(`/places/${id}`)
       return data
     },
   })
@@ -42,22 +48,41 @@ export function RedCrescentEditPage() {
     },
   })
 
-  if (!item.data || !provinces.data) {
+  const placeTypes = useQuery({
+    queryKey: ['place-types', 'lookup', 'active'],
+    queryFn: async () => {
+      const { data } = await api.get<PlaceType[]>('/place-types', {
+        params: { activeOnly: true },
+      })
+      return data
+    },
+  })
+
+  if (!item.data || !provinces.data || !placeTypes.data) {
     return <LoadingState />
+  }
+
+  const types: PlaceTypeRef[] = [...placeTypes.data]
+  if (!types.some((type) => type.id === item.data.placeTypeId)) {
+    types.unshift(item.data.placeType)
   }
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('redCrescents.edit')} subtitle={t('redCrescents.editSubtitle')} />
-      <RedCrescentForm
+      <PageHeader
+        title={t('places.edit')}
+        subtitle={<EntityNameSubtitle name={item.data.name} icon={Landmark} />}
+      />
+      <PlaceForm
         initial={item.data}
         provinces={provinces.data}
         cities={cities.data ?? []}
+        placeTypes={types}
         onProvinceChange={setProvinceId}
         onSubmit={async (payload) => {
-          await api.patch(`/red-crescents/${id}`, payload)
-          toast.success(t('redCrescents.updated'))
-          navigate(`/base-info/red-crescents/${id}`)
+          await api.patch(`/places/${id}`, payload)
+          toast.success(t('places.updated'))
+          navigate(`/base-info/places/${id}`)
         }}
       />
     </div>

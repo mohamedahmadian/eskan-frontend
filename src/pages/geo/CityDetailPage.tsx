@@ -1,4 +1,4 @@
-import { HandHeart, HeartHandshake, Hospital, UtensilsCrossed } from 'lucide-react'
+import { HandHeart, Landmark, UtensilsCrossed } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -33,9 +33,8 @@ export function CityDetailPage() {
   }
 
   const canManageFoodSuppliers = hasMenuAccess('/base-info/food-suppliers', user?.modules ?? [])
-  const canManageMedicalCenters = hasMenuAccess('/base-info/medical-centers', user?.modules ?? [])
-  const canManageRedCrescents = hasMenuAccess('/base-info/red-crescents', user?.modules ?? [])
   const canManageBenefactors = hasMenuAccess('/base-info/benefactors', user?.modules ?? [])
+  const canManagePlaces = hasMenuAccess('/base-info/places', user?.modules ?? [])
 
   return (
     <div className={formShellClassName}>
@@ -103,26 +102,6 @@ export function CityDetailPage() {
                 </Button>
               </Link>
             ) : null}
-            {canManageMedicalCenters ? (
-              <Link
-                to={`/base-info/medical-centers?provinceId=${city.provinceId}&cityId=${city.id}`}
-              >
-                <Button type="button" variant="ghost">
-                  <Hospital className="size-4" aria-hidden />
-                  {t('cities.manageMedicalCenters')}
-                </Button>
-              </Link>
-            ) : null}
-            {canManageRedCrescents ? (
-              <Link
-                to={`/base-info/red-crescents?provinceId=${city.provinceId}&cityId=${city.id}`}
-              >
-                <Button type="button" variant="ghost">
-                  <HeartHandshake className="size-4" aria-hidden />
-                  {t('cities.manageRedCrescents')}
-                </Button>
-              </Link>
-            ) : null}
             {canManageBenefactors ? (
               <Link
                 to={`/base-info/benefactors?provinceId=${city.provinceId}&cityId=${city.id}`}
@@ -130,6 +109,16 @@ export function CityDetailPage() {
                 <Button type="button" variant="ghost">
                   <HandHeart className="size-4" aria-hidden />
                   {t('cities.manageBenefactors')}
+                </Button>
+              </Link>
+            ) : null}
+            {canManagePlaces ? (
+              <Link
+                to={`/base-info/places?provinceId=${city.provinceId}&cityId=${city.id}`}
+              >
+                <Button type="button" variant="ghost">
+                  <Landmark className="size-4" aria-hidden />
+                  {t('cities.managePlaces')}
                 </Button>
               </Link>
             ) : null}

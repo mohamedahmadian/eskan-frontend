@@ -64,10 +64,14 @@ import { FoodSupplierCreatePage } from "./pages/food-suppliers/FoodSupplierCreat
 import { FoodSupplierDetailPage } from "./pages/food-suppliers/FoodSupplierDetailPage";
 import { FoodSupplierEditPage } from "./pages/food-suppliers/FoodSupplierEditPage";
 import { FoodSuppliersListPage } from "./pages/food-suppliers/FoodSuppliersListPage";
-import { MedicalCenterCreatePage } from "./pages/medical-centers/MedicalCenterCreatePage";
-import { MedicalCenterDetailPage } from "./pages/medical-centers/MedicalCenterDetailPage";
-import { MedicalCenterEditPage } from "./pages/medical-centers/MedicalCenterEditPage";
-import { MedicalCentersListPage } from "./pages/medical-centers/MedicalCentersListPage";
+import { PlaceCreatePage } from "./pages/places/PlaceCreatePage";
+import { PlaceDetailPage } from "./pages/places/PlaceDetailPage";
+import { PlaceEditPage } from "./pages/places/PlaceEditPage";
+import { PlacesListPage } from "./pages/places/PlacesListPage";
+import { PlaceTypeCreatePage } from "./pages/place-types/PlaceTypeCreatePage";
+import { PlaceTypeDetailPage } from "./pages/place-types/PlaceTypeDetailPage";
+import { PlaceTypeEditPage } from "./pages/place-types/PlaceTypeEditPage";
+import { PlaceTypesListPage } from "./pages/place-types/PlaceTypesListPage";
 import { GovernmentOrganizationCreatePage } from "./pages/government-organizations/GovernmentOrganizationCreatePage";
 import { GovernmentOrganizationDetailPage } from "./pages/government-organizations/GovernmentOrganizationDetailPage";
 import { GovernmentOrganizationEditPage } from "./pages/government-organizations/GovernmentOrganizationEditPage";
@@ -79,10 +83,6 @@ import { BenefactorCreatePage } from "./pages/benefactors/BenefactorCreatePage";
 import { BenefactorDetailPage } from "./pages/benefactors/BenefactorDetailPage";
 import { BenefactorEditPage } from "./pages/benefactors/BenefactorEditPage";
 import { BenefactorsListPage } from "./pages/benefactors/BenefactorsListPage";
-import { RedCrescentCreatePage } from "./pages/red-crescents/RedCrescentCreatePage";
-import { RedCrescentDetailPage } from "./pages/red-crescents/RedCrescentDetailPage";
-import { RedCrescentEditPage } from "./pages/red-crescents/RedCrescentEditPage";
-import { RedCrescentsListPage } from "./pages/red-crescents/RedCrescentsListPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ImpersonateEndedPage } from "./pages/ImpersonateEndedPage";
 import { ImpersonateEntryPage } from "./pages/ImpersonateEntryPage";
@@ -588,50 +588,6 @@ export default function App() {
                   />
                 </Route>
                 <Route
-                  element={
-                    <RequireMenuAccess path="/base-info/medical-centers" />
-                  }
-                >
-                  <Route
-                    path="/base-info/medical-centers"
-                    element={<MedicalCentersListPage />}
-                  />
-                  <Route
-                    path="/base-info/medical-centers/new"
-                    element={<MedicalCenterCreatePage />}
-                  />
-                  <Route
-                    path="/base-info/medical-centers/:id"
-                    element={<MedicalCenterDetailPage />}
-                  />
-                  <Route
-                    path="/base-info/medical-centers/:id/edit"
-                    element={<MedicalCenterEditPage />}
-                  />
-                </Route>
-                <Route
-                  element={
-                    <RequireMenuAccess path="/base-info/red-crescents" />
-                  }
-                >
-                  <Route
-                    path="/base-info/red-crescents"
-                    element={<RedCrescentsListPage />}
-                  />
-                  <Route
-                    path="/base-info/red-crescents/new"
-                    element={<RedCrescentCreatePage />}
-                  />
-                  <Route
-                    path="/base-info/red-crescents/:id"
-                    element={<RedCrescentDetailPage />}
-                  />
-                  <Route
-                    path="/base-info/red-crescents/:id/edit"
-                    element={<RedCrescentEditPage />}
-                  />
-                </Route>
-                <Route
                   element={<RequireMenuAccess path="/base-info/benefactors" />}
                 >
                   <Route
@@ -671,6 +627,40 @@ export default function App() {
                   <Route
                     path="/base-info/government-organizations/:id/edit"
                     element={<GovernmentOrganizationEditPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/base-info/places" />}>
+                  <Route
+                    path="/base-info/places"
+                    element={<PlacesListPage />}
+                  />
+                  <Route
+                    path="/base-info/places/new"
+                    element={<PlaceCreatePage />}
+                  />
+                  <Route
+                    path="/base-info/places/types"
+                    element={<PlaceTypesListPage />}
+                  />
+                  <Route
+                    path="/base-info/places/types/new"
+                    element={<PlaceTypeCreatePage />}
+                  />
+                  <Route
+                    path="/base-info/places/types/:id"
+                    element={<PlaceTypeDetailPage />}
+                  />
+                  <Route
+                    path="/base-info/places/types/:id/edit"
+                    element={<PlaceTypeEditPage />}
+                  />
+                  <Route
+                    path="/base-info/places/:id"
+                    element={<PlaceDetailPage />}
+                  />
+                  <Route
+                    path="/base-info/places/:id/edit"
+                    element={<PlaceEditPage />}
                   />
                 </Route>
                 <Route element={<RequireMenuAccess path="/licenses/new" />}>

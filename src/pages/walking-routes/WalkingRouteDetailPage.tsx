@@ -5,14 +5,20 @@ import {
   Globe2,
   MapPin,
   MapPinned,
+  MessageCircle,
   Milestone,
+  Phone,
   Route,
+  Share2,
+  Type,
+  UserRound,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
+  Button,
   DetailActions,
   EntityNameSubtitle,
   LoadingState,
@@ -26,12 +32,19 @@ import {
   FormMetaChip,
   FormSectionTitle,
 } from '../../components/ui/FormLayout'
+import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
-import { useGeoName } from '../../lib/geo'
-import type { WalkingRoute } from '../../types/app'
+import { stageCoordinates, useGeoName } from '../../lib/geo'
+import type { WalkingRoute, WalkingRouteStage } from '../../types/app'
+import { StationNearbyPlaces } from './StationNearbyPlaces'
+import { WalkingRouteStationsModal } from './WalkingRouteStationsModal'
 import { WalkingRouteTabNav, type WalkingRouteTab } from './WalkingRouteTabs'
+
+function hasText(value: string | null | undefined) {
+  return Boolean(value?.trim())
+}
 
 export function WalkingRouteDetailPage() {
   const { t, i18n } = useTranslation()
@@ -41,6 +54,7 @@ export function WalkingRouteDetailPage() {
   const navigate = useNavigate()
   const { confirmDelete } = useConfirmDelete()
   const [tab, setTab] = useState<WalkingRouteTab>('general')
+  const [stationsOpen, setStationsOpen] = useState(false)
   const query = useQuery({
     queryKey: ['walking-route', id],
     enabled: Boolean(id),
@@ -56,9 +70,8 @@ export function WalkingRouteDetailPage() {
   }
 
   const km = (value: number | null | undefined) =>
-    value == null ? '—' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
+    value == null ? '' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
   const n = (value: number) => formatNumber(value, locale)
-  const empty = '—'
   const borderLabel = `${item.entryBorder.name} — ${name(item.entryBorder.city)}`
 
   function panelClass(id: WalkingRouteTab) {
@@ -159,65 +172,153 @@ export function WalkingRouteDetailPage() {
             <FormSectionTitle icon={Milestone}>{t('walkingRoutes.sectionStages')}</FormSectionTitle>
             {item.stages.length ? (
               <div className="space-y-3">
-                {item.stages.map((stage) => (
-                  <article
-                    key={stage.id ?? stage.stageNumber}
-                    className="space-y-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white p-4"
-                  >
-                    <FormSectionTitle icon={Milestone} className="mb-0">
-                      {t('walkingRoutes.stage')} {n(stage.stageNumber)}
-                    </FormSectionTitle>
-                    <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-                      <FormFactTile
-                        icon={MapPin}
-                        label={t('walkingRoutes.city')}
-                        value={name(stage.city)}
-                        tone="teal"
+                {item.stages.map((stage) => {
+                  const title = hasText(stage.name)
+                    ? stage.name
+                    : `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`
+                  const coords = stageCoordinates(stage)
+                  const hasManager =
+                    hasText(stage.managerName) ||
+                    hasText(stage.managerPhone) ||
+                    hasText(stage.managerTelegram) ||
+                    hasText(stage.managerWhatsapp) ||
+                    hasText(stage.managerEitaa)
+                  return (
+                    <article
+                      key={stage.id ?? stage.stageNumber}
+                      className="space-y-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white p-4"
+                    >
+                      <FormSectionTitle icon={Milestone} className="mb-0">
+                        {title}
+                      </FormSectionTitle>
+                      <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                        {hasText(stage.name) ? (
+                          <FormFactTile
+                            icon={Type}
+                            label={t('walkingRoutes.stationName')}
+                            value={stage.name}
+                            tone="teal"
+                          />
+                        ) : null}
+                        <FormFactTile
+                          icon={MapPin}
+                          label={t('walkingRoutes.city')}
+                          value={name(stage.city)}
+                          tone="mint"
+                        />
+                        <FormFactTile
+                          icon={MapPinned}
+                          label={t('geo.province')}
+                          value={name(stage.city.province)}
+                          tone="ink"
+                        />
+                        {stage.distanceToPreviousKm != null ? (
+                          <FormFactTile
+                            icon={ArrowUpDown}
+                            label={t('walkingRoutes.distanceToPreviousKm')}
+                            value={km(stage.distanceToPreviousKm)}
+                            tone="teal"
+                          />
+                        ) : null}
+                        {stage.distanceToNextKm != null ? (
+                          <FormFactTile
+                            icon={ArrowUpDown}
+                            label={t('walkingRoutes.distanceToNextKm')}
+                            value={km(stage.distanceToNextKm)}
+                            tone="mint"
+                          />
+                        ) : null}
+                        {stage.distanceToMashhadKm != null ? (
+                          <FormFactTile
+                            icon={Milestone}
+                            label={t('walkingRoutes.stageDistanceToMashhadKm')}
+                            value={km(stage.distanceToMashhadKm)}
+                            tone="ink"
+                          />
+                        ) : null}
+                        {hasText(stage.description) ? (
+                          <FormFactTile
+                            icon={AlignLeft}
+                            label={t('walkingRoutes.description')}
+                            value={<span className="whitespace-pre-wrap">{stage.description}</span>}
+                            tone="ink"
+                            className="sm:col-span-2"
+                          />
+                        ) : null}
+                      </div>
+                      {coords ? (
+                        <div className="space-y-2">
+                          <FormSectionTitle icon={MapPinned} className="mb-0">
+                            {t('walkingRoutes.location')}
+                          </FormSectionTitle>
+                          <OsmMapPicker
+                            latitude={String(coords.lat)}
+                            longitude={String(coords.lng)}
+                            onChange={() => undefined}
+                            active={tab === 'stages'}
+                            variant="always"
+                            readOnly
+                            heightClass="h-64"
+                          />
+                        </div>
+                      ) : null}
+                      <StationNearbyPlaces
+                        cityId={stage.cityId}
+                        latitude={coords?.lat}
+                        longitude={coords?.lng}
                       />
-                      <FormFactTile
-                        icon={MapPinned}
-                        label={t('geo.province')}
-                        value={name(stage.city.province)}
-                        tone="mint"
-                      />
-                      <FormFactTile
-                        icon={ArrowUpDown}
-                        label={t('walkingRoutes.distanceToPreviousKm')}
-                        value={km(stage.distanceToPreviousKm)}
-                        empty={stage.distanceToPreviousKm == null}
-                        tone="ink"
-                      />
-                      <FormFactTile
-                        icon={ArrowUpDown}
-                        label={t('walkingRoutes.distanceToNextKm')}
-                        value={km(stage.distanceToNextKm)}
-                        empty={stage.distanceToNextKm == null}
-                        tone="teal"
-                      />
-                      <FormFactTile
-                        icon={Milestone}
-                        label={t('walkingRoutes.stageDistanceToMashhadKm')}
-                        value={km(stage.distanceToMashhadKm)}
-                        empty={stage.distanceToMashhadKm == null}
-                        tone="mint"
-                      />
-                      <FormFactTile
-                        icon={AlignLeft}
-                        label={t('walkingRoutes.description')}
-                        value={
-                          stage.description ? (
-                            <span className="whitespace-pre-wrap">{stage.description}</span>
-                          ) : (
-                            empty
-                          )
-                        }
-                        empty={!stage.description}
-                        tone="ink"
-                        className="sm:col-span-2"
-                      />
-                    </div>
-                  </article>
-                ))}
+                      {hasManager ? (
+                        <div className="space-y-2">
+                          <FormSectionTitle icon={UserRound} className="mb-0">
+                            {t('walkingRoutes.sectionManager')}
+                          </FormSectionTitle>
+                          <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                            {hasText(stage.managerName) ? (
+                              <FormFactTile
+                                icon={UserRound}
+                                label={t('walkingRoutes.managerName')}
+                                value={stage.managerName}
+                                tone="teal"
+                              />
+                            ) : null}
+                            {hasText(stage.managerPhone) ? (
+                              <FormFactTile
+                                icon={Phone}
+                                label={t('walkingRoutes.managerPhone')}
+                                copyValue={stage.managerPhone}
+                                tone="mint"
+                              />
+                            ) : null}
+                            {hasText(stage.managerWhatsapp) ? (
+                              <FormFactTile
+                                icon={Phone}
+                                label={t('walkingRoutes.managerWhatsapp')}
+                                copyValue={stage.managerWhatsapp}
+                                tone="ink"
+                              />
+                            ) : null}
+                            {hasText(stage.managerTelegram) ? (
+                              <FormFactTile
+                                icon={MessageCircle}
+                                label={t('walkingRoutes.managerTelegram')}
+                                value={<span dir="ltr">{stage.managerTelegram}</span>}
+                                tone="teal"
+                              />
+                            ) : null}
+                            {hasText(stage.managerEitaa) ? (
+                              <FormFactTile
+                                icon={Share2}
+                                label={t('walkingRoutes.managerEitaa')}
+                                value={<span dir="ltr">{stage.managerEitaa}</span>}
+                                tone="mint"
+                              />
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  )
+                })}
               </div>
             ) : (
               <FormEmptyHint>{t('walkingRoutes.stagesEmpty')}</FormEmptyHint>
@@ -229,6 +330,12 @@ export function WalkingRouteDetailPage() {
             editTo={`/base-info/walking-routes/${item.id}/edit`}
             editLabel={t('common.edit')}
             deleteLabel={t('walkingRoutes.delete')}
+            extra={
+              <Button type="button" variant="soft" onClick={() => setStationsOpen(true)}>
+                <Milestone className="size-4" aria-hidden />
+                {t('walkingRoutes.stages')}
+              </Button>
+            }
             onDelete={() =>
               confirmDelete({
                 message: t('walkingRoutes.confirmDelete'),
@@ -241,6 +348,13 @@ export function WalkingRouteDetailPage() {
           />
         </div>
       </FormCard>
+      {stationsOpen ? (
+        <WalkingRouteStationsModal
+          routeId={item.id}
+          initialRoute={item}
+          onClose={() => setStationsOpen(false)}
+        />
+      ) : null}
     </div>
   )
 }

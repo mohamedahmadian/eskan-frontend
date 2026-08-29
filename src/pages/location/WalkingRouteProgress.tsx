@@ -44,6 +44,7 @@ export function useWalkingRouteMap(
       const coords = stageCoordinates(stage)
       if (!coords) return
       const city = geoName(stage.city, locale)
+      const title = stage.name?.trim() || city
       const facts = [
         `${t('walkingRoutes.stage')} ${formatNumber(stage.stageNumber, locale)}`,
         kmLabel(stage.distanceToPreviousKm, locale, unit)
@@ -63,8 +64,8 @@ export function useWalkingRouteMap(
         lng: coords.lng,
         kind,
         badge: escapeHtml(badge),
-        title: escapeHtml(city),
-        popupHtml: `<div class="eskan-route-popup-body" dir="${document.documentElement.dir}"><strong>${escapeHtml(city)}</strong><p>${facts.map((line) => escapeHtml(line)).join('</p><p>')}</p></div>`,
+        title: escapeHtml(title),
+        popupHtml: `<div class="eskan-route-popup-body" dir="${document.documentElement.dir}"><strong>${escapeHtml(title)}</strong><p>${facts.map((line) => escapeHtml(line)).join('</p><p>')}</p></div>`,
       })
       path.push(coords)
     }
@@ -135,7 +136,7 @@ function StationCard({
           {stage ? (
             <>
               <p className="mt-1.5 truncate text-sm font-semibold text-ink-900">
-                {geoName(stage.city, locale)}
+                {stage.name?.trim() || geoName(stage.city, locale)}
               </p>
               <p className="mt-0.5 text-xs text-ink-500">
                 {t('walkingRoutes.stage')} {formatNumber(stage.stageNumber, locale)}

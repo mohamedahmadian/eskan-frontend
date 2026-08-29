@@ -919,6 +919,14 @@ export type WalkingRouteStage = {
     province: GeoName & { id: string; countryId: string };
   };
   stageNumber: number;
+  name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  managerName: string | null;
+  managerPhone: string | null;
+  managerTelegram: string | null;
+  managerWhatsapp: string | null;
+  managerEitaa: string | null;
   distanceToNextKm: number | null;
   distanceToPreviousKm: number | null;
   distanceToMashhadKm: number | null;
@@ -962,7 +970,7 @@ export type FoodSupplier = {
   updatedAt: string;
 };
 
-export type MedicalCenter = {
+export type Benefactor = {
   id: string;
   name: string;
   phone: string | null;
@@ -979,9 +987,42 @@ export type MedicalCenter = {
   updatedAt: string;
 };
 
-export type RedCrescent = MedicalCenter;
+export type PlaceType = GeoName & {
+  id: string;
+  code: string;
+  icon: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { places: number };
+};
 
-export type Benefactor = MedicalCenter;
+export type PlaceTypeRef = GeoName & {
+  id: string;
+  code: string;
+  icon: string;
+  isActive: boolean;
+};
+
+export type Place = {
+  id: string;
+  name: string;
+  placeTypeId: string;
+  provinceId: string;
+  cityId: string;
+  phone: string | null;
+  address: string | null;
+  neshanAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  description: string | null;
+  placeType: PlaceTypeRef;
+  province: GeoName & { id: string; countryId: string };
+  city: GeoName & { id: string; provinceId: string };
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type GovernmentOrganizationContactUser = {
   id: string;

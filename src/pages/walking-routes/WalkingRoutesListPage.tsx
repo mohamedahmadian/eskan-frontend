@@ -1,4 +1,5 @@
-import { Fence, Globe2, MapPin, MapPinned, Plus } from 'lucide-react'
+import { Fence, Globe2, MapPin, MapPinned, Milestone, Plus } from 'lucide-react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -24,6 +25,7 @@ import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { City, Country, EntryBorder, Paginated, Province, WalkingRoute } from '../../types/app'
+import { WalkingRouteStationsModal } from './WalkingRouteStationsModal'
 
 export function WalkingRoutesListPage() {
   const { t, i18n } = useTranslation()
@@ -32,6 +34,7 @@ export function WalkingRoutesListPage() {
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
+  const [stationsRoute, setStationsRoute] = useState<WalkingRoute | null>(null)
   const originCountryId = searchParams.get('originCountryId') ?? ''
   const entryBorderId = searchParams.get('entryBorderId') ?? ''
   const provinceId = searchParams.get('provinceId') ?? ''
@@ -266,6 +269,12 @@ export function WalkingRoutesListPage() {
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/base-info/walking-routes/${item.id}`}
+                    extra={
+                      <Button type="button" variant="soft" onClick={() => setStationsRoute(item)}>
+                        <Milestone className="size-4" aria-hidden />
+                        {t('walkingRoutes.stages')}
+                      </Button>
+                    }
                     editTo={`/base-info/walking-routes/${item.id}/edit`}
                     onDelete={() =>
                       confirmDelete({
@@ -288,6 +297,13 @@ export function WalkingRoutesListPage() {
           pageSize={query.data.pageSize}
           total={query.data.total}
           onPageChange={setPage}
+        />
+      ) : null}
+      {stationsRoute ? (
+        <WalkingRouteStationsModal
+          routeId={stationsRoute.id}
+          initialRoute={stationsRoute}
+          onClose={() => setStationsRoute(null)}
         />
       ) : null}
     </div>

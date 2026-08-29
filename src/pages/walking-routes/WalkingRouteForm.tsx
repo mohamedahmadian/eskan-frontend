@@ -7,11 +7,16 @@ import {
   Globe2,
   Hash,
   MapPin,
+  MapPinned,
+  MessageCircle,
   Milestone,
+  Phone,
   Plus,
   Route,
+  Share2,
   Trash2,
   Type,
+  UserRound,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -25,8 +30,9 @@ import {
 } from '../../components/ui/Form'
 import { FormCard, FormSectionTitle } from '../../components/ui/FormLayout'
 import { CheckboxField } from '../../components/ui/CheckboxField'
+import { OsmMapPicker, type MapFocus } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
-import { formatNumber } from '../../lib/datetime'
+import { formatNumber, parseDigitString } from '../../lib/datetime'
 import { getApiErrorMessage } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
 import type { City, Country, EntryBorder, WalkingRoute } from '../../types/app'
@@ -40,6 +46,14 @@ export type WalkingRoutePayload = {
   stages: {
     cityId: string
     stageNumber: number
+    name: string | null
+    latitude: number | null
+    longitude: number | null
+    managerName: string | null
+    managerPhone: string | null
+    managerTelegram: string | null
+    managerWhatsapp: string | null
+    managerEitaa: string | null
     distanceToNextKm: number | null
     distanceToPreviousKm: number | null
     distanceToMashhadKm: number | null
@@ -49,7 +63,15 @@ export type WalkingRoutePayload = {
 
 type StageDraft = {
   key: string
+  name: string
   cityId: string
+  latitude: string
+  longitude: string
+  managerName: string
+  managerPhone: string
+  managerTelegram: string
+  managerWhatsapp: string
+  managerEitaa: string
   distanceToNextKm: string
   distanceToPreviousKm: string
   distanceToMashhadKm: string
@@ -72,6 +94,10 @@ function toOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function toCoordString(value: number | null | undefined) {
+  return value == null || !Number.isFinite(value) ? '' : String(value)
+}
+
 function newStageKey() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
@@ -79,7 +105,15 @@ function newStageKey() {
 function emptyStage(): StageDraft {
   return {
     key: newStageKey(),
+    name: '',
     cityId: '',
+    latitude: '',
+    longitude: '',
+    managerName: '',
+    managerPhone: '',
+    managerTelegram: '',
+    managerWhatsapp: '',
+    managerEitaa: '',
     distanceToNextKm: '',
     distanceToPreviousKm: '',
     distanceToMashhadKm: '',
@@ -130,7 +164,15 @@ export function WalkingRouteForm({
     initial?.stages.length
       ? initial.stages.map((stage) => ({
           key: stage.id ?? newStageKey(),
+          name: stage.name ?? '',
           cityId: stage.cityId,
+          latitude: toCoordString(stage.latitude),
+          longitude: toCoordString(stage.longitude),
+          managerName: stage.managerName ?? '',
+          managerPhone: stage.managerPhone ?? '',
+          managerTelegram: stage.managerTelegram ?? '',
+          managerWhatsapp: stage.managerWhatsapp ?? '',
+          managerEitaa: stage.managerEitaa ?? '',
           distanceToNextKm: stage.distanceToNextKm != null ? String(stage.distanceToNextKm) : '',
           distanceToPreviousKm:
             stage.distanceToPreviousKm != null ? String(stage.distanceToPreviousKm) : '',
@@ -163,6 +205,17 @@ export function WalkingRouteForm({
     })
   }
 
+  function stageMapFocus(stage: StageDraft): MapFocus | null {
+    if (toOptionalNumber(stage.latitude) != null && toOptionalNumber(stage.longitude) != null) {
+      return null
+    }
+    const city = iranCities.find((item) => item.id === stage.cityId)
+    if (city?.latitude != null && city?.longitude != null) {
+      return { lat: city.latitude, lng: city.longitude, zoom: 13 }
+    }
+    return null
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!originCountryIds.length) {
@@ -176,6 +229,11 @@ export function WalkingRouteForm({
       setTab('stages')
       return
     }
+    if (filledStages.some((stage) => !stage.name.trim())) {
+      toast.error(t('walkingRoutes.stationNameRequired'))
+      setTab('stages')
+      return
+    }
     setSaving(true)
     try {
       await onSubmit({
@@ -186,6 +244,14 @@ export function WalkingRouteForm({
         stages: filledStages.map((stage, index) => ({
           cityId: stage.cityId,
           stageNumber: index + 1,
+          name: emptyToNull(stage.name),
+          latitude: toOptionalNumber(stage.latitude),
+          longitude: toOptionalNumber(stage.longitude),
+          managerName: emptyToNull(stage.managerName),
+          managerPhone: emptyToNull(stage.managerPhone),
+          managerTelegram: emptyToNull(stage.managerTelegram),
+          managerWhatsapp: emptyToNull(stage.managerWhatsapp),
+          managerEitaa: emptyToNull(stage.managerEitaa),
           distanceToNextKm: toOptionalNumber(stage.distanceToNextKm),
           distanceToPreviousKm: toOptionalNumber(stage.distanceToPreviousKm),
           distanceToMashhadKm: toOptionalNumber(stage.distanceToMashhadKm),
@@ -351,6 +417,20 @@ export function WalkingRouteForm({
                       />
                     </FormField>
                     <FormField
+                      icon={Type}
+                      label={t('walkingRoutes.stationName')}
+                      htmlFor={`stage-name-${stage.key}`}
+                    >
+                      <input
+                        id={`stage-name-${stage.key}`}
+                        className={fieldClassName}
+                        value={stage.name}
+                        required
+                        minLength={1}
+                        onChange={(e) => updateStage(index, { name: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField
                       icon={MapPin}
                       label={t('walkingRoutes.city')}
                       htmlFor={`stage-city-${stage.key}`}
@@ -366,6 +446,92 @@ export function WalkingRouteForm({
                           geoName,
                           t('walkingRoutes.selectCity'),
                         )}
+                      />
+                    </FormField>
+                  </div>
+                  <FormField icon={MapPinned} label={t('walkingRoutes.location')}>
+                    <OsmMapPicker
+                      latitude={stage.latitude}
+                      longitude={stage.longitude}
+                      active={tab === 'stages'}
+                      focus={stageMapFocus(stage)}
+                      onChange={(latitude, longitude) =>
+                        updateStage(index, { latitude, longitude })
+                      }
+                    />
+                  </FormField>
+                  <FormSectionTitle icon={UserRound}>
+                    {t('walkingRoutes.sectionManager')}
+                  </FormSectionTitle>
+                  <FormField
+                    icon={UserRound}
+                    label={t('walkingRoutes.managerName')}
+                    htmlFor={`stage-manager-${stage.key}`}
+                  >
+                    <input
+                      id={`stage-manager-${stage.key}`}
+                      className={fieldClassName}
+                      value={stage.managerName}
+                      onChange={(e) => updateStage(index, { managerName: e.target.value })}
+                    />
+                  </FormField>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      icon={Phone}
+                      label={t('walkingRoutes.managerPhone')}
+                      htmlFor={`stage-phone-${stage.key}`}
+                    >
+                      <input
+                        id={`stage-phone-${stage.key}`}
+                        className={`${fieldClassName} digit-field`}
+                        value={stage.managerPhone}
+                        onChange={(e) =>
+                          updateStage(index, {
+                            managerPhone: parseDigitString(e.target.value).slice(0, 15),
+                          })
+                        }
+                      />
+                    </FormField>
+                    <FormField
+                      icon={Phone}
+                      label={t('walkingRoutes.managerWhatsapp')}
+                      htmlFor={`stage-whatsapp-${stage.key}`}
+                    >
+                      <input
+                        id={`stage-whatsapp-${stage.key}`}
+                        className={`${fieldClassName} digit-field`}
+                        value={stage.managerWhatsapp}
+                        onChange={(e) =>
+                          updateStage(index, {
+                            managerWhatsapp: parseDigitString(e.target.value).slice(0, 15),
+                          })
+                        }
+                      />
+                    </FormField>
+                    <FormField
+                      icon={MessageCircle}
+                      label={t('walkingRoutes.managerTelegram')}
+                      htmlFor={`stage-telegram-${stage.key}`}
+                    >
+                      <input
+                        id={`stage-telegram-${stage.key}`}
+                        className={fieldClassName}
+                        dir="ltr"
+                        value={stage.managerTelegram}
+                        onChange={(e) => updateStage(index, { managerTelegram: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField
+                      icon={Share2}
+                      label={t('walkingRoutes.managerEitaa')}
+                      htmlFor={`stage-eitaa-${stage.key}`}
+                    >
+                      <input
+                        id={`stage-eitaa-${stage.key}`}
+                        className={fieldClassName}
+                        dir="ltr"
+                        value={stage.managerEitaa}
+                        onChange={(e) => updateStage(index, { managerEitaa: e.target.value })}
                       />
                     </FormField>
                   </div>
