@@ -71,7 +71,7 @@ import {
 import {
   travelDatesError,
   OccasionStayHint,
-  ReservationDateFields,
+  ReservationTravelInfoFields,
   ReservationApplicantFields,
   type TravelValues,
 } from './ReservationTravelFields'
@@ -1173,7 +1173,11 @@ export function ReservationCreatePage() {
         ) : null}
 
         {step === 'dates' ? (
-          <ReservationDateFields values={values} onChange={patchValues} showOccasionHint={false} />
+          <ReservationTravelInfoFields
+            values={values}
+            onChange={patchValues}
+            showOccasionHint={false}
+          />
         ) : null}
 
         {step === 'services' ? (

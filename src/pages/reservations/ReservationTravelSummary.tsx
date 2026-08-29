@@ -132,7 +132,7 @@ export function ReservationTravelSummary({
         <section>
           <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
             <SectionTitle icon={CalendarCheck} className="mb-0">
-              {t('reservations.createSteps.dates')}
+              {t('reservations.travelDatesSection')}
             </SectionTitle>
             {nights ? (
               <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-[11px] font-semibold text-teal-800">
