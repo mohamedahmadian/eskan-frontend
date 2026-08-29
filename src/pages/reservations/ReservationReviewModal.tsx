@@ -16,10 +16,10 @@ import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import type { Reservation, ReservationListItem, ReservationType } from '../../types/app'
 import {
-  GROUP_MAX_SIZE,
   applicantSectionKey,
   canAdjustApprovedCapacity,
   isInsuranceAccepted,
+  partyMaxSize,
 } from './reservation-steps'
 
 export type ReservationReviewMode = 'approve' | 'reject' | 'adjustCapacity'
@@ -272,7 +272,7 @@ export function ReservationReviewModal({
       : reservation.createdBy?.fullName || '—'
   const approvedMale = Number(maleCount) || 0
   const approvedFemale = Number(femaleCount) || 0
-  const maxCount = reservation.type === 'GROUP' ? GROUP_MAX_SIZE : undefined
+  const maxCount = partyMaxSize(reservation.type)
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

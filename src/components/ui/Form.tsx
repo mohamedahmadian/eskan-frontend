@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
+import { CopyableDigits } from './CopyableDigits'
 import { useNavigationHistory } from '../../lib/navigation-history'
 
 const variants = {
@@ -235,14 +236,18 @@ export function PageHeader({
 export function EntityNameSubtitle({
   name,
   icon: Icon,
+  copyValue,
 }: {
   name: string
   icon: LucideIcon
+  copyValue?: string | null
 }) {
   return (
     <span className="inline-flex max-w-full items-center gap-2 rounded-2xl bg-teal-50 px-3 py-1.5 text-sm font-medium text-teal-800">
       <Icon className="size-4 shrink-0" aria-hidden />
-      <span className="truncate">{name}</span>
+      <span className="truncate">
+        {copyValue ? <CopyableDigits value={copyValue} /> : name}
+      </span>
     </span>
   )
 }

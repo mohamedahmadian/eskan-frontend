@@ -37,6 +37,12 @@ type ReservationStepDates = {
 
 export const GROUP_MAX_SIZE = 20
 
+/** Shared headcount cap for group and caravan files. */
+export function partyMaxSize(type: ReservationType | '' | null | undefined) {
+  if (type === 'GROUP' || type === 'CARAVAN') return GROUP_MAX_SIZE
+  return undefined
+}
+
 export function requestedHeadcount(row: {
   requestedMaleCount?: number
   requestedFemaleCount?: number

@@ -6,7 +6,7 @@ export type TravelSubStep = (typeof travelSubSteps)[number]
 
 export function travelSubStepsForType(type: ReservationType): TravelSubStep[] {
   if (type === 'INDIVIDUAL') {
-    return ['dates', 'services', 'optional']
+    return ['dates', 'services']
   }
   return ['count', 'party', 'dates', 'services']
 }
@@ -46,7 +46,7 @@ export function inferTravelSubMaxReached(
       furthest = step
       continue
     }
-    // services / optional are always reachable once prior steps are filled
+    // services are always reachable once prior steps are filled
     furthest = step
   }
 

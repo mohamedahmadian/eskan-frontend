@@ -84,7 +84,12 @@ export function ReservationTravelStep({
   const [maxReached, setMaxReached] = useState<TravelSubStep>(() =>
     mode === 'admin' || locked ? subSteps[subSteps.length - 1] : inferredMax,
   )
-  const stepIndex = subSteps.indexOf(subStep)
+  const activeSubStep = subSteps.includes(subStep)
+    ? subStep
+    : subStep === 'optional'
+      ? 'dates'
+      : subSteps[0]
+  const stepIndex = subSteps.indexOf(activeSubStep)
   const maxReachedIndex = Math.max(stepIndex, subSteps.indexOf(maxReached), subSteps.indexOf(inferredMax))
   const effectiveMax = subSteps[Math.min(maxReachedIndex, subSteps.length - 1)] ?? subSteps[0]
   const lastStep = stepIndex >= subSteps.length - 1
@@ -139,14 +144,14 @@ export function ReservationTravelStep({
 
   function assertCurrentSubStep() {
     if (locked) return true
-    if (subStep === 'count') {
+    if (activeSubStep === 'count') {
       if (countTotal() <= 0) {
         toast.error(t('reservations.countInvalid'))
         return false
       }
       return true
     }
-    if (subStep === 'party') {
+    if (activeSubStep === 'party') {
       if (reservation.type === 'GROUP' && !values.groupId) {
         toast.error(t('reservations.groupRequired'))
         return false
@@ -157,7 +162,7 @@ export function ReservationTravelStep({
       }
       return true
     }
-    if (subStep === 'dates') {
+    if (activeSubStep === 'dates') {
       return assertTravelDates()
     }
     return true
@@ -223,14 +228,14 @@ export function ReservationTravelStep({
   return (
     <div className="space-y-4">
       <TravelSubStepBar
-        current={subStep}
+        current={activeSubStep}
         maxReached={effectiveMax}
         steps={subSteps}
         type={reservation.type}
         onSelect={goToSubStep}
       />
       <AppForm
-        key={subStep}
+        key={activeSubStep}
         autoFocusFirst={false}
         onSubmit={(event) => {
           event.preventDefault()
@@ -272,7 +277,7 @@ export function ReservationTravelStep({
           type={reservation.type}
           locked={locked}
           iranId={iranId}
-          activeSubStep={subStep}
+          activeSubStep={activeSubStep}
           dualCounts={dualCounts}
           selectedParty={selectedParty}
           reservationId={mode === 'admin' ? reservation.id : undefined}
