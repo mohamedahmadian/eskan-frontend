@@ -1,4 +1,4 @@
-import { Footprints, Lock, ScrollText, Users, type LucideIcon } from 'lucide-react'
+import { Footprints, Hash, Lock, ScrollText, Users, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EntityNameSubtitle } from '../../components/ui/Form'
@@ -108,14 +108,14 @@ export function ReservationTitleMeta({
   const PartyIcon = reservation.type === 'CARAVAN' ? Footprints : Users
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <ReservationCodeBadge code={reservation.code} size="lg" />
+      {reservation.code ? (
+        <EntityNameSubtitle name={reservation.code} icon={Hash} copyValue={reservation.code} />
+      ) : null}
       {partyName ? (
-        <span className="inline-flex max-w-full items-center gap-2 rounded-2xl border-2 border-teal-500 bg-teal-50 px-3 py-1.5 text-sm font-bold text-teal-900">
-          <PartyIcon className="size-4 shrink-0" aria-hidden />
-          <span className="truncate">
-            {partyKind ? `${partyKind} ${partyName}` : partyName}
-          </span>
-        </span>
+        <EntityNameSubtitle
+          name={partyKind ? `${partyKind} ${partyName}` : partyName}
+          icon={PartyIcon}
+        />
       ) : null}
       <EntityNameSubtitle
         name={t(`reservations.types.${reservation.type}`)}
