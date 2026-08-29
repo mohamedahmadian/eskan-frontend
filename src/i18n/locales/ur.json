@@ -2751,7 +2751,6 @@
     "walkingDateInPast": "پیدل سفر کی شروع تاریخ آج سے پہلے نہیں ہو سکتی",
     "stayStartRequired": "مقدس مشہد پہنچنے کی تاریخ درج کریں",
     "stayEndRequired": "قیام کی اختتامی تاریخ درج کریں",
-    "datesOverlap": "سفر اور قیام کی مدت فائل {{code}} سے متصادم ہے۔ ایک ہی مدت میں صرف ایک فائل کی اجازت ہے",
     "occasionStayTitle": "زیارت کی مناسبات",
     "occasionProphetLabel": "حضرت رسول اکرم (ص) کا انتقال",
     "occasionImamRezaLabel": "امام رضا (ع) کی شہادت",

@@ -1,0 +1,16 @@
+---
+description: Only update Persian translation files
+alwaysApply: true
+---
+
+# Translation files
+
+- Only update `src/i18n/locales/fa.json` for new or changed UI copy.
+- Do not edit `en.json`, `ar.json`, `ur.json`, `hi.json`, or any other non-Persian locale files.
+- Other locale JSON files will be updated manually later.
+
+فقط فایل ترجمهٔ فارسی را به‌روز کن:
+
+- فقط `src/i18n/locales/fa.json` برای متن‌های جدید یا تغییر یافته.
+- فایل‌های `en.json`، `ar.json`، `ur.json`، `hi.json` و سایر زبان‌ها را تغییر نده.
+- بقیهٔ فایل‌های JSON زبان‌ها بعداً به‌صورت دستی به‌روز می‌شوند.
