@@ -1226,7 +1226,9 @@ export function ReservationCreatePage() {
             disabled={submitting || (step === 'type' && !type) || finalSubmitBlocked}
             aria-describedby={finalSubmitBlocked ? 'final-submit-blocked-reason' : undefined}
           >
-            {lastStep ? t('reservations.finalSubmit') : t('reservations.nextStep')}
+            {lastStep
+              ? t(step === 'services' ? 'reservations.createFileSubmit' : 'reservations.finalSubmit')
+              : t('reservations.nextStep')}
             {lastStep ? <Check className="size-4" aria-hidden /> : <ChevronLeft className="size-4" aria-hidden />}
           </Button>
         </div>
