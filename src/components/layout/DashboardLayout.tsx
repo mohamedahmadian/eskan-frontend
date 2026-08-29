@@ -1,6 +1,7 @@
 import {
   Boxes,
   HandHeart,
+  LogOut,
   Menu,
   PackageOpen,
   Search,
@@ -11,7 +12,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { api, getImageUrl } from "../../lib/api";
 import { getNavIcon } from "../../lib/icons";
@@ -147,10 +148,11 @@ function menuMatchesSearch(
 }
 
 export function DashboardLayout() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
   const location = useLocation();
+  const navigate = useNavigate();
   const showQuickToolsFab = isQuickToolsFabVisible(location.pathname, user);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -371,7 +373,7 @@ export function DashboardLayout() {
               </div>
             )}
 
-            <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
+            <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-3">
               {modules.map((mod) => {
                 const { ungrouped, sections } = splitMenus(mod);
                 return (
@@ -416,6 +418,21 @@ export function DashboardLayout() {
                 );
               })}
             </nav>
+            <div className="shrink-0 border-t border-line px-3 py-3">
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
+                onClick={() => {
+                  const impersonating = Boolean(user?.impersonating);
+                  setOpen(false);
+                  logout();
+                  if (!impersonating) navigate("/login");
+                }}
+              >
+                <LogOut className="size-4 shrink-0" aria-hidden />
+                {user?.impersonating ? t("auth.impersonateEnd") : t("auth.logout")}
+              </button>
+            </div>
           </aside>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
