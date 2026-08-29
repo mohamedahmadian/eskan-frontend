@@ -1,0 +1,20 @@
+---
+description: Verification constraints for all agent work
+alwaysApply: true
+---
+
+# Agent verification rules
+
+These rules override default “start the app / record a demo / write tests” workflows.
+
+- Never start a test server, dev server, preview server, or any local HTTP server.
+- Never record video, screen recordings, or walkthrough recordings.
+- Do not write new test files and do not run tests.
+- Only compile and type-check the code (for example `tsc`, `npm run build`, or the project’s compile/lint commands).
+
+این قواعد همیشه اعمال شوند:
+
+- هیچ‌گاه سرور تست یا dev بالا نیاور.
+- فیلم یا اسکرین‌رکورد نگیر.
+- فایل تست ننویس و تست ران نکن.
+- صرفاً کد را کامپایل و چک کن.
