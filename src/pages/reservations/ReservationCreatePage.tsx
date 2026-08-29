@@ -76,6 +76,10 @@ import {
   ReservationApplicantFields,
   type TravelValues,
 } from './ReservationTravelFields'
+import {
+  RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
+  fetchSubjectReservationSpans,
+} from './reservation-date-overlap'
 import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
 import { StepBlockedNotice } from './ReservationStepNav'
 import { StepProgressChart } from './StepProgressChart'
@@ -384,6 +388,33 @@ export function ReservationCreatePage() {
         : null
   const needsPartyCity = !subject?.cityId
   const subjectReady = !isAdminCreate || Boolean(subject) || Boolean(draftParam && draftHydrated)
+  const subjectNationalId =
+    subject && 'nationalId' in subject ? (subject.nationalId ?? null) : null
+  const existingReservationsQuery = useQuery({
+    queryKey: [
+      'reservations',
+      'date-overlap',
+      isAdminCreate ? forUserId || 'admin' : 'mine',
+      subjectNationalId ?? '',
+    ],
+    enabled:
+      RESERVATION_DATE_OVERLAP_CHECK_ENABLED &&
+      (isAdminCreate ? Boolean(forUserId) : Boolean(user?.id)),
+    queryFn: () =>
+      fetchSubjectReservationSpans({
+        forSelf: !isAdminCreate,
+        subjectId: isAdminCreate ? forUserId || undefined : user?.id,
+        subjectNationalId,
+      }),
+  })
+  const datesOverlapError = useMemo(() => {
+    if (!existingReservationsQuery.data) return null
+    if (travelDatesError(values, t)) return null
+    return travelDatesError(values, t, {
+      others: existingReservationsQuery.data,
+      excludeId: draftId || undefined,
+    })
+  }, [draftId, existingReservationsQuery.data, t, values])
 
   const settings = useQuery({
     queryKey: ['reception-settings', year],
@@ -822,6 +853,28 @@ export function ReservationCreatePage() {
     return true
   }
 
+  async function assertTravelDatesReady() {
+    try {
+      const others = RESERVATION_DATE_OVERLAP_CHECK_ENABLED
+        ? (existingReservationsQuery.data ??
+          (await existingReservationsQuery.refetch()).data ??
+          [])
+        : []
+      const dateError = travelDatesError(values, t, {
+        others,
+        excludeId: draftId || undefined,
+      })
+      if (dateError) {
+        toast.error(dateError)
+        return false
+      }
+      return true
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+      return false
+    }
+  }
+
   async function advanceAfterSave(nextValues = values, nextPermit = permitDraft) {
     if (!type) return false
     const nextStep = lastStep ? step : steps[stepIndex + 1]
@@ -840,6 +893,12 @@ export function ReservationCreatePage() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!validateStep()) return
+    if (step === 'dates' || lastStep) {
+      if (!(await assertTravelDatesReady())) {
+        if (lastStep && step !== 'dates') setStep('dates')
+        return
+      }
+    }
     if (step === 'party') {
       setSubmitting(true)
       try {
@@ -895,12 +954,6 @@ export function ReservationCreatePage() {
         return
       }
     }
-    const dateError = travelDatesError(values, t)
-    if (dateError) {
-      toast.error(dateError)
-      setStep('dates')
-      return
-    }
     setSubmitting(true)
     try {
       const id = await persistDraft({ silent: true, wizardStep: step })
@@ -927,6 +980,11 @@ export function ReservationCreatePage() {
 
   async function finalizeReservation() {
     if (!type) return
+    if (!(await assertTravelDatesReady())) {
+      setRulesModalOpen(false)
+      setStep('dates')
+      return
+    }
     if (
       type === 'CARAVAN' &&
       permitDraft.source === 'ISSUED_LICENSE' &&
@@ -1197,6 +1255,7 @@ export function ReservationCreatePage() {
             values={values}
             onChange={patchValues}
             showOccasionHint={false}
+            error={datesOverlapError}
           />
         ) : null}
 

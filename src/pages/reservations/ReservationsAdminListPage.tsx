@@ -15,7 +15,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { useAuth } from "../../auth/AuthProvider";
 import {
   FilterPair,
   PaginationBar,
@@ -36,7 +35,6 @@ import { SearchSelect } from "../../components/ui/SearchSelect";
 import { useListParams } from "../../hooks/useListParams";
 import { useListSort } from "../../hooks/useListSort";
 import { api, getApiErrorMessage } from "../../lib/api";
-import { isAdmin } from "../../lib/roles";
 import {
   addDaysIso,
   currentPersianYear,
@@ -80,7 +78,6 @@ export function ReservationsAdminListPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
   const navigate = useNavigate();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [purging, setPurging] = useState(false);
@@ -101,7 +98,6 @@ export function ReservationsAdminListPage() {
     setParams,
   );
 
-  // TEMP: remove this helper (and DELETE /reservations/purge-all) when no longer needed.
   function purgeAllReservations() {
     confirmToast({
       title: t("reservations.confirmPurgeAll"),
@@ -275,17 +271,15 @@ export function ReservationsAdminListPage() {
                 year: formatNumber(currentPersianYear(), locale),
               })}
             </Button>
-            {isAdmin(user) ? (
-              <Button
-                type="button"
-                variant="danger"
-                disabled={purging}
-                onClick={purgeAllReservations}
-              >
-                <Trash2 className="size-4" aria-hidden />
-                {t("reservations.purgeAllTemp")}
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              variant="danger"
+              disabled={purging}
+              onClick={purgeAllReservations}
+            >
+              <Trash2 className="size-4" aria-hidden />
+              {t("reservations.purgeAllTemp")}
+            </Button>
           </div>
         }
       />
