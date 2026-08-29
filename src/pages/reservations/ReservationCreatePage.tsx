@@ -135,6 +135,24 @@ function stayDatesFromOccasions(
   }
 }
 
+function withDefaultStayDates(
+  values: TravelValues,
+  settings?: Pick<ReceptionSettings, 'prophetDemiseDate' | 'imamRezaMartyrdomDate'> | null,
+): TravelValues {
+  const defaults = stayDatesFromOccasions(settings)
+  const stayStartDate = values.stayStartDate || defaults.stayStartDate
+  const stayEndDate = values.stayEndDate || defaults.stayEndDate
+  const walkingStartDate = values.walkingStartDate || defaults.walkingStartDate
+  if (
+    stayStartDate === values.stayStartDate &&
+    stayEndDate === values.stayEndDate &&
+    walkingStartDate === values.walkingStartDate
+  ) {
+    return values
+  }
+  return { ...values, stayStartDate, stayEndDate, walkingStartDate }
+}
+
 const emptyTravel = (): TravelValues => ({
   provinceId: '',
   originCityId: '',
@@ -367,6 +385,14 @@ export function ReservationCreatePage() {
   const needsPartyCity = !subject?.cityId
   const subjectReady = !isAdminCreate || Boolean(subject) || Boolean(draftParam && draftHydrated)
 
+  const settings = useQuery({
+    queryKey: ['reception-settings', year],
+    queryFn: async () => {
+      const { data } = await api.get<ReceptionSettings>(`/reception-settings/${year}`)
+      return data
+    },
+  })
+
   useEffect(() => {
     if (!draftParam) {
       setDraftHydrated(true)
@@ -382,9 +408,12 @@ export function ReservationCreatePage() {
     const nextType = reservation.type
     if (nextType === 'CARAVAN' && !isAdminCreate && myCaravansQuery.isPending) return
     const skipParty = nextType === 'CARAVAN' && Boolean(soleCaravan)
-    const nextValues = valuesFromReservation(
-      reservation,
-      reservation.createdBy ? undefined : user?.provinceId,
+    const nextValues = withDefaultStayDates(
+      valuesFromReservation(
+        reservation,
+        reservation.createdBy ? undefined : user?.provinceId,
+      ),
+      settings.data,
     )
     if (skipParty && soleCaravan && !nextValues.caravanId) {
       nextValues.caravanId = soleCaravan.id
@@ -421,6 +450,7 @@ export function ReservationCreatePage() {
     isAdminCreate,
     myCaravansQuery.isPending,
     soleCaravan,
+    settings.data,
   ])
 
   useEffect(() => {
@@ -467,32 +497,9 @@ export function ReservationCreatePage() {
     }))
   }, [subject, draftParam])
 
-  const settings = useQuery({
-    queryKey: ['reception-settings', year],
-    queryFn: async () => {
-      const { data } = await api.get<ReceptionSettings>(`/reception-settings/${year}`)
-      return data
-    },
-  })
-
   useEffect(() => {
-    if (draftParam) return
-    const defaults = stayDatesFromOccasions(settings.data)
-    if (!defaults.stayStartDate && !defaults.stayEndDate) return
-    setValues((current) => {
-      const stayStartDate = current.stayStartDate || defaults.stayStartDate
-      const stayEndDate = current.stayEndDate || defaults.stayEndDate
-      const walkingStartDate = current.walkingStartDate || defaults.walkingStartDate
-      if (
-        stayStartDate === current.stayStartDate &&
-        stayEndDate === current.stayEndDate &&
-        walkingStartDate === current.walkingStartDate
-      ) {
-        return current
-      }
-      return { ...current, stayStartDate, stayEndDate, walkingStartDate }
-    })
-  }, [settings.data, draftParam])
+    setValues((current) => withDefaultStayDates(current, settings.data))
+  }, [settings.data])
 
   const capacity = useQuery({
     queryKey: ['reception-settings', year, 'capacity'],
@@ -588,7 +595,11 @@ export function ReservationCreatePage() {
   }): Promise<string | null> {
     const nextType = options?.nextType ?? (type || null)
     if (!nextType) return draftId || null
-    const nextValues = options?.nextValues ?? values
+    const sourceValues = options?.nextValues ?? values
+    const nextValues = withDefaultStayDates(sourceValues, settings.data)
+    if (nextValues !== sourceValues) {
+      setValues(nextValues)
+    }
     const nextPermit = options?.nextPermit ?? permitDraft
     const skipParty = options?.skipCaravanParty ?? skipCaravanParty
     const reached = furtherCreateStep(
