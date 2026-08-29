@@ -46,6 +46,7 @@ import {
 } from "./ReservationPartyFields";
 import type { TravelSubStep } from "./travel-sub-steps";
 import {
+  RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
   findOverlappingReservation,
   type ReservationDateSpan,
 } from "./reservation-date-overlap";
@@ -78,7 +79,7 @@ export function travelDatesError(
   ) {
     return t("reservations.stayRangeInvalid");
   }
-  if (overlap) {
+  if (overlap && RESERVATION_DATE_OVERLAP_CHECK_ENABLED) {
     const conflict = findOverlappingReservation(
       values,
       overlap.others,

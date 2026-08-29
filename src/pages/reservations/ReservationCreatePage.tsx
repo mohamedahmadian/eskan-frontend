@@ -76,7 +76,10 @@ import {
   ReservationApplicantFields,
   type TravelValues,
 } from './ReservationTravelFields'
-import { fetchSubjectReservationSpans } from './reservation-date-overlap'
+import {
+  RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
+  fetchSubjectReservationSpans,
+} from './reservation-date-overlap'
 import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
 import { StepBlockedNotice } from './ReservationStepNav'
 import { StepProgressChart } from './StepProgressChart'
@@ -394,7 +397,9 @@ export function ReservationCreatePage() {
       isAdminCreate ? forUserId || 'admin' : 'mine',
       subjectNationalId ?? '',
     ],
-    enabled: isAdminCreate ? Boolean(forUserId) : Boolean(user?.id),
+    enabled:
+      RESERVATION_DATE_OVERLAP_CHECK_ENABLED &&
+      (isAdminCreate ? Boolean(forUserId) : Boolean(user?.id)),
     queryFn: () =>
       fetchSubjectReservationSpans({
         forSelf: !isAdminCreate,
@@ -850,10 +855,11 @@ export function ReservationCreatePage() {
 
   async function assertTravelDatesReady() {
     try {
-      const others =
-        existingReservationsQuery.data ??
-        (await existingReservationsQuery.refetch()).data ??
-        []
+      const others = RESERVATION_DATE_OVERLAP_CHECK_ENABLED
+        ? (existingReservationsQuery.data ??
+          (await existingReservationsQuery.refetch()).data ??
+          [])
+        : []
       const dateError = travelDatesError(values, t, {
         others,
         excludeId: draftId || undefined,

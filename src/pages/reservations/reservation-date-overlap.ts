@@ -7,6 +7,9 @@ import type {
   ReservationStatus,
 } from '../../types/app'
 
+/** Keep the overlap logic, but do not enforce it until this is set back to true. */
+export const RESERVATION_DATE_OVERLAP_CHECK_ENABLED = false
+
 export type ReservationDateSpan = {
   id: string
   code: string
@@ -56,6 +59,7 @@ export function findOverlappingReservation(
   others: ReservationDateSpan[],
   excludeId?: string,
 ) {
+  if (!RESERVATION_DATE_OVERLAP_CHECK_ENABLED) return null
   const range = reservationTripRange(candidate)
   if (!range) return null
   for (const row of others) {

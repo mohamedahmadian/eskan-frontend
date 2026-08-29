@@ -12,7 +12,10 @@ import {
   travelDatesError,
   type TravelValues,
 } from './ReservationTravelFields'
-import { fetchSubjectReservationSpans } from './reservation-date-overlap'
+import {
+  RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
+  fetchSubjectReservationSpans,
+} from './reservation-date-overlap'
 import { workingHeadcount, requestedHeadcount } from './reservation-steps'
 import { TravelSubStepBar } from './TravelSubStepBar'
 import {
@@ -114,6 +117,7 @@ export function ReservationTravelStep({
       applicant.id,
       applicant.nationalId ?? '',
     ],
+    enabled: RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
     queryFn: () =>
       fetchSubjectReservationSpans({
         forSelf: mode === 'owner',
@@ -151,10 +155,11 @@ export function ReservationTravelStep({
 
   async function assertTravelDates() {
     try {
-      const others =
-        existingReservationsQuery.data ??
-        (await existingReservationsQuery.refetch()).data ??
-        []
+      const others = RESERVATION_DATE_OVERLAP_CHECK_ENABLED
+        ? (existingReservationsQuery.data ??
+          (await existingReservationsQuery.refetch()).data ??
+          [])
+        : []
       const dateError = travelDatesError(values, t, {
         others,
         excludeId: reservation.id,
