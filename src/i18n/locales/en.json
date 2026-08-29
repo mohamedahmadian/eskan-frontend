@@ -2742,6 +2742,7 @@
     "caravanRequired": "کاروان را انتخاب کنید یا کاروان جدید ثبت کنید",
     "groupMaxHint": "حداکثر {{count}} نفر",
     "groupMaxExceeded": "ظرفیت گروه حداکثر {{count}} نفر است",
+    "caravanMaxExceeded": "ظرفیت کاروان حداکثر {{count}} نفر است",
     "walkingRangeInvalid": "تاریخ شروع پیاده‌روی باید قبل از تاریخ رسیدن به مشهد باشد",
     "walkingDateInPast": "تاریخ شروع پیاده‌روی نمی‌تواند قبل از امروز باشد",
     "stayStartRequired": "تاریخ رسیدن به مشهد مقدس را وارد کنید",
