@@ -19,6 +19,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { CheckboxField } from "../../components/ui/CheckboxField";
 import { DateText, HijriDateText } from "../../components/ui/DateText";
 import { FormField, fieldClassName } from "../../components/ui/Form";
+import { FormSectionTitle } from "../../components/ui/FormLayout";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
 import { api, getApiErrorMessage } from "../../lib/api";
@@ -26,6 +27,7 @@ import { currentPersianYear } from "../../lib/datetime";
 import { useGeoName } from "../../lib/geo";
 import type {
   City,
+  Country,
   Paginated,
   Province,
   ReceptionSettings,
@@ -150,12 +152,13 @@ export function ReservationTravelFields({
       />
     );
   }
-  if (activeSubStep === "dates") {
+  if (activeSubStep === "dates" || activeSubStep === "optional") {
     return (
-      <ReservationDateFields
+      <ReservationTravelInfoFields
         values={values}
         onChange={onChange}
         locked={locked}
+        iranId={iranId}
       />
     );
   }
@@ -168,17 +171,52 @@ export function ReservationTravelFields({
       />
     );
   }
-  if (activeSubStep === "optional" && type === "INDIVIDUAL") {
-    return (
-      <ReservationOptionalGeoFields
-        values={values}
-        onChange={onChange}
-        locked={locked}
-        iranId={iranId}
-      />
-    );
-  }
   return null;
+}
+
+export function ReservationTravelInfoFields({
+  values,
+  onChange,
+  locked,
+  iranId,
+  showOccasionHint = true,
+}: {
+  values: TravelValues;
+  onChange: (patch: Partial<TravelValues>) => void;
+  locked?: boolean;
+  iranId?: string;
+  showOccasionHint?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-8">
+      <section>
+        <FormSectionTitle icon={Calendar}>
+          {t("reservations.travelDatesSection")}
+        </FormSectionTitle>
+        <ReservationDateFields
+          values={values}
+          onChange={onChange}
+          locked={locked}
+          showOccasionHint={showOccasionHint}
+        />
+      </section>
+      <section>
+        <FormSectionTitle icon={MapPin}>
+          {t("reservations.travelOriginSection")}
+        </FormSectionTitle>
+        <p className="mb-3 text-sm leading-6 text-ink-500">
+          {t("reservations.travelOriginHint")}
+        </p>
+        <ReservationOptionalGeoFields
+          values={values}
+          onChange={onChange}
+          locked={locked}
+          iranId={iranId}
+        />
+      </section>
+    </div>
+  );
 }
 
 export function ReservationApplicantFields({
@@ -409,17 +447,30 @@ export function ReservationOptionalGeoFields({
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
-  iranId: string;
+  iranId?: string;
 }) {
   const { t } = useTranslation();
   const nameOf = useGeoName();
 
+  const countries = useQuery({
+    queryKey: ["countries", "lookup"],
+    queryFn: async () => {
+      const { data } = await api.get<Country[]>("/countries", {
+        params: { activeOnly: true },
+      });
+      return data;
+    },
+    enabled: !iranId,
+  });
+  const resolvedIranId =
+    iranId || countries.data?.find((country) => country.iso2 === "IR")?.id || "";
+
   const provinces = useQuery({
-    queryKey: ["provinces", "lookup", iranId],
-    enabled: Boolean(iranId),
+    queryKey: ["provinces", "lookup", resolvedIranId],
+    enabled: Boolean(resolvedIranId),
     queryFn: async () => {
       const { data } = await api.get<Province[]>("/provinces", {
-        params: { countryId: iranId, activeOnly: true },
+        params: { countryId: resolvedIranId, activeOnly: true },
       });
       return data;
     },
