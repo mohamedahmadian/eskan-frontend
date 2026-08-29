@@ -2827,6 +2827,7 @@
     "walkingDateInPast": "لا يمكن أن يكون تاريخ بدء المشي قبل اليوم",
     "stayStartRequired": "أدخل تاريخ الوصول إلى مشهد المقدسة",
     "stayEndRequired": "أدخل تاريخ انتهاء الإقامة",
+    "datesOverlap": "تتداخل فترة السفر والإقامة مع الملف {{code}}. يُسمح بملف واحد فقط في نفس الفترة",
     "occasionStayTitle": "مناسبات الزيارة",
     "occasionProphetLabel": "رحلة النبي الأكرم (ص)",
     "occasionImamRezaLabel": "استشهاد الإمام الرضا (ع)",

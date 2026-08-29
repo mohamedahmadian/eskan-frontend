@@ -2750,6 +2750,7 @@
     "walkingDateInPast": "पैदल यात्रा प्रारंभ तिथि आज से पहले नहीं हो सकती",
     "stayStartRequired": "पवित्र मशहद पहुंचने की तिथि दर्ज करें",
     "stayEndRequired": "प्रवास समाप्ति तिथि दर्ज करें",
+    "datesOverlap": "यात्रा और प्रवास अवधि फ़ाइल {{code}} से टकराती है। एक ही अवधि में केवल एक फ़ाइल अनुमत है",
     "occasionStayTitle": "यात्रा अवसर",
     "occasionProphetLabel": "पैगंबर (स.) का निधन",
     "occasionImamRezaLabel": "इमाम रज़ा (अ.) की शहादत",

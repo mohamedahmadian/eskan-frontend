@@ -45,13 +45,18 @@ import {
   type PartyKind,
 } from "./ReservationPartyFields";
 import type { TravelSubStep } from "./travel-sub-steps";
+import {
+  findOverlappingReservation,
+  type ReservationDateSpan,
+} from "./reservation-date-overlap";
 
 export function travelDatesError(
   values: Pick<
     TravelValues,
     "walkingStartDate" | "stayStartDate" | "stayEndDate"
   >,
-  t: (key: string) => string,
+  t: (key: string, options?: Record<string, string>) => string,
+  overlap?: { others: ReservationDateSpan[]; excludeId?: string },
 ) {
   if (!values.stayStartDate) {
     return t("reservations.stayStartRequired");
@@ -72,6 +77,16 @@ export function travelDatesError(
     values.stayEndDate <= values.stayStartDate
   ) {
     return t("reservations.stayRangeInvalid");
+  }
+  if (overlap) {
+    const conflict = findOverlappingReservation(
+      values,
+      overlap.others,
+      overlap.excludeId,
+    );
+    if (conflict) {
+      return t("reservations.datesOverlap", { code: conflict.code });
+    }
   }
   return null;
 }
@@ -107,6 +122,7 @@ export function ReservationTravelFields({
   selectedParty,
   subjectUser,
   reservationId,
+  datesError,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -127,6 +143,7 @@ export function ReservationTravelFields({
     roles?: { code: string }[];
   } | null;
   reservationId?: string;
+  datesError?: string | null;
 }) {
   if (activeSubStep === "count") {
     return (
@@ -159,6 +176,7 @@ export function ReservationTravelFields({
         onChange={onChange}
         locked={locked}
         iranId={iranId}
+        error={datesError}
       />
     );
   }
@@ -180,12 +198,14 @@ export function ReservationTravelInfoFields({
   locked,
   iranId,
   showOccasionHint = true,
+  error,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
   iranId?: string;
   showOccasionHint?: boolean;
+  error?: string | null;
 }) {
   const { t } = useTranslation();
   return (
@@ -199,6 +219,7 @@ export function ReservationTravelInfoFields({
           onChange={onChange}
           locked={locked}
           showOccasionHint={showOccasionHint}
+          error={error}
         />
       </section>
       <section>
@@ -395,11 +416,13 @@ export function ReservationDateFields({
   onChange,
   locked,
   showOccasionHint = true,
+  error,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
   showOccasionHint?: boolean;
+  error?: string | null;
 }) {
   const { t } = useTranslation();
 
@@ -433,6 +456,7 @@ export function ReservationDateFields({
           onChange={(stayEndDate) => onChange({ stayEndDate })}
         />
       </div>
+      {error ? <p className="text-sm text-red-700">{error}</p> : null}
       {showOccasionHint ? <OccasionStayHint /> : null}
     </div>
   );

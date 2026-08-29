@@ -12,6 +12,7 @@ import {
   travelDatesError,
   type TravelValues,
 } from './ReservationTravelFields'
+import { fetchSubjectReservationSpans } from './reservation-date-overlap'
 import { workingHeadcount, requestedHeadcount } from './reservation-steps'
 import { TravelSubStepBar } from './TravelSubStepBar'
 import {
@@ -104,6 +105,30 @@ export function ReservationTravelStep({
     },
   })
   const iranId = countries.data?.find((item) => item.iso2 === 'IR')?.id ?? ''
+  const applicant = reservation.createdBy
+  const existingReservationsQuery = useQuery({
+    queryKey: [
+      'reservations',
+      'date-overlap',
+      mode,
+      applicant.id,
+      applicant.nationalId ?? '',
+    ],
+    queryFn: () =>
+      fetchSubjectReservationSpans({
+        forSelf: mode === 'owner',
+        subjectId: applicant.id,
+        subjectNationalId: applicant.nationalId,
+      }),
+  })
+  const datesOverlapError = useMemo(() => {
+    if (!existingReservationsQuery.data) return null
+    if (travelDatesError(values, t)) return null
+    return travelDatesError(values, t, {
+      others: existingReservationsQuery.data,
+      excludeId: reservation.id,
+    })
+  }, [existingReservationsQuery.data, reservation.id, t, values])
 
   const submit = useMutation({
     mutationFn: async () => {
@@ -124,13 +149,25 @@ export function ReservationTravelStep({
     onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
-  function assertTravelDates() {
-    const dateError = travelDatesError(values, t)
-    if (dateError) {
-      toast.error(dateError)
+  async function assertTravelDates() {
+    try {
+      const others =
+        existingReservationsQuery.data ??
+        (await existingReservationsQuery.refetch()).data ??
+        []
+      const dateError = travelDatesError(values, t, {
+        others,
+        excludeId: reservation.id,
+      })
+      if (dateError) {
+        toast.error(dateError)
+        return false
+      }
+      return true
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
       return false
     }
-    return true
   }
 
   function countTotal() {
@@ -142,7 +179,7 @@ export function ReservationTravelStep({
     return (Number(values.maleCount) || 0) + (Number(values.femaleCount) || 0)
   }
 
-  function assertCurrentSubStep() {
+  async function assertCurrentSubStep() {
     if (locked) return true
     if (activeSubStep === 'count') {
       if (countTotal() <= 0) {
@@ -168,7 +205,7 @@ export function ReservationTravelStep({
     return true
   }
 
-  function assertAllForSubmit() {
+  async function assertAllForSubmit() {
     if (locked) return true
     if (countTotal() <= 0) {
       toast.error(t('reservations.countInvalid'))
@@ -198,8 +235,8 @@ export function ReservationTravelStep({
     }
   }
 
-  function goNext() {
-    if (!assertCurrentSubStep()) return
+  async function goNext() {
+    if (!(await assertCurrentSubStep())) return
     if (lastStep) return
     const next = subSteps[stepIndex + 1]
     advanceMax(next)
@@ -211,8 +248,8 @@ export function ReservationTravelStep({
     setSubStep(subSteps[stepIndex - 1])
   }
 
-  function runSubmit() {
-    if (!assertAllForSubmit()) return
+  async function runSubmit() {
+    if (!(await assertAllForSubmit())) return
     if (!sendForReview) {
       submit.mutate()
       return
@@ -281,6 +318,7 @@ export function ReservationTravelStep({
           dualCounts={dualCounts}
           selectedParty={selectedParty}
           reservationId={mode === 'admin' ? reservation.id : undefined}
+          datesError={datesOverlapError}
           subjectUser={
             mode === 'admin'
               ? reservation.type === 'CARAVAN' && reservation.caravanManager

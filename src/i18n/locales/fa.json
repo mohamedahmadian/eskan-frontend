@@ -2886,6 +2886,7 @@
     "walkingDateInPast": "تاریخ شروع پیاده‌روی نمی‌تواند قبل از امروز باشد",
     "stayStartRequired": "تاریخ رسیدن به مشهد مقدس را وارد کنید",
     "stayEndRequired": "تاریخ پایان اقامت را وارد کنید",
+    "datesOverlap": "بازه سفر و اقامت با پرونده {{code}} تداخل دارد. در هر بازه زمانی فقط یک پرونده مجاز است",
     "occasionStayTitle": "مناسبت‌های زیارت",
     "occasionProphetLabel": "رحلت حضرت رسول اکرم (ص)",
     "occasionImamRezaLabel": "شهادت امام رضا (ع)",
