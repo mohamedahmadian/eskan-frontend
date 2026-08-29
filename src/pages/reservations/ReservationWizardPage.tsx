@@ -385,9 +385,11 @@ function ReviewWaitingBanner({
           <p className="text-sm font-bold text-gold-700">
             {t("reservations.statuses.PENDING_MANAGEMENT_REVIEW")}
           </p>
-          <p className="mt-0.5 text-xs leading-5 text-ink-600">
-            {t("reservations.reviewWaiting")}
-          </p>
+          <div className="mt-1 space-y-2 text-xs leading-6 text-ink-600">
+            <p>{t("reservations.reviewWaiting")}</p>
+            <p>{t("reservations.reviewWaitingContinue")}</p>
+            <p>{t("reservations.reviewWaitingBenefits")}</p>
+          </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs text-ink-800">
               <Hash
