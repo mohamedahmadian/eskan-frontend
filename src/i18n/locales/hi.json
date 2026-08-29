@@ -2730,6 +2730,7 @@
     "caravanRequired": "कारवां चुनें या नया कारवां पंजीकृत करें",
     "groupMaxHint": "अधिकतम {{count}} व्यक्ति",
     "groupMaxExceeded": "समूह क्षमता अधिकतम {{count}} व्यक्ति है",
+    "caravanMaxExceeded": "कारवां क्षमता अधिकतम {{count}} व्यक्ति है",
     "walkingRangeInvalid": "पैदल यात्रा प्रारंभ तिथि मशहद पहुंचने की तिथि से पहले होनी चाहिए",
     "walkingDateInPast": "पैदल यात्रा प्रारंभ तिथि आज से पहले नहीं हो सकती",
     "stayStartRequired": "पवित्र मशहद पहुंचने की तिथि दर्ज करें",

@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { FormField } from "../../components/ui/Form";
 import { formatNumber } from "../../lib/datetime";
 import type { ReservationType } from "../../types/app";
-import { GROUP_MAX_SIZE } from "./reservation-steps";
+import { partyMaxSize } from "./reservation-steps";
 import { PreviousApprovedCountsHint } from "./PreviousApprovedCountsHint";
 
 export type CountValues = {
@@ -88,7 +88,7 @@ export function ReservationCountFields({
   if (dual) {
     const requestedMale = Number(values.requestedMaleCount) || 0;
     const requestedFemale = Number(values.requestedFemaleCount) || 0;
-    const maxTotal = type === "GROUP" ? GROUP_MAX_SIZE : undefined;
+    const maxTotal = partyMaxSize(type);
     return (
       <div className="space-y-4">
         <CountPairSection
@@ -126,12 +126,12 @@ export function ReservationCountFields({
         {reservationId ? (
           <PreviousApprovedCountsHint reservationId={reservationId} />
         ) : null}
-        {type === "GROUP" ? <GroupMaxHint locale={locale} /> : null}
+        {maxTotal ? <PartyMaxHint max={maxTotal} locale={locale} /> : null}
       </div>
     );
   }
 
-  const maxTotal = type === "GROUP" ? GROUP_MAX_SIZE : undefined;
+  const maxTotal = partyMaxSize(type);
   const maleMax = maxTotal == null ? undefined : Math.max(0, maxTotal - female);
   const femaleMax = maxTotal == null ? undefined : Math.max(0, maxTotal - male);
 
@@ -177,7 +177,7 @@ export function ReservationCountFields({
           locked
         />
       </div>
-      {type === "GROUP" ? <GroupMaxHint locale={locale} /> : null}
+      {maxTotal ? <PartyMaxHint max={maxTotal} locale={locale} /> : null}
     </>
   );
 }
@@ -259,7 +259,7 @@ function CountPairSection({
   );
 }
 
-function GroupMaxHint({ locale }: { locale: string }) {
+function PartyMaxHint({ max, locale }: { max: number; locale: string }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-3 py-2.5 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
@@ -268,7 +268,7 @@ function GroupMaxHint({ locale }: { locale: string }) {
       </span>
       <p className="text-sm font-bold text-ink-800">
         {t("reservations.groupMaxHint", {
-          count: formatNumber(GROUP_MAX_SIZE, locale),
+          count: formatNumber(max, locale),
         })}
       </p>
     </div>

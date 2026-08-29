@@ -2807,6 +2807,7 @@
     "caravanRequired": "اختر القافلة أو سجّل قافلة جديدة",
     "groupMaxHint": "بحد أقصى {{count}} شخص",
     "groupMaxExceeded": "سعة المجموعة {{count}} شخص كحد أقصى",
+    "caravanMaxExceeded": "سعة القافلة {{count}} شخص كحد أقصى",
     "walkingRangeInvalid": "يجب أن يكون تاريخ بدء المشي قبل تاريخ الوصول إلى مشهد",
     "walkingDateInPast": "لا يمكن أن يكون تاريخ بدء المشي قبل اليوم",
     "stayStartRequired": "أدخل تاريخ الوصول إلى مشهد المقدسة",

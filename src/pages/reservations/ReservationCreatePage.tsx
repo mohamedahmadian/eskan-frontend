@@ -36,6 +36,7 @@ import { addDaysIso, currentPersianYear, formatNumber } from '../../lib/datetime
 import { isCaravanManager } from '../../lib/roles'
 import type {
   ManagedUser,
+  Paginated,
   ReceptionCapacity,
   ReceptionCapacitySlice,
   ReceptionSettings,
@@ -45,10 +46,10 @@ import type {
 } from '../../types/app'
 import {
   CAPACITY_WARNING_RATIO,
-  GROUP_MAX_SIZE,
   capacityKey,
   createWizardPath,
   isOwnerCreateDraft,
+  partyMaxSize,
   settingsEnabledKey,
 } from './reservation-steps'
 import {
@@ -88,9 +89,22 @@ type CreateStep = 'type' | 'party' | 'count' | 'dates' | 'services' | 'license'
 const individualCreateSteps: CreateStep[] = ['type', 'dates', 'services']
 const groupCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'services']
 const caravanCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'services', 'license']
+const caravanCreateStepsWithoutParty: CreateStep[] = ['type', 'count', 'dates', 'services', 'license']
 
-function stepsForCreateType(type: ReservationType | ''): CreateStep[] {
-  if (type === 'CARAVAN') return caravanCreateSteps
+type MineCaravan = {
+  id: string
+  walkingRouteId?: string | null
+}
+
+async function fetchMyCaravans() {
+  const { data } = await api.get<Paginated<MineCaravan>>('/caravans/mine', {
+    params: { pageSize: 100 },
+  })
+  return data.items
+}
+
+function stepsForCreateType(type: ReservationType | '', skipCaravanParty = false): CreateStep[] {
+  if (type === 'CARAVAN') return skipCaravanParty ? caravanCreateStepsWithoutParty : caravanCreateSteps
   if (type === 'GROUP') return groupCreateSteps
   return individualCreateSteps
 }
@@ -192,10 +206,14 @@ function inferCreateStep(
   values: TravelValues,
   permit: CaravanPermitDraft,
   savedStep?: string | null,
+  skipCaravanParty = false,
 ): CreateStep {
-  const steps = stepsForCreateType(type)
-  const requestedStep =
-    savedStep === 'count' && !steps.includes('count') ? 'dates' : savedStep
+  const steps = stepsForCreateType(type, skipCaravanParty)
+  let requestedStep = savedStep
+  if (requestedStep && !steps.includes(requestedStep as CreateStep)) {
+    if (requestedStep === 'party') requestedStep = 'count'
+    else if (requestedStep === 'count') requestedStep = 'dates'
+  }
   if (requestedStep && steps.includes(requestedStep as CreateStep)) {
     return requestedStep as CreateStep
   }
@@ -226,9 +244,10 @@ function furtherCreateStep(
   type: ReservationType | '',
   a: CreateStep,
   b: CreateStep,
+  skipCaravanParty = false,
 ): CreateStep {
   if (!type) return a
-  const list = stepsForCreateType(type)
+  const list = stepsForCreateType(type, skipCaravanParty)
   return list.indexOf(a) >= list.indexOf(b) ? a : b
 }
 
@@ -269,7 +288,15 @@ export function ReservationCreatePage() {
   const [draftHydrated, setDraftHydrated] = useState(!draftParam)
   const queryClient = useQueryClient()
   const reservationYear = draftId ? draftYear : year
-  const steps = stepsForCreateType(type)
+  const myCaravansQuery = useQuery({
+    queryKey: ['caravans', 'mine', 'lookup'],
+    enabled: !isAdminCreate,
+    queryFn: fetchMyCaravans,
+  })
+  const soleCaravan =
+    !isAdminCreate && myCaravansQuery.data?.length === 1 ? myCaravansQuery.data[0] : null
+  const skipCaravanParty = Boolean(soleCaravan)
+  const steps = stepsForCreateType(type, skipCaravanParty)
   const stepIndex = steps.indexOf(step)
   const maxReachedIndex = Math.max(stepIndex, steps.indexOf(maxReachedStep))
   const lastStep = stepIndex === steps.length - 1
@@ -350,10 +377,18 @@ export function ReservationCreatePage() {
       return
     }
     const nextType = reservation.type
+    if (nextType === 'CARAVAN' && !isAdminCreate && myCaravansQuery.isPending) return
+    const skipParty = nextType === 'CARAVAN' && Boolean(soleCaravan)
     const nextValues = valuesFromReservation(
       reservation,
       reservation.createdBy ? undefined : user?.provinceId,
     )
+    if (skipParty && soleCaravan && !nextValues.caravanId) {
+      nextValues.caravanId = soleCaravan.id
+      if (soleCaravan.walkingRouteId && !nextValues.walkingRouteId) {
+        nextValues.walkingRouteId = soleCaravan.walkingRouteId
+      }
+    }
     const nextPermit = permitFromReservation(reservation)
     setDraftId(reservation.id)
     setDraftYear(reservation.year)
@@ -361,7 +396,13 @@ export function ReservationCreatePage() {
     setValues(nextValues)
     setPermitDraft(nextPermit)
     setPartyDraft(emptyPartyDraft(subject ?? user))
-    const reached = inferCreateStep(nextType, nextValues, nextPermit, reservation.createWizardStep)
+    const reached = inferCreateStep(
+      nextType,
+      nextValues,
+      nextPermit,
+      reservation.createWizardStep,
+      skipParty,
+    )
     setStep(reached)
     setMaxReachedStep(reached)
     setDraftHydrated(true)
@@ -374,7 +415,28 @@ export function ReservationCreatePage() {
     user,
     createBase,
     subject,
+    isAdminCreate,
+    myCaravansQuery.isPending,
+    soleCaravan,
   ])
+
+  useEffect(() => {
+    if (type !== 'CARAVAN' || !skipCaravanParty || !soleCaravan) return
+    if (!values.caravanId) {
+      setValues((current) => ({
+        ...current,
+        caravanId: soleCaravan.id,
+        groupId: '',
+        ...(soleCaravan.walkingRouteId ? { walkingRouteId: soleCaravan.walkingRouteId } : {}),
+      }))
+    }
+    if (step === 'party') {
+      setStep('count')
+      setMaxReachedStep((current) =>
+        furtherCreateStep('CARAVAN', 'count', current === 'party' ? 'count' : current, true),
+      )
+    }
+  }, [type, skipCaravanParty, soleCaravan, values.caravanId, step])
 
   useEffect(() => {
     const main = document.querySelector('main')
@@ -519,20 +581,23 @@ export function ReservationCreatePage() {
     nextPermit?: CaravanPermitDraft
     wizardStep?: CreateStep
     silent?: boolean
+    skipCaravanParty?: boolean
   }): Promise<string | null> {
     const nextType = options?.nextType ?? (type || null)
     if (!nextType) return draftId || null
     const nextValues = options?.nextValues ?? values
     const nextPermit = options?.nextPermit ?? permitDraft
+    const skipParty = options?.skipCaravanParty ?? skipCaravanParty
     const reached = furtherCreateStep(
       nextType,
       options?.wizardStep ?? step,
       nextType === type ? maxReachedStep : (options?.wizardStep ?? 'type'),
+      skipParty,
     )
     if (nextType === type || options?.wizardStep) {
       setMaxReachedStep((current) =>
         nextType === type
-          ? furtherCreateStep(nextType, reached, current)
+          ? furtherCreateStep(nextType, reached, current, skipParty)
           : reached,
       )
     }
@@ -562,8 +627,8 @@ export function ReservationCreatePage() {
 
   async function goAfterType(next: ReservationType) {
     selectType(next)
-    const nextStep: CreateStep = next === 'GROUP' || next === 'CARAVAN' ? 'party' : 'dates'
-    const nextValues =
+    let nextStep: CreateStep = next === 'GROUP' || next === 'CARAVAN' ? 'party' : 'dates'
+    let nextValues: TravelValues =
       next === 'INDIVIDUAL'
         ? {
             ...values,
@@ -579,6 +644,33 @@ export function ReservationCreatePage() {
             caravanId: next === 'CARAVAN' ? values.caravanId : '',
             groupId: next === 'GROUP' ? values.groupId : '',
           }
+    let skipParty = false
+    if (next === 'CARAVAN' && !isAdminCreate) {
+      let items = myCaravansQuery.data
+      if (items === undefined) {
+        try {
+          items = await queryClient.fetchQuery({
+            queryKey: ['caravans', 'mine', 'lookup'],
+            queryFn: fetchMyCaravans,
+          })
+        } catch {
+          items = []
+        }
+      }
+      const caravans = items ?? []
+      if (caravans.length === 1) {
+        const sole = caravans[0]
+        nextValues = {
+          ...nextValues,
+          caravanId: sole.id,
+          groupId: '',
+          ...(sole.walkingRouteId ? { walkingRouteId: sole.walkingRouteId } : {}),
+        }
+        applyParty(sole, sole.walkingRouteId ?? undefined)
+        nextStep = 'count'
+        skipParty = true
+      }
+    }
     setSubmitting(true)
     try {
       const id = await persistDraft({
@@ -586,6 +678,7 @@ export function ReservationCreatePage() {
         nextValues,
         nextPermit: { source: '', issuedLicenseId: '', permitImageId: '' },
         wizardStep: nextStep,
+        skipCaravanParty: skipParty,
       })
       if (id) {
         setMaxReachedStep(nextStep)
@@ -660,8 +753,13 @@ export function ReservationCreatePage() {
         toast.error(t('reservations.countInvalid'))
         return false
       }
-      if (type === 'GROUP' && male + female > GROUP_MAX_SIZE) {
-        toast.error(t('reservations.groupMaxExceeded', { count: formatNumber(GROUP_MAX_SIZE, locale) }))
+      const max = partyMaxSize(type)
+      if (max && male + female > max) {
+        toast.error(
+          t(type === 'CARAVAN' ? 'reservations.caravanMaxExceeded' : 'reservations.groupMaxExceeded', {
+            count: formatNumber(max, locale),
+          }),
+        )
         return false
       }
       return true
@@ -1024,7 +1122,7 @@ export function ReservationCreatePage() {
 
         {step === 'count' && type ? (
           <>
-            {selectedCapacity ? (
+            {selectedCapacity && type !== 'CARAVAN' ? (
               <RemainingCapacityCard type={type} slice={selectedCapacity} locale={locale} />
             ) : null}
             <ReservationCountFields
