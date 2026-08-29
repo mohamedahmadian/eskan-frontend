@@ -606,19 +606,22 @@ export function ReservationCreatePage() {
       ...(isAdminCreate && forUserId && !draftId ? { createdById: forUserId } : {}),
     }
     try {
+      let savedId: string
       if (draftId) {
-        const { asDraft: _asDraft, createdById: _createdById, ...patch } = payload
+        const { createdById: _createdById, ...patch } = payload
         const { data } = await api.patch<Reservation>(`/reservations/${draftId}`, patch)
-        return data.id
-      }
-      const { data } = await api.post<Reservation>('/reservations', payload)
-      setDraftId(data.id)
-      navigate(createWizardPath(data.id, createBase, forUserId || undefined), { replace: true })
-      if (!options?.silent) {
-        toast.success(t('reservations.draftSaved'))
+        savedId = data.id
+      } else {
+        const { data } = await api.post<Reservation>('/reservations', payload)
+        setDraftId(data.id)
+        navigate(createWizardPath(data.id, createBase, forUserId || undefined), { replace: true })
+        if (!options?.silent) {
+          toast.success(t('reservations.draftSaved'))
+        }
+        savedId = data.id
       }
       await queryClient.invalidateQueries({ queryKey: ['reservations'] })
-      return data.id
+      return savedId
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
       return null
@@ -689,9 +692,26 @@ export function ReservationCreatePage() {
     }
   }
 
-  function goBack() {
+  async function goToCreateStep(next: CreateStep) {
+    if (next === step) return
+    if (type) {
+      const id = await persistDraft({
+        silent: true,
+        wizardStep: furtherCreateStep(type, maxReachedStep, next, skipCaravanParty),
+      })
+      if (!id) return
+    }
+    setStep(next)
+  }
+
+  async function goBack() {
     if (stepIndex <= 0) return
-    setStep(steps[stepIndex - 1])
+    setSubmitting(true)
+    try {
+      await goToCreateStep(steps[stepIndex - 1])
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function ensurePartySelected(
@@ -1019,7 +1039,15 @@ export function ReservationCreatePage() {
         type={type}
         onSelect={(next) => {
           const target = steps.indexOf(next)
-          if (target >= 0 && target <= maxReachedIndex) setStep(next)
+          if (target < 0 || target > maxReachedIndex || next === step || submitting) return
+          void (async () => {
+            setSubmitting(true)
+            try {
+              await goToCreateStep(next)
+            } finally {
+              setSubmitting(false)
+            }
+          })()
         }}
       />
 
