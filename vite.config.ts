@@ -35,7 +35,12 @@ export default defineConfig(({ command }) => {
       host: "127.0.0.1",
       port: 5173,
 
-      allowedHosts: ["ziyarat8.ir", "www.ziyarat8.ir"],
+      allowedHosts: [
+        "ziyarat8.ir",
+        "www.ziyarat8.ir",
+        "ziyarat8.com",
+        "www.ziyarat8.com",
+      ],
 
       hmr: disableHmr ? false : undefined,
       watch: disableHmr ? null : undefined,
