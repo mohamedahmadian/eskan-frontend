@@ -197,6 +197,10 @@ th {
   color: #3f3a34;
 }
 
+.eskan-route-pin-previous {
+  opacity: 0.42;
+}
+
 .eskan-route-pin-previous .eskan-route-pin-badge {
   background: #3fd6be;
 }

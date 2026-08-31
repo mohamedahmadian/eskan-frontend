@@ -526,6 +526,8 @@ export type Paginated<T> = {
   pageSize: number;
 };
 
+export type LocationSource = 'MANUAL' | 'APP' | 'STATION';
+
 export type UserLocationHistoryItem = {
   id: string;
   seq: number;
@@ -534,6 +536,7 @@ export type UserLocationHistoryItem = {
   latitude: number | null;
   longitude: number | null;
   notes: string | null;
+  source: LocationSource;
   createdAt: string;
   province: (GeoName & { id: string; countryId: string }) | null;
   city: (GeoName & { id: string; provinceId: string }) | null;
@@ -1919,6 +1922,30 @@ export type ReservationCaravanContact = {
   user: ReservationPerson;
 };
 
+export type ReservationTravelHistoryItem = {
+  id: string;
+  reservationId: string;
+  userId: string;
+  walkingRouteStageId: string | null;
+  walkingRouteStage: {
+    id: string;
+    name: string | null;
+    stageNumber: number;
+  } | null;
+  provinceId: string | null;
+  cityId: string | null;
+  province: (GeoName & { id: string; countryId: string }) | null;
+  city: (GeoName & { id: string; provinceId: string }) | null;
+  latitude: number | null;
+  longitude: number | null;
+  notes: string | null;
+  createdAt: string;
+};
+
+export type ReservationTravelHistoryList = {
+  items: ReservationTravelHistoryItem[];
+};
+
 export type ReservationListItem = {
   id: string;
   code: string;
@@ -1971,6 +1998,7 @@ export type ReservationListItem = {
   permitSource: ReservationPermitSource | null;
   returnedToStatus?: ReservationStatus | null;
   createWizardStep?: string | null;
+  walkingRoute?: { id: string; name: string } | null;
 };
 
 export type Reservation = ReservationListItem & {

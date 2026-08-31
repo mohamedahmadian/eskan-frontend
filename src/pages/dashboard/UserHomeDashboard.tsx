@@ -32,6 +32,7 @@ import { ReservationCodeBadge } from '../reservations/ReservationCodeBadge'
 import { ReservationStatusBadge } from '../reservations/ReservationStatusBadge'
 import { useDeleteOwnerDraft } from '../reservations/useDeleteOwnerDraft'
 import { HeadquartersServiceYearsCard } from './HeadquartersServiceYearsCard'
+import { PilgrimageRouteCard } from './PilgrimageRouteCard'
 import { UserLocationCard } from './UserLocationCard'
 
 const emptyTotals = { all: 0, inProgress: 0, pendingReview: 0, completed: 0 }
@@ -326,6 +327,10 @@ export function UserHomeDashboard() {
     },
   })
 
+  const latestFile =
+    query.data?.pilgrim?.recent[0] ?? query.data?.caravanManager?.recentReservations[0]
+  const walkingRouteId = latestFile?.walkingRoute?.id
+
   return (
     <div className={`${listShellClassName} space-y-8`}>
       <section className={`${cardClassName} overflow-hidden`}>
@@ -348,9 +353,9 @@ export function UserHomeDashboard() {
         </div>
       </section>
 
-      <HeadquartersServiceYearsCard />
-
-      {showPilgrim || showManager ? (
+      {walkingRouteId && latestFile ? (
+        <PilgrimageRouteCard routeId={walkingRouteId} reservationId={latestFile.id} />
+      ) : showPilgrim || showManager ? (
         <div className="w-full md:w-1/2">
           <UserLocationCard />
         </div>
@@ -384,6 +389,8 @@ export function UserHomeDashboard() {
           ) : null}
         </>
       )}
+
+      <HeadquartersServiceYearsCard />
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { AuthGuestLayout } from '../components/auth/AuthGuestLayout'
 import { AppForm, Button, FormField, fieldClassName } from '../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
+import { isApiServerError } from '../lib/api'
 import { toLatinDigits } from '../lib/datetime'
 
 export function LoginPage() {
@@ -27,8 +28,10 @@ export function LoginPage() {
     try {
       await login(toLatinDigits(username), toLatinDigits(password))
       navigate('/')
-    } catch {
-      toast.error(t('auth.loginFailed'))
+    } catch (error) {
+      toast.error(
+        isApiServerError(error) ? t('auth.serverUnavailable') : t('auth.loginFailed'),
+      )
     } finally {
       setSubmitting(false)
     }

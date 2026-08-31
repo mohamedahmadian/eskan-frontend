@@ -35,6 +35,7 @@ import { ReservationMembersGrid } from './ReservationMembersGrid'
 import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { ReservationCountMetrics } from './ReservationCountMetrics'
 import { ReservationIdentityChips } from './ReservationSectionHeader'
+import { ReservationTravelHistoryCard } from './ReservationTravelHistoryCard'
 import { bankLabel, simOperatorLabel } from './ReservationIssuedServicesPanel'
 
 type Tone = 'teal' | 'mint' | 'ink'
@@ -122,6 +123,7 @@ export function ReservationCompleteSummary({
     : null
 
   return (
+    <div className="space-y-4">
     <section className={`${cardClassName} overflow-hidden`}>
       <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
         <FormCardHeaderDecor />
@@ -498,6 +500,8 @@ export function ReservationCompleteSummary({
 
       {footer ? <div className="border-t border-line px-5 py-4 sm:px-6">{footer}</div> : null}
     </section>
+    <ReservationTravelHistoryCard reservationId={reservation.id} />
+    </div>
   )
 }
 

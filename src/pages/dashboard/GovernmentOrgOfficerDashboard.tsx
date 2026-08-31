@@ -58,8 +58,6 @@ export function GovernmentOrgOfficerDashboard() {
         </div>
       </section>
 
-      <HeadquartersServiceYearsCard />
-
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-ink-500">{t('dashboard.supportOfficerOrganization')}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -111,6 +109,8 @@ export function GovernmentOrgOfficerDashboard() {
           />
         </div>
       </section>
+
+      <HeadquartersServiceYearsCard />
     </div>
   )
 }

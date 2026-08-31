@@ -63,7 +63,6 @@ function AdminOverview() {
 
   return (
     <div className={`${listShellClassName} space-y-8`}>
-      <HeadquartersServiceYearsCard />
       <section>
         <h2 className="mb-4 text-sm font-medium text-ink-500">{t('dashboard.quickAccess')}</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -149,6 +148,8 @@ function AdminOverview() {
       <p className={`${cardClassName} px-5 py-4 text-sm text-ink-700`}>
         {t('dashboard.internationalNote')}
       </p>
+
+      <HeadquartersServiceYearsCard />
     </div>
   )
 }

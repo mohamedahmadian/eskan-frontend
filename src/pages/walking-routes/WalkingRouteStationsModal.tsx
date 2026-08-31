@@ -1,18 +1,12 @@
 import {
-  AlignLeft,
-  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  ListOrdered,
   Map as MapIcon,
-  MapPin,
-  MapPinned,
-  MessageCircle,
-  Milestone,
-  Phone,
   Route,
   Search,
-  Share2,
   Table2,
-  Type,
-  UserRound,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -20,11 +14,7 @@ import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AppForm, Button } from '../../components/ui/Form'
-import {
-  FormEmptyHint,
-  FormFactTile,
-  FormSectionTitle,
-} from '../../components/ui/FormLayout'
+import { FormEmptyHint } from '../../components/ui/FormLayout'
 import { TableCard } from '../../components/ui/ListControls'
 import { OsmMapPicker, type MapOverlayMarker, type MapOverlays } from '../../components/ui/OsmMapPicker'
 import { languageDir } from '../../i18n'
@@ -32,19 +22,12 @@ import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { geoName, stageCoordinates, useGeoName } from '../../lib/geo'
 import type { City, WalkingRoute, WalkingRouteStage } from '../../types/app'
-import { StationNearbyPlaces } from './StationNearbyPlaces'
-
-function hasText(value: string | null | undefined) {
-  return Boolean(value?.trim())
-}
-
-function stageKey(stage: WalkingRouteStage) {
-  return stage.id ?? `${stage.cityId}-${stage.stageNumber}`
-}
-
-function stageTitle(stage: WalkingRouteStage, locale: string, fallback: string) {
-  return stage.name?.trim() || geoName(stage.city, locale) || fallback
-}
+import {
+  StationDetailsOverlay,
+  StationInfoCard,
+  stageKey,
+  stageTitle,
+} from './StationInfoCard'
 
 function matchesStationQuery(
   stage: WalkingRouteStage,
@@ -64,191 +47,7 @@ function matchesStationQuery(
   return haystack.includes(term)
 }
 
-function StationInfoCard({
-  stage,
-  locale,
-  onClose,
-}: {
-  stage: WalkingRouteStage
-  locale: string
-  onClose?: () => void
-}) {
-  const { t } = useTranslation()
-  const name = useGeoName()
-  const n = (value: number) => formatNumber(value, locale)
-  const km = (value: number | null | undefined) =>
-    value == null ? '' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
-  const title = stageTitle(stage, locale, `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`)
-  const hasManager =
-    hasText(stage.managerName) ||
-    hasText(stage.managerPhone) ||
-    hasText(stage.managerTelegram) ||
-    hasText(stage.managerWhatsapp) ||
-    hasText(stage.managerEitaa)
-
-  return (
-    <article className="flex h-full min-h-0 flex-col overflow-hidden rounded-[22px] border border-teal-100 bg-white shadow-[0_18px_40px_rgba(20,40,40,0.16)]">
-      <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-4 py-3.5 sm:px-5">
-        <div
-          className="pointer-events-none absolute -start-8 -top-10 size-28 rounded-full bg-teal-200/30"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -end-6 -bottom-10 size-24 rounded-full bg-mint-100/70"
-          aria-hidden
-        />
-        <div className="relative flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
-              <Milestone className="size-5" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-teal-700">
-                {t('walkingRoutes.stage')} {n(stage.stageNumber)}
-              </p>
-              <h3 className="truncate text-sm font-semibold text-ink-900">{title}</h3>
-              <p className="mt-0.5 truncate text-xs text-ink-500">
-                {name(stage.city.province)} · {name(stage.city)}
-              </p>
-            </div>
-          </div>
-          {onClose ? (
-            <Button
-              type="button"
-              variant="ghost"
-              icon
-              aria-label={t('common.close')}
-              title={t('common.close')}
-              onClick={onClose}
-            >
-              <X className="size-4" aria-hidden />
-            </Button>
-          ) : null}
-        </div>
-      </header>
-
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
-        <section className="space-y-2">
-          <FormSectionTitle icon={MapPin} className="mb-0">
-            {t('walkingRoutes.sectionStation')}
-          </FormSectionTitle>
-          <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-            {hasText(stage.name) ? (
-              <FormFactTile
-                icon={Type}
-                label={t('walkingRoutes.stationName')}
-                value={stage.name}
-                tone="teal"
-              />
-            ) : null}
-            <FormFactTile
-              icon={MapPin}
-              label={t('walkingRoutes.city')}
-              value={name(stage.city)}
-              tone="mint"
-            />
-            <FormFactTile
-              icon={MapPinned}
-              label={t('geo.province')}
-              value={name(stage.city.province)}
-              tone="ink"
-            />
-            {stage.distanceToPreviousKm != null ? (
-              <FormFactTile
-                icon={ArrowUpDown}
-                label={t('walkingRoutes.distanceToPreviousKm')}
-                value={km(stage.distanceToPreviousKm)}
-                tone="teal"
-              />
-            ) : null}
-            {stage.distanceToNextKm != null ? (
-              <FormFactTile
-                icon={ArrowUpDown}
-                label={t('walkingRoutes.distanceToNextKm')}
-                value={km(stage.distanceToNextKm)}
-                tone="mint"
-              />
-            ) : null}
-            {stage.distanceToMashhadKm != null ? (
-              <FormFactTile
-                icon={Milestone}
-                label={t('walkingRoutes.stageDistanceToMashhadKm')}
-                value={km(stage.distanceToMashhadKm)}
-                tone="ink"
-              />
-            ) : null}
-            {hasText(stage.description) ? (
-              <FormFactTile
-                icon={AlignLeft}
-                label={t('walkingRoutes.description')}
-                value={<span className="whitespace-pre-wrap">{stage.description}</span>}
-                tone="ink"
-                className="sm:col-span-2"
-              />
-            ) : null}
-          </div>
-        </section>
-
-        {hasManager ? (
-          <section className="space-y-2">
-            <FormSectionTitle icon={UserRound} className="mb-0">
-              {t('walkingRoutes.sectionManager')}
-            </FormSectionTitle>
-            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-              {hasText(stage.managerName) ? (
-                <FormFactTile
-                  icon={UserRound}
-                  label={t('walkingRoutes.managerName')}
-                  value={stage.managerName}
-                  tone="teal"
-                />
-              ) : null}
-              {hasText(stage.managerPhone) ? (
-                <FormFactTile
-                  icon={Phone}
-                  label={t('walkingRoutes.managerPhone')}
-                  copyValue={stage.managerPhone}
-                  tone="mint"
-                />
-              ) : null}
-              {hasText(stage.managerWhatsapp) ? (
-                <FormFactTile
-                  icon={Phone}
-                  label={t('walkingRoutes.managerWhatsapp')}
-                  copyValue={stage.managerWhatsapp}
-                  tone="ink"
-                />
-              ) : null}
-              {hasText(stage.managerTelegram) ? (
-                <FormFactTile
-                  icon={MessageCircle}
-                  label={t('walkingRoutes.managerTelegram')}
-                  value={<span dir="ltr">{stage.managerTelegram}</span>}
-                  tone="teal"
-                />
-              ) : null}
-              {hasText(stage.managerEitaa) ? (
-                <FormFactTile
-                  icon={Share2}
-                  label={t('walkingRoutes.managerEitaa')}
-                  value={<span dir="ltr">{stage.managerEitaa}</span>}
-                  tone="mint"
-                />
-              ) : null}
-            </div>
-          </section>
-        ) : null}
-
-        <StationNearbyPlaces
-          cityId={stage.cityId}
-          latitude={stageCoordinates(stage)?.lat}
-          longitude={stageCoordinates(stage)?.lng}
-          compact
-        />
-      </div>
-    </article>
-  )
-}
+type StationsTab = 'map' | 'table' | 'steps'
 
 export function WalkingRouteStationsModal({
   routeId,
@@ -263,8 +62,9 @@ export function WalkingRouteStationsModal({
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
   const [term, setTerm] = useState('')
-  const [tab, setTab] = useState<'map' | 'table'>('map')
+  const [tab, setTab] = useState<StationsTab>('map')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [wizardIndex, setWizardIndex] = useState(0)
 
   const query = useQuery({
     queryKey: ['walking-route', routeId],
@@ -276,25 +76,6 @@ export function WalkingRouteStationsModal({
   })
 
   const route = query.data
-
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      if (selectedId) {
-        setSelectedId(null)
-        return
-      }
-      onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose, selectedId])
 
   const rawStages = useMemo(
     () => [...(route?.stages ?? [])].sort((a, b) => a.stageNumber - b.stageNumber),
@@ -341,12 +122,57 @@ export function WalkingRouteStationsModal({
   )
 
   useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        if (selectedId) {
+          setSelectedId(null)
+          return
+        }
+        onClose()
+        return
+      }
+      if (tab !== 'steps') return
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+      event.preventDefault()
+      const rtl = languageDir(locale) === 'rtl'
+      const goNext = rtl ? event.key === 'ArrowLeft' : event.key === 'ArrowRight'
+      setWizardIndex((index) => {
+        const next = index + (goNext ? 1 : -1)
+        if (next < 0 || next >= stages.length) return index
+        return next
+      })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previous
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [locale, onClose, selectedId, stages.length, tab])
+
+  useEffect(() => {
     if (selectedId && !filtered.some((stage) => stageKey(stage) === selectedId)) {
       setSelectedId(null)
     }
   }, [filtered, selectedId])
 
+  useEffect(() => {
+    if (wizardIndex >= stages.length) {
+      setWizardIndex(Math.max(0, stages.length - 1))
+    }
+  }, [stages.length, wizardIndex])
+
+  useEffect(() => {
+    if (tab !== 'steps') return
+    document
+      .getElementById(`wizard-step-${wizardIndex}`)
+      ?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+  }, [tab, wizardIndex])
+
   const selected = filtered.find((stage) => stageKey(stage) === selectedId) ?? null
+  const wizardStage = stages[wizardIndex] ?? null
   const n = (value: number) => formatNumber(value, locale)
   const km = (value: number | null | undefined) =>
     value == null ? '—' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
@@ -387,9 +213,16 @@ export function WalkingRouteStationsModal({
     setSelectedId(null)
   }
 
-  function showOnMap(stage: WalkingRouteStage) {
+  function showDetails(stage: WalkingRouteStage) {
     setSelectedId(stageKey(stage))
-    setTab('map')
+  }
+
+  function goWizard(delta: number) {
+    setWizardIndex((index) => {
+      const next = index + delta
+      if (next < 0 || next >= stages.length) return index
+      return next
+    })
   }
 
   const emptyFiltered = Boolean(term.trim()) && filtered.length === 0
@@ -420,47 +253,44 @@ export function WalkingRouteStationsModal({
               </p>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            icon
-            aria-label={t('common.close')}
-            title={t('common.close')}
-            onClick={onClose}
-          >
+          <Button type="button" variant="ghost" onClick={onClose}>
             <X className="size-4" aria-hidden />
+            {t('walkingRoutes.stationsModalClose')}
           </Button>
         </div>
       </header>
 
       <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col gap-3 px-3 py-3 sm:px-5">
-        <AppForm
-          autoFocusFirst={false}
-          onSubmit={() => undefined}
-          className="shrink-0 rounded-[22px] border border-line bg-white p-3 shadow-[0_10px_30px_rgba(20,40,40,0.05)]"
-        >
-          <label className="sr-only" htmlFor="station-modal-search">
-            {t('walkingRoutes.stationsSearch')}
-          </label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-teal-600" />
-            <input
-              id="station-modal-search"
-              className="w-full rounded-2xl border border-line bg-cream-50 py-2.5 ps-10 pe-3 text-sm text-ink-900 placeholder:text-ink-400"
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              placeholder={t('walkingRoutes.stationsSearchPlaceholder')}
-              autoComplete="off"
-              autoFocus
-            />
-          </div>
-        </AppForm>
+        {tab !== 'steps' ? (
+          <AppForm
+            autoFocusFirst={false}
+            onSubmit={() => undefined}
+            className="shrink-0 rounded-[22px] border border-line bg-white p-3 shadow-[0_10px_30px_rgba(20,40,40,0.05)]"
+          >
+            <label className="sr-only" htmlFor="station-modal-search">
+              {t('walkingRoutes.stationsSearch')}
+            </label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-teal-600" />
+              <input
+                id="station-modal-search"
+                className="w-full rounded-2xl border border-line bg-cream-50 py-2.5 ps-10 pe-3 text-sm text-ink-900 placeholder:text-ink-400"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                placeholder={t('walkingRoutes.stationsSearchPlaceholder')}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+          </AppForm>
+        ) : null}
 
         <nav className="flex shrink-0 flex-wrap gap-2 rounded-2xl border border-line bg-white p-2">
           {(
             [
               { id: 'map' as const, icon: MapIcon, label: t('walkingRoutes.tabs.map') },
               { id: 'table' as const, icon: Table2, label: t('walkingRoutes.tabs.table') },
+              { id: 'steps' as const, icon: ListOrdered, label: t('walkingRoutes.tabs.steps') },
             ]
           ).map((item) => {
             const Icon = item.icon
@@ -469,7 +299,13 @@ export function WalkingRouteStationsModal({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setTab(item.id)}
+                onClick={() => {
+                  if (item.id === 'steps') {
+                    setWizardIndex(0)
+                    setSelectedId(null)
+                  }
+                  setTab(item.id)
+                }}
                 className={`inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium transition ${
                   active
                     ? 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]'
@@ -484,7 +320,66 @@ export function WalkingRouteStationsModal({
         </nav>
 
         <div className="relative min-h-0 flex-1">
-          {emptyFiltered ? (
+          {tab === 'steps' ? (
+            stages.length === 0 || !wizardStage ? (
+              <FormEmptyHint>{t('walkingRoutes.stagesEmpty')}</FormEmptyHint>
+            ) : (
+              <div className="flex h-full min-h-0 flex-col gap-3">
+                <div className="shrink-0 rounded-[22px] border border-line bg-white px-3 py-2.5 shadow-[0_10px_30px_rgba(20,40,40,0.05)] sm:px-4">
+                  <p className="mb-2 text-sm font-semibold text-ink-800">
+                    {t('walkingRoutes.stepOf', {
+                      current: n(wizardIndex + 1),
+                      total: n(stages.length),
+                    })}
+                  </p>
+                  <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                    {stages.map((stage, index) => {
+                      const active = index === wizardIndex
+                      return (
+                        <button
+                          key={stageKey(stage)}
+                          id={`wizard-step-${index}`}
+                          type="button"
+                          onClick={() => setWizardIndex(index)}
+                          aria-current={active ? 'step' : undefined}
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-2xl text-xs font-semibold transition ${
+                            active
+                              ? 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]'
+                              : 'bg-cream-50 text-ink-700 hover:bg-cream-100'
+                          }`}
+                        >
+                          {n(stage.stageNumber)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1">
+                  <StationInfoCard stage={wizardStage} locale={locale} />
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={wizardIndex <= 0}
+                    onClick={() => goWizard(-1)}
+                  >
+                    <ChevronRight className="size-4 ltr:rotate-180" aria-hidden />
+                    {t('walkingRoutes.prevStage')}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="ms-auto"
+                    disabled={wizardIndex >= stages.length - 1}
+                    onClick={() => goWizard(1)}
+                  >
+                    {t('walkingRoutes.nextStage')}
+                    <ChevronLeft className="size-4 ltr:rotate-180" aria-hidden />
+                  </Button>
+                </div>
+              </div>
+            )
+          ) : emptyFiltered ? (
             <FormEmptyHint>{t('walkingRoutes.stationsSearchEmpty')}</FormEmptyHint>
           ) : tab === 'map' ? (
             stages.length === 0 ? (
@@ -502,26 +397,6 @@ export function WalkingRouteStationsModal({
                   overlays={overlays}
                   onMarkerClick={(id) => setSelectedId(id)}
                 />
-                {selected ? (
-                  <div
-                    className="absolute inset-0 z-20 flex items-center justify-center bg-ink-900/25 p-3"
-                    onClick={closeStationCard}
-                  >
-                    <div
-                      dir={languageDir(locale)}
-                      role="dialog"
-                      aria-modal="true"
-                      className="h-[80%] w-[80%]"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <StationInfoCard
-                        stage={selected}
-                        locale={locale}
-                        onClose={closeStationCard}
-                      />
-                    </div>
-                  </div>
-                ) : null}
               </div>
             ) : (
               <FormEmptyHint>{t('walkingRoutes.stationsNoMap')}</FormEmptyHint>
@@ -564,7 +439,6 @@ export function WalkingRouteStationsModal({
                         locale,
                         `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`,
                       )
-                      const canShowOnMap = Boolean(stageCoordinates(stage))
                       return (
                         <tr key={stageKey(stage)} className="border-t border-line">
                           <td className="px-4 py-3">{n(stage.stageNumber)}</td>
@@ -576,14 +450,10 @@ export function WalkingRouteStationsModal({
                           <td className="px-4 py-3">{km(stage.distanceToMashhadKm)}</td>
                           <td className="px-4 py-3">{stage.managerName?.trim() || '—'}</td>
                           <td className="px-4 py-3">
-                            {canShowOnMap ? (
-                              <Button type="button" variant="soft" onClick={() => showOnMap(stage)}>
-                                <MapPinned className="size-4" aria-hidden />
-                                {t('walkingRoutes.showOnMap')}
-                              </Button>
-                            ) : (
-                              '—'
-                            )}
+                            <Button type="button" variant="soft" onClick={() => showDetails(stage)}>
+                              <Eye className="size-4" aria-hidden />
+                              {t('walkingRoutes.viewDetails')}
+                            </Button>
                           </td>
                         </tr>
                       )
@@ -593,6 +463,13 @@ export function WalkingRouteStationsModal({
               </TableCard>
             </div>
           )}
+          {selected && tab !== 'steps' ? (
+            <StationDetailsOverlay
+              stage={selected}
+              locale={locale}
+              onClose={closeStationCard}
+            />
+          ) : null}
         </div>
       </div>
     </div>,

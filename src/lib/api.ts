@@ -20,6 +20,14 @@ export function getImageUrl(id: string): string {
   return `${apiBaseUrl}/images/${id}`
 }
 
+export function isApiServerError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return false
+  }
+  const status = error.response?.status
+  return status == null || status >= 500
+}
+
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (!axios.isAxiosError(error)) {
     return fallback

@@ -3,7 +3,7 @@ import { useHeadquartersSummary } from '../../hooks/useHeadquartersSummary'
 import { formatNumber } from '../../lib/datetime'
 
 export function HeadquartersServiceYearsCard({
-  className = 'flex justify-end',
+  className = 'flex justify-center',
   compact = false,
 }: {
   className?: string

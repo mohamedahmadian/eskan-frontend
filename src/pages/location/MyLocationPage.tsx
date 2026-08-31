@@ -7,7 +7,7 @@ import { Button, LoadingState, PageHeader, formShellClassName } from '../../comp
 import { useAuth } from '../../auth/AuthProvider'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { isCaravanManager, isPilgrim } from '../../lib/roles'
-import type { ManagedUser } from '../../types/app'
+import type { ManagedUser, UserHomeDashboard } from '../../types/app'
 import { UserLocationForm } from './UserLocationForm'
 
 export function MyLocationPage() {
@@ -21,6 +21,17 @@ export function MyLocationPage() {
       return data
     },
   })
+  const homeQuery = useQuery({
+    queryKey: ['reservations', 'mine', 'home'],
+    queryFn: async () => {
+      const { data } = await api.get<UserHomeDashboard>('/reservations/mine/home')
+      return data
+    },
+  })
+  const latestReservationId =
+    homeQuery.data?.pilgrim?.recent[0]?.id ??
+    homeQuery.data?.caravanManager?.recentReservations[0]?.id ??
+    null
 
   if (!query.data) {
     return <LoadingState />
@@ -42,6 +53,7 @@ export function MyLocationPage() {
       />
       <UserLocationForm
         initial={query.data}
+        reservationId={latestReservationId}
         showWalkingRoute={isCaravanManager(user)}
         showLocationHistory={isPilgrim(user)}
         onSubmit={async (payload) => {

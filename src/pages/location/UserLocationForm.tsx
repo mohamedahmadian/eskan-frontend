@@ -37,6 +37,9 @@ export type UserLocationPayload = {
   latitude: number | null
   longitude: number | null
   notes: string | null
+  reservationId?: string | null
+  walkingRouteStageId?: string | null
+  source?: 'MANUAL' | 'APP' | 'STATION'
 }
 
 function toCoordString(value: number | null | undefined) {
@@ -55,6 +58,7 @@ export function UserLocationForm({
   showWalkingRoute = false,
   showLocationHistory = false,
   routeUserId,
+  reservationId,
   onSubmit,
 }: {
   initial?: Pick<
@@ -68,6 +72,7 @@ export function UserLocationForm({
   showWalkingRoute?: boolean
   showLocationHistory?: boolean
   routeUserId?: string
+  reservationId?: string | null
   onSubmit: (payload: UserLocationPayload) => Promise<void>
 }) {
   const { t } = useTranslation()
@@ -189,6 +194,8 @@ export function UserLocationForm({
         latitude: toOptionalNumber(latitude),
         longitude: toOptionalNumber(longitude),
         notes: notes.trim() || null,
+        reservationId: reservationId ?? null,
+        source: 'MANUAL',
       })
     } finally {
       setSubmitting(false)
