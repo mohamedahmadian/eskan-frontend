@@ -212,13 +212,19 @@ export function ReservationPartyFields({
   })
 
   const selected = fromList ?? known ?? selectedLookup.data ?? null
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(() => Boolean(hideExistingParties))
   const createPanelId = useId()
   const PartyIcon = isCaravan ? Footprints : Users
 
   useEffect(() => {
     if (!draft.managerUserId) setManagerChoice(null)
   }, [draft.managerUserId])
+
+  useEffect(() => {
+    if (hideExistingParties || (mine.isSuccess && items.length === 0)) {
+      setCreateOpen(true)
+    }
+  }, [hideExistingParties, mine.isSuccess, items.length])
 
   function choose(item: PartyItem) {
     setCreateOpen(false)
@@ -326,7 +332,11 @@ export function ReservationPartyFields({
                 placeholder={t(isCaravan ? 'caravans.name' : 'groups.name')}
               />
             </FormField>
-            <PartyCityFields draft={draft} onDraftChange={onDraftChange} />
+            <PartyCityFields
+              draft={draft}
+              onDraftChange={onDraftChange}
+              countryId={managerChoice?.countryId || partySubject?.countryId}
+            />
             {pickManager ? (
               <CaravanManagerPicker
                 value={managerChoice}
@@ -337,7 +347,12 @@ export function ReservationPartyFields({
                 }
                 onChange={(next) => {
                   setManagerChoice(next)
-                  onDraftChange({ managerUserId: next?.id ?? '' })
+                  onDraftChange({
+                    managerUserId: next?.id ?? '',
+                    ...(next?.provinceId
+                      ? { provinceId: next.provinceId, cityId: next.cityId ?? '' }
+                      : {}),
+                  })
                 }}
               />
             ) : null}
@@ -447,9 +462,11 @@ function PartyCountChip({
 function PartyCityFields({
   draft,
   onDraftChange,
+  countryId,
 }: {
   draft: PartyDraft
   onDraftChange: (patch: Partial<PartyDraft>) => void
+  countryId?: string | null
 }) {
   const { t } = useTranslation()
   const nameOf = useGeoName()
@@ -462,13 +479,14 @@ function PartyCityFields({
     },
   })
   const iranId = countries.data?.find((item) => item.iso2 === 'IR')?.id ?? ''
+  const selectedCountryId = countryId || iranId
 
   const provinces = useQuery({
-    queryKey: ['provinces', 'lookup', iranId],
-    enabled: Boolean(iranId),
+    queryKey: ['provinces', 'lookup', selectedCountryId],
+    enabled: Boolean(selectedCountryId),
     queryFn: async () => {
       const { data } = await api.get<Province[]>('/provinces', {
-        params: { countryId: iranId, activeOnly: true },
+        params: { countryId: selectedCountryId, activeOnly: true },
       })
       return data
     },
@@ -486,10 +504,13 @@ function PartyCityFields({
   })
 
   const routes = useQuery({
-    queryKey: ['walking-routes', 'lookup'],
+    queryKey: ['walking-routes', 'lookup', selectedCountryId],
     queryFn: async () => {
       const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
-        params: { pageSize: 100 },
+        params: {
+          pageSize: 100,
+          originCountryId: selectedCountryId || undefined,
+        },
       })
       return data.items
     },

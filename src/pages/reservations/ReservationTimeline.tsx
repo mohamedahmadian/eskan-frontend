@@ -236,7 +236,7 @@ function buildTimelineItems(
   reservation: Reservation,
   t: (key: string, opts?: Record<string, string>) => string,
 ): TimelineItem[] {
-  const steps = stepsForType(reservation.type, reservation.requestsAccommodation)
+  const steps = stepsForType(reservation.type, reservation)
   const current = currentStepFromStatus(reservation.status, reservation.type, reservation)
   const items: TimelineItem[] = steps.map((step) => {
     const at = stepCompletedAt(step, reservation)

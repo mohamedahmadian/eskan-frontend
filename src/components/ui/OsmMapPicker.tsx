@@ -48,6 +48,13 @@ export type MapOverlayMarker = {
   popupHtml?: string
 }
 
+function overlayMarkerHtml(marker: MapOverlayMarker) {
+  if (marker.kind === 'history') {
+    return `<span class="eskan-history-pin">${marker.badge}</span>`
+  }
+  return `<span class="eskan-route-pin"><span class="eskan-route-pin-badge">${marker.badge}</span><span class="eskan-route-pin-title">${marker.title}</span></span>`
+}
+
 export type MapOverlayClickPoint = {
   x: number
   y: number
@@ -56,6 +63,8 @@ export type MapOverlayClickPoint = {
 export type MapOverlays = {
   markers: MapOverlayMarker[]
   path?: { lat: number; lng: number }[]
+  /** If set, `fit` zooms to these points instead of every marker and path vertex. */
+  fitPoints?: { lat: number; lng: number }[]
   fit?: boolean
   fitMaxZoom?: number
 }
@@ -70,12 +79,22 @@ function overlayLatLngs(overlays: MapOverlays | null, extra?: L.LatLng | null) {
   return points
 }
 
+function overlayFitLatLngs(overlays: MapOverlays | null, extra?: L.LatLng | null) {
+  if (!overlays) return []
+  if (overlays.fitPoints?.length) {
+    const points = overlays.fitPoints.map((point) => L.latLng(point.lat, point.lng))
+    if (extra) points.push(extra)
+    return points
+  }
+  return overlayLatLngs(overlays, extra)
+}
+
 function overlayFitKey(points: L.LatLng[]) {
   return points.map((point) => `${point.lat.toFixed(5)},${point.lng.toFixed(5)}`).join('|')
 }
 
 function fitOverlayBounds(map: L.Map, overlays: MapOverlays | null, extra?: L.LatLng | null) {
-  const points = overlayLatLngs(overlays, extra)
+  const points = overlayFitLatLngs(overlays, extra)
   if (!points.length) return
   const bounds = L.latLngBounds(points)
   if (!bounds.isValid()) return
@@ -211,7 +230,7 @@ export function OsmMapPicker({
     const currentOverlays = overlaysRef.current
     if (start) {
       map.setView(start, 16)
-    } else if (currentOverlays?.fit && overlayLatLngs(currentOverlays).length) {
+    } else if (currentOverlays?.fit && overlayFitLatLngs(currentOverlays).length) {
       fitOverlayBounds(map, currentOverlays)
     } else if (maxBounds) {
       map.fitBounds(toLeafletBounds(maxBounds), { padding: [28, 28], maxZoom: focus?.zoom ?? 13 })
@@ -312,9 +331,7 @@ export function OsmMapPicker({
       const isHistory = marker.kind === 'history'
       const icon = L.divIcon({
         className: `eskan-route-pin-wrap eskan-route-pin-${marker.kind}`,
-        html: isHistory
-          ? `<span class="eskan-history-pin">${marker.badge}</span>`
-          : `<span class="eskan-route-pin"><span class="eskan-route-pin-badge">${marker.badge}</span><span class="eskan-route-pin-title">${marker.title}</span></span>`,
+        html: overlayMarkerHtml(marker),
         iconSize: isHistory ? [28, 28] : [132, 52],
         iconAnchor: isHistory ? [14, 14] : [66, 50],
       })
@@ -337,7 +354,7 @@ export function OsmMapPicker({
     }
     if (overlays.fit) {
       const here = parseLatLng(latitude, longitude)
-      const points = overlayLatLngs(overlays, here)
+      const points = overlayFitLatLngs(overlays, here)
       const fitKey = overlayFitKey(points)
       if (points.length && overlayFitKeyRef.current !== fitKey) {
         overlayFitKeyRef.current = fitKey
@@ -360,7 +377,7 @@ export function OsmMapPicker({
       const current = overlaysRef.current
       if (!current?.fit) return
       const here = parseLatLng(latitude, longitude)
-      overlayFitKeyRef.current = overlayFitKey(overlayLatLngs(current, here))
+      overlayFitKeyRef.current = overlayFitKey(overlayFitLatLngs(current, here))
       fitOverlayBounds(map, current, here)
     }
     const first = window.setTimeout(resizeAndFit, 50)

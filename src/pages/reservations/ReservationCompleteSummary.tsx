@@ -10,7 +10,6 @@ import {
   HeartHandshake,
   MapPin,
   Mars,
-  Route,
   ScrollText,
   Shield,
   Smartphone,
@@ -23,7 +22,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { DateText } from '../../components/ui/DateText'
+import { DateEquivalents, DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { cardClassName } from '../../components/ui/Form'
 import { FormCardHeaderDecor } from '../../components/ui/FormLayout'
@@ -36,6 +35,7 @@ import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { ReservationCountMetrics } from './ReservationCountMetrics'
 import { ReservationIdentityChips } from './ReservationSectionHeader'
 import { ReservationTravelHistoryCard } from './ReservationTravelHistoryCard'
+import { ReservationWalkingRoutePreview } from './ReservationWalkingRoutePreview'
 import { bankLabel, simOperatorLabel } from './ReservationIssuedServicesPanel'
 
 type Tone = 'teal' | 'mint' | 'ink'
@@ -231,6 +231,7 @@ export function ReservationCompleteSummary({
                 icon={Footprints}
                 label={t('reservations.walkingStartDateShort')}
                 value={<DateText value={reservation.walkingStartDate} />}
+                extra={<DateEquivalents value={reservation.walkingStartDate} />}
                 tone="mint"
               />
             ) : null}
@@ -240,6 +241,7 @@ export function ReservationCompleteSummary({
               value={
                 reservation.stayStartDate ? <DateText value={reservation.stayStartDate} /> : empty
               }
+              extra={<DateEquivalents value={reservation.stayStartDate} />}
               empty={!reservation.stayStartDate}
               tone="teal"
             />
@@ -247,6 +249,7 @@ export function ReservationCompleteSummary({
               icon={CalendarX}
               label={t('reservations.stayEndDateShort')}
               value={reservation.stayEndDate ? <DateText value={reservation.stayEndDate} /> : empty}
+              extra={<DateEquivalents value={reservation.stayEndDate} />}
               empty={!reservation.stayEndDate}
               tone="ink"
             />
@@ -412,7 +415,7 @@ export function ReservationCompleteSummary({
           ) : null}
         </section>
 
-        {origin || route || reservation.caravan || reservation.group ? (
+        {origin || reservation.caravan || reservation.group ? (
           <section>
             <SectionTitle icon={MapPin}>{t('reservations.createSteps.optional')}</SectionTitle>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
@@ -422,14 +425,6 @@ export function ReservationCompleteSummary({
                   label={t('reservations.originCity')}
                   value={origin}
                   tone="teal"
-                />
-              ) : null}
-              {route ? (
-                <FactTile
-                  icon={Route}
-                  label={t('reservations.walkingRoute')}
-                  value={route}
-                  tone="mint"
                 />
               ) : null}
               {reservation.caravan ? (
@@ -451,6 +446,12 @@ export function ReservationCompleteSummary({
             </div>
           </section>
         ) : null}
+
+        <ReservationWalkingRoutePreview
+          routeId={reservation.walkingRoute?.id}
+          routeName={route}
+          originCityId={reservation.originCity?.id}
+        />
 
         {members?.length ? (
           <section>
@@ -528,18 +529,20 @@ function FactTile({
   icon: Icon,
   label,
   value,
+  extra,
   empty,
   tone,
 }: {
   icon: LucideIcon
   label: string
   value: ReactNode
+  extra?: ReactNode
   empty?: boolean
   tone: Tone
 }) {
   const colors = toneClass[tone]
   return (
-    <article className={`flex items-center gap-3 rounded-2xl border px-3 py-3 ${colors.wrap}`}>
+    <article className={`flex items-start gap-3 rounded-2xl border px-3 py-3 ${colors.wrap}`}>
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${colors.icon}`}>
         <Icon className="size-4" aria-hidden />
       </span>
@@ -548,6 +551,7 @@ function FactTile({
         <p className={`mt-0.5 text-sm font-semibold ${empty ? 'text-ink-400' : 'text-ink-900'}`}>
           {value}
         </p>
+        {extra}
       </div>
     </article>
   )

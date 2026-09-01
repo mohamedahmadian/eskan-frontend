@@ -1,9 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 
 export function useDeleteOwnerDraft() {
   const { t } = useTranslation()
   const { confirmDelete } = useConfirmDelete()
+  const queryClient = useQueryClient()
 
   return (id: string, onDeleted?: () => void) =>
     confirmDelete({
@@ -11,6 +13,9 @@ export function useDeleteOwnerDraft() {
       successMessage: t('reservations.draftDeleted'),
       path: `/reservations/${id}`,
       queryKey: ['reservations'],
-      onDeleted,
+      onDeleted: () => {
+        queryClient.removeQueries({ queryKey: ['reservations', id] })
+        onDeleted?.()
+      },
     })
 }

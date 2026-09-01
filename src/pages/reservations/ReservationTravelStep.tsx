@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { AppForm, Button, cardClassName } from '../../components/ui/Form'
+import { useAuth } from '../../auth/AuthProvider'
 import { api, getApiErrorMessage } from '../../lib/api'
 import type { Country, Reservation } from '../../types/app'
 import {
@@ -35,6 +36,7 @@ export function ReservationTravelStep({
   mode?: 'owner' | 'admin'
 }) {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const locked = mode === 'owner' && Boolean(reservation.basicInfoLockedAt)
   const sendForReview = reservation.status === 'DRAFT'
   const dualCounts = mode === 'admin'
@@ -108,6 +110,7 @@ export function ReservationTravelStep({
     },
   })
   const iranId = countries.data?.find((item) => item.iso2 === 'IR')?.id ?? ''
+  const applicantCountryId = user?.countryId || iranId
   const applicant = reservation.createdBy
   const existingReservationsQuery = useQuery({
     queryKey: [
@@ -147,7 +150,15 @@ export function ReservationTravelStep({
       }
     },
     onSuccess: () => {
-      toast.success(t(sendForReview ? 'reservations.submitted' : 'reservations.updated'))
+      toast.success(
+        sendForReview
+          ? t(
+              reservation.internationalWorkflow
+                ? 'reservations.internationalCompleted'
+                : 'reservations.submitted',
+            )
+          : t('reservations.updated'),
+      )
       onChanged()
     },
     onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
@@ -318,7 +329,7 @@ export function ReservationTravelStep({
           }
           type={reservation.type}
           locked={locked}
-          iranId={iranId}
+          countryId={mode === 'admin' ? undefined : applicantCountryId}
           activeSubStep={activeSubStep}
           dualCounts={dualCounts}
           selectedParty={selectedParty}

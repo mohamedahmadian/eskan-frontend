@@ -189,7 +189,7 @@ export function ReservationWizardPage() {
             footer={
               viewedStep &&
               viewedStep !== currentStep &&
-              !ownerFlowSteps(reservation.type).includes(viewedStep) ? (
+              !ownerFlowSteps(reservation.type, reservation).includes(viewedStep) ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -203,7 +203,8 @@ export function ReservationWizardPage() {
           />
         )}
       </ReservationWizardShell>
-      {reservation.status === "PENDING_MANAGEMENT_REVIEW" ? null : (
+      {reservation.status === "PENDING_MANAGEMENT_REVIEW" ||
+      reservation.internationalWorkflow ? null : (
         <div className="mt-4">
           <ReservationTimeline reservation={reservation} />
         </div>

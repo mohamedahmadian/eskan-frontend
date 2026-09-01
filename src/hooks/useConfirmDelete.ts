@@ -29,12 +29,13 @@ export function useConfirmDelete() {
       onConfirm: async () => {
         try {
           await api.delete(path)
-          await queryClient.invalidateQueries({ queryKey })
           toast.success(successMessage)
           onDeleted?.()
         } catch (error) {
           toast.error(getApiErrorMessage(error, t('common.error')))
+          return
         }
+        void queryClient.invalidateQueries({ queryKey })
       },
     })
   }

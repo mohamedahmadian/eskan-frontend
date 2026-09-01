@@ -2,13 +2,15 @@ import DatePickerImport, { DateObject } from 'react-multi-date-picker'
 import { CalendarDays, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
+  calendarDayParts,
   datePickerCalendar,
   datePickerLocale,
   fromIsoDateOnly,
   numberingDigits,
   toIsoDateOnly,
+  usesJalaliCalendar,
 } from '../../lib/datetime'
-import { HijriDateText } from './DateText'
+import { DateEquivalents } from './DateText'
 import { fieldClassName } from './Form'
 import 'react-multi-date-picker/styles/colors/teal.css'
 import 'react-multi-date-picker/styles/layouts/mobile.css'
@@ -105,6 +107,27 @@ function DatePickerActions({
   )
 }
 
+function CalendarLegend() {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const otherLabel = usesJalaliCalendar(locale)
+    ? t('common.calendarGregorian')
+    : t('common.calendarJalali')
+
+  return (
+    <div className="eskan-cal-legend">
+      <span className="eskan-cal-legend-item">
+        <span className="eskan-cal-legend-swatch eskan-cal-legend-hijri" aria-hidden />
+        {t('common.calendarHijri')}
+      </span>
+      <span className="eskan-cal-legend-item">
+        <span className="eskan-cal-legend-swatch eskan-cal-legend-other" aria-hidden />
+        {otherLabel}
+      </span>
+    </div>
+  )
+}
+
 export function PersianDateField({
   id,
   value,
@@ -141,14 +164,34 @@ export function PersianDateField({
         locale={pickerLocale}
         format="YYYY/M/D"
         digits={locale === 'en' ? undefined : (numberingDigits[locale] ?? numberingDigits.fa)}
-        className="teal"
+        className="teal eskan-triple-cal"
         calendarPosition={dir === 'rtl' ? 'bottom-right' : 'bottom-left'}
         containerClassName="w-full"
         portal
         zIndex={80}
         hideOnScroll
         onOpenPickNewDate={false}
-        plugins={[<DatePickerActions key="actions" position="bottom" />]}
+        mapDays={({ date }) => {
+          const parts = calendarDayParts(date, locale)
+          const friday = usesJalaliCalendar(locale) && date.weekDay?.index === 6
+          return {
+            className: friday ? 'eskan-cal-friday' : undefined,
+            title: `${parts.primary} · ${parts.hijri} · ${parts.other}`,
+            children: (
+              <div className="eskan-triple-day">
+                <div className="eskan-triple-day-primary">{parts.primary}</div>
+                <div className="eskan-triple-day-alts" dir="ltr">
+                  <div className="eskan-triple-day-hijri">{parts.hijri}</div>
+                  <div className="eskan-triple-day-other">{parts.other}</div>
+                </div>
+              </div>
+            ),
+          }
+        }}
+        plugins={[
+          <CalendarLegend key="legend" position="top" />,
+          <DatePickerActions key="actions" position="bottom" />,
+        ]}
         render={(formatted, openCalendar) => (
           <div className={`${fieldClassName} flex items-center gap-1`}>
             <button
@@ -189,7 +232,7 @@ export function PersianDateField({
           onChange(toIsoDateOnly(date))
         }}
       />
-      {showHijri ? <HijriDateText value={value} /> : null}
+      {showHijri ? <DateEquivalents value={value} /> : null}
     </div>
   )
 }

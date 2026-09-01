@@ -11,7 +11,6 @@ import {
   MapPin,
   Mars,
   Phone,
-  Route,
   Shield,
   Smartphone,
   UserRound,
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { DateText } from '../../components/ui/DateText'
+import { DateEquivalents, DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { cardClassName } from '../../components/ui/Form'
 import { formatGroupedNumber, formatNumber } from '../../lib/datetime'
@@ -31,6 +30,7 @@ import { ReservationCountMetrics } from './ReservationCountMetrics'
 import { ReservationIdentityChips, ReservationSectionHeader } from './ReservationSectionHeader'
 import { bankLabel, simOperatorLabel } from './ReservationIssuedServicesPanel'
 import { workingHeadcount } from './reservation-steps'
+import { ReservationWalkingRoutePreview } from './ReservationWalkingRoutePreview'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -155,6 +155,7 @@ export function ReservationTravelSummary({
                   icon={Footprints}
                   label={t('reservations.walkingStartDateShort')}
                   value={<DateText value={reservation.walkingStartDate} />}
+                  extra={<DateEquivalents value={reservation.walkingStartDate} />}
                   tone="mint"
                 />
               ) : null}
@@ -164,6 +165,7 @@ export function ReservationTravelSummary({
                 value={
                   reservation.stayStartDate ? <DateText value={reservation.stayStartDate} /> : empty
                 }
+                extra={<DateEquivalents value={reservation.stayStartDate} />}
                 empty={!reservation.stayStartDate}
                 tone="teal"
               />
@@ -173,6 +175,7 @@ export function ReservationTravelSummary({
                 value={
                   reservation.stayEndDate ? <DateText value={reservation.stayEndDate} /> : empty
                 }
+                extra={<DateEquivalents value={reservation.stayEndDate} />}
                 empty={!reservation.stayEndDate}
                 tone="ink"
               />
@@ -340,7 +343,6 @@ export function ReservationTravelSummary({
         </section>
 
         {origin ||
-        route ||
         reservation.caravan ||
         reservation.group ||
         reservation.caravanManager ? (
@@ -389,17 +391,15 @@ export function ReservationTravelSummary({
                   tone="teal"
                 />
               ) : null}
-              {route ? (
-                <FactTile
-                  icon={Route}
-                  label={t('reservations.walkingRoute')}
-                  value={route}
-                  tone="mint"
-                />
-              ) : null}
             </div>
           </section>
         ) : null}
+
+        <ReservationWalkingRoutePreview
+          routeId={reservation.walkingRoute?.id}
+          routeName={route}
+          originCityId={reservation.originCity?.id}
+        />
       </div>
 
       {footer ? <div className="border-t border-line px-5 py-4 sm:px-6">{footer}</div> : null}
@@ -430,18 +430,20 @@ function FactTile({
   icon: Icon,
   label,
   value,
+  extra,
   empty,
   tone,
 }: {
   icon: LucideIcon
   label: string
   value: ReactNode
+  extra?: ReactNode
   empty?: boolean
   tone: Tone
 }) {
   const colors = toneClass[tone]
   return (
-    <article className={`relative z-10 flex items-center gap-3 rounded-2xl border px-3 py-3 ${colors.wrap}`}>
+    <article className={`relative z-10 flex items-start gap-3 rounded-2xl border px-3 py-3 ${colors.wrap}`}>
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${colors.icon}`}>
         <Icon className="size-4" aria-hidden />
       </span>
@@ -450,6 +452,7 @@ function FactTile({
         <p className={`mt-0.5 text-sm font-semibold ${empty ? 'text-ink-400' : 'text-ink-900'}`}>
           {value}
         </p>
+        {extra}
       </div>
     </article>
   )

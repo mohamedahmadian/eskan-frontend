@@ -10,6 +10,7 @@ import { SearchSelect } from '../components/ui/SearchSelect'
 import { AppForm, Button, FormField, ToggleField, fieldClassName } from '../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
 import { usePreferredLocale } from '../hooks/usePreferredLocale'
+import { isAppLanguage } from '../i18n'
 import { api, getApiErrorMessage } from '../lib/api'
 import { parseDigitString, toLatinDigits } from '../lib/datetime'
 import { useGeoName } from '../lib/geo'
@@ -44,7 +45,7 @@ export function RegisterPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const geoName = useGeoName()
-  const { locale } = usePreferredLocale()
+  const { locale, setLocale } = usePreferredLocale()
   const [params] = useSearchParams()
   const initial = useMemo(
     () => splitIdentifier(params.get('identifier') ?? ''),
@@ -119,13 +120,12 @@ export function RegisterPage() {
     try {
       const usernameValue = toLatinDigits(username.trim())
       const passwordValue = toLatinDigits(password)
-      await api.post('/auth/register', {
+      const { data } = await api.post<{ status: string; locale: string }>('/auth/register', {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: usernameValue,
         password: passwordValue,
         gender,
-        locale,
         countryId: countryId || undefined,
         ...(phoneDigits ? { phone: phoneDigits } : {}),
         ...(!isIranian
@@ -135,6 +135,9 @@ export function RegisterPage() {
             }
           : {}),
       })
+      if (isAppLanguage(data.locale)) {
+        setLocale(data.locale)
+      }
       await login(usernameValue, passwordValue)
       navigate('/')
     } catch (error) {

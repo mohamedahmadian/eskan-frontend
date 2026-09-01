@@ -10,7 +10,7 @@ import {
   SortableTh,
   TableCard,
 } from '../../components/ui/ListControls'
-import { DateText } from '../../components/ui/DateText'
+import { DateEquivalents, DateText, YearEquivalents } from '../../components/ui/DateText'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
@@ -190,10 +190,24 @@ export function MyReservationsListPage() {
                   <td className="px-4 py-3">
                     <ReservationCodeBadge code={row.code} size="md" />
                   </td>
-                  <td className="px-4 py-3">{n(row.year)}</td>
+                  <td className="px-4 py-3">
+                    <div className="space-y-0.5">
+                      <div>{n(row.year)}</div>
+                      <YearEquivalents year={row.year} />
+                    </div>
+                  </td>
                   <td className="px-4 py-3">{t(`reservations.types.${row.type}`)}</td>
                   <td className="px-4 py-3">
-                    {row.stayStartDate ? <DateText value={row.stayStartDate} /> : '—'}
+                    {row.stayStartDate ? (
+                      <div className="space-y-0.5">
+                        <div>
+                          <DateText value={row.stayStartDate} />
+                        </div>
+                        <DateEquivalents value={row.stayStartDate} />
+                      </div>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <HeadcountPills

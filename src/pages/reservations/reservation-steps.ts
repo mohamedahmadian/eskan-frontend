@@ -126,6 +126,7 @@ export const selfAssignableContactRoles = [
 export type ReservationStepSource = {
   requestsAccommodation?: boolean
   placementStatus?: PlacementStatus | null
+  internationalWorkflow?: boolean
 }
 
 export function stepsForType(
@@ -134,13 +135,16 @@ export function stepsForType(
 ): ReservationStepCode[] {
   const requestsAccommodation =
     typeof source === 'boolean' ? source : Boolean(source?.requestsAccommodation)
-  const base: ReservationStepCode[] =
-    type === 'INDIVIDUAL'
+  const international =
+    typeof source === 'object' && Boolean(source?.internationalWorkflow)
+  const base: ReservationStepCode[] = international
+    ? ['travel', 'complete']
+    : type === 'INDIVIDUAL'
       ? ['travel', 'review', 'insurance', 'complete']
       : type === 'GROUP'
         ? ['travel', 'review', 'companions', 'insurance', 'complete']
         : ['travel', 'review', 'companions', 'contacts', 'insurance', 'complete']
-  if (requestsAccommodation) return [...base, 'placement']
+  if (requestsAccommodation && !international) return [...base, 'placement']
   return base
 }
 
@@ -155,7 +159,7 @@ export function currentStepFromStatus(
   if (status === 'CARAVAN_CONTACTS') return 'contacts'
   if (status === 'INSURANCE') return 'insurance'
   if (status === 'COMPLETED') {
-    if (source?.requestsAccommodation) return 'placement'
+    if (source?.requestsAccommodation && !source.internationalWorkflow) return 'placement'
     return 'complete'
   }
   return stepsForType(type, source)[0]
@@ -181,8 +185,11 @@ export function isStepDone(
 
 /** Owner can still edit these steps after completing them, until the file is finished. */
 /** Steps the owner can walk back and forth after management review. */
-export function ownerFlowSteps(type: ReservationType): ReservationStepCode[] {
-  return stepsForType(type).filter(
+export function ownerFlowSteps(
+  type: ReservationType,
+  source?: ReservationStepSource,
+): ReservationStepCode[] {
+  return stepsForType(type, source).filter(
     (step) => step === 'companions' || step === 'contacts' || step === 'insurance',
   )
 }
@@ -262,7 +269,11 @@ export function progressPercent(
   source?: ReservationStepSource,
 ) {
   if (status === 'COMPLETED') {
-    if (!source?.requestsAccommodation || source.placementStatus === 'PLACED') {
+    if (
+      source?.internationalWorkflow ||
+      !source?.requestsAccommodation ||
+      source.placementStatus === 'PLACED'
+    ) {
       return 100
     }
   }

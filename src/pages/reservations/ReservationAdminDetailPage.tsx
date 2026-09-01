@@ -263,7 +263,7 @@ export function ReservationAdminDetailPage() {
             footer={
               viewedStep &&
               viewedStep !== currentStep &&
-              !ownerFlowSteps(reservation.type).includes(viewedStep) ? (
+              !ownerFlowSteps(reservation.type, reservation).includes(viewedStep) ? (
                 <Button type="button" variant="ghost" onClick={() => setViewedStep(currentStep)}>
                   <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />
                   {t('reservations.backToCurrentStep')}

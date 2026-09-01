@@ -7,8 +7,11 @@ import { formatRoles, isPilgrim } from '../../lib/roles'
 
 export function UserMenu() {
   const { user, logout } = useAuth()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const languageLabel =
+    locale === 'en' ? t('nav.language') : `${t('nav.language')} - language`
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const pilgrim = isPilgrim(user)
@@ -27,7 +30,7 @@ export function UserMenu() {
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className="flex items-center gap-2 rounded-2xl border border-line bg-white px-3 py-2 text-sm shadow-sm sm:min-w-[16.5rem]"
+        className="flex cursor-pointer items-center gap-2 rounded-2xl border border-line bg-white px-3 py-2 text-sm shadow-sm sm:min-w-[16.5rem]"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
       >
@@ -47,7 +50,7 @@ export function UserMenu() {
           {user?.impersonating ? (
             <button
               type="button"
-              className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
+              className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
               onClick={() => {
                 setOpen(false)
                 logout()
@@ -60,7 +63,7 @@ export function UserMenu() {
             <>
               <Link
                 to="/account"
-                className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
+                className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                 onClick={() => setOpen(false)}
               >
                 <UserRound className="size-4 text-teal-600" />
@@ -68,7 +71,7 @@ export function UserMenu() {
               </Link>
               <Link
                 to="/settings/password"
-                className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
+                className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                 onClick={() => setOpen(false)}
               >
                 <KeyRound className="size-4 text-teal-600" />
@@ -77,7 +80,7 @@ export function UserMenu() {
               {pilgrim ? (
                 <Link
                   to="/settings/password"
-                  className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
+                  className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                   onClick={() => setOpen(false)}
                 >
                   <CircleHelp className="size-4 text-teal-600" />
@@ -86,15 +89,15 @@ export function UserMenu() {
               ) : null}
               <Link
                 to="/settings"
-                className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
+                className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                 onClick={() => setOpen(false)}
               >
                 <Globe className="size-4 text-teal-600" />
-                {t('nav.language')}
+                {languageLabel}
               </Link>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
                 onClick={() => {
                   logout()
                   navigate('/login')

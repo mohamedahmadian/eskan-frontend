@@ -15,6 +15,15 @@ export function useGeoName() {
   return (item?: GeoName | null) => (item ? geoName(item, locale) : '—')
 }
 
+/** Missing country is treated as Iranian so existing users keep the current flow. */
+export function isIranCountry(
+  countryId: string | null | undefined,
+  iranId: string | null | undefined,
+) {
+  if (!countryId || !iranId) return true
+  return countryId === iranId
+}
+
 export function slugifyCode(value: string) {
   return value
     .trim()

@@ -161,6 +161,7 @@ th {
 }
 
 .eskan-route-pin-wrap {
+  overflow: visible;
   background: none;
   border: none;
 }
@@ -197,12 +198,17 @@ th {
   color: #3f3a34;
 }
 
-.eskan-route-pin-previous {
-  opacity: 0.42;
+.eskan-route-pin-previous .eskan-route-pin {
+  filter: drop-shadow(0 8px 16px rgba(22, 163, 74, 0.22));
 }
 
 .eskan-route-pin-previous .eskan-route-pin-badge {
-  background: #3fd6be;
+  background: linear-gradient(180deg, #34d399 0%, #16a34a 100%);
+}
+
+.eskan-route-pin-previous .eskan-route-pin-title {
+  color: #166534;
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.18);
 }
 
 .eskan-route-pin-current .eskan-route-pin-badge {
@@ -229,12 +235,12 @@ th {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: #2ebdb6;
+  background: linear-gradient(180deg, #34d399 0%, #16a34a 100%);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
-  box-shadow: 0 0 0 3px #fff, 0 4px 10px rgba(20, 40, 40, 0.22);
+  box-shadow: 0 0 0 3px #fff, 0 4px 10px rgba(22, 163, 74, 0.28);
 }
 
 .eskan-route-popup .leaflet-popup-content-wrapper {
@@ -265,7 +271,7 @@ th {
   width: 2.25rem;
 }
 
-.rmdp-day span {
+.rmdp-day > span {
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -291,6 +297,144 @@ th {
   --rmdp-shadow-teal: var(--color-teal-400);
   --rmdp-today-teal: var(--color-teal-200);
   --rmdp-hover-teal: var(--color-teal-400);
+}
+
+.eskan-triple-cal .rmdp-week-day {
+  height: 1.75rem !important;
+  width: 2.75rem !important;
+}
+
+.eskan-triple-cal .rmdp-day {
+  height: 3.25rem !important;
+  width: 2.75rem !important;
+}
+
+.eskan-triple-cal .rmdp-day > span {
+  border-radius: 12px;
+}
+
+.eskan-triple-cal.teal .rmdp-day.rmdp-today:not(.rmdp-selected) > span {
+  background-color: transparent !important;
+  box-shadow: inset 0 0 0 1.5px var(--color-teal-500);
+  color: #3f3a34;
+}
+
+.eskan-triple-cal.teal .rmdp-day.rmdp-today:not(.rmdp-selected) .eskan-triple-day-primary {
+  color: #3f3a34;
+}
+
+.eskan-triple-cal.teal .rmdp-day.rmdp-today:not(.rmdp-selected) .eskan-triple-day-hijri {
+  color: #148f8a;
+}
+
+.eskan-triple-cal.teal .rmdp-day.rmdp-today:not(.rmdp-selected) .eskan-triple-day-other {
+  color: #6b6560;
+}
+
+.eskan-triple-cal.teal .rmdp-day.rmdp-today.eskan-cal-friday:not(.rmdp-selected) .eskan-triple-day-primary {
+  color: #c45c3e;
+}
+
+.eskan-triple-cal .eskan-triple-day,
+.eskan-triple-cal .eskan-triple-day * {
+  position: static;
+  inset: auto;
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0;
+}
+
+.eskan-triple-day {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+  line-height: 1.15;
+}
+
+.eskan-triple-day-primary {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.eskan-triple-day-alts {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.eskan-triple-day-hijri {
+  color: #148f8a;
+}
+
+.eskan-triple-day-other {
+  color: #6b6560;
+}
+
+.eskan-cal-friday:not(.rmdp-selected):not(.rmdp-disabled) .eskan-triple-day-primary {
+  color: #c45c3e;
+}
+
+.eskan-triple-cal .rmdp-day.rmdp-selected .eskan-triple-day-primary,
+.eskan-triple-cal .rmdp-day.rmdp-selected .eskan-triple-day-hijri,
+.eskan-triple-cal .rmdp-day.rmdp-selected .eskan-triple-day-other,
+.eskan-triple-cal .rmdp-day:not(.rmdp-day-hidden) > span:hover .eskan-triple-day-primary,
+.eskan-triple-cal .rmdp-day:not(.rmdp-day-hidden) > span:hover .eskan-triple-day-hijri,
+.eskan-triple-cal .rmdp-day:not(.rmdp-day-hidden) > span:hover .eskan-triple-day-other {
+  color: #fff;
+}
+
+.eskan-cal-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--color-line, #e8e2d8);
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #3f3a34;
+}
+
+.eskan-cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.eskan-cal-legend-swatch {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+}
+
+.eskan-cal-legend-hijri {
+  background: #148f8a;
+}
+
+.eskan-cal-legend-other {
+  background: #6b6560;
+}
+
+@media (max-width: 380px) {
+  .eskan-triple-cal .rmdp-week-day {
+    width: 2.45rem !important;
+  }
+
+  .eskan-triple-cal .rmdp-day {
+    height: 3rem !important;
+    width: 2.45rem !important;
+  }
 }
 
 @keyframes page-fade-in {

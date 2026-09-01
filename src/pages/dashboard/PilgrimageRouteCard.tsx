@@ -1,6 +1,9 @@
 import {
   ArrowRight,
+  Check,
   CircleCheck,
+  Eye,
+  EyeOff,
   Flag,
   Footprints,
   ListOrdered,
@@ -32,7 +35,7 @@ import type {
   WalkingRouteStage,
 } from '../../types/app'
 import {
-  StationDetailsModal,
+  StationInfoCard,
   stageKey,
   stageTitle,
 } from '../walking-routes/StationInfoCard'
@@ -166,7 +169,8 @@ export function PilgrimageRouteCard({
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<RouteTab>('steps')
   const [currentIndex, setCurrentIndex] = useState(-1)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [showPassedStations, setShowPassedStations] = useState(false)
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const [savingHere, setSavingHere] = useState(false)
 
   const routeQuery = useQuery({
@@ -203,7 +207,11 @@ export function PilgrimageRouteCard({
   }, [travelQuery.data])
 
   const stages = useHydratedStages(routeQuery.data)
-  const selected = stages.find((stage) => stageKey(stage) === selectedId) ?? null
+  const preview =
+    stages.find((stage) => stageKey(stage) === previewId) ??
+    (currentIndex >= 0 ? stages[currentIndex] : null) ??
+    stages[0] ??
+    null
   const n = (value: number) => formatNumber(value, locale)
   const stationTotal = stages.length
   const stationPassed = currentIndex < 0 ? 0 : currentIndex
@@ -226,6 +234,17 @@ export function PilgrimageRouteCard({
     setCurrentIndex(progress.index)
   }, [accountQuery.data, locationKey, stages])
 
+  const atLastStation = stationTotal > 0 && currentIndex === stationTotal - 1
+  const hasPassedStations = currentIndex > 0 && !atLastStation
+  const hidePassedStations = hasPassedStations && !showPassedStations
+  const visibleStages = useMemo(
+    () =>
+      stages
+        .map((stage, index) => ({ stage, index }))
+        .filter(({ index }) => !hidePassedStations || index >= currentIndex),
+    [currentIndex, hidePassedStations, stages],
+  )
+
   useEffect(() => {
     if (tab !== 'steps' || !stages.length) return
     const index = currentIndex >= 0 ? currentIndex : 0
@@ -235,12 +254,15 @@ export function PilgrimageRouteCard({
         ?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [currentIndex, stages.length, tab])
+  }, [currentIndex, hidePassedStations, stages.length, tab])
 
   const overlays = useMemo<MapOverlays | null>(() => {
     if (!stages.length) return null
     const path: { lat: number; lng: number }[] = []
     const markers: MapOverlayMarker[] = []
+    const fitPoints: { lat: number; lng: number }[] = []
+    const atEnd = currentIndex >= 0 && currentIndex === stages.length - 1
+    const remainingStart = currentIndex < 0 || atEnd ? 0 : currentIndex
     stages.forEach((stage, index) => {
       const coords = stageCoordinates(stage)
       if (!coords) return
@@ -256,19 +278,45 @@ export function PilgrimageRouteCard({
         badge: numberLabel,
         title: stageTitle(stage, locale, fallback),
       })
+      if (index >= remainingStart) fitPoints.push(coords)
     })
     if (!markers.length && path.length < 2) return null
     return {
       markers,
       path: path.length >= 2 ? path : undefined,
       fit: true,
+      fitPoints: fitPoints.length ? fitPoints : undefined,
       fitMaxZoom: 16,
     }
   }, [currentIndex, locale, stages, t])
 
-  function openStage(stage: WalkingRouteStage, index: number) {
-    setCurrentIndex(index)
-    setSelectedId(stageKey(stage))
+  function openStage(stage: WalkingRouteStage) {
+    setPreviewId(stageKey(stage))
+  }
+
+  function hereAction(stage: WalkingRouteStage) {
+    const fallbackName = (item: WalkingRouteStage) =>
+      stageTitle(item, locale, `${t('walkingRoutes.stage')} ${formatNumber(item.stageNumber, locale)}`)
+    const index = stages.findIndex((item) => stageKey(item) === stageKey(stage))
+    const previous = index > 0 ? stages[index - 1] : null
+    const to = fallbackName(stage)
+    const from = previous ? fallbackName(previous) : null
+    return (
+      <Button
+        type="button"
+        variant="soft"
+        className="w-full sm:w-auto"
+        disabled={savingHere}
+        onClick={() => void saveHereAtStation(stage)}
+      >
+        <LocateFixed className="size-4" aria-hidden />
+        {savingHere
+          ? t('dashboard.iAmHereSaving')
+          : from
+            ? t('dashboard.iAmHere', { from, to })
+            : t('dashboard.iAmHereFirst', { to })}
+      </Button>
+    )
   }
 
   async function saveHereAtStation(stage: WalkingRouteStage) {
@@ -294,7 +342,6 @@ export function PilgrimageRouteCard({
         queryClient.invalidateQueries({ queryKey: ['reservations', reservationId, 'travel-history'] }),
       ])
       toast.success(t('location.saved'))
-      setSelectedId(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
@@ -392,67 +439,119 @@ export function PilgrimageRouteCard({
         ) : stages.length === 0 ? (
           <FormEmptyHint>{t('walkingRoutes.stagesEmpty')}</FormEmptyHint>
         ) : tab === 'steps' ? (
-          <div dir="ltr" className="overflow-x-auto pb-1">
-            <ol className="flex min-w-min items-start px-1 py-2">
-              {stages.map((stage, index) => {
-                const title = stageTitle(
-                  stage,
-                  locale,
-                  `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`,
-                )
-                const passed = currentIndex >= 0 && index < currentIndex
-                const current = index === currentIndex
-                return (
-                  <Fragment key={stageKey(stage)}>
-                    {index > 0 ? (
-                      <li aria-hidden className="flex h-8 shrink-0 items-center px-0.5 sm:h-9">
-                        <ArrowRight
-                          className={`size-3.5 ${passed || current ? 'text-teal-400' : 'text-teal-200'}`}
-                          strokeWidth={2.4}
-                        />
-                      </li>
-                    ) : null}
-                    <li id={`pilgrimage-stage-${index}`} className="w-16 shrink-0 sm:w-[4.5rem]">
-                      <button
-                        type="button"
-                        onClick={() => openStage(stage, index)}
-                        aria-current={current ? 'step' : undefined}
-                        className="flex w-full cursor-pointer flex-col items-center"
-                      >
-                        <span
-                          className={`flex size-8 items-center justify-center rounded-full text-[11px] font-semibold transition sm:size-9 ${
-                            current
-                              ? 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.32)] ring-2 ring-teal-100'
-                              : 'bg-white text-teal-800 ring-2 ring-teal-100 hover:ring-teal-300'
-                          } ${passed ? 'opacity-40' : ''}`}
-                        >
-                          {n(stage.stageNumber)}
-                        </span>
-                        <span
-                          className={`mt-1.5 line-clamp-2 text-center text-[10px] font-medium leading-tight ${
-                            passed ? 'text-ink-400 opacity-70' : 'text-ink-700'
+          <div className="space-y-3">
+            {hasPassedStations ? (
+              <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="soft"
+                onClick={() => setShowPassedStations((open) => !open)}
+              >
+                {showPassedStations ? (
+                  <EyeOff className="size-4" aria-hidden />
+                ) : (
+                  <Eye className="size-4" aria-hidden />
+                )}
+                {showPassedStations
+                  ? t('dashboard.hidePassedStations')
+                  : t('dashboard.showPassedStations')}
+              </Button>
+              </div>
+            ) : null}
+            <div dir="ltr" className="overflow-x-auto pb-1">
+              <ol className="flex min-w-min items-start px-1 py-2">
+                {visibleStages.map(({ stage, index }, visibleIndex) => {
+                  const title = stageTitle(
+                    stage,
+                    locale,
+                    `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`,
+                  )
+                  const passed = currentIndex >= 0 && index < currentIndex
+                  const current = index === currentIndex
+                  const previewed = preview != null && stageKey(stage) === stageKey(preview)
+                  const enlarge = hidePassedStations
+                  return (
+                    <Fragment key={stageKey(stage)}>
+                      {visibleIndex > 0 ? (
+                        <li
+                          aria-hidden
+                          className={`flex shrink-0 items-center px-0.5 ${
+                            enlarge ? 'h-12 sm:h-14' : 'h-8 sm:h-9'
                           }`}
                         >
-                          {title}
-                        </span>
-                        {stage.id && arrivals.get(stage.id) ? (
+                          <ArrowRight
+                            className={`${enlarge ? 'size-5' : 'size-3.5'} ${
+                              passed
+                                ? 'text-[#34d399]'
+                                : current
+                                  ? 'text-teal-400'
+                                  : 'text-teal-200'
+                            }`}
+                            strokeWidth={2.4}
+                          />
+                        </li>
+                      ) : null}
+                      <li
+                        id={`pilgrimage-stage-${index}`}
+                        className={`shrink-0 ${enlarge ? 'w-28 sm:w-32' : 'w-16 sm:w-[4.5rem]'}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openStage(stage)}
+                          aria-current={current ? 'step' : undefined}
+                          aria-pressed={previewed}
+                          className="flex w-full cursor-pointer flex-col items-center"
+                        >
                           <span
-                            className={`mt-1 text-center text-[9px] leading-tight ${
-                              passed ? 'text-ink-400' : 'text-teal-700'
+                            className={`relative flex items-center justify-center rounded-full font-semibold transition ${
+                              enlarge
+                                ? 'size-12 text-sm sm:size-14 sm:text-base'
+                                : 'size-8 text-[11px] sm:size-9'
+                            } ${
+                              passed
+                                ? `bg-gradient-to-b from-[#34d399] to-[#16a34a] text-white shadow-[0_8px_16px_rgba(22,163,74,0.28)] ring-2 ${previewed ? 'ring-[#166534] ring-offset-2' : 'ring-[#bbf7d0]'}`
+                                : current
+                                  ? `bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.32)] ring-2 ${previewed ? 'ring-teal-700 ring-offset-2' : 'ring-teal-100'}`
+                                  : `bg-white text-teal-800 ring-2 hover:ring-teal-300 ${previewed ? 'ring-teal-500 ring-offset-2' : 'ring-teal-100'}`
                             }`}
                           >
-                            <span className="mb-0.5 block text-ink-400">
-                              {t('dashboard.arrivedAt')}
-                            </span>
-                            <DateText value={arrivals.get(stage.id)} withTime stacked />
+                            {passed ? (
+                              <Check
+                                className={`pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 text-white/40 ${
+                                  enlarge ? 'size-4 sm:size-5' : 'size-3'
+                                }`}
+                                strokeWidth={2.6}
+                                aria-hidden
+                              />
+                            ) : null}
+                            <span className="relative">{n(stage.stageNumber)}</span>
                           </span>
-                        ) : null}
-                      </button>
-                    </li>
-                  </Fragment>
-                )
-              })}
-            </ol>
+                          <span
+                            className={`mt-1.5 line-clamp-2 text-center font-medium leading-tight ${
+                              enlarge ? 'text-xs sm:text-sm' : 'text-[10px]'
+                            } ${passed ? 'text-[#166534]' : 'text-ink-700'}`}
+                          >
+                            {title}
+                          </span>
+                          {stage.id && arrivals.get(stage.id) ? (
+                            <span
+                              className={`mt-1 text-center leading-tight ${
+                                enlarge ? 'text-[10px] sm:text-xs' : 'text-[9px]'
+                              } ${passed ? 'text-[#15803d]' : 'text-teal-700'}`}
+                            >
+                              <span className={`mb-0.5 block ${passed ? 'text-[#16a34a]' : 'text-ink-400'}`}>
+                                {t('dashboard.arrivedAt')}
+                              </span>
+                              <DateText value={arrivals.get(stage.id)} withTime stacked />
+                            </span>
+                          ) : null}
+                        </button>
+                      </li>
+                    </Fragment>
+                  )
+                })}
+              </ol>
+            </div>
           </div>
         ) : overlays ? (
           <div className="overflow-hidden rounded-2xl ring-1 ring-teal-100">
@@ -465,10 +564,9 @@ export function PilgrimageRouteCard({
               readOnly
               overlays={overlays}
               onMarkerClick={(id) => {
-                const index = stages.findIndex((stage) => stageKey(stage) === id)
-                const stage = stages[index]
+                const stage = stages.find((item) => stageKey(item) === id)
                 if (!stage) return
-                openStage(stage, index)
+                openStage(stage)
               }}
               heightClass="h-72 sm:h-80"
             />
@@ -476,27 +574,16 @@ export function PilgrimageRouteCard({
         ) : (
           <FormEmptyHint>{t('walkingRoutes.stationsNoMap')}</FormEmptyHint>
         )}
+        {preview && stages.length > 0 && !routeQuery.isLoading && !routeQuery.isError ? (
+          <StationInfoCard
+            stage={preview}
+            locale={locale}
+            className="h-auto"
+            headerAction={hereAction(preview)}
+          />
+        ) : null}
       </div>
 
-      {selected ? (
-        <StationDetailsModal
-          stage={selected}
-          locale={locale}
-          onClose={() => setSelectedId(null)}
-          headerAction={
-            <Button
-              type="button"
-              variant="soft"
-              className="w-full sm:w-auto"
-              disabled={savingHere}
-              onClick={() => void saveHereAtStation(selected)}
-            >
-              <LocateFixed className="size-4" aria-hidden />
-              {savingHere ? t('dashboard.iAmHereSaving') : t('dashboard.iAmHere')}
-            </Button>
-          }
-        />
-      ) : null}
     </FormCard>
   )
 }

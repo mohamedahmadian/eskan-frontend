@@ -101,9 +101,32 @@ export function datePickerLocale(locale: string) {
   return gregorian_en
 }
 
+function cloneDateObject(date: DateObject) {
+  return new DateObject({
+    year: date.year,
+    month: date.month.number,
+    day: date.day,
+    calendar: date.calendar,
+  })
+}
+
 function toDisplayDate(value: string, locale: string, dateOnly: boolean) {
   const calendar = usesJalaliCalendar(locale) ? persian : gregorian
-  return toGregorianDateObject(value, dateOnly).convert(calendar)
+  return cloneDateObject(toGregorianDateObject(value, dateOnly)).convert(calendar)
+}
+
+export function calendarDayParts(date: DateObject, locale: string) {
+  const hijriDay = cloneDateObject(date).convert(arabic).day
+  const gregorianDay = cloneDateObject(date).convert(gregorian).day
+  const jalaliDay = cloneDateObject(date).convert(persian).day
+  return {
+    primary: localizeDigits(String(date.day), locale),
+    hijri: localizeDigits(String(hijriDay), locale),
+    other: localizeDigits(
+      String(usesJalaliCalendar(locale) ? gregorianDay : jalaliDay),
+      locale,
+    ),
+  }
 }
 
 export function formatDate(value: string, locale: string) {
@@ -117,9 +140,60 @@ export function formatDate(value: string, locale: string) {
 export function formatHijriDate(value: string, locale: string) {
   const date = fromIsoDateOnly(value)
   if (!date) return ''
-  const hijri = date.convert(arabic, arabic_ar)
+  const hijri = cloneDateObject(date).convert(arabic, arabic_ar)
   const month = String(hijri.month?.name ?? '').trim()
   return localizeDigits(`${hijri.day} ${month} ${hijri.year}`, locale)
+}
+
+export function formatGregorianDate(value: string, locale: string) {
+  const date = fromIsoDateOnly(value)
+  if (!date) return ''
+  const gregorianDate = cloneDateObject(date).convert(gregorian)
+  return localizeDigits(
+    `${gregorianDate.year}/${gregorianDate.month.number}/${gregorianDate.day}`,
+    locale,
+  )
+}
+
+export function formatJalaliDate(value: string, locale: string) {
+  const date = fromIsoDateOnly(value)
+  if (!date) return ''
+  const jalaliDate = cloneDateObject(date).convert(persian)
+  return localizeDigits(
+    `${jalaliDate.year}/${jalaliDate.month.number}/${jalaliDate.day}`,
+    locale,
+  )
+}
+
+function yearSpanLabel(from: number, to: number, locale: string) {
+  if (from === to) return formatNumber(from, locale)
+  return `${formatNumber(from, locale)}–${formatNumber(to, locale)}`
+}
+
+export function formatJalaliYearEquivalents(jalaliYear: number, locale: string) {
+  if (!Number.isFinite(jalaliYear) || jalaliYear < 1) {
+    return { gregorian: '', hijri: '' }
+  }
+  const start = new DateObject({
+    year: jalaliYear,
+    month: 1,
+    day: 1,
+    calendar: persian,
+  })
+  const end = new DateObject({
+    year: jalaliYear,
+    month: 12,
+    day: 1,
+    calendar: persian,
+  }).toLastOfMonth()
+  const gregorianStart = cloneDateObject(start).convert(gregorian).year
+  const gregorianEnd = cloneDateObject(end).convert(gregorian).year
+  const hijriStart = cloneDateObject(start).convert(arabic).year
+  const hijriEnd = cloneDateObject(end).convert(arabic).year
+  return {
+    gregorian: yearSpanLabel(gregorianStart, gregorianEnd, locale),
+    hijri: yearSpanLabel(hijriStart, hijriEnd, locale),
+  }
 }
 
 export function formatDateTimeDate(value: string, locale: string) {

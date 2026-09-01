@@ -53,7 +53,7 @@ export function ReservationWizardShell({
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { type, status } = reservation
-  const steps = stepsForType(type, reservation.requestsAccommodation)
+  const steps = stepsForType(type, reservation)
   const current = currentStepFromStatus(status, type, reservation)
   const stopped = status === 'CANCELLED' || status === 'REJECTED'
   const recordedIndex = steps.reduce(
@@ -72,6 +72,10 @@ export function ReservationWizardShell({
       : steps.length === 5
         ? 'grid-cols-2 sm:grid-cols-5'
         : 'grid-cols-4'
+
+  if (reservation.internationalWorkflow) {
+    return <div className="space-y-4">{children}</div>
+  }
 
   return (
     <div className="space-y-4">
@@ -129,7 +133,7 @@ function chipState(
   if (status === 'REJECTED' || status === 'CANCELLED') {
     return stepHasProgress(step, reservation) ? 'done' : 'pending'
   }
-  const flow = ownerFlowSteps(type)
+  const flow = ownerFlowSteps(type, reservation)
   if (viewedStep && flow.includes(viewedStep) && status !== 'COMPLETED') {
     if (step === viewedStep) return 'current'
     if (isStepDone(step, status, type, reservation) || step === current) return 'done'

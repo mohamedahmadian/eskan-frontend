@@ -42,7 +42,7 @@ export function inferTravelSubMaxReached(
       continue
     }
     if (step === 'dates') {
-      if (!values.stayStartDate || !values.stayEndDate) return furthest
+      if (!values.stayStartDate || !values.stayEndDate || !values.walkingRouteId) return furthest
       furthest = step
       continue
     }

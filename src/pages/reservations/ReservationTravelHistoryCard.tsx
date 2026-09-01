@@ -1,12 +1,29 @@
 import { Clock3, MapPin, Milestone, Route } from 'lucide-react'
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
+import { OsmMapPicker, type MapOverlayMarker, type MapOverlays } from '../../components/ui/OsmMapPicker'
 import { FormCard, FormEmptyHint, FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import type { ReservationTravelHistoryList } from '../../types/app'
+import type { ReservationTravelHistoryItem, ReservationTravelHistoryList } from '../../types/app'
+
+function historyCoordinates(item: ReservationTravelHistoryItem) {
+  if (item.latitude != null && item.longitude != null) {
+    return { lat: item.latitude, lng: item.longitude }
+  }
+  const stage = item.walkingRouteStage
+  if (stage?.latitude != null && stage.longitude != null) {
+    return { lat: stage.latitude, lng: stage.longitude }
+  }
+  const city = item.city
+  if (city?.latitude != null && city.longitude != null) {
+    return { lat: city.latitude, lng: city.longitude }
+  }
+  return null
+}
 
 export function ReservationTravelHistoryCard({ reservationId }: { reservationId: string }) {
   const { t, i18n } = useTranslation()
@@ -22,6 +39,41 @@ export function ReservationTravelHistoryCard({ reservationId }: { reservationId:
     },
   })
   const items = query.data ?? []
+  const overlays = useMemo<MapOverlays | null>(() => {
+    const ordered = [...items].sort(
+      (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
+    )
+    const path: { lat: number; lng: number }[] = []
+    const markers: MapOverlayMarker[] = []
+    ordered.forEach((item, index) => {
+      const coords = historyCoordinates(item)
+      if (!coords) return
+      path.push(coords)
+      const numberLabel = formatNumber(index + 1, locale)
+      const station =
+        item.walkingRouteStage?.name?.trim() ||
+        (item.walkingRouteStage
+          ? `${t('walkingRoutes.stage')} ${formatNumber(item.walkingRouteStage.stageNumber, locale)}`
+          : item.city
+            ? nameOf(item.city)
+            : numberLabel)
+      markers.push({
+        id: item.id,
+        lat: coords.lat,
+        lng: coords.lng,
+        kind: 'history',
+        badge: numberLabel,
+        title: station,
+      })
+    })
+    if (!markers.length) return null
+    return {
+      markers,
+      path: path.length >= 2 ? path : undefined,
+      fit: true,
+      fitMaxZoom: 16,
+    }
+  }, [items, locale, nameOf, t])
 
   return (
     <FormCard icon={Route} title={t('reservations.travelHistory')}>
@@ -31,6 +83,20 @@ export function ReservationTravelHistoryCard({ reservationId }: { reservationId:
         ) : items.length === 0 ? (
           <FormEmptyHint>{t('reservations.travelHistoryEmpty')}</FormEmptyHint>
         ) : (
+          <>
+            {overlays ? (
+              <div className="overflow-hidden rounded-[22px] border border-teal-100 bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]">
+                <OsmMapPicker
+                  latitude=""
+                  longitude=""
+                  onChange={() => undefined}
+                  variant="always"
+                  readOnly
+                  overlays={overlays}
+                  heightClass="h-72"
+                />
+              </div>
+            ) : null}
           <ul className="space-y-3">
             {items.map((item) => {
               const place = [item.city ? nameOf(item.city) : null, item.province ? nameOf(item.province) : null]
@@ -80,6 +146,7 @@ export function ReservationTravelHistoryCard({ reservationId }: { reservationId:
               )
             })}
           </ul>
+          </>
         )}
       </div>
     </FormCard>

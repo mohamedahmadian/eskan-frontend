@@ -1931,11 +1931,13 @@ export type ReservationTravelHistoryItem = {
     id: string;
     name: string | null;
     stageNumber: number;
+    latitude: number | null;
+    longitude: number | null;
   } | null;
   provinceId: string | null;
   cityId: string | null;
   province: (GeoName & { id: string; countryId: string }) | null;
-  city: (GeoName & { id: string; provinceId: string }) | null;
+  city: (GeoName & { id: string; provinceId: string; latitude?: number | null; longitude?: number | null }) | null;
   latitude: number | null;
   longitude: number | null;
   notes: string | null;
@@ -1999,6 +2001,7 @@ export type ReservationListItem = {
   returnedToStatus?: ReservationStatus | null;
   createWizardStep?: string | null;
   walkingRoute?: { id: string; name: string } | null;
+  internationalWorkflow?: boolean;
 };
 
 export type Reservation = ReservationListItem & {

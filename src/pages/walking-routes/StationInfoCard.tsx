@@ -39,11 +39,13 @@ export function StationInfoCard({
   locale,
   onClose,
   headerAction,
+  className,
 }: {
   stage: WalkingRouteStage
   locale: string
   onClose?: () => void
   headerAction?: ReactNode
+  className?: string
 }) {
   const { t } = useTranslation()
   const name = useGeoName()
@@ -59,7 +61,9 @@ export function StationInfoCard({
     hasText(stage.managerEitaa)
 
   return (
-    <article className="flex h-full min-h-0 flex-col overflow-hidden rounded-[22px] border border-teal-100 bg-white shadow-[0_18px_40px_rgba(20,40,40,0.16)]">
+    <article
+      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-[22px] border border-teal-100 bg-white shadow-[0_18px_40px_rgba(20,40,40,0.16)]${className ? ` ${className}` : ''}`}
+    >
       <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-4 py-3.5 sm:px-5">
         <div
           className="pointer-events-none absolute -start-8 -top-10 size-28 rounded-full bg-teal-200/30"

@@ -5,13 +5,14 @@ import {
   Calendar,
   CreditCard,
   Footprints,
+  Info,
   MapPin,
   MoonStar,
   Route,
   Shield,
   Smartphone,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -20,11 +21,12 @@ import { CheckboxField } from "../../components/ui/CheckboxField";
 import { DateText, HijriDateText } from "../../components/ui/DateText";
 import { FormField, fieldClassName } from "../../components/ui/Form";
 import { FormSectionTitle } from "../../components/ui/FormLayout";
+import { OsmMapPicker, type MapOverlayMarker, type MapOverlays } from "../../components/ui/OsmMapPicker";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
 import { api, getApiErrorMessage } from "../../lib/api";
-import { currentPersianYear } from "../../lib/datetime";
-import { useGeoName } from "../../lib/geo";
+import { currentPersianYear, formatNumber } from "../../lib/datetime";
+import { stageCoordinates, useGeoName } from "../../lib/geo";
 import type {
   City,
   Country,
@@ -33,7 +35,9 @@ import type {
   ReceptionSettings,
   ReservationType,
   WalkingRoute,
+  WalkingRouteStage,
 } from "../../types/app";
+import { stageKey, stageTitle } from "../walking-routes/StationInfoCard";
 import { ReservationCountFields } from "./ReservationCountFields";
 import {
   createReservationParty,
@@ -51,14 +55,28 @@ import {
   type ReservationDateSpan,
 } from "./reservation-date-overlap";
 
+function walkingStartFromStage(stage: WalkingRouteStage) {
+  return {
+    provinceId: stage.city.provinceId,
+    originCityId: stage.cityId,
+  };
+}
+
+function firstWalkingStage(route: WalkingRoute | undefined) {
+  return [...(route?.stages ?? [])].sort((a, b) => a.stageNumber - b.stageNumber)[0];
+}
+
 export function travelDatesError(
   values: Pick<
     TravelValues,
-    "walkingStartDate" | "stayStartDate" | "stayEndDate"
+    "walkingStartDate" | "stayStartDate" | "stayEndDate" | "walkingRouteId"
   >,
   t: (key: string, options?: Record<string, string>) => string,
   overlap?: { others: ReservationDateSpan[]; excludeId?: string },
 ) {
+  if (!values.walkingRouteId) {
+    return t("reservations.walkingRouteRequired");
+  }
   if (!values.stayStartDate) {
     return t("reservations.stayStartRequired");
   }
@@ -117,7 +135,7 @@ export function ReservationTravelFields({
   onChange,
   type,
   locked,
-  iranId,
+  countryId,
   activeSubStep,
   dualCounts,
   selectedParty,
@@ -129,7 +147,7 @@ export function ReservationTravelFields({
   onChange: (patch: Partial<TravelValues>) => void;
   type: ReservationType;
   locked?: boolean;
-  iranId: string;
+  countryId?: string;
   activeSubStep: TravelSubStep;
   dualCounts?: boolean;
   selectedParty?: PartyItemSnapshot | null;
@@ -176,7 +194,7 @@ export function ReservationTravelFields({
         values={values}
         onChange={onChange}
         locked={locked}
-        iranId={iranId}
+        countryId={countryId}
         error={datesError}
       />
     );
@@ -197,14 +215,14 @@ export function ReservationTravelInfoFields({
   values,
   onChange,
   locked,
-  iranId,
+  countryId,
   showOccasionHint = true,
   error,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
-  iranId?: string;
+  countryId?: string;
   showOccasionHint?: boolean;
   error?: string | null;
 }) {
@@ -227,14 +245,11 @@ export function ReservationTravelInfoFields({
         <FormSectionTitle icon={MapPin}>
           {t("reservations.travelOriginSection")}
         </FormSectionTitle>
-        <p className="mb-3 text-sm leading-6 text-ink-500">
-          {t("reservations.travelOriginHint")}
-        </p>
         <ReservationOptionalGeoFields
           values={values}
           onChange={onChange}
           locked={locked}
-          iranId={iranId}
+          countryId={countryId}
         />
       </section>
     </div>
@@ -429,14 +444,6 @@ export function ReservationDateFields({
 
   return (
     <div className="space-y-4">
-      <DateValueField
-        id="walkingStartDate"
-        icon={Footprints}
-        label={t("reservations.walkingStartDate")}
-        value={values.walkingStartDate}
-        locked={locked}
-        onChange={(walkingStartDate) => onChange({ walkingStartDate })}
-      />
       <div className="grid grid-cols-2 gap-4">
         <DateValueField
           id="stayStartDate"
@@ -467,14 +474,15 @@ export function ReservationOptionalGeoFields({
   values,
   onChange,
   locked,
-  iranId,
+  countryId,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
-  iranId?: string;
+  countryId?: string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
   const nameOf = useGeoName();
 
   const countries = useQuery({
@@ -485,17 +493,61 @@ export function ReservationOptionalGeoFields({
       });
       return data;
     },
-    enabled: !iranId,
   });
-  const resolvedIranId =
-    iranId || countries.data?.find((country) => country.iso2 === "IR")?.id || "";
+  const iranId = countries.data?.find((country) => country.iso2 === "IR")?.id || "";
+
+  const routes = useQuery({
+    queryKey: ["walking-routes", "lookup", countryId || "all"],
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<WalkingRoute>>(
+        "/walking-routes",
+        {
+          params: {
+            pageSize: 100,
+            originCountryId: countryId || undefined,
+          },
+        },
+      );
+      return data.items;
+    },
+  });
+
+  const selectedRouteQuery = useQuery({
+    queryKey: ["walking-route", values.walkingRouteId],
+    enabled:
+      Boolean(values.walkingRouteId) &&
+      !(routes.data ?? []).some((item) => item.id === values.walkingRouteId),
+    queryFn: async () => {
+      const { data } = await api.get<WalkingRoute>(
+        `/walking-routes/${values.walkingRouteId}`,
+      );
+      return data;
+    },
+  });
+  const selectedRoute =
+    (routes.data ?? []).find((item) => item.id === values.walkingRouteId) ??
+    selectedRouteQuery.data;
+  const stages = useMemo(
+    () =>
+      [...(selectedRoute?.stages ?? [])].sort(
+        (a, b) => a.stageNumber - b.stageNumber,
+      ),
+    [selectedRoute?.stages],
+  );
+  const selectedStage =
+    stages.find((stage) => stage.cityId === values.originCityId) ?? null;
+  const geoCountryId =
+    selectedStage?.city.province.countryId ||
+    firstWalkingStage(selectedRoute)?.city.province.countryId ||
+    countryId ||
+    iranId;
 
   const provinces = useQuery({
-    queryKey: ["provinces", "lookup", resolvedIranId],
-    enabled: Boolean(resolvedIranId),
+    queryKey: ["provinces", "lookup", geoCountryId],
+    enabled: Boolean(geoCountryId),
     queryFn: async () => {
       const { data } = await api.get<Province[]>("/provinces", {
-        params: { countryId: resolvedIranId, activeOnly: true },
+        params: { countryId: geoCountryId, activeOnly: true },
       });
       return data;
     },
@@ -512,70 +564,165 @@ export function ReservationOptionalGeoFields({
     },
   });
 
-  const routes = useQuery({
-    queryKey: ["walking-routes", "lookup"],
-    queryFn: async () => {
-      const { data } = await api.get<Paginated<WalkingRoute>>(
-        "/walking-routes",
-        {
-          params: { pageSize: 100 },
-        },
-      );
-      return data.items;
-    },
-  });
+  useEffect(() => {
+    if (!values.walkingRouteId || values.originCityId || locked) return;
+    const start = firstWalkingStage(selectedRoute);
+    if (!start) return;
+    onChange(walkingStartFromStage(start));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked, selectedRoute, values.originCityId, values.walkingRouteId]);
+
+  const overlays = useMemo<MapOverlays | null>(() => {
+    if (!stages.length) return null;
+    const path: { lat: number; lng: number }[] = [];
+    const markers: MapOverlayMarker[] = [];
+    for (const stage of stages) {
+      const coords = stageCoordinates(stage);
+      if (!coords) continue;
+      path.push(coords);
+      const id = stageKey(stage);
+      const numberLabel = formatNumber(stage.stageNumber, locale);
+      markers.push({
+        id,
+        lat: coords.lat,
+        lng: coords.lng,
+        kind: stage.cityId === values.originCityId ? "current" : "station",
+        badge: numberLabel,
+        title: stageTitle(
+          stage,
+          locale,
+          `${t("walkingRoutes.stage")} ${numberLabel}`,
+        ),
+      });
+    }
+    if (!markers.length && path.length < 2) return null;
+    return {
+      markers,
+      path: path.length >= 2 ? path : undefined,
+      fit: true,
+      fitMaxZoom: 16,
+    };
+  }, [locale, stages, t, values.originCityId]);
+
+  function applyRoute(walkingRouteId: string) {
+    if (!walkingRouteId) {
+      onChange({ walkingRouteId: "", provinceId: "", originCityId: "" });
+      return;
+    }
+    const route = (routes.data ?? []).find((item) => item.id === walkingRouteId);
+    const currentOnRoute = route?.stages.some(
+      (stage) => stage.cityId === values.originCityId,
+    );
+    if (currentOnRoute) {
+      onChange({ walkingRouteId });
+      return;
+    }
+    const start = firstWalkingStage(route);
+    onChange({
+      walkingRouteId,
+      ...(start ? walkingStartFromStage(start) : { provinceId: "", originCityId: "" }),
+    });
+  }
+
+  function applyStation(stageId: string) {
+    const stage = stages.find((item) => stageKey(item) === stageId);
+    if (!stage) return;
+    onChange(walkingStartFromStage(stage));
+  }
 
   return (
     <div className="space-y-4">
+      <DateValueField
+        id="walkingStartDate"
+        icon={Footprints}
+        label={t("reservations.walkingStartDate")}
+        value={values.walkingStartDate}
+        locked={locked}
+        onChange={(walkingStartDate) => onChange({ walkingStartDate })}
+      />
+      <aside
+        className="relative overflow-hidden rounded-[22px] border-2 border-teal-200 bg-gradient-to-b from-teal-50 via-white to-mint-50 p-4 shadow-[0_12px_28px_rgba(46,189,182,0.16)]"
+        role="alert"
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-1 bg-gradient-to-e from-teal-400 via-mint-400 to-teal-500"
+          aria-hidden
+        />
+        <div className="flex items-start gap-3 pt-1">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
+            <Info className="size-5" aria-hidden />
+          </span>
+          <p className="pt-1.5 text-sm font-medium leading-7 text-ink-800">
+            {t("reservations.walkingRouteStationHint")}
+          </p>
+        </div>
+      </aside>
+      <FormField
+        icon={Route}
+        label={`${t("reservations.walkingRoute")} *`}
+      >
+        <SearchSelect
+          value={values.walkingRouteId}
+          onChange={applyRoute}
+          options={(
+            selectedRoute &&
+            !(routes.data ?? []).some((item) => item.id === selectedRoute.id)
+              ? [selectedRoute, ...(routes.data ?? [])]
+              : (routes.data ?? [])
+          ).map((item) => ({
+            value: item.id,
+            label: item.name,
+          }))}
+          placeholder={t("reservations.walkingRoute")}
+          disabled={locked}
+        />
+      </FormField>
+      {values.walkingRouteId ? (
+        overlays ? (
+          <div className="overflow-hidden rounded-[22px] border border-teal-100 bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]">
+            <OsmMapPicker
+              latitude=""
+              longitude=""
+              onChange={() => undefined}
+              variant="always"
+              readOnly
+              overlays={overlays}
+              heightClass="h-72"
+              onMarkerClick={locked ? undefined : applyStation}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-ink-500">{t("walkingRoutes.stationsNoMap")}</p>
+        )
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField icon={Building2} label={t("reservations.province")}>
+        <FormField icon={Building2} label={t("reservations.walkingStartProvince")}>
           <SearchSelect
             value={values.provinceId}
             onChange={(provinceId) =>
               onChange({ provinceId, originCityId: "" })
             }
-            options={[
-              { value: "", label: t("reservations.optionalUnspecified") },
-              ...(provinces.data ?? []).map((item) => ({
-                value: item.id,
-                label: nameOf(item),
-              })),
-            ]}
-            placeholder={t("reservations.province")}
+            options={(provinces.data ?? []).map((item) => ({
+              value: item.id,
+              label: nameOf(item),
+            }))}
+            placeholder={t("reservations.walkingStartProvince")}
             disabled={locked}
           />
         </FormField>
-        <FormField icon={MapPin} label={t("reservations.originCity")}>
+        <FormField icon={MapPin} label={t("reservations.walkingStartCity")}>
           <SearchSelect
             value={values.originCityId}
             onChange={(originCityId) => onChange({ originCityId })}
-            options={[
-              { value: "", label: t("reservations.optionalUnspecified") },
-              ...(cities.data ?? []).map((item) => ({
-                value: item.id,
-                label: nameOf(item),
-              })),
-            ]}
-            placeholder={t("reservations.originCity")}
+            options={(cities.data ?? []).map((item) => ({
+              value: item.id,
+              label: nameOf(item),
+            }))}
+            placeholder={t("reservations.walkingStartCity")}
             disabled={locked || !values.provinceId}
           />
         </FormField>
       </div>
-      <FormField icon={Route} label={t("reservations.walkingRoute")}>
-        <SearchSelect
-          value={values.walkingRouteId}
-          onChange={(walkingRouteId) => onChange({ walkingRouteId })}
-          options={[
-            { value: "", label: t("reservations.walkingRouteNone") },
-            ...(routes.data ?? []).map((item) => ({
-              value: item.id,
-              label: item.name,
-            })),
-          ]}
-          placeholder={t("reservations.walkingRoute")}
-          disabled={locked}
-        />
-      </FormField>
     </div>
   );
 }
