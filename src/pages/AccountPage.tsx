@@ -37,6 +37,7 @@ export function AccountPage() {
         hideStatus
         requirePassword={false}
         identityCheckPath="/account/identity-check"
+        selfProfile
         onCancel={() => navigate('/')}
         onSubmit={async (payload) => {
           const { password: _password, roleIds: _roleIds, status: _status, ...body } = payload

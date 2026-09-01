@@ -24,6 +24,7 @@ import { PageBreadcrumb } from "./PageBreadcrumb";
 import {
   canAccessMyAccommodations,
   canAccessMyCaravans,
+  canAccessMyEvaluations,
   canAccessMyGroups,
   canAccessMyReservations,
   isAccommodationManager,
@@ -301,15 +302,18 @@ export function DashboardLayout() {
     const showMyGroups = canAccessMyGroups(user);
     const showMyReservations = canAccessMyReservations(user);
     const showMyAccommodations = canAccessMyAccommodations(user);
+    const showMyEvaluations = canAccessMyEvaluations(user);
     const next = (user?.modules ?? [])
-      .map(withAccommodationsDirectoryMenu)
+      .map((mod) => (showMyAccommodations ? withAccommodationsDirectoryMenu(mod) : mod))
       .map((mod) => {
         const menus = mod.menus.filter(
           (item) =>
             (item.code !== "caravans.mine" || showMyCaravans) &&
             (item.code !== "groups.mine" || showMyGroups) &&
             (item.code !== "reservations.mine" || showMyReservations) &&
-            (item.code !== "accommodation.mine" || showMyAccommodations),
+            (item.code !== "reservations.create" || showMyReservations) &&
+            (item.code !== "accommodation.mine" || showMyAccommodations) &&
+            (item.code !== "evaluations.mine" || showMyEvaluations),
         );
         if (mod.code !== "caravans" || !pilgrimageYearMenus.length) {
           return { ...mod, menus };

@@ -425,6 +425,7 @@ function AdminEditableStep({
         <ReservationTravelSummary
           reservation={reservation}
           variant="review"
+          audience="admin"
           hint={t('reservations.reviewDecisionHint')}
           footer={
             <>

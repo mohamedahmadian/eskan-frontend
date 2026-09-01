@@ -451,6 +451,12 @@ export function ReservationCompleteSummary({
           routeId={reservation.walkingRoute?.id}
           routeName={route}
           originCityId={reservation.originCity?.id}
+          reservationId={audience === 'admin' ? reservation.id : undefined}
+          locationUserId={
+            audience === 'admin'
+              ? reservation.caravanManager?.id ?? reservation.createdBy.id
+              : undefined
+          }
         />
 
         {members?.length ? (

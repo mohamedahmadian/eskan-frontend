@@ -15,7 +15,7 @@ import {
   Route,
   type LucideIcon,
 } from 'lucide-react'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -41,6 +41,16 @@ import {
 } from '../walking-routes/StationInfoCard'
 
 type RouteTab = 'steps' | 'map'
+
+/** Enlarged remaining-station track: `w-28`/`sm:w-32` boxes + `size-5` arrows + `px-1`. */
+function enlargedStepsTrackWidth(count: number) {
+  const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  const wide = window.matchMedia('(min-width: 640px)').matches
+  const box = (wide ? 8 : 7) * rem
+  const arrow = 1.25 * rem + 0.25 * rem
+  const pad = 0.5 * rem
+  return count * box + Math.max(0, count - 1) * arrow + pad
+}
 
 const statTone = {
   teal: {
@@ -220,6 +230,26 @@ export function PilgrimageRouteCard({
   const distanceRemaining = remainingDistanceKm(stages, currentIndex, distanceTotal)
   const distancePassed = Math.max(0, distanceTotal - distanceRemaining)
   const km = t('walkingRoutes.km')
+  const currentLocationName = useMemo(() => {
+    const current = currentIndex >= 0 ? stages[currentIndex] : null
+    if (current) {
+      return stageTitle(
+        current,
+        locale,
+        `${t('walkingRoutes.stage')} ${formatNumber(current.stageNumber, locale)}`,
+      )
+    }
+    const lastTravel = [...(travelQuery.data ?? [])].sort(
+      (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    )[0]
+    if (lastTravel?.walkingRouteStage) {
+      return (
+        lastTravel.walkingRouteStage.name?.trim() ||
+        `${t('walkingRoutes.stage')} ${formatNumber(lastTravel.walkingRouteStage.stageNumber, locale)}`
+      )
+    }
+    return ''
+  }, [currentIndex, locale, stages, t, travelQuery.data])
 
   const locationKey = `${accountQuery.data?.locationCityId ?? ''}:${accountQuery.data?.latitude ?? ''}:${accountQuery.data?.longitude ?? ''}`
   useEffect(() => {
@@ -244,6 +274,27 @@ export function PilgrimageRouteCard({
         .filter(({ index }) => !hidePassedStations || index >= currentIndex),
     [currentIndex, hidePassedStations, stages],
   )
+  const stepsTrackRef = useRef<HTMLDivElement>(null)
+  const [remainingFitsTrack, setRemainingFitsTrack] = useState(false)
+  const enlarge = hidePassedStations && remainingFitsTrack
+
+  useLayoutEffect(() => {
+    if (!hidePassedStations || tab !== 'steps') {
+      setRemainingFitsTrack(false)
+      return
+    }
+    const el = stepsTrackRef.current
+    if (!el) return
+
+    function measure() {
+      setRemainingFitsTrack(enlargedStepsTrackWidth(visibleStages.length) <= el.clientWidth + 1)
+    }
+
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hidePassedStations, tab, visibleStages.length])
 
   useEffect(() => {
     if (tab !== 'steps' || !stages.length) return
@@ -297,10 +348,17 @@ export function PilgrimageRouteCard({
   function hereAction(stage: WalkingRouteStage) {
     const fallbackName = (item: WalkingRouteStage) =>
       stageTitle(item, locale, `${t('walkingRoutes.stage')} ${formatNumber(item.stageNumber, locale)}`)
-    const index = stages.findIndex((item) => stageKey(item) === stageKey(stage))
-    const previous = index > 0 ? stages[index - 1] : null
+    const current = currentIndex >= 0 ? stages[currentIndex] : null
+    const atCurrent = current != null && stageKey(stage) === stageKey(current)
     const to = fallbackName(stage)
-    const from = previous ? fallbackName(previous) : null
+    const from = current ? fallbackName(current) : null
+    const label = savingHere
+      ? t('dashboard.iAmHereSaving')
+      : atCurrent
+        ? t('dashboard.iAmHereCurrent', { name: to })
+        : from
+          ? t('dashboard.iAmHere', { from, to })
+          : t('dashboard.iAmHereFirst', { to })
     return (
       <Button
         type="button"
@@ -310,11 +368,7 @@ export function PilgrimageRouteCard({
         onClick={() => void saveHereAtStation(stage)}
       >
         <LocateFixed className="size-4" aria-hidden />
-        {savingHere
-          ? t('dashboard.iAmHereSaving')
-          : from
-            ? t('dashboard.iAmHere', { from, to })
-            : t('dashboard.iAmHereFirst', { to })}
+        {label}
       </Button>
     )
   }
@@ -355,12 +409,23 @@ export function PilgrimageRouteCard({
       title={t('dashboard.pilgrimageRouteTitle')}
       subtitle={routeQuery.data?.name}
       action={
-        <Link to="/my-location/history">
-          <Button type="button" variant="ghost">
-            <Radar className="size-4" aria-hidden />
-            {t('location.openTrail')}
-          </Button>
-        </Link>
+        <div className="flex flex-col items-end gap-1.5">
+          <Link to="/my-location/history">
+            <Button type="button" variant="ghost">
+              <Radar className="size-4" aria-hidden />
+              {t('location.openTrail')}
+            </Button>
+          </Link>
+          {currentLocationName ? (
+            <span className="inline-flex max-w-[16rem] items-center gap-1.5 rounded-full bg-gradient-to-e from-mint-50 to-white px-2.5 py-1 text-teal-800 shadow-[0_6px_14px_rgba(46,189,182,0.18)] ring-1 ring-teal-100">
+              <MapPinned className="size-3.5 shrink-0 text-teal-600" aria-hidden />
+              <span className="min-w-0 truncate text-[11px] font-medium">
+                {t('dashboard.currentLocation')}:{' '}
+                <span className="text-sm font-bold">{currentLocationName}</span>
+              </span>
+            </span>
+          ) : null}
+        </div>
       }
     >
       <div className="space-y-4 p-5 sm:p-6">
@@ -458,7 +523,7 @@ export function PilgrimageRouteCard({
               </Button>
               </div>
             ) : null}
-            <div dir="ltr" className="overflow-x-auto pb-1">
+            <div ref={stepsTrackRef} dir="ltr" className="overflow-x-auto pb-1">
               <ol className="flex min-w-min items-start px-1 py-2">
                 {visibleStages.map(({ stage, index }, visibleIndex) => {
                   const title = stageTitle(
@@ -469,7 +534,6 @@ export function PilgrimageRouteCard({
                   const passed = currentIndex >= 0 && index < currentIndex
                   const current = index === currentIndex
                   const previewed = preview != null && stageKey(stage) === stageKey(preview)
-                  const enlarge = hidePassedStations
                   return (
                     <Fragment key={stageKey(stage)}>
                       {visibleIndex > 0 ? (

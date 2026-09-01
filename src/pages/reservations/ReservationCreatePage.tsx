@@ -413,7 +413,10 @@ export function ReservationCreatePage() {
   const isInternationalSubject =
     countries.isSuccess && !isIranCountry(subject?.countryId, iranId)
   const skipIranianOnlySteps = isInternationalSubject
-  const skipTypeStep = isInternationalSubject && isCaravanManager(subject)
+  const skipTypeStep = isInternationalSubject
+  const admissionTypes: ReservationType[] = isInternationalSubject
+    ? ['CARAVAN']
+    : types
   const skipLicenseStep = isInternationalSubject && (type === 'CARAVAN' || !type)
   const createOptions = (
     nextType: ReservationType | '' = type,
@@ -1289,7 +1292,7 @@ export function ReservationCreatePage() {
         {step === 'type' ? (
           <>
             <div className="flex flex-col gap-4">
-              {types.map((item) => {
+              {admissionTypes.map((item) => {
                 const Icon = typeIcons[item]
                 const enabled = Boolean(settings.data?.[settingsEnabledKey(item)])
                 const selected = type === item

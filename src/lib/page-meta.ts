@@ -185,7 +185,7 @@ export function getPageMeta(pathname: string): {
     return { titleKey: "menus.myGroups", subtitleKey: "myGroups.subtitle" };
   }
   if (pathname.startsWith("/my-reservations/new")) {
-    return { titleKey: "reservations.createPageTitle" };
+    return { titleKey: "menus.tasharofMashhad" };
   }
   if (
     pathname.startsWith("/my-reservations/") &&

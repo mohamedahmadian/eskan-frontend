@@ -36,6 +36,7 @@ export function ReservationStepReadonly({
       <ReservationTravelSummary
         reservation={reservation}
         variant={step}
+        audience={audience}
         hint={t("reservations.readonlyHint")}
         readonly
         footer={backButton}

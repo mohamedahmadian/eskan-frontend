@@ -69,6 +69,12 @@ html[lang="hi"] {
   text-align: right;
 }
 
+.latin-field {
+  direction: ltr;
+  text-align: left;
+  ime-mode: disabled;
+}
+
 html[dir="ltr"] .digit-field {
   text-align: left;
 }

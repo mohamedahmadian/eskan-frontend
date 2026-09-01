@@ -65,12 +65,14 @@ export function ReservationTravelSummary({
   hint,
   readonly,
   footer,
+  audience = 'owner',
 }: {
   reservation: Reservation
   variant: 'travel' | 'review'
   hint?: string
   readonly?: boolean
   footer?: ReactNode
+  audience?: 'owner' | 'admin'
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -399,6 +401,12 @@ export function ReservationTravelSummary({
           routeId={reservation.walkingRoute?.id}
           routeName={route}
           originCityId={reservation.originCity?.id}
+          reservationId={audience === 'admin' ? reservation.id : undefined}
+          locationUserId={
+            audience === 'admin'
+              ? reservation.caravanManager?.id ?? reservation.createdBy.id
+              : undefined
+          }
         />
       </div>
 

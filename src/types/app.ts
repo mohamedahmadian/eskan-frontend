@@ -147,6 +147,8 @@ export type AuthUser = {
     phone: string | null;
   } | null;
   roles: Pick<RoleOption, "code" | "nameKey">[];
+  hasGroup?: boolean;
+  managesAccommodation?: boolean;
   modules: NavModule[];
   impersonating?: boolean;
   impersonatedBy?: { id: string; fullName: string } | null;

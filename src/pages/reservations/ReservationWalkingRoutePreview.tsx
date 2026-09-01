@@ -1,25 +1,34 @@
-import { Route } from 'lucide-react'
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { LocateFixed, Route } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { OsmMapPicker, type MapOverlayMarker, type MapOverlays } from '../../components/ui/OsmMapPicker'
-import { api } from '../../lib/api'
+import { Button } from '../../components/ui/Form'
+import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { stageCoordinates } from '../../lib/geo'
-import type { WalkingRoute } from '../../types/app'
-import { stageKey, stageTitle } from '../walking-routes/StationInfoCard'
+import type { WalkingRoute, WalkingRouteStage } from '../../types/app'
+import { StationDetailsModal, stageKey, stageTitle } from '../walking-routes/StationInfoCard'
 
 export function ReservationWalkingRoutePreview({
   routeId,
   routeName,
   originCityId,
+  locationUserId,
+  reservationId,
 }: {
   routeId?: string | null
   routeName?: string | null
   originCityId?: string | null
+  locationUserId?: string | null
+  reservationId?: string | null
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
+  const queryClient = useQueryClient()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const query = useQuery({
     queryKey: ['walking-route', routeId],
@@ -64,6 +73,36 @@ export function ReservationWalkingRoutePreview({
     }
   }, [locale, originCityId, stages, t])
 
+  const selected = stages.find((stage) => stageKey(stage) === selectedId) ?? null
+  const canSetLocation = Boolean(locationUserId && reservationId)
+
+  async function setCaravanLocation(stage: WalkingRouteStage) {
+    if (!locationUserId || !reservationId || saving) return
+    setSaving(true)
+    try {
+      const coords = stageCoordinates(stage)
+      await api.patch(`/users/${locationUserId}/location`, {
+        provinceId: stage.city.provinceId,
+        cityId: stage.cityId,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
+        reservationId,
+        walkingRouteStageId: stage.id ?? null,
+        source: 'STATION',
+      })
+      toast.success(t('location.saved'))
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reservations', reservationId, 'travel-history'] }),
+        queryClient.invalidateQueries({ queryKey: ['account'] }),
+        queryClient.invalidateQueries({ queryKey: ['account', 'location-history'] }),
+      ])
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (!routeId) return null
 
   return (
@@ -88,12 +127,42 @@ export function ReservationWalkingRoutePreview({
             variant="always"
             readOnly
             overlays={overlays}
+            onMarkerClick={(id) => setSelectedId(id)}
             heightClass="h-72"
           />
         </div>
       ) : query.isLoading ? null : (
         <p className="text-sm text-ink-500">{t('walkingRoutes.stationsNoMap')}</p>
       )}
+      {selected ? (
+        <StationDetailsModal
+          stage={selected}
+          locale={locale}
+          onClose={() => setSelectedId(null)}
+          headerAction={
+            canSetLocation ? (
+              <Button
+                type="button"
+                variant="soft"
+                className="w-full sm:w-auto"
+                disabled={saving}
+                onClick={() => void setCaravanLocation(selected)}
+              >
+                <LocateFixed className="size-4" aria-hidden />
+                {saving
+                  ? t('reservations.setCaravanLocationSaving')
+                  : t('reservations.setCaravanLocation', {
+                      name: stageTitle(
+                        selected,
+                        locale,
+                        `${t('walkingRoutes.stage')} ${formatNumber(selected.stageNumber, locale)}`,
+                      ),
+                    })}
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
     </section>
   )
 }

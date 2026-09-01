@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthProvider'
 import {
   canAccessMyAccommodations,
   canAccessMyCaravans,
+  canAccessMyEvaluations,
   canAccessMyGroups,
   canAccessMyReservations,
 } from '../lib/roles'
@@ -55,6 +56,10 @@ export function RequireMenuAccess({
   }
 
   if (path === '/my-accommodations' && !canAccessMyAccommodations(user)) {
+    return <Navigate to="/" replace />
+  }
+
+  if (path === '/my-evaluations' && !canAccessMyEvaluations(user)) {
     return <Navigate to="/" replace />
   }
 

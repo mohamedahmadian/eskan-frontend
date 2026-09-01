@@ -36,12 +36,19 @@ import {
   inputClassName,
 } from '../../components/ui/Form'
 import { FormCard } from '../../components/ui/FormLayout'
-import { LoadingSpinner } from '../../components/ui/LoadingState'
+import { UniqueFieldWrap, type UniqueCheckStatus } from '../../components/ui/UniqueFieldStatus'
 import { languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
-import { parseDigitString } from '../../lib/datetime'
+import { parseDigitString, toLatinDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import { isValidIranianNationalId, normalizeNationalId } from '../../lib/national-id'
+import {
+  isLikelyEmail,
+  isPhoneReady,
+  preferEnglishKeyboard,
+  sanitizeUsername,
+  USERNAME_ENGLISH_PATTERN,
+} from '../../lib/identity'
+import { isValidIranianNationalId, normalizeNationalId, normalizePassportNumber } from '../../lib/national-id'
 import {
   religions,
   userGenders,
@@ -82,6 +89,8 @@ type IdentityCheckResponse = {
   nationalIdOwnerName?: string | null
   phoneTaken?: boolean
   usernameTaken?: boolean
+  emailTaken?: boolean
+  passportTaken?: boolean
 }
 
 export type UserPayload = {
@@ -127,6 +136,7 @@ export function UserForm({
   extraTabs,
   identityCheckPath = '/users/identity-check',
   i18nPrefix = 'users',
+  selfProfile = false,
   onCancel,
   onSubmit,
 }: {
@@ -141,6 +151,7 @@ export function UserForm({
   extraTabs?: UserFormExtraTab[]
   identityCheckPath?: string
   i18nPrefix?: 'users' | 'pilgrims' | 'accommodationManagers' | 'caravanManagers' | 'headquartersRepresentatives'
+  selfProfile?: boolean
   onCancel?: () => void
   onSubmit: (payload: UserPayload) => Promise<void>
 }) {
@@ -210,15 +221,22 @@ export function UserForm({
     Boolean(initial?.nationalId && isValidIranianNationalId(initial.nationalId)),
   )
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [phoneStatus, setPhoneStatus] = useState<UniqueCheckStatus>(initial?.phone ? 'ok' : 'idle')
+  const [emailStatus, setEmailStatus] = useState<UniqueCheckStatus>(initial?.email ? 'ok' : 'idle')
+  const [identityStatus, setIdentityStatus] = useState<UniqueCheckStatus>(
+    initial?.nationalId ? 'ok' : 'idle',
+  )
   const pendingFocusId = useRef<string | null>(null)
   const lastNationalIdCheck = useRef<string | null>(null)
   const lastPhoneCheck = useRef<string | null>(null)
   const lastUsernameCheck = useRef<string | null>(null)
+  const lastEmailCheck = useRef<string | null>(null)
   const nationalIdCheckSeq = useRef(0)
   const phoneCheckSeq = useRef(0)
   const usernameCheckSeq = useRef(0)
+  const emailCheckSeq = useRef(0)
   const isCreate = !initial?.id
-  const personalFieldsLocked = isCreate && !nationalIdReady
+  const personalFieldsLocked = isCreate && !selfProfile && !nationalIdReady
 
   useEffect(() => {
     const id = pendingFocusId.current
@@ -254,6 +272,10 @@ export function UserForm({
   })
   const iranCountryId = countries.data?.find((country) => country.iso2 === 'IR')?.id ?? ''
   const selectedCountryId = countryId || (isCreate ? iranCountryId : '')
+  const isIranian = !iranCountryId || !selectedCountryId || selectedCountryId === iranCountryId
+  const phoneRequired = selfProfile ? isIranian : true
+  const identityRequired = !selfProfile
+  const identityIsPassport = selfProfile && !isIranian
   const provinces = useQuery({
     queryKey: ['provinces', 'lookup', selectedCountryId],
     enabled: Boolean(selectedCountryId),
@@ -314,57 +336,85 @@ export function UserForm({
   }
 
   async function checkNationalIdTaken(raw?: string): Promise<boolean> {
-    const value = normalizeNationalId(raw ?? nationalId)
+    const rawValue = raw ?? nationalId
+    const value = identityIsPassport
+      ? normalizePassportNumber(rawValue)
+      : normalizeNationalId(rawValue)
     if (!value) {
       lastNationalIdCheck.current = null
       setNationalIdReady(false)
+      setIdentityStatus('idle')
       clearError('nationalId')
-      return false
+      return !identityRequired
     }
-    if (!isValidIranianNationalId(value)) {
+    if (identityIsPassport) {
+      if (value.length < 5) {
+        lastNationalIdCheck.current = value
+        setNationalIdReady(false)
+        setIdentityStatus('idle')
+        const message = t('users.passportRequired')
+        setFieldError('nationalId', message)
+        return false
+      }
+    } else if (!isValidIranianNationalId(value)) {
       lastNationalIdCheck.current = value
       setNationalIdReady(false)
+      setIdentityStatus('idle')
       const message = t('users.nationalIdInvalid')
       setFieldError('nationalId', message)
       toast.error(message)
       return false
     }
-    if (initial?.nationalId && normalizeNationalId(initial.nationalId) === value) {
+    const initialIdentity = identityIsPassport
+      ? normalizePassportNumber(initial?.nationalId ?? '')
+      : normalizeNationalId(initial?.nationalId ?? '')
+    if (initial?.nationalId && initialIdentity === value) {
       lastNationalIdCheck.current = value
       setNationalIdReady(true)
+      setIdentityStatus('ok')
       clearError('nationalId')
       return true
     }
     if (lastNationalIdCheck.current === value && nationalIdReady && !fieldErrors.nationalId) {
+      setIdentityStatus(fieldErrors.nationalId ? 'taken' : 'ok')
       return true
     }
     lastNationalIdCheck.current = value
     const seq = ++nationalIdCheckSeq.current
     setCheckingNationalId(true)
+    setIdentityStatus('checking')
     setNationalIdReady(false)
     try {
       const { data } = await api.post<IdentityCheckResponse>(
         identityCheckPath,
         {
-          nationalId: value,
+          ...(identityIsPassport ? { passportNumber: value } : { nationalId: value }),
           ...(initial?.id ? { excludeId: initial.id } : {}),
         },
       )
       if (seq !== nationalIdCheckSeq.current) return false
-      if (data.nationalIdTaken ?? data.taken) {
+      const taken = identityIsPassport
+        ? Boolean(data.passportTaken ?? data.nationalIdTaken ?? data.taken)
+        : Boolean(data.nationalIdTaken ?? data.taken)
+      if (taken) {
         setNationalIdReady(false)
-        const message = nationalIdTakenMessage(data.nationalIdOwnerName)
+        setIdentityStatus('taken')
+        const message = identityIsPassport
+          ? t('users.passportTaken')
+          : nationalIdTakenMessage(data.nationalIdOwnerName)
         setFieldError('nationalId', message)
         toast.error(message)
         return false
       }
       setNationalIdReady(true)
+      setIdentityStatus('ok')
       clearError('nationalId')
       return true
     } catch (error) {
       if (seq === nationalIdCheckSeq.current) {
         lastNationalIdCheck.current = null
         setNationalIdReady(false)
+        setIdentityStatus('idle')
       }
       if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return false
       return false
@@ -373,25 +423,34 @@ export function UserForm({
     }
   }
 
-  async function checkPhoneTaken(): Promise<boolean> {
-    const value = parseDigitString(phone).trim()
+  async function checkPhoneTaken(raw?: string): Promise<boolean> {
+    const value = parseDigitString(raw ?? phone).trim()
     if (!value) {
       lastPhoneCheck.current = null
+      setPhoneStatus('idle')
       clearError('phone')
-      return true
+      return !phoneRequired
+    }
+    if (!isPhoneReady(value, isIranian) && selfProfile) {
+      lastPhoneCheck.current = null
+      setPhoneStatus('idle')
+      return !phoneRequired
     }
     if (initial?.phone && parseDigitString(initial.phone) === value) {
       lastPhoneCheck.current = value
+      setPhoneStatus('ok')
       clearError('phone')
       return true
     }
     if (lastPhoneCheck.current === value && !fieldErrors.phone) {
+      setPhoneStatus('ok')
       return true
     }
     lastPhoneCheck.current = value
     const seq = ++phoneCheckSeq.current
+    setPhoneStatus('checking')
     try {
-      const { data } = await api.post<{ taken: boolean; phoneTaken?: boolean }>(
+      const { data } = await api.post<IdentityCheckResponse>(
         identityCheckPath,
         {
           phone: value,
@@ -401,15 +460,78 @@ export function UserForm({
       if (seq !== phoneCheckSeq.current) return false
       if (data.phoneTaken ?? data.taken) {
         const message = t('users.phoneTaken')
+        setPhoneStatus('taken')
         setFieldError('phone', message)
         toast.error(message)
         return false
       }
+      setPhoneStatus('ok')
       clearError('phone')
       return true
     } catch (error) {
-      if (seq === phoneCheckSeq.current) lastPhoneCheck.current = null
+      if (seq === phoneCheckSeq.current) {
+        lastPhoneCheck.current = null
+        setPhoneStatus('idle')
+      }
       if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return false
+      return false
+    }
+  }
+
+  async function checkEmailTaken(raw?: string): Promise<boolean> {
+    const value = toLatinDigits(raw ?? email).trim().toLowerCase()
+    if (!value) {
+      lastEmailCheck.current = null
+      setEmailStatus('idle')
+      clearError('email')
+      return true
+    }
+    if (!isLikelyEmail(value)) {
+      lastEmailCheck.current = null
+      setEmailStatus('idle')
+      const message = t('users.emailInvalid')
+      setFieldError('email', message)
+      return false
+    }
+    if (initial?.email && initial.email.trim().toLowerCase() === value) {
+      lastEmailCheck.current = value
+      setEmailStatus('ok')
+      clearError('email')
+      return true
+    }
+    if (lastEmailCheck.current === value && !fieldErrors.email) {
+      setEmailStatus('ok')
+      return true
+    }
+    lastEmailCheck.current = value
+    const seq = ++emailCheckSeq.current
+    setEmailStatus('checking')
+    try {
+      const { data } = await api.post<IdentityCheckResponse>(
+        identityCheckPath,
+        {
+          email: value,
+          ...(initial?.id ? { excludeId: initial.id } : {}),
+        },
+      )
+      if (seq !== emailCheckSeq.current) return false
+      if (data.emailTaken ?? data.taken) {
+        const message = t('users.emailTaken')
+        setEmailStatus('taken')
+        setFieldError('email', message)
+        toast.error(message)
+        return false
+      }
+      setEmailStatus('ok')
+      clearError('email')
+      return true
+    } catch (error) {
+      if (seq === emailCheckSeq.current) {
+        lastEmailCheck.current = null
+        setEmailStatus('idle')
+      }
+      if (axios.isAxiosError(error) && error.code === 'ERR_CANCELED') return false
+      toast.error(getApiErrorMessage(error, t('common.error')))
       return false
     }
   }
@@ -459,11 +581,21 @@ export function UserForm({
   async function submit(event: FormEvent) {
     event.preventDefault()
     const nextRoleIds = [...new Set([...roleIds, ...lockedIds])]
-    if (!nationalId.trim()) {
+    const identityValue = identityIsPassport
+      ? normalizePassportNumber(nationalId)
+      : normalizeNationalId(nationalId)
+    const phoneDigits = parseDigitString(phone)
+    const emailValue = toLatinDigits(email).trim().toLowerCase()
+    if (identityRequired && !identityValue) {
       failField('personal', 'nationalId', t('users.nationalIdRequired'))
       return
     }
-    if (!isValidIranianNationalId(nationalId)) {
+    if (identityIsPassport) {
+      if (identityValue && identityValue.length < 5) {
+        failField('personal', 'nationalId', t('users.passportRequired'))
+        return
+      }
+    } else if (identityValue && !isValidIranianNationalId(identityValue)) {
       failField('personal', 'nationalId', t('users.nationalIdInvalid'))
       return
     }
@@ -475,8 +607,16 @@ export function UserForm({
       failField('personal', 'lastName', t('users.nameRequired'))
       return
     }
-    if (!phone.trim()) {
+    if (phoneRequired && !phoneDigits) {
       failField('personal', 'phone', t('users.phoneRequired'))
+      return
+    }
+    if (phoneDigits && !isPhoneReady(phoneDigits, isIranian)) {
+      failField('personal', 'phone', t('users.phoneRequired'))
+      return
+    }
+    if (emailValue && !isLikelyEmail(emailValue)) {
+      failField('other', 'email', t('users.emailInvalid'))
       return
     }
     if (!nextRoleIds.length) {
@@ -489,6 +629,10 @@ export function UserForm({
     }
     if (!username.trim() || username.trim().length < 3) {
       failField('account', 'username', t('users.usernameMin'))
+      return
+    }
+    if (!USERNAME_ENGLISH_PATTERN.test(username.trim())) {
+      failField('account', 'username', t('users.usernameEnglish'))
       return
     }
     if (requirePassword || password) {
@@ -510,6 +654,12 @@ export function UserForm({
       if (tab !== 'personal') setTab('personal')
       return
     }
+    const emailAvailable = await checkEmailTaken()
+    if (!emailAvailable) {
+      pendingFocusId.current = 'email'
+      if (tab !== 'other') setTab('other')
+      return
+    }
     const usernameAvailable = await checkUsernameTaken()
     if (!usernameAvailable) {
       pendingFocusId.current = 'username'
@@ -527,9 +677,11 @@ export function UserForm({
         roleIds: nextRoleIds,
         status,
         gender: gender ? (gender as UserGender) : null,
-        nationalId: normalizeNationalId(nationalId),
-        phone: parseDigitString(phone),
-        email: emptyToNull(email),
+        nationalId: identityIsPassport
+          ? identityValue
+          : identityValue || '',
+        phone: phoneDigits,
+        email: emptyToNull(emailValue),
         address: emptyToNull(address),
         notes: emptyToNull(notes),
         religion: religion ? (religion as Religion) : null,
@@ -560,6 +712,8 @@ export function UserForm({
           )
         } else if (message.includes('تلفن') || message.includes('شماره')) {
           failField('personal', 'phone', t('users.phoneTaken'))
+        } else if (message.includes('ایمیل')) {
+          failField('other', 'email', t('users.emailTaken'))
         } else if (message.includes('نام کاربری')) {
           failField('account', 'username', t('users.usernameTaken'))
         } else {
@@ -620,47 +774,56 @@ export function UserForm({
       <div className={`space-y-4 ${tab === 'personal' ? '' : 'hidden'}`}>
         <FormField
           icon={IdCard}
-          label={t('users.nationalId')}
+          label={identityIsPassport ? t('users.passportNumber') : t('users.nationalId')}
           htmlFor="nationalId"
           error={fieldErrors.nationalId}
         >
-          <div className="relative">
-            <input
-              id="nationalId"
-              className={`${inputClassName(Boolean(fieldErrors.nationalId))} ${
-                checkingNationalId ? 'pe-11' : ''
-              }`}
-              value={nationalId}
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={10}
-              required
-              aria-invalid={Boolean(fieldErrors.nationalId)}
-              aria-busy={checkingNationalId}
-              onChange={(e) => {
-                lastNationalIdCheck.current = null
-                const next = parseDigitString(e.target.value).slice(0, 10)
-                setNationalId(next)
-                setNationalIdReady(false)
-                clearError('nationalId')
-                if (next.length === 10) void checkNationalIdTaken(next)
-              }}
-              onBlur={() => void checkNationalIdTaken()}
-              onMouseLeave={() => {
-                if (normalizeNationalId(nationalId).length === 10) void checkNationalIdTaken()
-              }}
-            />
-            {checkingNationalId ? (
-              <span
-                className="pointer-events-none absolute inset-y-0 end-3 flex items-center"
-                role="status"
-                aria-live="polite"
-                aria-label={t('users.nationalIdChecking')}
-              >
-                <LoadingSpinner size="xs" />
-              </span>
-            ) : null}
-          </div>
+          <UniqueFieldWrap
+            status={identityStatus}
+            availableLabel={t('users.identityAvailable')}
+            checkingLabel={t('users.identityChecking')}
+          >
+            <div className="relative">
+              <input
+                id="nationalId"
+                className={`${inputClassName(Boolean(fieldErrors.nationalId))} ${
+                  identityIsPassport ? 'latin-field' : ''
+                }`}
+                value={nationalId}
+                inputMode={identityIsPassport ? 'text' : 'numeric'}
+                autoComplete="off"
+                maxLength={identityIsPassport ? 20 : 10}
+                required={identityRequired}
+                aria-invalid={Boolean(fieldErrors.nationalId)}
+                aria-busy={checkingNationalId}
+                onChange={(e) => {
+                  lastNationalIdCheck.current = null
+                  const next = identityIsPassport
+                    ? normalizePassportNumber(e.target.value).slice(0, 20)
+                    : parseDigitString(e.target.value).slice(0, 10)
+                  setNationalId(next)
+                  setNationalIdReady(false)
+                  setIdentityStatus('idle')
+                  clearError('nationalId')
+                  if (identityIsPassport) {
+                    if (next.length >= 5) void checkNationalIdTaken(next)
+                  } else if (next.length === 10) {
+                    void checkNationalIdTaken(next)
+                  }
+                }}
+                onBlur={() => {
+                  if (identityRequired || nationalId.trim()) void checkNationalIdTaken()
+                }}
+                onMouseLeave={() => {
+                  if (identityIsPassport) {
+                    if (normalizePassportNumber(nationalId).length >= 5) void checkNationalIdTaken()
+                  } else if (normalizeNationalId(nationalId).length === 10) {
+                    void checkNationalIdTaken()
+                  }
+                }}
+              />
+            </div>
+          </UniqueFieldWrap>
         </FormField>
         <div
           className={`space-y-4 transition-opacity duration-200 ${
@@ -715,28 +878,38 @@ export function UserForm({
             htmlFor="phone"
             error={fieldErrors.phone}
           >
-            <input
-              id="phone"
-              className={`${inputClassName(Boolean(fieldErrors.phone))} disabled:cursor-not-allowed`}
-              value={phone}
-              required
-              disabled={personalFieldsLocked}
-              aria-invalid={Boolean(fieldErrors.phone)}
-              onChange={(e) => {
-                const value = parseDigitString(e.target.value).slice(0, 15)
-                lastPhoneCheck.current = null
-                setPhone(value)
-                clearError('phone')
-                if (!usernameTouched.current) {
-                  setUsername(value)
-                  clearError('username')
-                }
-              }}
-              onBlur={() => void checkPhoneTaken()}
-              onMouseLeave={() => {
-                if (parseDigitString(phone).length >= 10) void checkPhoneTaken()
-              }}
-            />
+            <UniqueFieldWrap
+              status={phoneStatus}
+              availableLabel={t('users.identityAvailable')}
+              checkingLabel={t('users.identityChecking')}
+            >
+              <input
+                id="phone"
+                className={`${inputClassName(Boolean(fieldErrors.phone))} disabled:cursor-not-allowed`}
+                value={phone}
+                required={phoneRequired}
+                disabled={personalFieldsLocked}
+                aria-invalid={Boolean(fieldErrors.phone)}
+                onChange={(e) => {
+                  const value = parseDigitString(e.target.value).slice(0, isIranian ? 11 : 15)
+                  lastPhoneCheck.current = null
+                  setPhone(value)
+                  setPhoneStatus('idle')
+                  clearError('phone')
+                  if (!usernameTouched.current) {
+                    setUsername(sanitizeUsername(value))
+                    clearError('username')
+                  }
+                  if (isPhoneReady(value, isIranian)) void checkPhoneTaken(value)
+                }}
+                onBlur={() => {
+                  if (phoneRequired || parseDigitString(phone)) void checkPhoneTaken()
+                }}
+                onMouseLeave={() => {
+                  if (isPhoneReady(parseDigitString(phone), isIranian)) void checkPhoneTaken()
+                }}
+              />
+            </UniqueFieldWrap>
           </FormField>
           <FormField icon={UserRound} label={t('users.gender')} htmlFor="gender">
             <SearchSelect
@@ -793,7 +966,9 @@ export function UserForm({
         >
           <input
             id="username"
-            className={inputClassName(Boolean(fieldErrors.username))}
+            lang="en"
+            dir="ltr"
+            className={`${inputClassName(Boolean(fieldErrors.username))} latin-field`}
             value={username}
             required
             minLength={3}
@@ -801,13 +976,21 @@ export function UserForm({
             onChange={(e) => {
               usernameTouched.current = true
               lastUsernameCheck.current = null
-              setUsername(e.target.value)
+              setUsername(sanitizeUsername(e.target.value))
               clearError('username')
             }}
+            onMouseEnter={(e) => preferEnglishKeyboard(e.currentTarget)}
+            onFocus={(e) => preferEnglishKeyboard(e.currentTarget)}
             onBlur={() => {
               if (username.trim().length >= 3) void checkUsernameTaken()
             }}
             autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="url"
+            pattern="[A-Za-z0-9._-]+"
+            title={t('users.usernameEnglish')}
           />
         </FormField>
         {hideRoles ? null : (
@@ -1048,14 +1231,31 @@ export function UserForm({
       </div>
 
       <div className={`space-y-4 ${tab === 'other' ? '' : 'hidden'}`}>
-        <FormField icon={Mail} label={t('users.email')} htmlFor="email">
-          <input
-            id="email"
-            type="email"
-            className={fieldClassName}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+        <FormField icon={Mail} label={t('users.email')} htmlFor="email" error={fieldErrors.email}>
+          <UniqueFieldWrap
+            status={emailStatus}
+            availableLabel={t('users.identityAvailable')}
+            checkingLabel={t('users.identityChecking')}
+          >
+            <input
+              id="email"
+              type="email"
+              className={`${inputClassName(Boolean(fieldErrors.email))} latin-field`}
+              value={email}
+              aria-invalid={Boolean(fieldErrors.email)}
+              onChange={(e) => {
+                lastEmailCheck.current = null
+                const next = toLatinDigits(e.target.value)
+                setEmail(next)
+                setEmailStatus('idle')
+                clearError('email')
+                if (isLikelyEmail(next)) void checkEmailTaken(next)
+              }}
+              onBlur={() => {
+                if (toLatinDigits(email).trim()) void checkEmailTaken()
+              }}
+            />
+          </UniqueFieldWrap>
         </FormField>
         <FormField icon={Car} label={t('users.vehiclePlates')}>
           <div className="space-y-2">

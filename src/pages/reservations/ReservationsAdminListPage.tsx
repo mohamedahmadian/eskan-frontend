@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   Filter,
+  Flag,
   Footprints,
   IdCard,
   MapPin,
@@ -129,6 +130,7 @@ export function ReservationsAdminListPage() {
   const year = searchParams.get("year") || currentYear;
   const type = searchParams.get("type") ?? "";
   const status = searchParams.get("status") ?? "";
+  const countryId = searchParams.get("countryId") ?? "";
   const provinceId = searchParams.get("provinceId") ?? "";
   const originCityId = searchParams.get("originCityId") ?? "";
   const walkingRouteId = searchParams.get("walkingRouteId") ?? "";
@@ -148,12 +150,13 @@ export function ReservationsAdminListPage() {
   });
   const iranId = countries.data?.find((item) => item.iso2 === "IR")?.id ?? "";
 
+  const provinceCountryId = countryId || iranId;
   const provinces = useQuery({
-    queryKey: ["provinces", "lookup", iranId],
-    enabled: Boolean(iranId),
+    queryKey: ["provinces", "lookup", provinceCountryId],
+    enabled: Boolean(provinceCountryId),
     queryFn: async () => {
       const { data } = await api.get<Province[]>("/provinces", {
-        params: { countryId: iranId, activeOnly: true },
+        params: { countryId: provinceCountryId, activeOnly: true },
       });
       return data;
     },
@@ -220,6 +223,7 @@ export function ReservationsAdminListPage() {
     year: Number(year),
     type: type || undefined,
     status: status || undefined,
+    countryId: countryId || undefined,
     originCityId: originCityId || undefined,
     walkingRouteId: walkingRouteId || undefined,
     caravanId: caravanId || undefined,
@@ -248,6 +252,7 @@ export function ReservationsAdminListPage() {
     searchParams.get("year") ||
     type ||
     status ||
+    countryId ||
     provinceId ||
     originCityId ||
     walkingRouteId ||
@@ -373,6 +378,29 @@ export function ReservationsAdminListPage() {
                   })),
                 ]}
                 placeholder={t("reservations.status")}
+              />
+            </FormField>
+            <FormField icon={Flag} label={t("geo.country")}>
+              <SearchSelect
+                value={countryId}
+                onChange={(next) =>
+                  setParams(
+                    {
+                      countryId: next || undefined,
+                      provinceId: undefined,
+                      originCityId: undefined,
+                    },
+                    { resetPage: true },
+                  )
+                }
+                options={[
+                  { value: "", label: t("geo.allCountries") },
+                  ...(countries.data ?? []).map((item) => ({
+                    value: item.id,
+                    label: nameOf(item),
+                  })),
+                ]}
+                placeholder={t("geo.allCountries")}
               />
             </FormField>
             <FormField

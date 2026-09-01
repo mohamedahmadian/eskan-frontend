@@ -6,7 +6,6 @@ import {
   MapPin,
   Mars,
   Plus,
-  Route,
   Users,
   Venus,
 } from 'lucide-react'
@@ -28,7 +27,6 @@ import type {
   Group,
   Paginated,
   Province,
-  WalkingRoute,
 } from '../../types/app'
 import {
   CaravanManagerPicker,
@@ -503,58 +501,29 @@ function PartyCityFields({
     },
   })
 
-  const routes = useQuery({
-    queryKey: ['walking-routes', 'lookup', selectedCountryId],
-    queryFn: async () => {
-      const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
-        params: {
-          pageSize: 100,
-          originCountryId: selectedCountryId || undefined,
-        },
-      })
-      return data.items
-    },
-  })
-
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <FormField icon={Building2} label={t('reservations.province')}>
-          <SearchSelect
-            value={draft.provinceId}
-            onChange={(provinceId) => onDraftChange({ provinceId, cityId: '' })}
-            options={(provinces.data ?? []).map((item) => ({
-              value: item.id,
-              label: nameOf(item),
-            }))}
-            placeholder={t('reservations.province')}
-          />
-        </FormField>
-        <FormField icon={MapPin} label={t('geo.city')}>
-          <SearchSelect
-            value={draft.cityId}
-            onChange={(cityId) => onDraftChange({ cityId })}
-            options={(cities.data ?? []).map((item) => ({
-              value: item.id,
-              label: nameOf(item),
-            }))}
-            placeholder={t('geo.city')}
-            disabled={!draft.provinceId}
-          />
-        </FormField>
-      </div>
-      <FormField icon={Route} label={t('reservations.walkingRoute')}>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <FormField icon={Building2} label={t('reservations.province')}>
         <SearchSelect
-          value={draft.walkingRouteId}
-          onChange={(walkingRouteId) => onDraftChange({ walkingRouteId })}
-          options={[
-            { value: '', label: t('reservations.walkingRouteNone') },
-            ...(routes.data ?? []).map((item) => ({
-              value: item.id,
-              label: item.name,
-            })),
-          ]}
-          placeholder={t('reservations.walkingRoute')}
+          value={draft.provinceId}
+          onChange={(provinceId) => onDraftChange({ provinceId, cityId: '' })}
+          options={(provinces.data ?? []).map((item) => ({
+            value: item.id,
+            label: nameOf(item),
+          }))}
+          placeholder={t('reservations.province')}
+        />
+      </FormField>
+      <FormField icon={MapPin} label={t('geo.city')}>
+        <SearchSelect
+          value={draft.cityId}
+          onChange={(cityId) => onDraftChange({ cityId })}
+          options={(cities.data ?? []).map((item) => ({
+            value: item.id,
+            label: nameOf(item),
+          }))}
+          placeholder={t('geo.city')}
+          disabled={!draft.provinceId}
         />
       </FormField>
     </div>

@@ -1,22 +1,25 @@
-import { ListOrdered, Map as MapIcon } from 'lucide-react'
+import { ListOrdered, Map as MapIcon, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import {
   PaginationBar,
   SearchBar,
   SortableTh,
   TableCard,
 } from '../../components/ui/ListControls'
-import { FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
+import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { FormEmptyHint } from '../../components/ui/FormLayout'
+import { confirmToast } from '../../components/ui/confirmToast'
 import { DateText } from '../../components/ui/DateText'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
+import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
-import { api } from '../../lib/api'
+import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { LocationSource, UserLocationHistoryList } from '../../types/app'
@@ -29,14 +32,18 @@ export function LocationHistoryPage({
   apiPath,
   queryKey,
   titleKey = 'location.history',
+  canDelete = false,
 }: {
   apiPath: string
   queryKey: unknown[]
   titleKey?: string
+  canDelete?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const geoName = useGeoName()
+  const queryClient = useQueryClient()
+  const { confirmDelete } = useConfirmDelete()
   const [tab, setTab] = useState<'map' | 'table'>('map')
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } =
     useListParams()
@@ -62,10 +69,58 @@ export function LocationHistoryPage({
   const mapPoints = query.data?.mapPoints ?? []
   const overlays = useLocationHistoryOverlays(mapPoints)
   const empty = q || source ? t('location.historyNoResults') : t('location.historyEmpty')
+  const total = query.data?.total ?? 0
+
+  function deleteOne(id: string) {
+    confirmDelete({
+      message: t('location.confirmDeleteHistory'),
+      successMessage: t('location.historyDeleted'),
+      path: `${apiPath}/${id}`,
+      queryKey: ['account'],
+      onDeleted: () => {
+        if (rows.length === 1 && page > 1) {
+          setPage(page - 1)
+        }
+      },
+    })
+  }
+
+  function deleteAll() {
+    confirmToast({
+      title: t('location.confirmDeleteAllHistory'),
+      confirmLabel: t('common.yesDelete'),
+      cancelLabel: t('common.cancel'),
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(apiPath)
+          toast.success(t('location.allHistoryDeleted'))
+          if (page > 1) {
+            setPage(1)
+          }
+        } catch (error) {
+          toast.error(getApiErrorMessage(error, t('common.error')))
+          return
+        }
+        void queryClient.invalidateQueries({ queryKey: ['account'] })
+      },
+    })
+  }
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t(titleKey)} subtitle={t('location.historySubtitle')} />
+      <PageHeader
+        title={t(titleKey)}
+        subtitle={t('location.historySubtitle')}
+        action={
+          canDelete && total > 0 ? (
+            <Button type="button" variant="danger" onClick={deleteAll}>
+              <Trash2 className="size-4" aria-hidden />
+              {t('location.deleteAllHistory')}
+            </Button>
+          ) : undefined
+        }
+      />
       <SearchBar
         term={term}
         onTermChange={setTerm}
@@ -191,6 +246,9 @@ export function LocationHistoryPage({
                     sortDir={sortDir}
                     onSort={onSort}
                   />
+                  {canDelete ? (
+                    <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -211,6 +269,21 @@ export function LocationHistoryPage({
                         : '—'}
                     </td>
                     <td className="px-4 py-3">{item.notes || '—'}</td>
+                    {canDelete ? (
+                      <td className="px-4 py-3">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          icon
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                          aria-label={t('common.delete')}
+                          title={t('common.delete')}
+                          onClick={() => deleteOne(item.id)}
+                        >
+                          <Trash2 className="size-4" aria-hidden />
+                        </Button>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -236,6 +309,7 @@ export function MyLocationHistoryPage() {
       apiPath="/account/location-history"
       queryKey={['account', 'location-history']}
       titleKey="menus.myLocationHistory"
+      canDelete
     />
   )
 }
