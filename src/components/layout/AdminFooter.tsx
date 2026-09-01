@@ -1,11 +1,34 @@
 import { Globe, Phone, Tag, type LucideIcon } from 'lucide-react'
-import type { ComponentType, SVGProps } from 'react'
+import {
+  useEffect,
+  useState,
+  type ComponentType,
+  type SVGProps,
+} from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 import { BaleIcon, EitaaIcon, InstagramIcon, TelegramIcon } from '../brand/SocialBrandIcon'
 import { APP_VERSION } from '../../lib/app-version'
 import { localizeDigits, parseDigitString } from '../../lib/datetime'
 import { displayExternalUrl, toExternalHref, type SocialNetwork } from '../../lib/social-links'
 import type { HeadquartersServiceSummary } from '../../types/app'
+
+const MOBILE_FOOTER_QUERY = '(max-width: 1023px)'
+const AUTO_HIDE_MS = 4000
+
+function useMobileFooterViewport() {
+  const [mobile, setMobile] = useState(() =>
+    typeof window === 'undefined' ? false : window.matchMedia(MOBILE_FOOTER_QUERY).matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_FOOTER_QUERY)
+    const sync = () => setMobile(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+  return mobile
+}
 
 type SocialIcon = LucideIcon | ComponentType<SVGProps<SVGSVGElement>>
 
@@ -55,6 +78,10 @@ export function AdminFooter({
   compactEnd?: boolean
 }) {
   const { t, i18n } = useTranslation()
+  const { pathname } = useLocation()
+  const isMobile = useMobileFooterViewport()
+  const [open, setOpen] = useState(true)
+  const [hideCycle, setHideCycle] = useState(0)
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const phones = (branding?.phones ?? []).filter((item) => item.phone.trim())
   const links = socials.flatMap((item) => {
@@ -72,16 +99,44 @@ export function AdminFooter({
   const hasContacts = phones.length > 0 || links.length > 0
   const versionLabel = t('nav.appVersion')
   const versionText = localizeDigits(APP_VERSION, locale)
+  const collapsed = isMobile && !open
+
+  useEffect(() => {
+    setOpen(true)
+    setHideCycle((cycle) => cycle + 1)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!isMobile || !open) return
+    const timer = window.setTimeout(() => setOpen(false), AUTO_HIDE_MS)
+    return () => window.clearTimeout(timer)
+  }, [isMobile, open, hideCycle])
+
+  function revealFooter() {
+    setOpen(true)
+    setHideCycle((cycle) => cycle + 1)
+  }
 
   return (
-    <footer
-      data-admin-footer
-      aria-label={hasContacts ? t('nav.contactFooter') : versionLabel}
-      className={`shrink-0 border-t border-line bg-white/90 px-4 py-2 backdrop-blur sm:px-8 ${
-        compactEnd ? 'lg:pe-32' : ''
-      }`}
-    >
-      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
+    <>
+      <footer
+        id="admin-footer"
+        data-admin-footer
+        data-collapsed={collapsed ? 'true' : undefined}
+        aria-hidden={collapsed || undefined}
+        inert={collapsed || undefined}
+        aria-label={hasContacts ? t('nav.contactFooter') : versionLabel}
+        className={`grid shrink-0 bg-white/90 backdrop-blur transition-[grid-template-rows,border-color,opacity] duration-500 ease-out motion-reduce:transition-none ${
+          collapsed
+            ? 'grid-rows-[0fr] border-transparent opacity-0'
+            : 'grid-rows-[1fr] border-t border-line opacity-100'
+        } ${compactEnd && !collapsed ? 'lg:pe-32' : ''}`}
+      >
+        <div
+          className={`min-h-0 overflow-hidden px-4 py-2 sm:px-8 ${collapsed ? 'pointer-events-none' : ''}`}
+          onPointerDown={isMobile ? revealFooter : undefined}
+        >
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
         {phones.map((item) => {
           const latin = parseDigitString(item.phone)
           const phoneLabel = localizeDigits(item.phone, locale)
@@ -163,7 +218,21 @@ export function AdminFooter({
             {versionText}
           </span>
         </span>
-      </div>
-    </footer>
+          </div>
+        </div>
+      </footer>
+      {collapsed ? (
+        <button
+          type="button"
+          className="admin-footer-open-btn fixed start-3 bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))] z-[24] inline-flex size-11 items-center justify-center rounded-full bg-teal-500 text-white shadow-[0_8px_20px_rgba(46,189,182,0.35)] ring-2 ring-white transition hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 lg:hidden print:hidden"
+          aria-label={t('nav.openFooter')}
+          aria-controls="admin-footer"
+          aria-expanded="false"
+          onClick={revealFooter}
+        >
+          <Phone className="size-5" aria-hidden />
+        </button>
+      ) : null}
+    </>
   )
 }

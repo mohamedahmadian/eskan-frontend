@@ -478,6 +478,10 @@ th {
   animation: page-fade-in 0.32s ease-out both;
 }
 
+.admin-footer-open-btn {
+  animation: page-fade-in 0.35s ease-out both;
+}
+
 .animate-loading-spin {
   animation: loading-spin 0.9s linear infinite;
 }
@@ -488,6 +492,7 @@ th {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-page-fade-in,
+  .admin-footer-open-btn,
   .animate-loading-spin,
   .animate-loading-pulse {
     animation: none;

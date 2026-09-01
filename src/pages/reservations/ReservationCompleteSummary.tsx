@@ -186,17 +186,23 @@ export function ReservationCompleteSummary({
 
       <div className="space-y-5 p-5 sm:p-6">
         {cancelled || audience === 'admin' ? null : (
-          <p className="rounded-2xl border border-teal-100 bg-gradient-to-e from-white to-teal-50 px-4 py-3 text-sm leading-7 text-ink-700">
-            {t(
-              !reservation.requestsAccommodation
-                ? 'reservations.completedBodyNoStay'
-                : reservation.placementStatus === 'PLACED'
-                  ? 'reservations.completedBodyPlaced'
-                  : reservation.placementStatus === 'PARTIAL'
-                    ? 'reservations.completedBodyPartial'
-                    : 'reservations.completedBodyPending',
+          <div className="rounded-2xl border border-teal-100 bg-gradient-to-e from-white to-teal-50 px-4 py-3 text-sm leading-7 text-ink-700">
+            {!reservation.requestsAccommodation ? (
+              <p>{t('reservations.completedBodyNoStay')}</p>
+            ) : reservation.placementStatus === 'PLACED' ? (
+              <p>{t('reservations.completedBodyPlaced')}</p>
+            ) : reservation.placementStatus === 'PARTIAL' ? (
+              <p>{t('reservations.completedBodyPartial')}</p>
+            ) : (
+              <>
+                <p>{t('reservations.completedBodyPending')}</p>
+                <p>
+                  {t('reservations.completedTrackingCode')}{' '}
+                  <CopyableDigits value={reservation.code} />
+                </p>
+              </>
             )}
-          </p>
+          </div>
         )}
         <section>
           <SectionTitle icon={Users}>{t('reservations.createSteps.count')}</SectionTitle>

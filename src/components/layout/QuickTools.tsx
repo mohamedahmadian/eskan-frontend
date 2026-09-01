@@ -99,12 +99,16 @@ function clampFabPos(pos: FabPos, desktop: boolean): FabPos {
   }
 }
 
+function getFooterDock(): HTMLElement | null {
+  const footer = document.querySelector<HTMLElement>('[data-admin-footer]')
+  if (!footer || footer.dataset.collapsed === 'true') return null
+  return document.querySelector<HTMLElement>('[data-app-version]') ?? footer
+}
+
 function defaultFabPos(desktop: boolean): FabPos {
   const size = fabSizeFor(desktop)
   if (!desktop) {
-    const dock =
-      document.querySelector<HTMLElement>('[data-app-version]') ??
-      document.querySelector<HTMLElement>('[data-admin-footer]')
+    const dock = getFooterDock()
     if (dock) {
       const rect = dock.getBoundingClientRect()
       return {
@@ -429,13 +433,21 @@ function QuickToolsFab({
     layout()
     window.addEventListener('resize', layout)
     const footer = document.querySelector('[data-admin-footer]')
-    const dock = document.querySelector('[data-app-version]')
-    const observer = footer || dock ? new ResizeObserver(layout) : null
+    const version = document.querySelector('[data-app-version]')
+    const observer = footer || version ? new ResizeObserver(layout) : null
     if (observer && footer) observer.observe(footer)
-    if (observer && dock) observer.observe(dock)
+    if (observer && version) observer.observe(version)
+    const collapsedObserver =
+      footer instanceof HTMLElement
+        ? new MutationObserver(layout)
+        : null
+    if (collapsedObserver && footer) {
+      collapsedObserver.observe(footer, { attributes: true, attributeFilter: ['data-collapsed'] })
+    }
     return () => {
       window.removeEventListener('resize', layout)
       observer?.disconnect()
+      collapsedObserver?.disconnect()
     }
   }, [desktop])
 
