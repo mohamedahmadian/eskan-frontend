@@ -41,7 +41,7 @@ import { WalkingRouteTabNav, type WalkingRouteTab } from './WalkingRouteTabs'
 export type WalkingRoutePayload = {
   name: string
   distanceToMashhadKm: number
-  entryBorderId: string
+  entryBorderId: string | null
   originCountryIds: string[]
   stages: {
     cityId: string
@@ -239,7 +239,7 @@ export function WalkingRouteForm({
       await onSubmit({
         name: name.trim(),
         distanceToMashhadKm: toNumber(distanceToMashhadKm),
-        entryBorderId,
+        entryBorderId: entryBorderId || null,
         originCountryIds,
         stages: filledStages.map((stage, index) => ({
           cityId: stage.cityId,
@@ -314,7 +314,6 @@ export function WalkingRouteForm({
                 <SearchSelect
                   id="entry-border"
                   value={entryBorderId}
-                  required
                   placeholder={t('walkingRoutes.selectEntryBorder')}
                   onChange={setEntryBorderId}
                   options={[

@@ -13,6 +13,7 @@ import { UniqueFieldWrap, type UniqueCheckStatus } from '../components/ui/Unique
 import { usePreferredLocale } from '../hooks/usePreferredLocale'
 import { isAppLanguage } from '../i18n'
 import { api, getApiErrorMessage } from '../lib/api'
+import { afterAuthPath, withNext } from '../lib/auth-redirect'
 import { parseDigitString, toLatinDigits } from '../lib/datetime'
 import { useGeoName } from '../lib/geo'
 import {
@@ -54,6 +55,8 @@ export function RegisterPage() {
   const geoName = useGeoName()
   const { setLocale } = usePreferredLocale()
   const [params] = useSearchParams()
+  const next = params.get('next')
+  const afterAuth = afterAuthPath(next)
   const initial = useMemo(
     () => splitIdentifier(params.get('identifier') ?? ''),
     [params],
@@ -212,12 +215,22 @@ export function RegisterPage() {
     if (isPhoneReady(phoneDigits, isIranian)) {
       scheduleCheck('phone', phoneDigits)
     }
+    if (isIranian) {
+      if (emailTimer.current) clearTimeout(emailTimer.current)
+      if (passportTimer.current) clearTimeout(passportTimer.current)
+      setPassportNumber('')
+      setEmail('')
+      setPassportStatus('idle')
+      setEmailStatus('idle')
+      setPassportError('')
+      setEmailError('')
+    }
     // فقط با عوض شدن کشور دوباره بررسی شود
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isIranian])
 
   if (user) {
-    return <Navigate to="/" replace />
+    return <Navigate to={afterAuth} replace />
   }
 
   async function onSubmit(event: FormEvent) {
@@ -239,11 +252,11 @@ export function RegisterPage() {
       toast.error(t('users.phoneRequired'))
       return
     }
-    if (emailValue && !isLikelyEmail(emailValue)) {
+    if (!isIranian && emailValue && !isLikelyEmail(emailValue)) {
       toast.error(t('users.emailInvalid'))
       return
     }
-    if (passportValue && passportValue.length < 5) {
+    if (!isIranian && passportValue && passportValue.length < 5) {
       toast.error(t('users.passportRequired'))
       return
     }
@@ -256,10 +269,10 @@ export function RegisterPage() {
     if (isPhoneReady(phoneDigits, isIranian)) {
       checks.push(runCheck('phone', phoneDigits, ++phoneSeq.current))
     }
-    if (emailValue && isLikelyEmail(emailValue)) {
+    if (!isIranian && emailValue && isLikelyEmail(emailValue)) {
       checks.push(runCheck('email', emailValue, ++emailSeq.current))
     }
-    if (passportValue.length >= 5) {
+    if (!isIranian && passportValue.length >= 5) {
       checks.push(runCheck('passport', passportValue, ++passportSeq.current))
     }
     if (checks.length) {
@@ -281,14 +294,14 @@ export function RegisterPage() {
         gender,
         countryId: countryId || undefined,
         ...(phoneDigits ? { phone: phoneDigits } : {}),
-        ...(passportValue ? { passportNumber: passportValue } : {}),
-        ...(emailValue ? { email: emailValue } : {}),
+        ...(!isIranian && passportValue ? { passportNumber: passportValue } : {}),
+        ...(!isIranian && emailValue ? { email: emailValue } : {}),
       })
       if (isAppLanguage(data.locale)) {
         setLocale(data.locale)
       }
       await login(usernameValue, passwordValue)
-      navigate('/')
+      navigate(afterAuth)
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
@@ -302,7 +315,7 @@ export function RegisterPage() {
         icon={UserPlus}
         title={t('auth.register')}
         subtitle={t('auth.registerSubtitle')}
-        action={<AuthBackButton to="/login" />}
+        action={<AuthBackButton to={withNext('/login', next)} />}
       >
         <AppForm className={formCardBodyClassName} onSubmit={onSubmit} autoFocusFirst>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -384,58 +397,62 @@ export function RegisterPage() {
                   />
                 </UniqueFieldWrap>
               </FormField>
-              <FormField
-                icon={IdCard}
-                label={t('users.passportNumber')}
-                htmlFor="passportNumber"
-                error={passportError}
-              >
-                <UniqueFieldWrap
-                  status={passportStatus}
-                  availableLabel={t('users.identityAvailable')}
-                  checkingLabel={t('users.identityChecking')}
+              {!isIranian ? (
+                <FormField
+                  icon={IdCard}
+                  label={t('users.passportNumber')}
+                  htmlFor="passportNumber"
+                  error={passportError}
                 >
-                  <input
-                    id="passportNumber"
-                    className={`${inputClassName(Boolean(passportError))} latin-field`}
-                    value={passportNumber}
-                    onChange={(e) => onPassportChange(e.target.value)}
-                    onBlur={() => {
-                      if (passportValue.length >= 5) {
-                        scheduleCheck('passport', passportValue, true)
-                      }
-                    }}
-                    autoComplete="off"
-                    minLength={5}
-                    maxLength={20}
-                    aria-invalid={Boolean(passportError)}
-                  />
-                </UniqueFieldWrap>
-              </FormField>
-              <FormField icon={Mail} label={t('users.email')} htmlFor="email" error={emailError}>
-                <UniqueFieldWrap
-                  status={emailStatus}
-                  availableLabel={t('users.identityAvailable')}
-                  checkingLabel={t('users.identityChecking')}
-                >
-                  <input
-                    id="email"
-                    type="email"
-                    className={`${inputClassName(Boolean(emailError))} latin-field`}
-                    value={email}
-                    onChange={(e) => onEmailChange(e.target.value)}
-                    onBlur={() => {
-                      if (isLikelyEmail(emailValue)) {
-                        scheduleCheck('email', emailValue, true)
-                      } else if (emailValue) {
-                        setEmailError(t('users.emailInvalid'))
-                      }
-                    }}
-                    autoComplete="email"
-                    aria-invalid={Boolean(emailError)}
-                  />
-                </UniqueFieldWrap>
-              </FormField>
+                  <UniqueFieldWrap
+                    status={passportStatus}
+                    availableLabel={t('users.identityAvailable')}
+                    checkingLabel={t('users.identityChecking')}
+                  >
+                    <input
+                      id="passportNumber"
+                      className={`${inputClassName(Boolean(passportError))} latin-field`}
+                      value={passportNumber}
+                      onChange={(e) => onPassportChange(e.target.value)}
+                      onBlur={() => {
+                        if (passportValue.length >= 5) {
+                          scheduleCheck('passport', passportValue, true)
+                        }
+                      }}
+                      autoComplete="off"
+                      minLength={5}
+                      maxLength={20}
+                      aria-invalid={Boolean(passportError)}
+                    />
+                  </UniqueFieldWrap>
+                </FormField>
+              ) : null}
+              {!isIranian ? (
+                <FormField icon={Mail} label={t('users.email')} htmlFor="email" error={emailError}>
+                  <UniqueFieldWrap
+                    status={emailStatus}
+                    availableLabel={t('users.identityAvailable')}
+                    checkingLabel={t('users.identityChecking')}
+                  >
+                    <input
+                      id="email"
+                      type="email"
+                      className={`${inputClassName(Boolean(emailError))} latin-field`}
+                      value={email}
+                      onChange={(e) => onEmailChange(e.target.value)}
+                      onBlur={() => {
+                        if (isLikelyEmail(emailValue)) {
+                          scheduleCheck('email', emailValue, true)
+                        } else if (emailValue) {
+                          setEmailError(t('users.emailInvalid'))
+                        }
+                      }}
+                      autoComplete="email"
+                      aria-invalid={Boolean(emailError)}
+                    />
+                  </UniqueFieldWrap>
+                </FormField>
+              ) : null}
               <FormField icon={UserRound} label={t('users.gender')} htmlFor="gender">
                 <ToggleField
                   id="gender"
@@ -465,7 +482,7 @@ export function RegisterPage() {
             <p className="text-center text-sm text-ink-500">
               {t('auth.hasAccount')}{' '}
               <Link
-                to="/login"
+                to={withNext('/login', next)}
                 className="font-medium text-teal-700 hover:text-teal-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 rounded-lg"
               >
                 {t('auth.login')}

@@ -165,6 +165,15 @@ export function formatJalaliDate(value: string, locale: string) {
   )
 }
 
+export function formatWeekday(value: string, locale: string) {
+  const date = fromIsoDateOnly(value)
+  if (!date) return ''
+  const calendar = usesJalaliCalendar(locale) ? persian : gregorian
+  const converted = cloneDateObject(date).convert(calendar, datePickerLocale(locale))
+  const name = converted.weekDay?.name
+  return typeof name === 'string' ? name.trim() : ''
+}
+
 function yearSpanLabel(from: number, to: number, locale: string) {
   if (from === to) return formatNumber(from, locale)
   return `${formatNumber(from, locale)}–${formatNumber(to, locale)}`

@@ -1,4 +1,4 @@
-import { Building, FileCheck, Phone, Stamp, type LucideIcon } from 'lucide-react'
+import { Building, FileCheck, HandHeart, Phone, Stamp, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { localizeDigits } from '../../lib/datetime'
 import { Link } from 'react-router-dom'
@@ -99,6 +99,12 @@ export function LicenseIssuerDashboard() {
             to="/licenses/issued"
             icon={FileCheck}
             label={t('menus.issuedLicenses')}
+            tone="mint"
+          />
+          <ActionCard
+            to="/honorary-apply"
+            icon={HandHeart}
+            label={t('honoraryServants.create')}
             tone="mint"
           />
         </div>

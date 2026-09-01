@@ -313,7 +313,7 @@ export function ReservationCreatePage() {
     ? '/reservations'
     : '/my-reservations'
   const isAdminCreate = createBase === '/reservations'
-  const { user } = useAuth()
+  const { user, refresh } = useAuth()
   const year = currentPersianYear()
   const yearLabel = formatNumber(year, locale)
   const types = isAdminCreate
@@ -756,6 +756,7 @@ export function ReservationCreatePage() {
         const { data } = await api.post<Reservation>('/reservations', payload)
         setDraftId(data.id)
         navigate(createWizardPath(data.id, createBase, forUserId || undefined), { replace: true })
+        await refresh()
         if (!options?.silent) {
           toast.success(t('reservations.draftSaved'))
         }
@@ -883,6 +884,7 @@ export function ReservationCreatePage() {
         queryKey: partyKind === 'CARAVAN' ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
       })
       toast.success(t(partyKind === 'CARAVAN' ? 'caravans.created' : 'groups.created'))
+      await refresh()
       return patched
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))

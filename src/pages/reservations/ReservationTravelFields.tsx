@@ -752,7 +752,7 @@ export function ReservationTravelPartyField({
   } | null;
 }) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const draftUser = subjectUser ?? user;
   const [draft, setDraft] = useState<PartyDraft>(() =>
     emptyPartyDraft(draftUser),
@@ -786,6 +786,7 @@ export function ReservationTravelPartyField({
       toast.success(
         t(type === "CARAVAN" ? "caravans.created" : "groups.created"),
       );
+      await refresh();
     } catch (error) {
       toast.error(getApiErrorMessage(error, t("common.error")));
     } finally {

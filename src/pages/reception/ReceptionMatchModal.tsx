@@ -191,7 +191,11 @@ export function ReceptionMatchModal({
                       ) : null}
                     </span>
                   </span>
-                  <ReceptionMatchRoles roles={item.roles} kinds={item.kinds} />
+                  <ReceptionMatchRoles
+                    roles={item.roles}
+                    kinds={item.kinds}
+                    hasHonoraryService={item.hasHonoraryService}
+                  />
                 </button>
               </li>
             ))}

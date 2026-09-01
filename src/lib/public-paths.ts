@@ -1,5 +1,6 @@
 export function isPublicSessionPath(pathname: string) {
   return (
+    pathname.startsWith('/welcome') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/register') ||

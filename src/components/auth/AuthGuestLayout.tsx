@@ -1,7 +1,8 @@
-import { ArrowRight, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, ArrowRight, LogIn, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthProvider'
 import { useBrandDisplay } from '../../hooks/useHeadquartersSummary'
 import { languages, type AppLanguage } from '../../i18n'
 import { usePreferredLocale } from '../../hooks/usePreferredLocale'
@@ -11,11 +12,16 @@ import { AdminFooter } from '../layout/AdminFooter'
 export function AuthGuestLayout({
   children,
   wide = false,
+  full = false,
+  showAuthLinks = false,
 }: {
   children: ReactNode
   wide?: boolean
+  full?: boolean
+  showAuthLinks?: boolean
 }) {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const { title: brandTitle, name: brandName, logoSrc, branding } = useBrandDisplay()
   const { locale, setLocale } = usePreferredLocale()
 
@@ -23,49 +29,78 @@ export function AuthGuestLayout({
     <div className="flex min-h-svh flex-col bg-cream-50">
       <header className="z-20 shrink-0 border-b border-line/70 bg-white/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
-          <AppLogo
-            src={logoSrc}
-            className={
-              logoSrc
-                ? 'h-11 w-11 shrink-0 rounded-2xl bg-white object-cover shadow-[0_8px_18px_rgba(20,40,40,0.16)] ring-1 ring-teal-100 sm:h-12 sm:w-12'
-                : 'h-11 w-auto shrink-0 object-contain sm:h-12'
-            }
-          />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink-900 sm:text-base">{brandTitle}</p>
-            {brandName && brandName !== brandTitle ? (
-              <p className="truncate text-[11px] text-ink-400 sm:text-xs">{brandName}</p>
-            ) : null}
-          </div>
-          <div
-            role="group"
-            aria-label={t('settings.locale')}
-            className="flex max-w-[min(100%,18rem)] flex-wrap justify-end gap-1"
-          >
-            {(Object.keys(languages) as AppLanguage[]).map((code) => {
-              const selected = locale === code
-              return (
-                <button
-                  key={code}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setLocale(code)}
-                  className={`rounded-full px-2 py-1 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:px-2.5 ${
-                    selected
-                      ? 'bg-teal-500 text-white shadow-sm'
-                      : 'bg-cream-50 text-ink-600 ring-1 ring-line hover:bg-teal-50 hover:text-teal-800'
-                  }`}
-                >
-                  {t(`languages.${code}`)}
-                </button>
-              )
-            })}
+          <Link to={user ? '/' : '/welcome'} className="flex min-w-0 items-center gap-3">
+            <AppLogo
+              src={logoSrc}
+              className={
+                logoSrc
+                  ? 'h-11 w-11 shrink-0 rounded-2xl bg-white object-cover shadow-[0_8px_18px_rgba(20,40,40,0.16)] ring-1 ring-teal-100 sm:h-12 sm:w-12'
+                  : 'h-11 w-auto shrink-0 object-contain sm:h-12'
+              }
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink-900 sm:text-base">{brandTitle}</p>
+              {brandName && brandName !== brandTitle ? (
+                <p className="truncate text-[11px] text-ink-400 sm:text-xs">{brandName}</p>
+              ) : null}
+            </div>
+          </Link>
+          <div className="ms-auto flex items-center gap-2">
+            <div
+              role="group"
+              aria-label={t('settings.locale')}
+              className="flex max-w-[min(100%,18rem)] flex-wrap justify-end gap-1"
+            >
+              {(Object.keys(languages) as AppLanguage[]).map((code) => {
+                const selected = locale === code
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setLocale(code)}
+                    className={`rounded-full px-2 py-1 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:px-2.5 ${
+                      selected
+                        ? 'bg-teal-500 text-white shadow-sm'
+                        : 'bg-cream-50 text-ink-600 ring-1 ring-line hover:bg-teal-50 hover:text-teal-800'
+                    }`}
+                  >
+                    {t(`languages.${code}`)}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </header>
-      <main className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center">
-        <div className={`mx-auto w-full ${wide ? 'max-w-xl' : 'max-w-md'}`}>{children}</div>
+      <main
+        className={`flex flex-1 items-start justify-center px-4 py-8 ${full ? '' : 'sm:items-center'}`}
+      >
+        <div className={`mx-auto w-full ${full ? 'max-w-5xl' : wide ? 'max-w-xl' : 'max-w-md'}`}>
+          {children}
+        </div>
       </main>
+      {showAuthLinks ? (
+        <div className="shrink-0 px-4 pb-5 sm:px-8">
+          <div className="mx-auto flex max-w-5xl justify-center">
+            <Link
+              to={user ? '/' : '/login'}
+              className="group inline-flex min-h-12 items-center gap-3 rounded-2xl bg-teal-500 px-6 py-3 text-white shadow-[0_10px_24px_rgba(46,189,182,0.28)] transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-[0_14px_28px_rgba(46,189,182,0.36)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+            >
+              <span className="flex size-9 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/25">
+                <LogIn className="size-5 text-white" aria-hidden />
+              </span>
+              <span className="text-[15px] font-semibold tracking-tight text-white">
+                {user ? t('landing.goToPanel') : t('landing.enterSystem')}
+              </span>
+              <ArrowLeft
+                className="size-4 text-white/80 transition group-hover:-translate-x-0.5 ltr:rotate-180 ltr:group-hover:translate-x-0.5"
+                aria-hidden
+              />
+            </Link>
+          </div>
+        </div>
+      ) : null}
       <AdminFooter branding={branding} />
     </div>
   )

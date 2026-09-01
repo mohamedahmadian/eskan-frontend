@@ -5,6 +5,7 @@ import {
   Footprints,
   History,
   IdCard,
+  HandHeart,
   Mail,
   MapPin,
   Mars,
@@ -351,7 +352,11 @@ export function ReceptionDesk({
             }
             chips={
               <>
-                <ReceptionKindChips kinds={profile.person.kinds} />
+                <ReceptionKindChips
+                  kinds={profile.person.kinds}
+                  roles={profile.person.roles}
+                  hasHonoraryService={profile.person.hasHonoraryService}
+                />
                 {profile.person.status === 'INACTIVE' ? (
                   <span className="inline-flex rounded-full bg-cream-100 px-2.5 py-1 text-[11px] font-medium text-ink-600 ring-1 ring-line">
                     {t('userStatuses.INACTIVE')}
@@ -412,11 +417,29 @@ export function ReceptionDesk({
                   {t('reception.openProfile')}
                 </Link>
               </div>
-              {!profile.person.kinds.length ? (
-                <p className="text-sm text-ink-500">{t('reception.noKindHint')}</p>
-              ) : null}
             </div>
           </FormCard>
+
+          {profile.honorary ? (
+            <FormCard
+              icon={HandHeart}
+              title={t('reception.honorarySection')}
+              subtitle={t('reception.honorarySubtitle')}
+            >
+              <div className="space-y-3 p-4 sm:p-5">
+                <FormSectionTitle icon={History}>
+                  {t('reception.honoraryFiles')}
+                </FormSectionTitle>
+                <VisitList
+                  visits={profile.honorary.visits}
+                  emptyText={t('reception.noHonoraryFiles')}
+                  highlightCode={
+                    isReservationCodeQuery(term) ? normalizeReservationCode(term) : ''
+                  }
+                />
+              </div>
+            </FormCard>
+          ) : null}
 
           {profile.caravanManager ? (
             <FormCard

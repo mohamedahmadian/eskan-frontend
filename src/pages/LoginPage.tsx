@@ -1,25 +1,29 @@
 import { KeyRound, Lock, User } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthProvider'
-import { AuthGuestLayout } from '../components/auth/AuthGuestLayout'
+import { AuthBackButton, AuthGuestLayout } from '../components/auth/AuthGuestLayout'
 import { AppForm, Button, FormField, fieldClassName } from '../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
 import { isApiServerError } from '../lib/api'
+import { afterAuthPath, withNext } from '../lib/auth-redirect'
 import { toLatinDigits } from '../lib/datetime'
 
 export function LoginPage() {
   const { t } = useTranslation()
   const { user, login } = useAuth()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const next = params.get('next')
+  const afterAuth = afterAuthPath(next)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   if (user) {
-    return <Navigate to="/" replace />
+    return <Navigate to={afterAuth} replace />
   }
 
   async function onSubmit(event: FormEvent) {
@@ -27,7 +31,7 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       await login(toLatinDigits(username), toLatinDigits(password))
-      navigate('/')
+      navigate(afterAuth)
     } catch (error) {
       toast.error(
         isApiServerError(error) ? t('auth.serverUnavailable') : t('auth.loginFailed'),
@@ -39,7 +43,11 @@ export function LoginPage() {
 
   return (
     <AuthGuestLayout>
-      <FormCard icon={KeyRound} title={t('auth.loginTitle')}>
+      <FormCard
+        icon={KeyRound}
+        title={t('auth.loginTitle')}
+        action={<AuthBackButton to="/welcome" />}
+      >
         <AppForm className={formCardBodyClassName} onSubmit={onSubmit} autoFocusFirst>
           <FormField icon={User} label={t('auth.username')} htmlFor="username">
             <input
@@ -77,7 +85,7 @@ export function LoginPage() {
           <p className="text-center text-sm text-ink-500">
             {t('auth.noAccount')}{' '}
             <Link
-              to="/register"
+              to={withNext('/register', next)}
               className="font-medium text-teal-700 hover:text-teal-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 rounded-lg"
             >
               {t('auth.register')}

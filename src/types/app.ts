@@ -149,6 +149,7 @@ export type AuthUser = {
   roles: Pick<RoleOption, "code" | "nameKey">[];
   hasGroup?: boolean;
   managesAccommodation?: boolean;
+  honoraryServices?: HonoraryServiceSummary[];
   modules: NavModule[];
   impersonating?: boolean;
   impersonatedBy?: { id: string; fullName: string } | null;
@@ -946,7 +947,7 @@ export type WalkingRoute = {
   id: string;
   name: string;
   distanceToMashhadKm: number;
-  entryBorderId: string;
+  entryBorderId: string | null;
   entryBorder: {
     id: string;
     name: string;
@@ -954,7 +955,7 @@ export type WalkingRoute = {
     neighboringCountry: GeoName & { id: string; iso2: string };
     province: GeoName & { id: string; countryId: string };
     city: GeoName & { id: string; provinceId: string };
-  };
+  } | null;
   originCountries: (GeoName & { id: string; iso2: string })[];
   stages: WalkingRouteStage[];
   createdAt: string;
@@ -1950,6 +1951,14 @@ export type ReservationTravelHistoryList = {
   items: ReservationTravelHistoryItem[];
 };
 
+export type ReservationHonoraryAssignment = {
+  id: string;
+  user: ReservationPerson;
+  serviceType: { id: string; name: string; code: string | null };
+  assignedBy?: ReservationPerson | null;
+  createdAt: string;
+};
+
 export type ReservationListItem = {
   id: string;
   code: string;
@@ -2004,6 +2013,8 @@ export type ReservationListItem = {
   createWizardStep?: string | null;
   walkingRoute?: { id: string; name: string } | null;
   internationalWorkflow?: boolean;
+  iraqiWorkflow?: boolean;
+  honoraryAssignments?: ReservationHonoraryAssignment[];
 };
 
 export type Reservation = ReservationListItem & {
@@ -2022,6 +2033,8 @@ export type Reservation = ReservationListItem & {
   bankCardDeliveredAt: string | null;
   bankCardInitialBalance: number | null;
   caravanManager: ReservationPerson | null;
+  honoraryAssignments?: ReservationHonoraryAssignment[];
+  iraqiWorkflow?: boolean;
   caravanManagerNotes: string | null;
   managementNotes: string | null;
   rejectionReason: string | null;
@@ -2300,6 +2313,7 @@ export type ReceptionMatch = {
   city?: ReceptionGeo | null;
   roles: Pick<RoleOption, "code" | "nameKey">[];
   kinds: ReceptionKind[];
+  hasHonoraryService?: boolean;
 };
 
 export type ReceptionVisit = {
@@ -2384,6 +2398,7 @@ export type ReceptionProfile = {
     current: ReceptionHousingRow[];
     history: ReceptionHousingRow[];
   } | null;
+  honorary?: { visits: ReceptionVisit[] } | null;
 };
 
 export type ReceptionSearchResult = {
@@ -2489,4 +2504,65 @@ export type MyEvaluationsPayload = {
   activeCampaigns: EvaluationCampaign[];
   evaluations: Evaluation[];
 };
+
+export const honoraryServiceWeekDays = [
+  "SATURDAY",
+  "SUNDAY",
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+] as const;
+
+export type HonoraryServiceWeekDay = (typeof honoraryServiceWeekDays)[number];
+
+export const OTHER_HONORARY_SERVICE = "other";
+
+export type HonoraryServiceSummary = {
+  id: string;
+  name: string;
+  code: string | null;
+};
+
+export type HonoraryServiceType = {
+  id: string;
+  code?: string | null;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type HonoraryServantPerson = {
+  id: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  nationalId: string | null;
+  phone: string | null;
+};
+
+export type HonoraryServant = {
+  id: string;
+  userId: string;
+  serviceTypeId: string | null;
+  otherDescription: string | null;
+  startDate: string;
+  endDate: string;
+  weekDays: HonoraryServiceWeekDay[];
+  startTime: string;
+  endTime: string;
+  user: HonoraryServantPerson;
+  serviceType: HonoraryServiceType | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type HonoraryServantStats = {
+  total: number;
+  currentYear: number;
+  year: number;
+};
+
 

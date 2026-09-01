@@ -1,5 +1,6 @@
 import {
   Boxes,
+  FolderOpen,
   HandHeart,
   LogOut,
   Menu,
@@ -21,12 +22,14 @@ import { displayExternalUrl, toExternalHref } from "../../lib/social-links";
 import { isSidebarMenuActive } from "../../lib/nav-path";
 import { useHeadquartersSummary } from "../../hooks/useHeadquartersSummary";
 import { PageBreadcrumb } from "./PageBreadcrumb";
+import { HeaderToday } from "./HeaderToday";
 import {
   canAccessMyAccommodations,
   canAccessMyCaravans,
   canAccessMyEvaluations,
   canAccessMyGroups,
   canAccessMyReservations,
+  hasNoRoles,
   isAccommodationManager,
   isAdmin,
   isCaravanManager,
@@ -47,11 +50,22 @@ import { UserMenu } from "./UserMenu";
 
 type SidebarNavMenu = NavMenu & { label?: string };
 
-const menuSections: Record<
-  string,
-  { titleKey: string; icon?: typeof Snowflake; codes: string[] }[]
-> = {
+type MenuSectionDef = {
+  titleKey: string;
+  icon?: typeof Snowflake;
+  codes?: string[];
+  codePrefix?: string;
+};
+
+const PILGRIMAGE_YEAR_PREFIX = "reservations.year.";
+
+const menuSections: Record<string, MenuSectionDef[]> = {
   caravans: [
+    {
+      titleKey: "menus.myFilesSection",
+      icon: FolderOpen,
+      codePrefix: PILGRIMAGE_YEAR_PREFIX,
+    },
     {
       titleKey: "menus.groupsSection",
       icon: UsersRound,
@@ -115,6 +129,86 @@ function insertAfterMenu(
   return [...menus.slice(0, index + 1), ...extra, ...menus.slice(index + 1)];
 }
 
+const HONORARY_SERVICE_MENUS: SidebarNavMenu[] = [
+  {
+    code: "honorary-service.apply",
+    nameKey: "menus.honoraryApply",
+    path: "/honorary-apply",
+    icon: "hand-heart",
+    sortOrder: 1,
+  },
+  {
+    code: "honorary-service.history",
+    nameKey: "menus.honoraryHistory",
+    path: "/honorary-history",
+    icon: "history",
+    sortOrder: 2,
+  },
+];
+
+function isHonoraryServiceModule(mod: NavModule) {
+  return mod.code === "honorary-service" || mod.nameKey === "modules.honoraryService";
+}
+
+function isLegacyHonoraryApplyMenu(item: SidebarNavMenu) {
+  return (
+    item.code === "dashboard.honorary-apply" ||
+    item.path === "/honorary-apply" ||
+    item.nameKey === "menus.honoraryApply"
+  );
+}
+
+function withHonoraryServiceNav(modules: NavModule[]): NavModule[] {
+  const stripped = modules
+    .map((mod) => {
+      if (mod.code !== "dashboard") return mod;
+      return {
+        ...mod,
+        menus: mod.menus.filter(
+          (item) =>
+            item.code !== "dashboard.honorary-apply" &&
+            item.path !== "/honorary-apply",
+        ),
+      };
+    })
+    .filter((mod) => mod.menus.length > 0);
+
+  const existing = stripped.find(isHonoraryServiceModule);
+  if (existing) {
+    const missing = HONORARY_SERVICE_MENUS.filter(
+      (extra) =>
+        !existing.menus.some(
+          (item) => item.code === extra.code || item.path === extra.path,
+        ),
+    );
+    if (!missing.length) return stripped;
+    return stripped.map((mod) =>
+      isHonoraryServiceModule(mod)
+        ? {
+            ...mod,
+            menus: [...mod.menus, ...missing].sort((a, b) => a.sortOrder - b.sortOrder),
+          }
+        : mod,
+    );
+  }
+
+  const withoutLegacyApply = stripped.map((mod) => ({
+    ...mod,
+    menus: mod.menus.filter((item) => !isLegacyHonoraryApplyMenu(item)),
+  })).filter((mod) => mod.menus.length > 0);
+
+  return [
+    ...withoutLegacyApply,
+    {
+      code: "honorary-service",
+      nameKey: "modules.honoraryService",
+      icon: "hand-heart",
+      sortOrder: 13,
+      menus: HONORARY_SERVICE_MENUS,
+    },
+  ].sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
 function withAccommodationsDirectoryMenu(mod: NavModule): NavModule {
   if (mod.code !== "accommodation") return mod;
   const hasList = mod.menus.some(
@@ -172,17 +266,31 @@ function filterSidebarModules(
     .filter((mod) => mod.menus.length > 0);
 }
 
+function menuBelongsToSection(item: { code: string }, section: MenuSectionDef) {
+  if (section.codes?.includes(item.code)) return true;
+  if (section.codePrefix && item.code.startsWith(section.codePrefix)) return true;
+  return false;
+}
+
+function sectionMenuItems(mod: NavModule, section: MenuSectionDef): NavMenu[] {
+  if (section.codePrefix) {
+    return mod.menus.filter((item) => item.code.startsWith(section.codePrefix!));
+  }
+  return (section.codes ?? [])
+    .map((code) => mod.menus.find((item) => item.code === code))
+    .filter((item): item is NavMenu => Boolean(item));
+}
+
 function splitMenus(mod: NavModule) {
   const sections = menuSections[mod.code] ?? [];
-  const groupedCodes = new Set(sections.flatMap((section) => section.codes));
   return {
-    ungrouped: mod.menus.filter((item) => !groupedCodes.has(item.code)),
+    ungrouped: mod.menus.filter(
+      (item) => !sections.some((section) => menuBelongsToSection(item, section)),
+    ),
     sections: sections
       .map((section) => ({
         ...section,
-        items: section.codes
-          .map((code) => mod.menus.find((item) => item.code === code))
-          .filter((item): item is NavMenu => Boolean(item)),
+        items: sectionMenuItems(mod, section),
       }))
       .filter((section) => section.items.length > 0),
   };
@@ -203,7 +311,7 @@ function menuMatchesSearch(
   }
   return (menuSections[mod.code] ?? []).some(
     (section) =>
-      section.codes.includes(item.code) &&
+      menuBelongsToSection(item, section) &&
       label(section.titleKey).includes(needle),
   );
 }
@@ -225,7 +333,9 @@ export function DashboardLayout() {
   const pilgrim = isPilgrim(user);
   const brandTitle = pilgrim
     ? t("nav.pilgrimPanel")
-    : branding?.title?.trim() || branding?.name?.trim() || t("nav.panel");
+    : hasNoRoles(user)
+      ? t("nav.account")
+      : branding?.title?.trim() || branding?.name?.trim() || t("nav.panel");
   const brandWebsite = branding?.website?.trim() || "";
   const brandLogoSrc = branding?.logoId
     ? getImageUrl(branding.logoId)
@@ -285,7 +395,7 @@ export function DashboardLayout() {
     if (!showPilgrimageYears) return [];
     return pickReservationPerYear(mineNavQuery.data?.items ?? []).map(
       (item, index) => ({
-        code: `reservations.year.${item.id}`,
+        code: `${PILGRIMAGE_YEAR_PREFIX}${item.id}`,
         nameKey: "menus.pilgrimageYear",
         label: t("menus.pilgrimageYear", {
           year: formatNumber(item.year, locale),
@@ -308,6 +418,10 @@ export function DashboardLayout() {
       .map((mod) => {
         const menus = mod.menus.filter(
           (item) =>
+            item.code !== "base-info.medical-centers" &&
+            item.code !== "base-info.red-crescents" &&
+            item.nameKey !== "menus.medicalCenters" &&
+            item.nameKey !== "menus.redCrescents" &&
             (item.code !== "caravans.mine" || showMyCaravans) &&
             (item.code !== "groups.mine" || showMyGroups) &&
             (item.code !== "reservations.mine" || showMyReservations) &&
@@ -328,7 +442,7 @@ export function DashboardLayout() {
         };
       })
       .filter((mod) => mod.menus.length > 0);
-    return filterSidebarModules(next, user);
+    return filterSidebarModules(withHonoraryServiceNav(next), user);
   }, [pilgrimageYearMenus, user]);
 
   const modules = useMemo(() => {
@@ -516,7 +630,10 @@ export function DashboardLayout() {
                 pathname={location.pathname}
                 modules={navModules}
               />
-              <UserMenu />
+              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                <HeaderToday />
+                <UserMenu />
+              </div>
             </header>
             <main
               ref={mainRef}

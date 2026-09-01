@@ -205,8 +205,7 @@ export function WalkingRouteProgress({
           <p className="mt-0.5 text-xs text-ink-500">
             {t('walkingRoutes.distanceToMashhadKm')}:{' '}
             {formatNumber(route.distanceToMashhadKm, locale)} {t('walkingRoutes.km')}
-            {' · '}
-            {route.entryBorder.name}
+            {route.entryBorder ? ` · ${route.entryBorder.name}` : ''}
           </p>
         </div>
       </div>

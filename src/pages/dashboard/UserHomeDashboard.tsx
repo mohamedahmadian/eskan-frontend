@@ -1,5 +1,7 @@
 import {
   Footprints,
+  HandHeart,
+  HeartHandshake,
   History,
   Plus,
   ScrollText,
@@ -18,7 +20,7 @@ import { DateText } from '../../components/ui/DateText'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import { isCaravanManager, isPilgrim } from '../../lib/roles'
+import { hasNoRoles, isCaravanManager, isHonoraryServant, isPilgrim } from '../../lib/roles'
 import type {
   ReservationListItem,
   UserHomeCaravan,
@@ -319,16 +321,23 @@ export function UserHomeDashboard() {
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const showPilgrim = isPilgrim(user)
   const showManager = isCaravanManager(user)
+  const showStarter = hasNoRoles(user)
+  const showHonorary = isHonoraryServant(user)
+  const honoraryServices = user?.honoraryServices ?? []
+  const showAssignedFiles = honoraryServices.length > 0
+  const showRouteHome = showPilgrim || showManager
   const query = useQuery({
-    queryKey: ['reservations', 'mine', 'home'],
+    queryKey: ['reservations', 'mine', 'home', user?.id],
+    enabled: showRouteHome,
     queryFn: async () => {
       const { data } = await api.get<UserHomeDashboardData>('/reservations/mine/home')
       return data
     },
   })
 
-  const latestFile =
-    query.data?.pilgrim?.recent[0] ?? query.data?.caravanManager?.recentReservations[0]
+  const latestFile = showRouteHome
+    ? query.data?.pilgrim?.recent[0] ?? query.data?.caravanManager?.recentReservations[0]
+    : undefined
   const walkingRouteId = latestFile?.walkingRoute?.id
 
   return (
@@ -347,15 +356,86 @@ export function UserHomeDashboard() {
             <h2 className="text-lg font-semibold text-ink-900">
               {t('dashboard.welcomeUser', { name: user?.fullName ?? '' })}
             </h2>
-            {showPilgrim ? <RoleBadges roles={user?.roles} /> : null}
-            <p className="mt-1 text-sm text-ink-500">{t('dashboard.userSubtitle')}</p>
+            {showPilgrim || showHonorary ? <RoleBadges roles={user?.roles} /> : null}
+            <p className="mt-1 text-sm text-ink-500">
+              {t(
+                showHonorary && !showPilgrim && !showManager
+                  ? 'dashboard.honorarySubtitle'
+                  : showStarter
+                    ? 'dashboard.accountSubtitle'
+                    : 'dashboard.userSubtitle',
+              )}
+            </p>
           </div>
         </div>
       </section>
 
-      {walkingRouteId && latestFile ? (
+      {showHonorary ? (
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-ink-800">{t('dashboard.honoraryServices')}</h3>
+            <p className="mt-0.5 text-xs text-ink-500">{t('dashboard.honoraryServicesHint')}</p>
+          </div>
+          {honoraryServices.length ? (
+            <div className="flex flex-wrap gap-2">
+              {honoraryServices.map((item) => (
+                <span
+                  key={item.id}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-mint-50 px-3 py-1.5 text-sm font-medium text-mint-800 ring-1 ring-mint-100"
+                >
+                  <HeartHandshake className="size-3.5" aria-hidden />
+                  {item.name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className={`${cardClassName} px-4 py-3 text-sm text-ink-600`}>
+              {t('dashboard.honoraryServicesEmpty')}
+            </p>
+          )}
+          {showAssignedFiles ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ActionCard
+                to="/translator-reservations"
+                icon={HandHeart}
+                label={t('dashboard.translatorFiles')}
+                tone="teal"
+              />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ActionCard
+            to="/honorary-apply"
+            icon={HandHeart}
+            label={t('honoraryServants.create')}
+            tone="mint"
+          />
+          {showStarter ? (
+            <>
+              <ActionCard
+                to="/my-reservations/new"
+                icon={Plus}
+                label={t('dashboard.quickNewFile')}
+                tone="teal"
+              />
+              <ActionCard
+                to="/my-reservations"
+                icon={ScrollText}
+                label={t('dashboard.quickMyFiles')}
+                tone="mint"
+              />
+            </>
+          ) : null}
+        </div>
+      </section>
+
+      {showRouteHome && walkingRouteId && latestFile ? (
         <PilgrimageRouteCard routeId={walkingRouteId} reservationId={latestFile.id} />
-      ) : showPilgrim || showManager ? (
+      ) : showRouteHome ? (
         <div className="w-full md:w-1/2">
           <UserLocationCard />
         </div>

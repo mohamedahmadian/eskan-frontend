@@ -40,6 +40,7 @@ import { ProvincialMonitoringProvincePage } from "./pages/provincial-monitoring/
 import { ProvincialMonitoringCityPage } from "./pages/provincial-monitoring/ProvincialMonitoringCityPage";
 import { NationalMonitoringPage } from "./pages/national-monitoring/NationalMonitoringPage";
 import { ReservationWizardPage } from "./pages/reservations/ReservationWizardPage";
+import { TranslatorReservationsListPage } from "./pages/reservations/TranslatorReservationsListPage";
 import { AccountPage } from "./pages/AccountPage";
 import { MyLocationHistoryPage } from "./pages/location/LocationHistoryPage";
 import { MyLocationPage } from "./pages/location/MyLocationPage";
@@ -84,6 +85,7 @@ import { BenefactorDetailPage } from "./pages/benefactors/BenefactorDetailPage";
 import { BenefactorEditPage } from "./pages/benefactors/BenefactorEditPage";
 import { BenefactorsListPage } from "./pages/benefactors/BenefactorsListPage";
 import { LoginPage } from "./pages/LoginPage";
+import { LandingPage } from "./pages/LandingPage";
 import { ImpersonateEndedPage } from "./pages/ImpersonateEndedPage";
 import { ImpersonateEntryPage } from "./pages/ImpersonateEntryPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -207,6 +209,16 @@ import { EvaluationQuestionsListPage } from "./pages/evaluations/EvaluationQuest
 import { EvaluationSubmitPage } from "./pages/evaluations/EvaluationSubmitPage";
 import { EvaluationsListPage } from "./pages/evaluations/EvaluationsListPage";
 import { MyEvaluationsPage } from "./pages/evaluations/MyEvaluationsPage";
+import { HonoraryApplyPage } from "./pages/honorary-servants/HonoraryApplyPage";
+import { HonoraryHistoryPage } from "./pages/honorary-servants/HonoraryHistoryPage";
+import { HonoraryServantCreatePage } from "./pages/honorary-servants/HonoraryServantCreatePage";
+import { HonoraryServantDetailPage } from "./pages/honorary-servants/HonoraryServantDetailPage";
+import { HonoraryServantEditPage } from "./pages/honorary-servants/HonoraryServantEditPage";
+import { HonoraryServantsListPage } from "./pages/honorary-servants/HonoraryServantsListPage";
+import { HonoraryServiceTypeCreatePage } from "./pages/honorary-servants/HonoraryServiceTypeCreatePage";
+import { HonoraryServiceTypeDetailPage } from "./pages/honorary-servants/HonoraryServiceTypeDetailPage";
+import { HonoraryServiceTypeEditPage } from "./pages/honorary-servants/HonoraryServiceTypeEditPage";
+import { HonoraryServiceTypesListPage } from "./pages/honorary-servants/HonoraryServiceTypesListPage";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { RequireMenuAccess } from "./routes/RequireMenuAccess";
 import { PublicIceVoucherPage } from "./pages/public-vouchers/PublicIceVoucherPage";
@@ -238,6 +250,7 @@ export default function App() {
           <NavigationHistoryProvider>
           <AppToaster />
           <Routes>
+            <Route path="/welcome" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/impersonate" element={<ImpersonateEntryPage />} />
             <Route path="/impersonate-ended" element={<ImpersonateEndedPage />} />
@@ -248,6 +261,26 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<OverviewPage />} />
+                <Route path="/honorary-apply" element={<HonoraryApplyPage />} />
+                <Route
+                  path="/honorary-apply/:id"
+                  element={<HonoraryServantDetailPage />}
+                />
+                <Route path="/honorary-history" element={<HonoraryHistoryPage />} />
+                <Route
+                  path="/honorary-history/:id"
+                  element={<HonoraryServantDetailPage />}
+                />
+                <Route element={<RequireMenuAccess path="/translator-reservations" />}>
+                  <Route
+                    path="/translator-reservations"
+                    element={<TranslatorReservationsListPage />}
+                  />
+                  <Route
+                    path="/translator-reservations/:id"
+                    element={<ReservationAdminDetailPage />}
+                  />
+                </Route>
                 <Route path="/account" element={<AccountPage />} />
                 <Route element={<RequireMenuAccess path="/my-location/history" />}>
                   <Route path="/my-location/history" element={<MyLocationHistoryPage />} />
@@ -1220,6 +1253,46 @@ export default function App() {
                   <Route
                     path="/my-evaluations/:id"
                     element={<EvaluationDetailPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/honorary-service-types" />}
+                >
+                  <Route
+                    path="/honorary-service-types"
+                    element={<HonoraryServiceTypesListPage />}
+                  />
+                  <Route
+                    path="/honorary-service-types/new"
+                    element={<HonoraryServiceTypeCreatePage />}
+                  />
+                  <Route
+                    path="/honorary-service-types/:id"
+                    element={<HonoraryServiceTypeDetailPage />}
+                  />
+                  <Route
+                    path="/honorary-service-types/:id/edit"
+                    element={<HonoraryServiceTypeEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/honorary-servants" />}
+                >
+                  <Route
+                    path="/honorary-servants"
+                    element={<HonoraryServantsListPage />}
+                  />
+                  <Route
+                    path="/honorary-servants/new"
+                    element={<HonoraryServantCreatePage />}
+                  />
+                  <Route
+                    path="/honorary-servants/:id"
+                    element={<HonoraryServantDetailPage />}
+                  />
+                  <Route
+                    path="/honorary-servants/:id/edit"
+                    element={<HonoraryServantEditPage />}
                   />
                 </Route>
               </Route>

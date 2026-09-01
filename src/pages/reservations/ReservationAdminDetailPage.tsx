@@ -2,6 +2,7 @@ import {
   ArrowRight,
   ClipboardCheck,
   CreditCard,
+  HandHeart,
   IdCard,
   Phone,
   RotateCcw,
@@ -15,7 +16,7 @@ import {
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { toast } from 'sonner'
 import {
@@ -35,6 +36,8 @@ import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
+import { canAssignReservationHonorary, showReservationHonoraryAssignments } from '../../lib/honorary-services'
+import { isAdmin } from '../../lib/roles'
 import type { Reservation, ReservationPerson, ReservationStatus } from '../../types/app'
 import {
   currentStepFromStatus,
@@ -62,6 +65,10 @@ import {
   ReservationIssuedServicesModal,
   type IssuedServiceSection,
 } from './ReservationIssuedServicesPanel'
+import {
+  ReservationHonoraryAssignModal,
+  ReservationHonoraryBox,
+} from './ReservationHonoraryAssign'
 
 function personName(person?: ReservationPerson | null) {
   return person?.fullName || '—'
@@ -71,7 +78,11 @@ export function ReservationAdminDetailPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { id } = useParams()
+  const { pathname } = useLocation()
+  const { user } = useAuth()
   const queryClient = useQueryClient()
+  const admin = isAdmin(user)
+  const translatorView = pathname.startsWith('/translator-reservations')
 
   const query = useQuery({
     queryKey: ['reservations', id],
@@ -92,6 +103,7 @@ export function ReservationAdminDetailPage() {
   )
   const [toolPanel, setToolPanel] = useState<'return' | null>(null)
   const [issuedModal, setIssuedModal] = useState<IssuedServiceSection | null>(null)
+  const [honoraryModal, setHonoraryModal] = useState(false)
 
   useEffect(() => {
     setViewedStep(cancelled ? null : currentStep)
@@ -100,6 +112,7 @@ export function ReservationAdminDetailPage() {
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ['reservations', id] })
     void queryClient.invalidateQueries({ queryKey: ['reservations', 'admin'] })
+    void queryClient.invalidateQueries({ queryKey: ['reservations', 'assigned'] })
     void queryClient.invalidateQueries({ queryKey: ['reservations', 'dashboard'] })
     void queryClient.invalidateQueries({ queryKey: ['reservations', id, 'insurance'] })
   }
@@ -113,8 +126,10 @@ export function ReservationAdminDetailPage() {
   const pendingReview = reservation.status === 'PENDING_MANAGEMENT_REVIEW'
   const canRejectMidStage =
     !rejected && reservation.status !== 'CANCELLED' && reservation.status !== 'COMPLETED'
-  const rewindTargets = validRewindStatuses(reservation.type, reservation.status)
+  const rewindTargets = admin ? validRewindStatuses(reservation.type, reservation.status) : []
   const headerBtnClass = 'h-8 gap-1 !rounded-xl !px-2.5 !py-1 text-xs shadow-none'
+  const showHonoraryAssign = admin && canAssignReservationHonorary(reservation)
+  const fileInfoOnly = !admin || translatorView
 
   return (
     <div className={listShellClassName}>
@@ -126,7 +141,9 @@ export function ReservationAdminDetailPage() {
             extra={<ReservationStatusBadge status={reservation.status} />}
           />
         }
+        backTo={translatorView ? '/translator-reservations' : undefined}
         action={
+          admin ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
             {pendingReview ? (
               <ReservationReviewActions
@@ -151,6 +168,7 @@ export function ReservationAdminDetailPage() {
               aria-pressed={issuedModal === 'sim'}
               onClick={() => {
                 setToolPanel(null)
+                setHonoraryModal(false)
                 setIssuedModal((current) => (current === 'sim' ? null : 'sim'))
               }}
             >
@@ -164,12 +182,29 @@ export function ReservationAdminDetailPage() {
               aria-pressed={issuedModal === 'bank'}
               onClick={() => {
                 setToolPanel(null)
+                setHonoraryModal(false)
                 setIssuedModal((current) => (current === 'bank' ? null : 'bank'))
               }}
             >
               <CreditCard className="size-3.5" aria-hidden />
               {t('reservations.trackMobile')}
             </Button>
+            {showHonoraryAssign ? (
+              <Button
+                type="button"
+                variant={honoraryModal ? 'primary' : 'ghost'}
+                className={headerBtnClass}
+                aria-pressed={honoraryModal}
+                onClick={() => {
+                  setToolPanel(null)
+                  setIssuedModal(null)
+                  setHonoraryModal((current) => !current)
+                }}
+              >
+                <HandHeart className="size-3.5" aria-hidden />
+                {t('reservations.assignHonorary')}
+              </Button>
+            ) : null}
             {rewindTargets.length ? (
               <Button
                 type="button"
@@ -178,6 +213,7 @@ export function ReservationAdminDetailPage() {
                 aria-pressed={toolPanel === 'return'}
                 onClick={() => {
                   setIssuedModal(null)
+                  setHonoraryModal(false)
                   setToolPanel((current) => (current === 'return' ? null : 'return'))
                 }}
               >
@@ -186,6 +222,7 @@ export function ReservationAdminDetailPage() {
               </Button>
             ) : null}
           </div>
+          ) : undefined
         }
       />
 
@@ -211,6 +248,17 @@ export function ReservationAdminDetailPage() {
         />
       ) : null}
 
+      {honoraryModal ? (
+        <ReservationHonoraryAssignModal
+          reservation={reservation}
+          onChanged={() => {
+            setHonoraryModal(false)
+            refresh()
+          }}
+          onClose={() => setHonoraryModal(false)}
+        />
+      ) : null}
+
       <ApplicantCard
         person={
           reservation.type === 'CARAVAN' && reservation.caravanManager
@@ -219,6 +267,24 @@ export function ReservationAdminDetailPage() {
         }
         type={reservation.type}
       />
+
+      {admin &&
+      !fileInfoOnly &&
+      reservation.status !== 'COMPLETED' &&
+      showReservationHonoraryAssignments(reservation, showHonoraryAssign) ? (
+        <div className="mb-4">
+          <ReservationHonoraryBox
+            reservation={reservation}
+            canAssign={showHonoraryAssign}
+            onChanged={refresh}
+            onAssign={() => {
+              setIssuedModal(null)
+              setToolPanel(null)
+              setHonoraryModal(true)
+            }}
+          />
+        </div>
+      ) : null}
 
       {rejected && reservation.rejectionReason ? (
         <div className={`${cardClassName} mb-4 flex items-start gap-3 border-red-100 p-4`}>
@@ -232,6 +298,20 @@ export function ReservationAdminDetailPage() {
         </div>
       ) : null}
 
+      {fileInfoOnly ? (
+        <ReservationCompleteSummary
+          reservation={reservation}
+          variant={cancelled ? 'cancelled' : 'complete'}
+          audience="admin"
+          canAssignHonorary={showHonoraryAssign}
+          onAssignHonorary={() => {
+            setIssuedModal(null)
+            setToolPanel(null)
+            setHonoraryModal(true)
+          }}
+          onHonoraryChanged={refresh}
+        />
+      ) : (
       <ReservationWizardShell
         reservation={reservation}
         viewedStep={viewedStep}
@@ -252,6 +332,13 @@ export function ReservationAdminDetailPage() {
               reservation={reservation}
               variant="cancelled"
               audience="admin"
+              canAssignHonorary={showHonoraryAssign}
+              onAssignHonorary={() => {
+                setIssuedModal(null)
+                setToolPanel(null)
+                setHonoraryModal(true)
+              }}
+              onHonoraryChanged={refresh}
             />
           )
         ) : (
@@ -260,6 +347,12 @@ export function ReservationAdminDetailPage() {
             step={viewedStep ?? currentStep}
             onGoToStep={setViewedStep}
             onChanged={refresh}
+            canAssignHonorary={showHonoraryAssign}
+            onAssignHonorary={() => {
+              setIssuedModal(null)
+              setToolPanel(null)
+              setHonoraryModal(true)
+            }}
             footer={
               viewedStep &&
               viewedStep !== currentStep &&
@@ -273,6 +366,7 @@ export function ReservationAdminDetailPage() {
           />
         )}
       </ReservationWizardShell>
+      )}
 
       {reservation.managementNotes || reservation.caravanManagerNotes ? (
         <section className={`${cardClassName} mt-4 overflow-hidden`}>
@@ -401,12 +495,16 @@ function AdminEditableStep({
   onChanged,
   onGoToStep,
   footer,
+  canAssignHonorary,
+  onAssignHonorary,
 }: {
   reservation: Reservation
   step: ReservationStepCode
   onChanged: () => void
   onGoToStep?: (step: ReservationStepCode) => void
   footer?: ReactNode
+  canAssignHonorary?: boolean
+  onAssignHonorary?: () => void
 }) {
   const { t } = useTranslation()
   const back = footer ? <div className="mt-3">{footer}</div> : null
@@ -482,7 +580,16 @@ function AdminEditableStep({
   if (step === 'placement') {
     return <ReservationPlacementPanel reservation={reservation} footer={footer} />
   }
-  return <ReservationCompleteSummary reservation={reservation} audience="admin" footer={footer} />
+  return (
+    <ReservationCompleteSummary
+      reservation={reservation}
+      audience="admin"
+      footer={footer}
+      canAssignHonorary={canAssignHonorary}
+      onAssignHonorary={onAssignHonorary}
+      onHonoraryChanged={onChanged}
+    />
+  )
 }
 
 function ReviewDecisionForm({

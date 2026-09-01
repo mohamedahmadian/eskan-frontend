@@ -1,5 +1,6 @@
 import {
   Footprints,
+  HandHeart,
   MessageSquare,
   Plus,
   Send,
@@ -107,6 +108,12 @@ function AdminOverview() {
             icon={MessageSquare}
             label={t('sms.settingsTitle')}
             tone="gold"
+          />
+          <QuickCard
+            to="/honorary-apply"
+            icon={HandHeart}
+            label={t('honoraryServants.create')}
+            tone="teal"
           />
           <QuickCard
             to="/settings"

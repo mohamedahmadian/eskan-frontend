@@ -123,6 +123,34 @@ function toOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function formatCoordinates(latitude: number | null | undefined, longitude: number | null | undefined) {
+  if (latitude == null && longitude == null) return ''
+  if (latitude != null && longitude != null) return `${latitude},${longitude}`
+  return latitude != null ? String(latitude) : String(longitude)
+}
+
+function coordinatesParts(value: string) {
+  const latin = toLatinDigits(value).trim()
+  if (!latin) return { latitude: '', longitude: '' }
+  const parts = latin.split(/[,،]/).map((part) => part.trim())
+  return {
+    latitude: parts[0] ?? '',
+    longitude: parts[1] ?? '',
+  }
+}
+
+function parseCoordinates(value: string): { latitude: number | null; longitude: number | null } | 'invalid' {
+  const trimmed = toLatinDigits(value).trim()
+  if (!trimmed) return { latitude: null, longitude: null }
+  const parts = trimmed.split(/[,،]/).map((part) => part.trim()).filter((part) => part.length > 0)
+  if (parts.length !== 2) return 'invalid'
+  const latitude = Number(parts[0])
+  const longitude = Number(parts[1])
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return 'invalid'
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return 'invalid'
+  return { latitude, longitude }
+}
+
 export function AccommodationForm({
   initial,
   countries,
@@ -163,8 +191,7 @@ export function AccommodationForm({
     phone: initial?.phone ?? '',
     address: initial?.address ?? '',
     neshanAddress: initial?.neshanAddress ?? '',
-    latitude: initial?.latitude != null ? String(initial.latitude) : '',
-    longitude: initial?.longitude != null ? String(initial.longitude) : '',
+    coordinates: formatCoordinates(initial?.latitude, initial?.longitude),
     eitaa: initial?.eitaa ?? '',
     bale: initial?.bale ?? '',
     otherSocial: initial?.otherSocial ?? '',
@@ -249,8 +276,19 @@ export function AccommodationForm({
     }))
   }
 
+  const mapCoordinates = useMemo(
+    () => coordinatesParts(values.coordinates),
+    [values.coordinates],
+  )
+
   async function submit(event: FormEvent) {
     event.preventDefault()
+    const parsed = parseCoordinates(values.coordinates)
+    if (parsed === 'invalid') {
+      toast.error(t('accommodations.coordinatesInvalid'))
+      setTab('location')
+      return
+    }
     setSaving(true)
     try {
       await onSubmit({
@@ -265,8 +303,8 @@ export function AccommodationForm({
         phone: emptyToNull(values.phone),
         address: emptyToNull(values.address),
         neshanAddress: emptyToNull(values.neshanAddress),
-        latitude: toOptionalNumber(values.latitude),
-        longitude: toOptionalNumber(values.longitude),
+        latitude: parsed.latitude,
+        longitude: parsed.longitude,
         eitaa: emptyToNull(values.eitaa),
         bale: emptyToNull(values.bale),
         otherSocial: emptyToNull(values.otherSocial),
@@ -510,34 +548,25 @@ export function AccommodationForm({
             onChange={(e) => set('neshanAddress', e.target.value)}
           />
         </FormField>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField icon={Compass} label={t('accommodations.latitude')} htmlFor="latitude">
-            <input
-              id="latitude"
-              type="number"
-              step="any"
-              className={fieldClassName}
-              value={values.latitude}
-              onChange={(e) => set('latitude', e.target.value)}
-            />
-          </FormField>
-          <FormField icon={Compass} label={t('accommodations.longitude')} htmlFor="longitude">
-            <input
-              id="longitude"
-              type="number"
-              step="any"
-              className={fieldClassName}
-              value={values.longitude}
-              onChange={(e) => set('longitude', e.target.value)}
-            />
-          </FormField>
-        </div>
+        <FormField icon={Compass} label={t('accommodations.coordinates')} htmlFor="coordinates">
+          <input
+            id="coordinates"
+            className={`${fieldClassName} digit-field`}
+            inputMode="decimal"
+            placeholder={t('accommodations.coordinatesPlaceholder')}
+            value={values.coordinates}
+            onChange={(e) => set('coordinates', toLatinDigits(e.target.value))}
+          />
+        </FormField>
         <OsmMapPicker
-          latitude={values.latitude}
-          longitude={values.longitude}
+          latitude={mapCoordinates.latitude}
+          longitude={mapCoordinates.longitude}
           active={tab === 'location'}
           onChange={(latitude, longitude) => {
-            setValues((current) => ({ ...current, latitude, longitude }))
+            set(
+              'coordinates',
+              latitude && longitude ? `${latitude},${longitude}` : '',
+            )
           }}
         />
       </div>

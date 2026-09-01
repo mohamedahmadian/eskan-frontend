@@ -258,7 +258,7 @@ export function WalkingRoutesListPage() {
             {rows.map((item) => (
               <tr key={item.id} className="border-t border-line">
                 <td className="px-4 py-3">{item.name}</td>
-                <td className="px-4 py-3">{item.entryBorder.name}</td>
+                <td className="px-4 py-3">{item.entryBorder?.name ?? '—'}</td>
                 <td className="px-4 py-3">
                   {item.originCountries.map((country) => name(country)).join('، ') || '—'}
                 </td>

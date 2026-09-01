@@ -619,7 +619,7 @@ export function UserForm({
       failField('other', 'email', t('users.emailInvalid'))
       return
     }
-    if (!nextRoleIds.length) {
+    if (!nextRoleIds.length && isCreate) {
       failField('account', 'roles', t('users.rolesRequired'))
       return
     }

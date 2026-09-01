@@ -107,6 +107,12 @@ export function GovernmentOrgOfficerDashboard() {
             label={t('menus.supportRequestReport')}
             tone="mint"
           />
+          <ActionCard
+            to="/honorary-apply"
+            icon={HandHeart}
+            label={t('honoraryServants.create')}
+            tone="mint"
+          />
         </div>
       </section>
 

@@ -72,7 +72,8 @@ export function WalkingRouteDetailPage() {
   const km = (value: number | null | undefined) =>
     value == null ? '' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
   const n = (value: number) => formatNumber(value, locale)
-  const borderLabel = `${item.entryBorder.name} — ${name(item.entryBorder.city)}`
+  const border = item.entryBorder
+  const borderLabel = border ? `${border.name} — ${name(border.city)}` : '—'
 
   function panelClass(id: WalkingRouteTab) {
     return `space-y-4 ${tab === id ? '' : 'hidden'}`
@@ -89,7 +90,7 @@ export function WalkingRouteDetailPage() {
         title={item.name}
         chips={
           <>
-            <FormMetaChip icon={Fence} label={item.entryBorder.name} />
+            {border ? <FormMetaChip icon={Fence} label={border.name} /> : null}
             <FormMetaChip
               icon={ArrowUpDown}
               label={`${n(item.distanceToMashhadKm)} ${t('walkingRoutes.km')}`}
@@ -132,18 +133,22 @@ export function WalkingRouteDetailPage() {
                 tone="ink"
                 className="sm:col-span-2"
               />
-              <FormFactTile
-                icon={MapPinned}
-                label={t('geo.province')}
-                value={name(item.entryBorder.province)}
-                tone="teal"
-              />
-              <FormFactTile
-                icon={MapPin}
-                label={t('geo.city')}
-                value={name(item.entryBorder.city)}
-                tone="mint"
-              />
+              {border ? (
+                <>
+                  <FormFactTile
+                    icon={MapPinned}
+                    label={t('geo.province')}
+                    value={name(border.province)}
+                    tone="teal"
+                  />
+                  <FormFactTile
+                    icon={MapPin}
+                    label={t('geo.city')}
+                    value={name(border.city)}
+                    tone="mint"
+                  />
+                </>
+              ) : null}
             </div>
           </div>
 

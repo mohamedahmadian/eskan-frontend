@@ -11,6 +11,10 @@ export function hasRole(user: RoleUser, code: string) {
   return user?.roles?.some((role) => role.code === code) ?? false
 }
 
+export function hasNoRoles(user: RoleUser) {
+  return Boolean(user) && !(user?.roles?.length)
+}
+
 export function isAdmin(user: RoleUser) {
   return hasRole(user, 'ADMIN')
 }
@@ -43,6 +47,10 @@ export function isGovernmentOrgOfficer(user: RoleUser) {
   return hasRole(user, 'GOVERNMENT_ORG_OFFICER')
 }
 
+export function isHonoraryServant(user: RoleUser) {
+  return hasRole(user, 'HONORARY_SERVANT')
+}
+
 /** زائر فقط با گروه یا مدیریت اسکان منوهای گروه/اسکان/ارزیابی را می‌بیند */
 export function pilgrimHasGroupOrHousingAccess(user: RoleUser) {
   return (
@@ -58,10 +66,9 @@ export function canAccessMyCaravans(user: RoleUser) {
 }
 
 export function canAccessMyReservations(user: RoleUser) {
-  return (
-    !isAdmin(user) &&
-    (isPilgrim(user) || isCaravanManager(user) || isGroupManager(user))
-  )
+  if (!user || isAdmin(user)) return false
+  if (hasNoRoles(user)) return true
+  return isPilgrim(user) || isCaravanManager(user) || isGroupManager(user)
 }
 
 export function canAccessMyGroups(user: RoleUser) {
@@ -90,7 +97,9 @@ export function canAccessMyEvaluations(user: RoleUser) {
 export function usesDedicatedHomeDashboard(user: RoleUser) {
   return (
     !isAdmin(user) &&
-    (isPilgrim(user) ||
+    (hasNoRoles(user) ||
+      isHonoraryServant(user) ||
+      isPilgrim(user) ||
       isCaravanManager(user) ||
       isGroupManager(user) ||
       isLicenseIssuer(user) ||

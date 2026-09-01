@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import {
   clearImpersonateToken,
@@ -45,6 +46,7 @@ function endImpersonationWindow() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -89,9 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { username, password, locale },
       )
       setSessionToken(data.token)
+      queryClient.clear()
       applyUser(data.user)
     },
-    [applyUser],
+    [applyUser, queryClient],
   )
 
   const logout = useCallback(() => {
@@ -100,9 +103,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     clearSessionToken()
+    queryClient.clear()
     setUser(null)
     applyUiLanguage(getStoredPreferredLocale())
-  }, [user?.impersonating])
+  }, [queryClient, user?.impersonating])
 
   const value = useMemo(
     () => ({ user, loading, login, logout, refresh }),

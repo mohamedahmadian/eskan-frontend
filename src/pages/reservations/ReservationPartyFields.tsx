@@ -50,11 +50,13 @@ export type SelectedParty = {
   id: string
 }
 
-/** زائر یا مدیر کاروان: خودش مدیر است؛ در غیر این صورت باید مدیر انتخاب شود. */
+/** زائر، مدیر کاروان، یا حساب بدون نقش: خودش مدیر است. */
 export function shouldPickCaravanManager(
   user: { roles?: { code: string }[] } | null | undefined,
 ) {
-  return !(isPilgrim(user) || isCaravanManager(user))
+  if (!user) return true
+  if (isPilgrim(user) || isCaravanManager(user)) return false
+  return Boolean(user.roles?.length)
 }
 
 export function emptyPartyDraft(user?: {

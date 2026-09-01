@@ -184,6 +184,18 @@ export function getPageMeta(pathname: string): {
   if (pathname.startsWith("/my-groups")) {
     return { titleKey: "menus.myGroups", subtitleKey: "myGroups.subtitle" };
   }
+  if (pathname.startsWith("/translator-reservations/") && pathname !== "/translator-reservations") {
+    return {
+      titleKey: "reservations.adminDetails",
+      subtitleKey: "translatorReservations.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/translator-reservations")) {
+    return {
+      titleKey: "menus.translatorReservations",
+      subtitleKey: "translatorReservations.subtitle",
+    };
+  }
   if (pathname.startsWith("/my-reservations/new")) {
     return { titleKey: "menus.tasharofMashhad" };
   }
@@ -1292,6 +1304,87 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.myEvaluations",
       subtitleKey: "evaluations.mine.subtitle",
+    };
+  }
+  if (pathname.startsWith("/honorary-history/") && pathname !== "/honorary-history") {
+    return {
+      titleKey: "honoraryServants.details",
+      subtitleKey: "honoraryServants.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/honorary-history")) {
+    return {
+      titleKey: "menus.honoraryHistory",
+      subtitleKey: "honoraryServants.historySubtitle",
+    };
+  }
+  if (pathname.startsWith("/honorary-apply/") && pathname !== "/honorary-apply") {
+    return {
+      titleKey: "honoraryServants.details",
+      subtitleKey: "honoraryServants.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/honorary-apply")) {
+    return {
+      titleKey: "honoraryServants.create",
+      subtitleKey: "honoraryServants.applySubtitle",
+    };
+  }
+  if (pathname.startsWith("/honorary-service-types/new")) {
+    return {
+      titleKey: "honoraryServiceTypes.create",
+      subtitleKey: "honoraryServiceTypes.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/honorary-service-types/")
+  ) {
+    return {
+      titleKey: "honoraryServiceTypes.edit",
+      subtitleKey: "honoraryServiceTypes.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/honorary-service-types/") &&
+    pathname !== "/honorary-service-types"
+  ) {
+    return {
+      titleKey: "honoraryServiceTypes.details",
+      subtitleKey: "honoraryServiceTypes.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/honorary-service-types")) {
+    return {
+      titleKey: "menus.honoraryServiceTypes",
+      subtitleKey: "honoraryServiceTypes.subtitle",
+    };
+  }
+  if (pathname.startsWith("/honorary-servants/new")) {
+    return {
+      titleKey: "honoraryServants.create",
+      subtitleKey: "honoraryServants.createSubtitle",
+    };
+  }
+  if (pathname.includes("/edit") && pathname.startsWith("/honorary-servants/")) {
+    return {
+      titleKey: "honoraryServants.edit",
+      subtitleKey: "honoraryServants.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/honorary-servants/") &&
+    pathname !== "/honorary-servants"
+  ) {
+    return {
+      titleKey: "honoraryServants.details",
+      subtitleKey: "honoraryServants.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/honorary-servants")) {
+    return {
+      titleKey: "menus.honoraryServants",
+      subtitleKey: "honoraryServants.subtitle",
     };
   }
   return { titleKey: "menus.overview", subtitleKey: "dashboard.subtitle" };

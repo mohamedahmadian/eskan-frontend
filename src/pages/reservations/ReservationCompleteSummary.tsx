@@ -37,6 +37,9 @@ import { ReservationIdentityChips } from './ReservationSectionHeader'
 import { ReservationTravelHistoryCard } from './ReservationTravelHistoryCard'
 import { ReservationWalkingRoutePreview } from './ReservationWalkingRoutePreview'
 import { bankLabel, simOperatorLabel } from './ReservationIssuedServicesPanel'
+import {
+  ReservationHonoraryBox,
+} from './ReservationHonoraryAssign'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -97,11 +100,17 @@ export function ReservationCompleteSummary({
   variant = 'complete',
   audience = 'owner',
   footer,
+  canAssignHonorary,
+  onAssignHonorary,
+  onHonoraryChanged,
 }: {
   reservation: Reservation
   variant?: 'complete' | 'cancelled'
   audience?: 'owner' | 'admin'
   footer?: ReactNode
+  canAssignHonorary?: boolean
+  onAssignHonorary?: () => void
+  onHonoraryChanged?: () => void
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -258,6 +267,14 @@ export function ReservationCompleteSummary({
 
         <section>
           <SectionTitle icon={HeartHandshake}>{t('reservations.createSteps.services')}</SectionTitle>
+          <div className="mb-2.5">
+            <ReservationHonoraryBox
+              reservation={reservation}
+              canAssign={canAssignHonorary}
+              onAssign={onAssignHonorary}
+              onChanged={onHonoraryChanged}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
             <FactTile
               icon={Shield}
