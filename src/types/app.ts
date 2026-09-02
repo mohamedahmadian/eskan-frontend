@@ -584,6 +584,7 @@ export type ManagedUser = {
   nationalId: string | null;
   phone: string | null;
   birthDate?: string | null;
+  activityStartYear?: number | null;
   email: string | null;
   address: string | null;
   notes: string | null;
@@ -634,6 +635,109 @@ export type ManagedUser = {
   primaryAccommodation?: { id: string; name: string } | null;
   accommodations?: ManagedAccommodationLink[];
   caravans?: ManagedCaravan[];
+};
+
+export type PublicProfilePilgrimage = {
+  id: string;
+  year: number;
+  type: ReservationType;
+  status: ReservationStatus;
+  stayStartDate: string | null;
+  stayEndDate: string | null;
+  walkingStartDate: string | null;
+  originCity: (GeoName & { id: string; provinceId: string }) | null;
+  walkingRoute: { id: string; name: string } | null;
+  caravan: { id: string; name: string } | null;
+};
+
+export type PublicProfileAccommodation = {
+  id: string;
+  year: number;
+  isPrimary: boolean;
+  accommodation: {
+    id: string;
+    name: string;
+    type?: AccommodationType;
+    status?: AccommodationStatus;
+  };
+};
+
+export type PublicProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  gender: UserGender | null;
+  nationalId: string | null;
+  phone: string | null;
+  photoId: string | null;
+  activityStartYear: number | null;
+  country: (GeoName & { id: string }) | null;
+  province: (GeoName & { id: string; countryId: string }) | null;
+  city: (GeoName & { id: string; provinceId: string }) | null;
+  roles: RoleOption[];
+  caravans: ManagedCaravan[];
+  accommodations: PublicProfileAccommodation[];
+  pilgrimages: PublicProfilePilgrimage[];
+};
+
+export type PublicAccommodation = {
+  id: string;
+  name: string;
+  type: AccommodationType;
+  status: AccommodationStatus;
+  genderType: GenderType;
+  managementType: ManagementType;
+  maleCapacity: number;
+  femaleCapacity: number;
+  phone: string | null;
+  address: string | null;
+  neshanAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  eitaa: string | null;
+  bale: string | null;
+  otherSocial: string | null;
+  description: string | null;
+  country: (GeoName & { id: string }) | null;
+  province: (GeoName & { id: string; countryId: string }) | null;
+  city: (GeoName & { id: string; provinceId: string }) | null;
+  distanceToShrineKm: number | null;
+  distanceToMashhadKm: number | null;
+  hasLaundry: boolean;
+  hasInternet: boolean;
+  hasPrayerRoom: boolean;
+  hasElevator: boolean;
+  heatingSystem: string | null;
+  coolingSystem: string | null;
+  parkingCapacity: number | null;
+  bathroomCount: number | null;
+  toiletCount: number | null;
+};
+
+export type PublicWalkingStation = StationAmenities & {
+  id: string;
+  name: string;
+  city: GeoName & {
+    id: string;
+    provinceId: string;
+    latitude: number | null;
+    longitude: number | null;
+    province: GeoName & { id: string; countryId: string };
+  };
+  latitude: number | null;
+  longitude: number | null;
+  neshanAddress: string | null;
+  maleCount: number;
+  femaleCount: number;
+  managerName: string | null;
+  managerPhone: string | null;
+  managerTelegram: string | null;
+  managerWhatsapp: string | null;
+  managerEitaa: string | null;
+  distanceToMashhadKm: number | null;
+  description: string | null;
+  routes: { id: string; name: string; stageNumber: number }[];
 };
 
 export type GeoName = {
@@ -914,7 +1018,33 @@ export type PilgrimReport = PilgrimReportSummary &
   PilgrimReportGeo &
   Pick<PilgrimReportTimeline, "byYear">;
 
-export type WalkingRouteStage = {
+export type StationAmenities = {
+  hasLaundry: boolean;
+  hasInternet: boolean;
+  hasPrayerRoom: boolean;
+  hasElevator: boolean;
+  heatingSystem: string | null;
+  coolingSystem: string | null;
+  parkingCapacity: number | null;
+  bathroomCount: number | null;
+  toiletCount: number | null;
+  areaSqm: number | null;
+};
+
+export const emptyStationAmenities: StationAmenities = {
+  hasLaundry: false,
+  hasInternet: false,
+  hasPrayerRoom: false,
+  hasElevator: false,
+  heatingSystem: null,
+  coolingSystem: null,
+  parkingCapacity: null,
+  bathroomCount: null,
+  toiletCount: null,
+  areaSqm: null,
+};
+
+export type WalkingRouteStage = StationAmenities & {
   id?: string;
   stationId: string;
   cityId: string;
@@ -943,7 +1073,7 @@ export type WalkingRouteStage = {
   description: string | null;
 };
 
-export type WalkingStation = {
+export type WalkingStation = StationAmenities & {
   id: string;
   cityId: string;
   city: GeoName & {
@@ -1789,6 +1919,7 @@ export type ReservationFeatures = {
   insurance: boolean;
   mashhadPlacement: boolean;
   routePlacement: boolean;
+  caravanContacts: boolean;
 };
 
 export const allocationSources = {
@@ -1895,6 +2026,8 @@ export type ReservationPerson = {
 export type ReservationMember = {
   id: string;
   user: ReservationPerson;
+  requestsSimCard: boolean;
+  requestsBankCard: boolean;
   insuranceStatus: ReservationMemberInsuranceStatus;
   insurancePaidAt: string | null;
   insurancePaidAmount: number | null;
@@ -1919,6 +2052,8 @@ export type MemberImportPreviewRow = {
   genderText: string;
   phone: string | null;
   birthDate: string | null;
+  requestsSimCard: boolean;
+  requestsBankCard: boolean;
   status: MemberImportRowStatus;
   errors: string[];
   duplicateOfRow?: number;
@@ -2113,6 +2248,8 @@ export type ReservationListItem = {
   requestsBus: boolean;
   requestsSimCard: boolean;
   requestsBankCard: boolean;
+  simCardRequestCount?: number;
+  bankCardRequestCount?: number;
   specialServices: string | null;
   requestedMaleCount: number;
   requestedFemaleCount: number;
@@ -2354,6 +2491,7 @@ export type ReceptionSettings = {
   individualCountries: (GeoName & { id: string; iso2: string })[];
   groupCountries: (GeoName & { id: string; iso2: string })[];
   caravanCountries: (GeoName & { id: string; iso2: string })[];
+  caravanContactsCountries: (GeoName & { id: string; iso2: string })[];
   insuranceOrganization: string;
   insurancePlans: ReceptionInsurancePlan[];
   imamRezaMartyrdomDate: string | null;

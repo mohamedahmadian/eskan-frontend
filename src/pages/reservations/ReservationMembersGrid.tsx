@@ -132,6 +132,12 @@ export function ReservationMembersGrid({
                   <>
                     <th className="px-4 py-3 text-start font-medium">{t('users.gender')}</th>
                     <th className="px-4 py-3 text-start font-medium">{t('users.phone')}</th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t('reservations.memberRequestsSimCard')}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium">
+                      {t('reservations.memberRequestsBankCard')}
+                    </th>
                   </>
                 ) : null}
                 {showInsurance ? (
@@ -170,6 +176,12 @@ export function ReservationMembersGrid({
                         </td>
                         <td className="px-4 py-3">
                           <CopyableDigits value={item.user.phone} />
+                        </td>
+                        <td className="px-4 py-3">
+                          {item.requestsSimCard ? t('common.yes') : t('common.no')}
+                        </td>
+                        <td className="px-4 py-3">
+                          {item.requestsBankCard ? t('common.yes') : t('common.no')}
                         </td>
                       </>
                     ) : null}

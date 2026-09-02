@@ -17,6 +17,19 @@ export type RoleUserScope = {
   hideDelete?: boolean
 }
 
+export function showUserActivityStartYear(
+  i18nPrefix: RoleUserScope['i18nPrefix'],
+  options?: { lockedRoleCodes?: string[]; roleCodes?: string[] },
+) {
+  if (i18nPrefix === 'pilgrims') return false
+  if (options?.lockedRoleCodes?.includes('PILGRIM')) return false
+  const codes = options?.roleCodes
+  if (codes && codes.length > 0 && codes.every((code) => code === 'PILGRIM')) {
+    return false
+  }
+  return true
+}
+
 export const userScopes: Record<string, RoleUserScope> = {
   all: {
     queryKey: 'users',

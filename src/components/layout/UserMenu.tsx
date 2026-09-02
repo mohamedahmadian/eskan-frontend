@@ -1,8 +1,9 @@
-import { ChevronDown, CircleHelp, Globe, KeyRound, LogOut, UserRound } from 'lucide-react'
+import { ChevronDown, CircleHelp, Globe, IdCard, KeyRound, LogOut, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
+import { publicProfilePath } from '../../lib/public-profile'
 import { formatRoles, isPilgrim } from '../../lib/roles'
 
 export function UserMenu() {
@@ -69,6 +70,16 @@ export function UserMenu() {
                 <UserRound className="size-4 text-teal-600" />
                 {t('nav.account')}
               </Link>
+              {user?.id ? (
+                <Link
+                  to={publicProfilePath(user.id)}
+                  className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
+                  onClick={() => setOpen(false)}
+                >
+                  <IdCard className="size-4 text-teal-600" />
+                  {t('nav.publicCard')}
+                </Link>
+              ) : null}
               <Link
                 to="/settings/password"
                 className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"

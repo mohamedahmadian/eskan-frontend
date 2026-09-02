@@ -20,7 +20,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { CheckboxField } from "../../components/ui/CheckboxField";
 import { DateText, HijriDateText } from "../../components/ui/DateText";
 import { FormField, fieldClassName } from "../../components/ui/Form";
-import { FormSectionTitle } from "../../components/ui/FormLayout";
+import { FormFactTile, FormSectionTitle } from "../../components/ui/FormLayout";
 import { OsmMapPicker, type MapOverlayMarker, type MapOverlays } from "../../components/ui/OsmMapPicker";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
@@ -142,6 +142,8 @@ export function ReservationTravelFields({
   subjectUser,
   reservationId,
   datesError,
+  simCardRequestCount,
+  bankCardRequestCount,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -163,6 +165,8 @@ export function ReservationTravelFields({
   } | null;
   reservationId?: string;
   datesError?: string | null;
+  simCardRequestCount?: number;
+  bankCardRequestCount?: number;
 }) {
   if (activeSubStep === "count") {
     return (
@@ -205,6 +209,9 @@ export function ReservationTravelFields({
         values={values}
         onChange={onChange}
         locked={locked}
+        reservationType={type}
+        simCardRequestCount={simCardRequestCount}
+        bankCardRequestCount={bankCardRequestCount}
       />
     );
   }
@@ -260,6 +267,9 @@ export function ReservationApplicantFields({
   values,
   onChange,
   locked,
+  reservationType,
+  simCardRequestCount = 0,
+  bankCardRequestCount = 0,
 }: {
   values: Pick<
     TravelValues,
@@ -271,8 +281,14 @@ export function ReservationApplicantFields({
   >;
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
+  reservationType?: ReservationType | "";
+  simCardRequestCount?: number;
+  bankCardRequestCount?: number;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
+  const perMemberServices =
+    reservationType === "GROUP" || reservationType === "CARAVAN";
   return (
     <div className="grid gap-3">
       <CheckboxField
@@ -311,30 +327,54 @@ export function ReservationApplicantFields({
           </span>
         }
       />
-      <CheckboxField
-        id="requestsSimCard"
-        checked={values.requestsSimCard}
-        disabled={locked}
-        onChange={(checked) => onChange({ requestsSimCard: checked })}
-        label={
-          <span className="flex items-center gap-2">
-            <Smartphone className="size-4 shrink-0 text-teal-600" aria-hidden />
-            {t("reservations.requestsSimCard")}
-          </span>
-        }
-      />
-      <CheckboxField
-        id="requestsBankCard"
-        checked={values.requestsBankCard}
-        disabled={locked}
-        onChange={(checked) => onChange({ requestsBankCard: checked })}
-        label={
-          <span className="flex items-center gap-2">
-            <CreditCard className="size-4 shrink-0 text-teal-600" aria-hidden />
-            {t("reservations.requestsBankCard")}
-          </span>
-        }
-      />
+      {perMemberServices ? (
+        <>
+          <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+            <FormFactTile
+              icon={Smartphone}
+              label={t("reservations.simCardRequestCount")}
+              value={formatNumber(simCardRequestCount, locale)}
+              tone="teal"
+            />
+            <FormFactTile
+              icon={CreditCard}
+              label={t("reservations.bankCardRequestCount")}
+              value={formatNumber(bankCardRequestCount, locale)}
+              tone="mint"
+            />
+          </div>
+          <p className="text-xs text-ink-500">
+            {t("reservations.serviceRequestsFromMembersHint")}
+          </p>
+        </>
+      ) : (
+        <>
+          <CheckboxField
+            id="requestsSimCard"
+            checked={values.requestsSimCard}
+            disabled={locked}
+            onChange={(checked) => onChange({ requestsSimCard: checked })}
+            label={
+              <span className="flex items-center gap-2">
+                <Smartphone className="size-4 shrink-0 text-teal-600" aria-hidden />
+                {t("reservations.requestsSimCard")}
+              </span>
+            }
+          />
+          <CheckboxField
+            id="requestsBankCard"
+            checked={values.requestsBankCard}
+            disabled={locked}
+            onChange={(checked) => onChange({ requestsBankCard: checked })}
+            label={
+              <span className="flex items-center gap-2">
+                <CreditCard className="size-4 shrink-0 text-teal-600" aria-hidden />
+                {t("reservations.requestsBankCard")}
+              </span>
+            }
+          />
+        </>
+      )}
       <FormField
         icon={Accessibility}
         label={t("reservations.specialServices")}

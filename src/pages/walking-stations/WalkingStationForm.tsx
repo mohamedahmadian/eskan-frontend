@@ -1,21 +1,31 @@
 import {
   AlignLeft,
+  ArrowUpDown,
+  Bath,
+  BookOpen,
+  Car,
+  Droplets,
+  Flame,
   MapPin,
   MapPinned,
   Mars,
+  Maximize2,
   MessageCircle,
   Milestone,
   Navigation,
   Phone,
   Share2,
+  Shirt,
+  Snowflake,
   Type,
   UserRound,
   Venus,
+  Wifi,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { AppForm, FormActions, FormField, ToggleField, fieldClassName } from '../../components/ui/Form'
 import { FormCard, FormSectionTitle, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
@@ -39,6 +49,16 @@ export type WalkingStationPayload = {
   managerEitaa: string | null
   distanceToMashhadKm: number | null
   description: string | null
+  hasLaundry: boolean
+  hasInternet: boolean
+  hasPrayerRoom: boolean
+  hasElevator: boolean
+  heatingSystem: string | null
+  coolingSystem: string | null
+  parkingCapacity: number | null
+  bathroomCount: number | null
+  toiletCount: number | null
+  areaSqm: number | null
 }
 
 function emptyToNull(value: string) {
@@ -95,6 +115,16 @@ export function WalkingStationForm({
     distanceToMashhadKm:
       initial?.distanceToMashhadKm != null ? String(initial.distanceToMashhadKm) : '',
     description: initial?.description ?? '',
+    hasLaundry: initial?.hasLaundry ?? false,
+    hasInternet: initial?.hasInternet ?? false,
+    hasPrayerRoom: initial?.hasPrayerRoom ?? false,
+    hasElevator: initial?.hasElevator ?? false,
+    heatingSystem: initial?.heatingSystem ?? '',
+    coolingSystem: initial?.coolingSystem ?? '',
+    parkingCapacity: initial?.parkingCapacity != null ? String(initial.parkingCapacity) : '',
+    bathroomCount: initial?.bathroomCount != null ? String(initial.bathroomCount) : '',
+    toiletCount: initial?.toiletCount != null ? String(initial.toiletCount) : '',
+    areaSqm: initial?.areaSqm != null ? String(initial.areaSqm) : '',
   })
 
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
@@ -129,6 +159,16 @@ export function WalkingStationForm({
         managerEitaa: emptyToNull(values.managerEitaa),
         distanceToMashhadKm: toOptionalNumber(values.distanceToMashhadKm),
         description: emptyToNull(values.description),
+        hasLaundry: values.hasLaundry,
+        hasInternet: values.hasInternet,
+        hasPrayerRoom: values.hasPrayerRoom,
+        hasElevator: values.hasElevator,
+        heatingSystem: emptyToNull(values.heatingSystem),
+        coolingSystem: emptyToNull(values.coolingSystem),
+        parkingCapacity: toOptionalNumber(values.parkingCapacity),
+        bathroomCount: toOptionalNumber(values.bathroomCount),
+        toiletCount: toOptionalNumber(values.toiletCount),
+        areaSqm: toOptionalNumber(values.areaSqm),
       })
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
@@ -261,6 +301,123 @@ export function WalkingStationForm({
             onChange={(e) => set('distanceToMashhadKm', e.target.value)}
           />
         </FormField>
+        <FormSectionTitle icon={Shirt}>{t('walkingStations.sectionAmenities')}</FormSectionTitle>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AmenityCheck
+            icon={Shirt}
+            label={t('walkingStations.hasLaundry')}
+            checked={values.hasLaundry}
+            onChange={(checked) => set('hasLaundry', checked)}
+            onLabel={t('walkingStations.equipped')}
+            offLabel={t('walkingStations.notEquipped')}
+          />
+          <AmenityCheck
+            icon={Wifi}
+            label={t('walkingStations.hasInternet')}
+            checked={values.hasInternet}
+            onChange={(checked) => set('hasInternet', checked)}
+            onLabel={t('walkingStations.equipped')}
+            offLabel={t('walkingStations.notEquipped')}
+          />
+          <AmenityCheck
+            icon={BookOpen}
+            label={t('walkingStations.hasPrayerRoom')}
+            checked={values.hasPrayerRoom}
+            onChange={(checked) => set('hasPrayerRoom', checked)}
+            onLabel={t('walkingStations.equipped')}
+            offLabel={t('walkingStations.notEquipped')}
+          />
+          <AmenityCheck
+            icon={ArrowUpDown}
+            label={t('walkingStations.hasElevator')}
+            checked={values.hasElevator}
+            onChange={(checked) => set('hasElevator', checked)}
+            onLabel={t('walkingStations.equipped')}
+            offLabel={t('walkingStations.notEquipped')}
+          />
+        </div>
+        <FormField
+          icon={Flame}
+          label={t('walkingStations.heatingSystem')}
+          htmlFor="station-heating"
+        >
+          <input
+            id="station-heating"
+            className={fieldClassName}
+            value={values.heatingSystem}
+            onChange={(e) => set('heatingSystem', e.target.value)}
+          />
+        </FormField>
+        <FormField
+          icon={Snowflake}
+          label={t('walkingStations.coolingSystem')}
+          htmlFor="station-cooling"
+        >
+          <input
+            id="station-cooling"
+            className={fieldClassName}
+            value={values.coolingSystem}
+            onChange={(e) => set('coolingSystem', e.target.value)}
+          />
+        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <FormField
+            icon={Car}
+            label={t('walkingStations.parkingCapacity')}
+            htmlFor="station-parking"
+          >
+            <input
+              id="station-parking"
+              className={fieldClassName}
+              type="number"
+              min={0}
+              step={1}
+              value={values.parkingCapacity}
+              onChange={(e) => set('parkingCapacity', e.target.value)}
+            />
+          </FormField>
+          <FormField
+            icon={Bath}
+            label={t('walkingStations.bathroomCount')}
+            htmlFor="station-bath"
+          >
+            <input
+              id="station-bath"
+              className={fieldClassName}
+              type="number"
+              min={0}
+              step={1}
+              value={values.bathroomCount}
+              onChange={(e) => set('bathroomCount', e.target.value)}
+            />
+          </FormField>
+          <FormField
+            icon={Droplets}
+            label={t('walkingStations.toiletCount')}
+            htmlFor="station-toilet"
+          >
+            <input
+              id="station-toilet"
+              className={fieldClassName}
+              type="number"
+              min={0}
+              step={1}
+              value={values.toiletCount}
+              onChange={(e) => set('toiletCount', e.target.value)}
+            />
+          </FormField>
+          <FormField icon={Maximize2} label={t('walkingStations.areaSqm')} htmlFor="station-area">
+            <input
+              id="station-area"
+              className={fieldClassName}
+              type="number"
+              min={0}
+              step="0.01"
+              value={values.areaSqm}
+              onChange={(e) => set('areaSqm', e.target.value)}
+            />
+          </FormField>
+        </div>
         <FormSectionTitle icon={UserRound}>{t('walkingRoutes.sectionManager')}</FormSectionTitle>
         <FormField
           icon={UserRound}
@@ -341,5 +498,31 @@ export function WalkingStationForm({
         />
       </AppForm>
     </FormCard>
+  )
+}
+
+function AmenityCheck({
+  icon: Icon,
+  label,
+  checked,
+  onChange,
+  onLabel,
+  offLabel,
+}: {
+  icon: typeof Shirt
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  onLabel: string
+  offLabel: string
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-cream-50 px-3 py-2.5">
+      <span className="flex items-center gap-2 text-sm text-ink-800">
+        <Icon className="size-4 text-teal-600" aria-hidden />
+        {label}
+      </span>
+      <ToggleField checked={checked} onChange={onChange} onLabel={onLabel} offLabel={offLabel} />
+    </div>
   )
 }

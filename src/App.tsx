@@ -107,6 +107,9 @@ import { PublicAnnouncementPage } from "./pages/landing/PublicAnnouncementPage";
 import { PublicCampaignPage } from "./pages/landing/PublicCampaignPage";
 import { PublicNewsPage } from "./pages/landing/PublicNewsPage";
 import { PublicParticipationsPage } from "./pages/landing/PublicParticipationsPage";
+import { PublicAccommodationPage } from "./pages/public-places/PublicAccommodationPage";
+import { PublicWalkingStationPage } from "./pages/public-places/PublicWalkingStationPage";
+import { PublicProfilePage } from "./pages/public-profile/PublicProfilePage";
 import { ImpersonateEndedPage } from "./pages/ImpersonateEndedPage";
 import { ImpersonateEntryPage } from "./pages/ImpersonateEntryPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -304,6 +307,9 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/v/item/:code" element={<PublicItemVoucherPage />} />
             <Route path="/v/ice/:code" element={<PublicIceVoucherPage />} />
+            <Route path="/p/:id" element={<PublicProfilePage />} />
+            <Route path="/a/:id" element={<PublicAccommodationPage />} />
+            <Route path="/s/:id" element={<PublicWalkingStationPage />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<OverviewPage />} />

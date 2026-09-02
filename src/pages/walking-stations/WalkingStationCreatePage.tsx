@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import type { City, Country, Province, WalkingStation } from '../../types/app'
+import { emptyStationAmenities, type City, type Country, type Province, type WalkingStation } from '../../types/app'
 import { WalkingStationForm } from './WalkingStationForm'
 
 export function WalkingStationCreatePage() {
@@ -77,6 +77,7 @@ export function WalkingStationCreatePage() {
           managerEitaa: null,
           distanceToMashhadKm: null,
           description: null,
+          ...emptyStationAmenities,
           routes: [],
           createdAt: '',
           updatedAt: '',

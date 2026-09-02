@@ -1,17 +1,26 @@
 import {
   AlignLeft,
   ArrowUpDown,
+  Bath,
+  BookOpen,
+  Car,
+  Droplets,
+  Flame,
   MapPin,
   MapPinned,
   Mars,
+  Maximize2,
   MessageCircle,
   Milestone,
   Navigation,
   Phone,
   Share2,
+  Shirt,
+  Snowflake,
   Type,
   UserRound,
   Venus,
+  Wifi,
   X,
 } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
@@ -55,6 +64,10 @@ export function StationInfoCard({
   const n = (value: number) => formatNumber(value, locale)
   const km = (value: number | null | undefined) =>
     value == null ? '' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
+  const equipped = (value: boolean) =>
+    value ? t('walkingStations.equipped') : t('walkingStations.notEquipped')
+  const countValue = (value: number | null | undefined) =>
+    value == null ? '—' : n(value)
   const title = stageTitle(stage, locale, `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`)
   const hasManager =
     hasText(stage.managerName) ||
@@ -191,6 +204,80 @@ export function StationInfoCard({
                 className="sm:col-span-2"
               />
             ) : null}
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <FormSectionTitle icon={Shirt} className="mb-0">
+            {t('walkingStations.sectionAmenities')}
+          </FormSectionTitle>
+          <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+            <FormFactTile
+              icon={Shirt}
+              label={t('walkingStations.hasLaundry')}
+              value={equipped(stage.hasLaundry)}
+              tone="teal"
+            />
+            <FormFactTile
+              icon={Wifi}
+              label={t('walkingStations.hasInternet')}
+              value={equipped(stage.hasInternet)}
+              tone="mint"
+            />
+            <FormFactTile
+              icon={BookOpen}
+              label={t('walkingStations.hasPrayerRoom')}
+              value={equipped(stage.hasPrayerRoom)}
+              tone="ink"
+            />
+            <FormFactTile
+              icon={ArrowUpDown}
+              label={t('walkingStations.hasElevator')}
+              value={equipped(stage.hasElevator)}
+              tone="teal"
+            />
+            <FormFactTile
+              icon={Flame}
+              label={t('walkingStations.heatingSystem')}
+              value={stage.heatingSystem || '—'}
+              empty={!stage.heatingSystem}
+              tone="mint"
+            />
+            <FormFactTile
+              icon={Snowflake}
+              label={t('walkingStations.coolingSystem')}
+              value={stage.coolingSystem || '—'}
+              empty={!stage.coolingSystem}
+              tone="ink"
+            />
+            <FormFactTile
+              icon={Car}
+              label={t('walkingStations.parkingCapacity')}
+              value={countValue(stage.parkingCapacity)}
+              empty={stage.parkingCapacity == null}
+              tone="teal"
+            />
+            <FormFactTile
+              icon={Bath}
+              label={t('walkingStations.bathroomCount')}
+              value={countValue(stage.bathroomCount)}
+              empty={stage.bathroomCount == null}
+              tone="mint"
+            />
+            <FormFactTile
+              icon={Droplets}
+              label={t('walkingStations.toiletCount')}
+              value={countValue(stage.toiletCount)}
+              empty={stage.toiletCount == null}
+              tone="ink"
+            />
+            <FormFactTile
+              icon={Maximize2}
+              label={t('walkingStations.areaSqm')}
+              value={countValue(stage.areaSqm)}
+              empty={stage.areaSqm == null}
+              tone="teal"
+            />
           </div>
         </section>
 

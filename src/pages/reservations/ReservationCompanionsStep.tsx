@@ -3,6 +3,7 @@ import {
   BookUser,
   Calendar,
   Check,
+  CreditCard,
   FileSpreadsheet,
   History,
   IdCard,
@@ -10,6 +11,7 @@ import {
   Pencil,
   Phone,
   SearchX,
+  Smartphone,
   Trash2,
   UserPlus,
   UserRound,
@@ -39,6 +41,7 @@ import {
   fieldClassName,
 } from "../../components/ui/Form";
 import { confirmToast } from "../../components/ui/confirmToast";
+import { CheckboxField } from "../../components/ui/CheckboxField";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { CopyableDigits } from "../../components/ui/CopyableDigits";
 import { api, getApiErrorMessage } from "../../lib/api";
@@ -542,6 +545,8 @@ function MemberLookupForm({
   const [person, setPerson] = useState<Partial<ReservationPerson>>({});
   const [gender, setGender] = useState("MALE");
   const [birthDate, setBirthDate] = useState("");
+  const [requestsSimCard, setRequestsSimCard] = useState(false);
+  const [requestsBankCard, setRequestsBankCard] = useState(false);
   const showForm = status === "new" || status === "edit";
 
   function resetForm() {
@@ -551,6 +556,8 @@ function MemberLookupForm({
     setPerson({});
     setGender("MALE");
     setBirthDate("");
+    setRequestsSimCard(false);
+    setRequestsBankCard(false);
     setMissingNationalId(null);
     setStatus("idle");
   }
@@ -568,6 +575,8 @@ function MemberLookupForm({
     });
     setGender(editing.user.gender ?? "MALE");
     setBirthDate(editing.user.birthDate ?? "");
+    setRequestsSimCard(Boolean(editing.requestsSimCard));
+    setRequestsBankCard(Boolean(editing.requestsBankCard));
     setMissingNationalId(null);
     setStatus("edit");
     requestAnimationFrame(() => {
@@ -606,6 +615,8 @@ function MemberLookupForm({
       if (data.found) {
         await api.post(`/reservations/${reservationId}/members`, {
           nationalId: id,
+          requestsSimCard,
+          requestsBankCard,
         });
         toast.success(
           t(
@@ -647,6 +658,8 @@ function MemberLookupForm({
         gender: gender === "FEMALE" ? "FEMALE" : "MALE",
         phone: person.phone || null,
         birthDate: birthDate || null,
+        requestsSimCard,
+        requestsBankCard,
       };
       if (editing) {
         await api.patch(
@@ -728,6 +741,14 @@ function MemberLookupForm({
                 </Button>
               </div>
             </FormField>
+            {!showForm ? (
+              <MemberServiceRequestFields
+                requestsSimCard={requestsSimCard}
+                requestsBankCard={requestsBankCard}
+                onSimChange={setRequestsSimCard}
+                onBankChange={setRequestsBankCard}
+              />
+            ) : null}
           </AppForm>
         </article>
       ) : null}
@@ -836,6 +857,12 @@ function MemberLookupForm({
               onChange={(event) => setPassportNumber(event.target.value)}
             />
           </FormField>
+          <MemberServiceRequestFields
+            requestsSimCard={requestsSimCard}
+            requestsBankCard={requestsBankCard}
+            onSimChange={setRequestsSimCard}
+            onBankChange={setRequestsBankCard}
+          />
           <FormActions
             submitLabel={
               status === "edit"
@@ -848,6 +875,46 @@ function MemberLookupForm({
           />
         </AppForm>
       ) : null}
+    </div>
+  );
+}
+
+function MemberServiceRequestFields({
+  requestsSimCard,
+  requestsBankCard,
+  onSimChange,
+  onBankChange,
+}: {
+  requestsSimCard: boolean;
+  requestsBankCard: boolean;
+  onSimChange: (checked: boolean) => void;
+  onBankChange: (checked: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <CheckboxField
+        id="member-requests-sim"
+        checked={requestsSimCard}
+        onChange={onSimChange}
+        label={
+          <span className="flex items-center gap-2">
+            <Smartphone className="size-4 shrink-0 text-teal-600" aria-hidden />
+            {t("reservations.memberRequestsSimCard")}
+          </span>
+        }
+      />
+      <CheckboxField
+        id="member-requests-bank"
+        checked={requestsBankCard}
+        onChange={onBankChange}
+        label={
+          <span className="flex items-center gap-2">
+            <CreditCard className="size-4 shrink-0 text-teal-600" aria-hidden />
+            {t("reservations.memberRequestsBankCard")}
+          </span>
+        }
+      />
     </div>
   );
 }

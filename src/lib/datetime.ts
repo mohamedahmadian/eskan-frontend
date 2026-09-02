@@ -258,6 +258,13 @@ export function currentPersianYear() {
   return new DateObject({ calendar: persian }).year
 }
 
+export function collaborationYears(startYear?: number | null) {
+  if (startYear == null || !Number.isFinite(startYear)) return null
+  const current = currentPersianYear()
+  if (startYear < 1300 || startYear > current) return null
+  return Math.max(1, Math.ceil(current - startYear))
+}
+
 export function persianYearOptions(locale: string, selected?: number) {
   const current = currentPersianYear()
   const max = Math.max(current + 1, selected ?? current)

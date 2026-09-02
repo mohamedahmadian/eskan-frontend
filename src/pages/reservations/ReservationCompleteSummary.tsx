@@ -303,14 +303,34 @@ export function ReservationCompleteSummary({
             />
             <FactTile
               icon={Smartphone}
-              label={t('reservations.requestsSimCardShort')}
-              value={reservation.requestsSimCard ? t('common.yes') : t('common.no')}
+              label={
+                individual
+                  ? t('reservations.requestsSimCardShort')
+                  : t('reservations.simCardRequestCount')
+              }
+              value={
+                individual
+                  ? reservation.requestsSimCard
+                    ? t('common.yes')
+                    : t('common.no')
+                  : n(reservation.simCardRequestCount ?? 0)
+              }
               tone="teal"
             />
             <FactTile
               icon={CreditCard}
-              label={t('reservations.requestsBankCardShort')}
-              value={reservation.requestsBankCard ? t('common.yes') : t('common.no')}
+              label={
+                individual
+                  ? t('reservations.requestsBankCardShort')
+                  : t('reservations.bankCardRequestCount')
+              }
+              value={
+                individual
+                  ? reservation.requestsBankCard
+                    ? t('common.yes')
+                    : t('common.no')
+                  : n(reservation.bankCardRequestCount ?? 0)
+              }
               tone="mint"
             />
             <FactTile

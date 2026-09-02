@@ -40,10 +40,11 @@ import {
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import {
+  Button,
   DetailActions,
   EntityNameSubtitle,
   LoadingState,
@@ -62,6 +63,7 @@ import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
+import { publicAccommodationPath } from '../../lib/public-place'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { useAuth } from '../../auth/AuthProvider'
 import type { Accommodation, AccommodationStatus } from '../../types/app'
@@ -637,13 +639,21 @@ export function AccommodationDetailPage() {
             </div>
           </div>
 
-          {canManage ? (
-            <div className="border-t border-line px-5 py-4 sm:px-6">
+          <div className="border-t border-line px-5 py-4 sm:px-6">
+            {canManage ? (
               <DetailActions
                 className=""
                 editTo={`${listPath}/${item.id}/edit`}
                 editLabel={t('common.edit')}
                 deleteLabel={t('accommodations.delete')}
+                extra={
+                  <Link to={publicAccommodationPath(item.id)}>
+                    <Button type="button" variant="soft">
+                      <IdCard className="size-4" aria-hidden />
+                      {t('publicAccommodation.openPage')}
+                    </Button>
+                  </Link>
+                }
                 onDelete={() =>
                   confirmDelete({
                     message: t('accommodations.confirmDelete'),
@@ -654,8 +664,15 @@ export function AccommodationDetailPage() {
                   })
                 }
               />
-            </div>
-          ) : null}
+            ) : (
+              <Link to={publicAccommodationPath(item.id)}>
+                <Button type="button" variant="soft">
+                  <IdCard className="size-4" aria-hidden />
+                  {t('publicAccommodation.openPage')}
+                </Button>
+              </Link>
+            )}
+          </div>
         </FormCard>
       </div>
     </div>

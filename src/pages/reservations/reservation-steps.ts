@@ -132,6 +132,7 @@ export type ReservationStepSource = {
     insurance: boolean
     mashhadPlacement: boolean
     routePlacement: boolean
+    caravanContacts: boolean
   }
 }
 
@@ -157,6 +158,7 @@ export function stepsForType(
     typeof source === 'object' && Boolean(source?.internationalWorkflow)
   const features = typeof source === 'object' ? source?.features : undefined
   const companionsOn = features?.companions ?? !international
+  const contactsOn = features?.caravanContacts ?? !international
   const insuranceOn = features?.insurance ?? !international
   const mashhadOn =
     (features?.mashhadPlacement ?? (!international && requestsAccommodation)) &&
@@ -171,6 +173,7 @@ export function stepsForType(
         : ['travel', 'review', 'companions', 'contacts', 'insurance', 'complete']
   const steps = base.filter((step) => {
     if (step === 'companions') return companionsOn
+    if (step === 'contacts') return contactsOn
     if (step === 'insurance') return insuranceOn
     return true
   })

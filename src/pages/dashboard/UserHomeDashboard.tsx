@@ -3,6 +3,7 @@ import {
   HandHeart,
   HeartHandshake,
   History,
+  IdCard,
   Plus,
   ScrollText,
   Tent,
@@ -20,6 +21,7 @@ import { DateText } from '../../components/ui/DateText'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
+import { publicProfilePath } from '../../lib/public-profile'
 import { hasNoRoles, isCaravanManager, isHonoraryServant, isPilgrim } from '../../lib/roles'
 import type {
   ReservationListItem,
@@ -408,6 +410,14 @@ export function UserHomeDashboard() {
 
       <section className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
+          {user?.id ? (
+            <ActionCard
+              to={publicProfilePath(user.id)}
+              icon={IdCard}
+              label={t('dashboard.quickPublicCard')}
+              tone="teal"
+            />
+          ) : null}
           <ActionCard
             to="/honorary-apply"
             icon={HandHeart}

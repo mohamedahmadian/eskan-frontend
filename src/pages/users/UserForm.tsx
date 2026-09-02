@@ -1,4 +1,5 @@
 import {
+  Calendar,
   Car,
   FileText,
   Flag,
@@ -39,7 +40,7 @@ import { FormCard } from '../../components/ui/FormLayout'
 import { UniqueFieldWrap, type UniqueCheckStatus } from '../../components/ui/UniqueFieldStatus'
 import { languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
-import { parseDigitString, toLatinDigits } from '../../lib/datetime'
+import { collaborationYears, currentPersianYear, formatNumber, parseDigitString, toLatinDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import {
   isLikelyEmail,
@@ -63,6 +64,7 @@ import {
   type UserGender,
   type UserStatus,
 } from '../../types/app'
+import { showUserActivityStartYear } from './user-scopes'
 
 const tabs = ['personal', 'account', 'location', 'documents', 'social', 'other'] as const
 
@@ -122,6 +124,7 @@ export type UserPayload = {
   photoId: string | null
   nationalCardPhotoId: string | null
   passportPhotoId: string | null
+  activityStartYear?: number | null
 }
 
 export function UserForm({
@@ -155,7 +158,8 @@ export function UserForm({
   onCancel?: () => void
   onSubmit: (payload: UserPayload) => Promise<void>
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const uiLocale = i18n.language.split('-')[0] ?? 'fa'
   const geoName = useGeoName()
   const lockedIds = useMemo(
     () => roles.filter((role) => lockedRoleCodes.includes(role.code)).map((role) => role.id),
@@ -175,6 +179,9 @@ export function UserForm({
   const [email, setEmail] = useState(initial?.email ?? '')
   const [address, setAddress] = useState(initial?.address ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
+  const [activityStartYear, setActivityStartYear] = useState(
+    initial?.activityStartYear != null ? String(initial.activityStartYear) : '',
+  )
   const [religion, setReligion] = useState(initial?.religion ?? '')
   const [religionOther, setReligionOther] = useState(initial?.religionOther ?? '')
   const [telegram, setTelegram] = useState(initial?.telegram ?? '')
@@ -215,6 +222,20 @@ export function UserForm({
     (roleIds.includes(governmentOrgOfficerRoleId) || lockedIds.includes(governmentOrgOfficerRoleId))
     ? t('users.linkedOrganizationRequired')
     : t('users.issuingOrganizationRequired')
+  const selectedRoleCodes = roles
+    .filter((role) => roleIds.includes(role.id) || lockedIds.includes(role.id))
+    .map((role) => role.code)
+  const showActivityStart = showUserActivityStartYear(i18nPrefix, {
+    lockedRoleCodes,
+    roleCodes: selectedRoleCodes,
+  })
+  const parsedActivityStartYear = (() => {
+    const raw = toLatinDigits(activityStartYear).trim()
+    if (!raw) return null
+    const year = Number(raw)
+    return Number.isFinite(year) ? year : null
+  })()
+  const yearsOfCollaboration = collaborationYears(parsedActivityStartYear)
   const [saving, setSaving] = useState(false)
   const [checkingNationalId, setCheckingNationalId] = useState(false)
   const [nationalIdReady, setNationalIdReady] = useState(
@@ -699,6 +720,7 @@ export function UserForm({
         photoId: emptyToNull(photoId),
         nationalCardPhotoId: emptyToNull(nationalCardPhotoId),
         passportPhotoId: emptyToNull(passportPhotoId),
+        ...(showActivityStart ? { activityStartYear: parsedActivityStartYear } : {}),
         ...(password ? { password } : {}),
       })
     } catch (error) {
@@ -952,6 +974,31 @@ export function UserForm({
                 disabled={personalFieldsLocked}
                 onChange={(e) => setReligionOther(e.target.value)}
               />
+            </FormField>
+          ) : null}
+          {showActivityStart ? (
+            <FormField
+              icon={Calendar}
+              label={t('users.activityStartYear')}
+              htmlFor="activityStartYear"
+            >
+              <input
+                id="activityStartYear"
+                type="number"
+                min={1300}
+                max={currentPersianYear()}
+                className={`${fieldClassName} digit-field disabled:cursor-not-allowed`}
+                value={activityStartYear}
+                disabled={personalFieldsLocked}
+                onChange={(e) => setActivityStartYear(e.target.value)}
+              />
+              {yearsOfCollaboration != null ? (
+                <p className="text-xs text-ink-500">
+                  {t('users.collaborationYears', {
+                    years: formatNumber(yearsOfCollaboration, uiLocale),
+                  })}
+                </p>
+              ) : null}
             </FormField>
           ) : null}
         </div>

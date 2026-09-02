@@ -32,7 +32,13 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { formatNumber } from '../../lib/datetime'
 import { getApiErrorMessage, api } from '../../lib/api'
 import { stageCoordinates, useGeoName } from '../../lib/geo'
-import type { Country, EntryBorder, WalkingRoute, WalkingStation } from '../../types/app'
+import {
+  emptyStationAmenities,
+  type Country,
+  type EntryBorder,
+  type WalkingRoute,
+  type WalkingStation,
+} from '../../types/app'
 import { WalkingRouteTabNav, type WalkingRouteTab } from './WalkingRouteTabs'
 
 export type WalkingRoutePayload = {
@@ -143,6 +149,16 @@ export function WalkingRouteForm({
         managerEitaa: stage.managerEitaa,
         distanceToMashhadKm: stage.distanceToMashhadKm,
         description: stage.description,
+        hasLaundry: stage.hasLaundry ?? emptyStationAmenities.hasLaundry,
+        hasInternet: stage.hasInternet ?? emptyStationAmenities.hasInternet,
+        hasPrayerRoom: stage.hasPrayerRoom ?? emptyStationAmenities.hasPrayerRoom,
+        hasElevator: stage.hasElevator ?? emptyStationAmenities.hasElevator,
+        heatingSystem: stage.heatingSystem ?? null,
+        coolingSystem: stage.coolingSystem ?? null,
+        parkingCapacity: stage.parkingCapacity ?? null,
+        bathroomCount: stage.bathroomCount ?? null,
+        toiletCount: stage.toiletCount ?? null,
+        areaSqm: stage.areaSqm ?? null,
         routes: [],
         createdAt: '',
         updatedAt: '',

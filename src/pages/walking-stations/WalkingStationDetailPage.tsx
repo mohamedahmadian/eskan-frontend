@@ -1,17 +1,27 @@
 import {
   AlignLeft,
+  ArrowUpDown,
+  Bath,
+  BookOpen,
+  Car,
   DoorOpen,
+  Droplets,
+  Flame,
   MapPin,
   MapPinned,
   Mars,
+  Maximize2,
   MessageCircle,
   Milestone,
   Navigation,
   Phone,
   Route,
   Share2,
+  Shirt,
+  Snowflake,
   UserRound,
   Venus,
+  Wifi,
 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -38,6 +48,7 @@ import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { stageCoordinates, useGeoName } from '../../lib/geo'
+import { publicWalkingStationPath } from '../../lib/public-place'
 import type { WalkingStation, WalkingStationStay } from '../../types/app'
 
 function hasText(value: string | null | undefined) {
@@ -89,6 +100,10 @@ export function WalkingStationDetailPage() {
   const coords = stageCoordinates(item)
   const km = (value: number | null | undefined) =>
     value == null ? '' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
+  const equipped = (value: boolean) =>
+    value ? t('walkingStations.equipped') : t('walkingStations.notEquipped')
+  const countValue = (value: number | null | undefined) =>
+    value == null ? '—' : formatNumber(value, locale)
   const hasManager =
     hasText(item.managerName) ||
     hasText(item.managerPhone) ||
@@ -168,6 +183,77 @@ export function WalkingStationDetailPage() {
                 className="sm:col-span-2"
               />
             ) : null}
+          </div>
+          <div className="space-y-2">
+            <FormSectionTitle icon={Shirt}>{t('walkingStations.sectionAmenities')}</FormSectionTitle>
+            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+              <FormFactTile
+                icon={Shirt}
+                label={t('walkingStations.hasLaundry')}
+                value={equipped(item.hasLaundry)}
+                tone="teal"
+              />
+              <FormFactTile
+                icon={Wifi}
+                label={t('walkingStations.hasInternet')}
+                value={equipped(item.hasInternet)}
+                tone="mint"
+              />
+              <FormFactTile
+                icon={BookOpen}
+                label={t('walkingStations.hasPrayerRoom')}
+                value={equipped(item.hasPrayerRoom)}
+                tone="ink"
+              />
+              <FormFactTile
+                icon={ArrowUpDown}
+                label={t('walkingStations.hasElevator')}
+                value={equipped(item.hasElevator)}
+                tone="teal"
+              />
+              <FormFactTile
+                icon={Flame}
+                label={t('walkingStations.heatingSystem')}
+                value={item.heatingSystem || '—'}
+                empty={!item.heatingSystem}
+                tone="mint"
+              />
+              <FormFactTile
+                icon={Snowflake}
+                label={t('walkingStations.coolingSystem')}
+                value={item.coolingSystem || '—'}
+                empty={!item.coolingSystem}
+                tone="ink"
+              />
+              <FormFactTile
+                icon={Car}
+                label={t('walkingStations.parkingCapacity')}
+                value={countValue(item.parkingCapacity)}
+                empty={item.parkingCapacity == null}
+                tone="teal"
+              />
+              <FormFactTile
+                icon={Bath}
+                label={t('walkingStations.bathroomCount')}
+                value={countValue(item.bathroomCount)}
+                empty={item.bathroomCount == null}
+                tone="mint"
+              />
+              <FormFactTile
+                icon={Droplets}
+                label={t('walkingStations.toiletCount')}
+                value={countValue(item.toiletCount)}
+                empty={item.toiletCount == null}
+                tone="ink"
+              />
+              <FormFactTile
+                icon={Maximize2}
+                label={t('walkingStations.areaSqm')}
+                value={item.areaSqm == null ? '—' : formatNumber(item.areaSqm, locale)}
+                empty={item.areaSqm == null}
+                tone="teal"
+              />
+            </div>
           </div>
           {coords ? (
             <div className="space-y-2">
@@ -321,12 +407,20 @@ export function WalkingStationDetailPage() {
             editLabel={t('common.edit')}
             deleteLabel={t('walkingStations.delete')}
             extra={
-              <Link to="/base-info/walking-routes">
-                <Button type="button" variant="soft">
-                  <Route className="size-4" aria-hidden />
-                  {t('walkingStations.manageRoutes')}
-                </Button>
-              </Link>
+              <>
+                <Link to={publicWalkingStationPath(item.id)}>
+                  <Button type="button" variant="soft">
+                    <Milestone className="size-4" aria-hidden />
+                    {t('publicWalkingStation.openPage')}
+                  </Button>
+                </Link>
+                <Link to="/base-info/walking-routes">
+                  <Button type="button" variant="soft">
+                    <Route className="size-4" aria-hidden />
+                    {t('walkingStations.manageRoutes')}
+                  </Button>
+                </Link>
+              </>
             }
             onDelete={() =>
               confirmDelete({

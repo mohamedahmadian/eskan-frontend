@@ -54,6 +54,7 @@ type FeatureCountryIdsKey =
   | 'individualCountryIds'
   | 'groupCountryIds'
   | 'caravanCountryIds'
+  | 'caravanContactsCountryIds'
 
 type Draft = Omit<
   ReceptionSettings,
@@ -67,6 +68,7 @@ type Draft = Omit<
   | 'individualCountries'
   | 'groupCountries'
   | 'caravanCountries'
+  | 'caravanContactsCountries'
 > & {
   insurancePlans: DraftPlan[]
 } & Record<FeatureCountryIdsKey, string[]>
@@ -139,6 +141,7 @@ const emptyDraft = (): Draft => ({
   individualCountryIds: [],
   groupCountryIds: [],
   caravanCountryIds: [],
+  caravanContactsCountryIds: [],
   insuranceOrganization: '',
   insurancePlans: [],
   imamRezaMartyrdomDate: null,
@@ -173,6 +176,7 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
           individualCountryIds: data.individualCountryIds,
           groupCountryIds: data.groupCountryIds,
           caravanCountryIds: data.caravanCountryIds,
+          caravanContactsCountryIds: data.caravanContactsCountryIds,
         }
       : {
           mashhadPlacementCountryIds: idsOf(data.mashhadPlacementCountries),
@@ -182,6 +186,7 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
           individualCountryIds: idsOf(data.individualCountries),
           groupCountryIds: idsOf(data.groupCountries),
           caravanCountryIds: idsOf(data.caravanCountries),
+          caravanContactsCountryIds: idsOf(data.caravanContactsCountries),
         }
   return {
     individualEnabled: data.individualEnabled,
@@ -366,6 +371,7 @@ export function ReceptionSettingsPage() {
   }
 
   function patchEnabled(key: keyof Draft, checked: boolean) {
+    if (!settings.data) return
     const next = { ...draft, [key]: checked }
     setDraft(next)
     if (occasionsSequenceError(next)) {
@@ -422,6 +428,7 @@ export function ReceptionSettingsPage() {
 
   function submit(event: FormEvent) {
     event.preventDefault()
+    if (!settings.data) return
     if (occasionError) {
       setTab('OCCASIONS')
       toast.error(occasionError)
@@ -566,6 +573,16 @@ export function ReceptionSettingsPage() {
                     countries={countries.data ?? []}
                     nameOf={nameOf}
                     onChange={(ids) => patch('companionsCountryIds', ids)}
+                  />
+                  <p className="text-sm leading-7 text-ink-500">
+                    {t('receptionSettings.caravanContactsCountriesHint')}
+                  </p>
+                  <CountryCheckboxGrid
+                    label={t('receptionSettings.caravanContactsCountries')}
+                    ids={draft.caravanContactsCountryIds}
+                    countries={countries.data ?? []}
+                    nameOf={nameOf}
+                    onChange={(ids) => patch('caravanContactsCountryIds', ids)}
                   />
                 </>
               ) : null}

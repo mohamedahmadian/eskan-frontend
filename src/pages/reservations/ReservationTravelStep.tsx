@@ -318,6 +318,8 @@ export function ReservationTravelStep({
           selectedParty={selectedParty}
           reservationId={mode === 'admin' ? reservation.id : undefined}
           datesError={datesOverlapError}
+          simCardRequestCount={reservation.simCardRequestCount ?? 0}
+          bankCardRequestCount={reservation.bankCardRequestCount ?? 0}
           subjectUser={
             mode === 'admin'
               ? reservation.type === 'CARAVAN' && reservation.caravanManager

@@ -1340,7 +1340,13 @@ export function ReservationCreatePage() {
         ) : null}
 
         {step === 'services' ? (
-          <ReservationApplicantFields values={values} onChange={patchValues} />
+          <ReservationApplicantFields
+            values={values}
+            onChange={patchValues}
+            reservationType={type}
+            simCardRequestCount={draftQuery.data?.simCardRequestCount ?? 0}
+            bankCardRequestCount={draftQuery.data?.bankCardRequestCount ?? 0}
+          />
         ) : null}
 
         {step === 'license' && !skipLicenseStep ? (

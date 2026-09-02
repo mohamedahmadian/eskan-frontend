@@ -53,12 +53,13 @@ import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { toast } from 'sonner'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { FormCard } from '../../components/ui/FormLayout'
-import { currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
+import { collaborationYears, currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
+import { publicProfilePath } from '../../lib/public-profile'
 import { formatRoles, isAdmin } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import type { ManagedUser } from '../../types/app'
 import { HeadquartersAreasCard } from '../headquarters-representatives/HeadquartersAreasCard'
-import type { RoleUserScope } from './user-scopes'
+import { showUserActivityStartYear, type RoleUserScope } from './user-scopes'
 import { RoleUserProfileHeader } from './RoleUserProfileHeader'
 import { SetUserPasswordModal } from './SetUserPasswordModal'
 import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
@@ -140,6 +141,11 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
     : empty
   const cityLabel = user.city ? geoName(user.city) : ''
   const rolesLabel = formatRoles(user.roles, t)
+  const showActivityStart = showUserActivityStartYear(keys, {
+    lockedRoleCodes: scope.lockedRoleCodes,
+    roleCodes: user.roles.map((role) => role.code),
+  })
+  const yearsOfCollaboration = collaborationYears(user.activityStartYear)
 
   async function submitUserPassword(password: string) {
     if (!user.phone) {
@@ -248,6 +254,26 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                   empty={!user.religion}
                   tone="ink"
                 />
+                {showActivityStart ? (
+                  <FactTile
+                    icon={Calendar}
+                    label={t('users.activityStartYear')}
+                    value={
+                      user.activityStartYear != null
+                        ? formatNumber(user.activityStartYear, uiLocale)
+                        : empty
+                    }
+                    empty={user.activityStartYear == null}
+                    hint={
+                      yearsOfCollaboration != null
+                        ? t('users.collaborationYears', {
+                            years: formatNumber(yearsOfCollaboration, uiLocale),
+                          })
+                        : undefined
+                    }
+                    tone="teal"
+                  />
+                ) : null}
               </div>
             </section>
           ) : null}
@@ -633,8 +659,21 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                     })
             }
             extra={
-              scope.showPilgrimCard ? undefined : (
+              scope.showPilgrimCard ? (
+                <Link to={publicProfilePath(user.id)}>
+                  <Button type="button" variant="soft">
+                    <IdCard className="size-4" aria-hidden />
+                    {t('publicProfile.openPage')}
+                  </Button>
+                </Link>
+              ) : (
                 <>
+                  <Link to={publicProfilePath(user.id)}>
+                    <Button type="button" variant="soft">
+                      <IdCard className="size-4" aria-hidden />
+                      {t('publicProfile.openPage')}
+                    </Button>
+                  </Link>
                   <Link to={`${scope.listPath}/${user.id}/location`}>
                     <Button type="button" variant="soft">
                       <MapPinned className="size-4" aria-hidden />
@@ -708,6 +747,12 @@ function PilgrimOperationsBox({ userId, listPath }: { userId: string; listPath: 
             {t('pilgrims.card')}
           </Button>
         </Link>
+        <Link to={publicProfilePath(userId)}>
+          <Button type="button" variant="soft">
+            <IdCard className="size-4" aria-hidden />
+            {t('publicProfile.openPage')}
+          </Button>
+        </Link>
         <Link to={`${base}/location`}>
           <Button type="button" variant="soft">
             <MapPinned className="size-4" aria-hidden />
@@ -751,6 +796,7 @@ function FactTile({
   label,
   value,
   empty,
+  hint,
   tone,
   className = '',
 }: {
@@ -758,6 +804,7 @@ function FactTile({
   label: string
   value: ReactNode
   empty?: boolean
+  hint?: ReactNode
   tone: Tone
   className?: string
 }) {
@@ -780,6 +827,7 @@ function FactTile({
         >
           {value}
         </div>
+        {hint ? <p className="mt-1 text-xs font-medium text-ink-500">{hint}</p> : null}
       </div>
     </article>
   )

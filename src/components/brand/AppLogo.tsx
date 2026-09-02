@@ -17,6 +17,7 @@ export function AppLogo({
       src={src}
       alt={decorative ? '' : t('app.name')}
       className={className}
+      crossOrigin="anonymous"
       draggable={false}
       onError={(event) => {
         if (event.currentTarget.src.endsWith(APP_LOGO_SRC)) return

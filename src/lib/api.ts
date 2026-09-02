@@ -48,7 +48,13 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
 api.interceptors.request.use((config) => {
   const token = getAuthToken()
   const url = `${config.baseURL ?? ''}${config.url ?? ''}`
-  if (token && !url.includes('/public/vouchers/')) {
+  if (
+    token &&
+    !url.includes('/public/vouchers/') &&
+    !url.includes('/public/profiles/') &&
+    !url.includes('/public/accommodations/') &&
+    !url.includes('/public/walking-stations/')
+  ) {
     config.headers.Authorization = `Bearer ${token}`
   }
   config.headers['Accept-Language'] = uiLanguageFor(getStoredPreferredLocale())
