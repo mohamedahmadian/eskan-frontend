@@ -7,6 +7,7 @@ import {
   Check,
   CreditCard,
   Footprints,
+  Globe2,
   HeartHandshake,
   MapPin,
   Mars,
@@ -438,10 +439,18 @@ export function ReservationCompleteSummary({
           ) : null}
         </section>
 
-        {origin || reservation.caravan || reservation.group ? (
+        {origin || reservation.originCountry || reservation.caravan || reservation.group ? (
           <section>
             <SectionTitle icon={MapPin}>{t('reservations.createSteps.optional')}</SectionTitle>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+              {reservation.originCountry ? (
+                <FactTile
+                  icon={Globe2}
+                  label={t('reservations.originCountry')}
+                  value={nameOf(reservation.originCountry)}
+                  tone="mint"
+                />
+              ) : null}
               {origin ? (
                 <FactTile
                   icon={MapPin}

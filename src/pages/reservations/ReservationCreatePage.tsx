@@ -17,7 +17,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -53,7 +53,7 @@ import {
   createWizardPath,
   isOwnerCreateDraft,
   partyMaxSize,
-  settingsEnabledKey,
+  isReceptionTypeAvailable,
 } from './reservation-steps'
 import {
   ReceptionRulesModal,
@@ -221,11 +221,11 @@ function permitFromReservation(reservation: Reservation): CaravanPermitDraft {
   return { source: '', issuedLicenseId: '', permitImageId: '' }
 }
 
-function valuesFromReservation(reservation: Reservation, userProvinceId?: string | null): TravelValues {
+function valuesFromReservation(reservation: Reservation): TravelValues {
   const male = String(reservation.requestedMaleCount || reservation.maleCount || 0)
   const female = String(reservation.requestedFemaleCount || reservation.femaleCount || 0)
   return {
-    provinceId: reservation.originCity?.provinceId || userProvinceId || '',
+    provinceId: reservation.originCity?.provinceId || '',
     originCityId: reservation.originCity?.id ?? '',
     walkingRouteId: reservation.walkingRoute?.id ?? '',
     stayStartDate: reservation.stayStartDate ?? '',
@@ -355,7 +355,6 @@ export function ReservationCreatePage() {
     },
   })
   const iranId = countries.data?.find((item) => item.iso2 === 'IR')?.id ?? ''
-  const autoCaravanStarted = useRef(false)
 
   const permitOptionsQuery = useQuery({
     queryKey: ['reservations', 'permit-options', values.caravanId, reservationYear],
@@ -410,30 +409,24 @@ export function ReservationCreatePage() {
       : !isAdminCreate
         ? user
         : null
-  const isInternationalSubject =
-    countries.isSuccess && !isIranCountry(subject?.countryId, iranId)
-  const skipIranianOnlySteps = isInternationalSubject
-  const skipTypeStep = isInternationalSubject
-  const admissionTypes: ReservationType[] = isInternationalSubject
-    ? ['CARAVAN']
-    : types
-  const skipLicenseStep = isInternationalSubject && (type === 'CARAVAN' || !type)
+  const originCountryId = draftQuery.data?.originCountry?.id ?? ''
+  const admissionTypes: ReservationType[] = types
+  const skipLicenseStep =
+    type === 'CARAVAN' && Boolean(originCountryId) && !isIranCountry(originCountryId, iranId)
   const createOptions = (
     nextType: ReservationType | '' = type,
     skipParty = skipCaravanParty,
   ): CreateStepOptions => ({
     skipCaravanParty: skipParty,
-    skipType: skipTypeStep,
-    skipLicense: skipIranianOnlySteps && (nextType === 'CARAVAN' || nextType === ''),
+    skipLicense: nextType === 'CARAVAN' && Boolean(originCountryId) && !isIranCountry(originCountryId, iranId),
   })
   const steps = useMemo(
     () =>
       stepsForCreateType(type, {
         skipCaravanParty,
-        skipType: skipTypeStep,
         skipLicense: skipLicenseStep,
       }),
-    [type, skipCaravanParty, skipTypeStep, skipLicenseStep],
+    [type, skipCaravanParty, skipLicenseStep],
   )
   const stepIndex = steps.indexOf(step)
   const maxReachedIndex = Math.max(stepIndex, steps.indexOf(maxReachedStep))
@@ -501,10 +494,7 @@ export function ReservationCreatePage() {
     if (!countries.isSuccess) return
     const skipParty = nextType === 'CARAVAN' && Boolean(soleCaravan)
     const nextValues = withDefaultStayDates(
-      valuesFromReservation(
-        reservation,
-        reservation.createdBy ? undefined : user?.provinceId,
-      ),
+      valuesFromReservation(reservation),
       settings.data,
     )
     if (skipParty && soleCaravan && !nextValues.caravanId) {
@@ -585,11 +575,6 @@ export function ReservationCreatePage() {
 
   useEffect(() => {
     if (!subject || draftParam) return
-    setValues((current) => ({
-      ...current,
-      provinceId: current.provinceId || subject.provinceId || '',
-      originCityId: current.originCityId || subject.cityId || '',
-    }))
     setPartyDraft((current) => ({
       ...current,
       provinceId: current.provinceId || subject.provinceId || '',
@@ -608,22 +593,6 @@ export function ReservationCreatePage() {
     if (!type || !steps.length || steps.includes(step)) return
     setStep(step === 'license' ? steps[steps.length - 1] : steps[0])
   }, [type, steps, step])
-
-  useEffect(() => {
-    if (!skipTypeStep || type || draftParam || autoCaravanStarted.current) return
-    if (!subjectReady || !settings.isSuccess || !countries.isSuccess) return
-    if (!settings.data?.[settingsEnabledKey('CARAVAN')]) return
-    autoCaravanStarted.current = true
-    void goAfterType('CARAVAN')
-  }, [
-    skipTypeStep,
-    type,
-    draftParam,
-    subjectReady,
-    settings.isSuccess,
-    settings.data,
-    countries.isSuccess,
-  ])
 
   const capacity = useQuery({
     queryKey: ['reception-settings', year, 'capacity'],
@@ -815,10 +784,6 @@ export function ReservationCreatePage() {
         nextStep = 'count'
         skipParty = true
       }
-    }
-    if (skipTypeStep) {
-      setMaxReachedStep(nextStep)
-      setStep(nextStep)
     }
     setSubmitting(true)
     try {
@@ -1109,9 +1074,7 @@ export function ReservationCreatePage() {
       toast.success(
         data.status === 'PENDING_MANAGEMENT_REVIEW'
           ? t('reservations.submitted')
-          : data.status === 'COMPLETED'
-            ? t('reservations.internationalCompleted')
-            : t('reservations.created'),
+          : t('reservations.created'),
       )
       await queryClient.invalidateQueries({ queryKey: ['reservations'] })
       navigate(`${createBase}/${data.id}`)
@@ -1197,37 +1160,6 @@ export function ReservationCreatePage() {
     return null
   }
 
-  if (!draftParam && countries.isPending) {
-    return (
-      <div className={userFormShellClassName}>
-        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
-        <LoadingState />
-      </div>
-    )
-  }
-
-  if (
-    skipTypeStep &&
-    settings.isSuccess &&
-    !settings.data?.[settingsEnabledKey('CARAVAN')]
-  ) {
-    return (
-      <div className={userFormShellClassName}>
-        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
-        <CreateUnavailableNotice />
-      </div>
-    )
-  }
-
-  if (skipTypeStep && (step === 'type' || !type)) {
-    return (
-      <div className={userFormShellClassName}>
-        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
-        <LoadingState />
-      </div>
-    )
-  }
-
   return (
     <div className={userFormShellClassName}>
       <PageHeader
@@ -1296,7 +1228,11 @@ export function ReservationCreatePage() {
             <div className="flex flex-col gap-4">
               {admissionTypes.map((item) => {
                 const Icon = typeIcons[item]
-                const enabled = Boolean(settings.data?.[settingsEnabledKey(item)])
+                const enabled = isReceptionTypeAvailable(
+                  settings.data,
+                  item,
+                  originCountryId || undefined,
+                )
                 const selected = type === item
                 return (
                   <button
@@ -1399,7 +1335,7 @@ export function ReservationCreatePage() {
             onChange={patchValues}
             showOccasionHint={false}
             error={datesOverlapError}
-            countryId={subject?.countryId || iranId}
+            countryId={draftQuery.data?.originCountry?.id}
           />
         ) : null}
 

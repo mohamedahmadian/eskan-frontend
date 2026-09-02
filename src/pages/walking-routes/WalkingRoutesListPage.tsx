@@ -123,12 +123,20 @@ export function WalkingRoutesListPage() {
         title={t('menus.walkingRoutes')}
         subtitle={t('walkingRoutes.subtitle')}
         action={
-          <Link to="/base-info/walking-routes/new">
-            <Button>
-              <Plus className="size-4" />
-              {t('walkingRoutes.create')}
-            </Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/base-info/walking-stations">
+              <Button type="button" variant="soft">
+                <Milestone className="size-4" aria-hidden />
+                {t('walkingRoutes.manageStations')}
+              </Button>
+            </Link>
+            <Link to="/base-info/walking-routes/new">
+              <Button>
+                <Plus className="size-4" />
+                {t('walkingRoutes.create')}
+              </Button>
+            </Link>
+          </div>
         }
       />
       <SearchBar

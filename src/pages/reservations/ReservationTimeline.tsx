@@ -22,6 +22,8 @@ import type { Reservation, ReservationPerson, ReservationStatus } from '../../ty
 import {
   currentStepFromStatus,
   isStepDone,
+  showMashhadPlacement,
+  showRoutePlacement,
   stepCompletedAt,
   stepCompletedBy,
   stepLabelKey,
@@ -244,12 +246,16 @@ function buildTimelineItems(
     const state: TimelineState = done ? 'done' : step === current ? 'current' : 'pending'
     const actor = stepCompletedBy(step, reservation)
     const detail =
-      step === 'placement' && reservation.requestsAccommodation
-        ? reservation.placementStatus === 'PLACED'
-          ? t('reservations.timelinePlacementPlaced')
-          : reservation.placementStatus === 'PARTIAL'
-            ? t('reservations.timelinePlacementPartial')
-            : t('reservations.timelinePlacementPending')
+      step === 'placement'
+        ? showMashhadPlacement(reservation)
+          ? reservation.placementStatus === 'PLACED'
+            ? t('reservations.timelinePlacementPlaced')
+            : reservation.placementStatus === 'PARTIAL'
+              ? t('reservations.timelinePlacementPartial')
+              : t('reservations.timelinePlacementPending')
+          : showRoutePlacement(reservation)
+            ? t('reservations.timelineRoutePlacement')
+            : undefined
         : undefined
     return {
       key: step,

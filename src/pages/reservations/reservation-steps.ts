@@ -127,6 +127,24 @@ export type ReservationStepSource = {
   requestsAccommodation?: boolean
   placementStatus?: PlacementStatus | null
   internationalWorkflow?: boolean
+  features?: {
+    companions: boolean
+    insurance: boolean
+    mashhadPlacement: boolean
+    routePlacement: boolean
+  }
+}
+
+export function showMashhadPlacement(source?: ReservationStepSource | null) {
+  if (!source) return false
+  if (source.features) {
+    return Boolean(source.features.mashhadPlacement && source.requestsAccommodation)
+  }
+  return Boolean(source.requestsAccommodation && !source.internationalWorkflow)
+}
+
+export function showRoutePlacement(source?: ReservationStepSource | null) {
+  return Boolean(source?.features?.routePlacement)
 }
 
 export function stepsForType(
@@ -137,15 +155,27 @@ export function stepsForType(
     typeof source === 'boolean' ? source : Boolean(source?.requestsAccommodation)
   const international =
     typeof source === 'object' && Boolean(source?.internationalWorkflow)
-  const base: ReservationStepCode[] = international
+  const features = typeof source === 'object' ? source?.features : undefined
+  const companionsOn = features?.companions ?? !international
+  const insuranceOn = features?.insurance ?? !international
+  const mashhadOn =
+    (features?.mashhadPlacement ?? (!international && requestsAccommodation)) &&
+    requestsAccommodation
+  const routeOn = Boolean(features?.routePlacement)
+  const base: ReservationStepCode[] = international && !features
     ? ['travel', 'complete']
     : type === 'INDIVIDUAL'
       ? ['travel', 'review', 'insurance', 'complete']
       : type === 'GROUP'
         ? ['travel', 'review', 'companions', 'insurance', 'complete']
         : ['travel', 'review', 'companions', 'contacts', 'insurance', 'complete']
-  if (requestsAccommodation && !international) return [...base, 'placement']
-  return base
+  const steps = base.filter((step) => {
+    if (step === 'companions') return companionsOn
+    if (step === 'insurance') return insuranceOn
+    return true
+  })
+  if (mashhadOn || routeOn) return [...steps, 'placement']
+  return steps
 }
 
 export function currentStepFromStatus(
@@ -159,7 +189,12 @@ export function currentStepFromStatus(
   if (status === 'CARAVAN_CONTACTS') return 'contacts'
   if (status === 'INSURANCE') return 'insurance'
   if (status === 'COMPLETED') {
-    if (source?.requestsAccommodation && !source.internationalWorkflow) return 'placement'
+    const mashhadOn =
+      (source?.features?.mashhadPlacement ??
+        Boolean(source?.requestsAccommodation && !source?.internationalWorkflow)) &&
+      Boolean(source?.requestsAccommodation)
+    const routeOn = Boolean(source?.features?.routePlacement)
+    if (mashhadOn || routeOn) return 'placement'
     return 'complete'
   }
   return stepsForType(type, source)[0]
@@ -198,8 +233,9 @@ export function neighborFlowStep(
   type: ReservationType,
   step: ReservationStepCode,
   direction: -1 | 1,
+  source?: ReservationStepSource,
 ): ReservationStepCode | null {
-  const flow = ownerFlowSteps(type)
+  const flow = ownerFlowSteps(type, source)
   const index = flow.indexOf(step)
   if (index < 0) return null
   return flow[index + direction] ?? null
@@ -269,11 +305,11 @@ export function progressPercent(
   source?: ReservationStepSource,
 ) {
   if (status === 'COMPLETED') {
-    if (
-      source?.internationalWorkflow ||
-      !source?.requestsAccommodation ||
-      source.placementStatus === 'PLACED'
-    ) {
+    const mashhadOn =
+      (source?.features?.mashhadPlacement ??
+        Boolean(source?.requestsAccommodation && !source?.internationalWorkflow)) &&
+      Boolean(source?.requestsAccommodation)
+    if (!mashhadOn || source.placementStatus === 'PLACED') {
       return 100
     }
   }
@@ -305,6 +341,33 @@ export function settingsEnabledKey(type: ReservationType) {
   if (type === 'INDIVIDUAL') return 'individualEnabled' as const
   if (type === 'GROUP') return 'groupEnabled' as const
   return 'caravanEnabled' as const
+}
+
+export function settingsTypeCountriesKey(type: ReservationType) {
+  if (type === 'INDIVIDUAL') return 'individualCountries' as const
+  if (type === 'GROUP') return 'groupCountries' as const
+  return 'caravanCountries' as const
+}
+
+export function isReceptionTypeAvailable(
+  settings:
+    | {
+        individualEnabled: boolean
+        groupEnabled: boolean
+        caravanEnabled: boolean
+        individualCountries?: { id: string }[]
+        groupCountries?: { id: string }[]
+        caravanCountries?: { id: string }[]
+      }
+    | undefined,
+  type: ReservationType,
+  originCountryId?: string | null,
+) {
+  if (!settings?.[settingsEnabledKey(type)]) return false
+  if (!originCountryId) return true
+  return (settings[settingsTypeCountriesKey(type)] ?? []).some(
+    (country) => country.id === originCountryId,
+  )
 }
 
 export function validReturnStatuses(type: ReservationType): ReservationStatus[] {

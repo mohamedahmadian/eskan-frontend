@@ -14,7 +14,7 @@ function historyCoordinates(item: ReservationTravelHistoryItem) {
   if (item.latitude != null && item.longitude != null) {
     return { lat: item.latitude, lng: item.longitude }
   }
-  const stage = item.walkingRouteStage
+  const stage = item.walkingStation
   if (stage?.latitude != null && stage.longitude != null) {
     return { lat: stage.latitude, lng: stage.longitude }
   }
@@ -51,9 +51,9 @@ export function ReservationTravelHistoryCard({ reservationId }: { reservationId:
       path.push(coords)
       const numberLabel = formatNumber(index + 1, locale)
       const station =
-        item.walkingRouteStage?.name?.trim() ||
-        (item.walkingRouteStage
-          ? `${t('walkingRoutes.stage')} ${formatNumber(item.walkingRouteStage.stageNumber, locale)}`
+        item.walkingStation?.name?.trim() ||
+        (item.walkingStation
+          ? t('walkingRoutes.stage')
           : item.city
             ? nameOf(item.city)
             : numberLabel)
@@ -103,9 +103,8 @@ export function ReservationTravelHistoryCard({ reservationId }: { reservationId:
                 .filter(Boolean)
                 .join(' · ')
               const station =
-                item.walkingRouteStage != null
-                  ? item.walkingRouteStage.name?.trim() ||
-                    `${t('walkingRoutes.stage')} ${formatNumber(item.walkingRouteStage.stageNumber, locale)}`
+                item.walkingStation != null
+                  ? item.walkingStation.name?.trim() || t('walkingRoutes.stage')
                   : ''
               const coords =
                 item.latitude != null && item.longitude != null

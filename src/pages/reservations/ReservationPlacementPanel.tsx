@@ -37,8 +37,9 @@ import type {
   ReservationStayAccommodation,
   UserGender,
 } from "../../types/app";
+import { showMashhadPlacement, showRoutePlacement, workingHeadcount } from "./reservation-steps";
+import { ReservationRoutePlacementPanel } from "./ReservationRoutePlacementPanel";
 import { PlacementStatusBadge } from "./ReservationStatusBadge";
-import { workingHeadcount } from "./reservation-steps";
 
 type StayTone = "teal" | "mint";
 
@@ -552,5 +553,23 @@ function SocialTile({
         ))}
       </ul>
     </article>
+  );
+}
+
+export function ReservationPlacementStep({
+  reservation,
+  footer,
+}: {
+  reservation: Reservation;
+  footer?: ReactNode;
+}) {
+  const mashhad = showMashhadPlacement(reservation);
+  const route = showRoutePlacement(reservation);
+  return (
+    <div className="space-y-4">
+      {mashhad ? <ReservationPlacementPanel reservation={reservation} /> : null}
+      {route ? <ReservationRoutePlacementPanel reservation={reservation} /> : null}
+      {footer}
+    </div>
   );
 }

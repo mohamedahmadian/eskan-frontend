@@ -3,12 +3,15 @@ import {
   ArrowUpDown,
   MapPin,
   MapPinned,
+  Mars,
   MessageCircle,
   Milestone,
+  Navigation,
   Phone,
   Share2,
   Type,
   UserRound,
+  Venus,
   X,
 } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
@@ -27,7 +30,7 @@ function hasText(value: string | null | undefined) {
 }
 
 export function stageKey(stage: WalkingRouteStage) {
-  return stage.id ?? `${stage.cityId}-${stage.stageNumber}`
+  return stage.stationId || stage.id || `${stage.cityId}-${stage.stageNumber}`
 }
 
 export function stageTitle(stage: WalkingRouteStage, locale: string, fallback: string) {
@@ -158,6 +161,27 @@ export function StationInfoCard({
                 tone="ink"
               />
             ) : null}
+            {hasText(stage.neshanAddress) ? (
+              <FormFactTile
+                icon={Navigation}
+                label={t('walkingStations.neshanAddress')}
+                value={stage.neshanAddress}
+                tone="teal"
+                className="sm:col-span-2"
+              />
+            ) : null}
+            <FormFactTile
+              icon={Mars}
+              label={t('walkingStations.maleCount')}
+              value={n(stage.maleCount ?? 0)}
+              tone="mint"
+            />
+            <FormFactTile
+              icon={Venus}
+              label={t('walkingStations.femaleCount')}
+              value={n(stage.femaleCount ?? 0)}
+              tone="ink"
+            />
             {hasText(stage.description) ? (
               <FormFactTile
                 icon={AlignLeft}

@@ -5,7 +5,7 @@ import type { Reservation } from "../../types/app";
 import { type ReservationStepCode } from "./reservation-steps";
 import { ReservationCompanionsSummary } from "./ReservationCompanionsStep";
 import { ReservationCompleteSummary } from "./ReservationCompleteSummary";
-import { ReservationPlacementPanel } from "./ReservationPlacementPanel";
+import { ReservationPlacementStep } from "./ReservationPlacementPanel";
 import { ReservationContactsSummary } from "./ReservationContactsStep";
 import { ReservationInsuranceSummary } from "./ReservationInsuranceSummary";
 import { ReservationTravelSummary } from "./ReservationTravelSummary";
@@ -57,7 +57,7 @@ export function ReservationStepReadonly({
 
   if (step === "placement") {
     return (
-      <ReservationPlacementPanel reservation={reservation} footer={backButton} />
+      <ReservationPlacementStep reservation={reservation} footer={backButton} />
     );
   }
 

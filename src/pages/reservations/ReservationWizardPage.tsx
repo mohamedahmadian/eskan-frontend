@@ -40,7 +40,7 @@ import { ReservationContactsStep } from "./ReservationContactsStep";
 import { ReservationTravelStep } from "./ReservationTravelStep";
 import { ReservationStepReadonly } from "./ReservationStepReadonly";
 import { ReservationCompleteSummary } from "./ReservationCompleteSummary";
-import { ReservationPlacementPanel } from "./ReservationPlacementPanel";
+import { ReservationPlacementStep } from "./ReservationPlacementPanel";
 import { ReservationTravelSummary } from "./ReservationTravelSummary";
 import { ReservationTimeline } from "./ReservationTimeline";
 import { ReservationWizardShell } from "./ReservationWizardShell";
@@ -203,8 +203,7 @@ export function ReservationWizardPage() {
           />
         )}
       </ReservationWizardShell>
-      {reservation.status === "PENDING_MANAGEMENT_REVIEW" ||
-      reservation.internationalWorkflow ? null : (
+      {reservation.status === "PENDING_MANAGEMENT_REVIEW" ? null : (
         <div className="mt-4">
           <ReservationTimeline reservation={reservation} />
         </div>
@@ -251,7 +250,7 @@ function ActiveStep({
         onGoToStep={onGoToStep}
       />
     ) : active === "placement" ? (
-      <ReservationPlacementPanel reservation={reservation} />
+      <ReservationPlacementStep reservation={reservation} />
     ) : (
       <ReservationCompleteSummary reservation={reservation} />
     );

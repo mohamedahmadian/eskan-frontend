@@ -397,6 +397,36 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "entryBorders.subtitle",
     };
   }
+  if (pathname.startsWith("/base-info/walking-stations/new")) {
+    return {
+      titleKey: "walkingStations.create",
+      subtitleKey: "walkingStations.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/base-info/walking-stations/")
+  ) {
+    return {
+      titleKey: "walkingStations.edit",
+      subtitleKey: "walkingStations.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/base-info/walking-stations/") &&
+    pathname !== "/base-info/walking-stations"
+  ) {
+    return {
+      titleKey: "walkingStations.details",
+      subtitleKey: "walkingStations.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/base-info/walking-stations")) {
+    return {
+      titleKey: "menus.walkingStations",
+      subtitleKey: "walkingStations.subtitle",
+    };
+  }
   if (pathname.startsWith("/base-info/walking-routes/new")) {
     return {
       titleKey: "walkingRoutes.create",

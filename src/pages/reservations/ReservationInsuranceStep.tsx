@@ -110,7 +110,7 @@ export function InsuranceStep({
     reservation.status !== 'COMPLETED' &&
     reservation.status !== 'CANCELLED' &&
     reservation.status !== 'REJECTED'
-  const prevStep = neighborFlowStep(reservation.type, 'insurance', -1)
+  const prevStep = neighborFlowStep(reservation.type, 'insurance', -1, reservation)
 
   const settings = useQuery({
     queryKey: ['reception-settings', reservation.year],

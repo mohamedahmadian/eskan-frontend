@@ -58,7 +58,7 @@ import { ReservationContactsStep } from './ReservationContactsStep'
 import { CompanionsStep } from './ReservationCompanionsStep'
 import { ReservationStepReadonly } from './ReservationStepReadonly'
 import { ReservationCompleteSummary } from './ReservationCompleteSummary'
-import { ReservationPlacementPanel } from './ReservationPlacementPanel'
+import { ReservationPlacementStep } from './ReservationPlacementPanel'
 import { InsuranceStep } from './ReservationInsuranceStep'
 import { ReservationPermitPanel } from './ReservationPermitPanel'
 import {
@@ -578,7 +578,7 @@ function AdminEditableStep({
     )
   }
   if (step === 'placement') {
-    return <ReservationPlacementPanel reservation={reservation} footer={footer} />
+    return <ReservationPlacementStep reservation={reservation} footer={footer} />
   }
   return (
     <ReservationCompleteSummary

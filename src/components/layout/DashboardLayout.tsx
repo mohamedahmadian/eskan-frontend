@@ -11,7 +11,14 @@ import {
   X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
@@ -296,6 +303,23 @@ function splitMenus(mod: NavModule) {
   };
 }
 
+function flattenVisibleMenus(mods: NavModule[]): SidebarNavMenu[] {
+  return mods.flatMap((mod) => {
+    const { ungrouped, sections } = splitMenus(mod);
+    return [...ungrouped, ...sections.flatMap((section) => section.items)];
+  });
+}
+
+function sidebarMenuItemId(code: string) {
+  return `sidebar-menu-${code}`;
+}
+
+function nextMenuIndex(current: number, delta: number, count: number) {
+  if (count <= 0) return 0;
+  const index = Math.min(Math.max(current, 0), count - 1);
+  return (index + delta + count) % count;
+}
+
 function menuMatchesSearch(
   mod: NavModule,
   item: SidebarNavMenu,
@@ -325,9 +349,11 @@ export function DashboardLayout() {
   const showQuickToolsFab = isQuickToolsFabVisible(location.pathname, user);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const mainRef = useRef<HTMLElement>(null);
   const menuSearchRef = useRef<HTMLInputElement>(null);
   const menuSearchHintId = "sidebar-menu-search-hint";
+  const menuSearchListId = "sidebar-menu-list";
   const brandingQuery = useHeadquartersSummary();
   const branding = brandingQuery.data;
   const pilgrim = isPilgrim(user);
@@ -458,10 +484,69 @@ export function DashboardLayout() {
       .filter((mod) => mod.menus.length > 0);
   }, [navModules, query, t]);
 
+  const visibleMenus = useMemo(() => flattenVisibleMenus(modules), [modules]);
+  const searching = Boolean(query.trim());
+  const highlightedMenu = searching
+    ? visibleMenus[
+        visibleMenus.length
+          ? Math.min(highlightedIndex, visibleMenus.length - 1)
+          : 0
+      ]
+    : undefined;
+
   const allMenuPaths = useMemo(
     () => navModules.flatMap((mod) => mod.menus.map((item) => item.path)),
     [navModules],
   );
+
+  const openMenu = useCallback(
+    (item: SidebarNavMenu) => {
+      setOpen(false);
+      navigate(item.path);
+    },
+    [navigate],
+  );
+
+  const highlightMenu = useCallback(
+    (code: string) => {
+      const index = visibleMenus.findIndex((menu) => menu.code === code);
+      if (index >= 0) setHighlightedIndex(index);
+    },
+    [visibleMenus],
+  );
+
+  const onMenuSearchKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (!searching || event.isComposing) return;
+      const count = visibleMenus.length;
+      if (!count) return;
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setHighlightedIndex((current) => nextMenuIndex(current, 1, count));
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setHighlightedIndex((current) => nextMenuIndex(current, -1, count));
+        return;
+      }
+      if (event.key === "Enter") {
+        if (event.repeat) return;
+        event.preventDefault();
+        const index = Math.min(highlightedIndex, count - 1);
+        const item = visibleMenus[index] ?? visibleMenus[0];
+        if (item) openMenu(item);
+      }
+    },
+    [highlightedIndex, openMenu, searching, visibleMenus],
+  );
+
+  useEffect(() => {
+    if (!highlightedMenu) return;
+    const el = document.getElementById(sidebarMenuItemId(highlightedMenu.code));
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlightedMenu]);
 
   return (
     <QuickToolsProvider>
@@ -538,8 +623,21 @@ export function DashboardLayout() {
                   <input
                     ref={menuSearchRef}
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setHighlightedIndex(0);
+                    }}
+                    onKeyDown={onMenuSearchKeyDown}
                     placeholder={t("nav.searchMenu")}
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={searching}
+                    aria-controls={menuSearchListId}
+                    aria-activedescendant={
+                      highlightedMenu
+                        ? sidebarMenuItemId(highlightedMenu.code)
+                        : undefined
+                    }
                     aria-describedby={menuSearchHintId}
                     className="w-full rounded-2xl border border-line bg-cream-50 py-2.5 ps-10 pe-3 text-sm placeholder:text-ink-400"
                   />
@@ -553,7 +651,10 @@ export function DashboardLayout() {
               </div>
             )}
 
-            <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-3">
+            <nav
+              id={menuSearchListId}
+              className="flex-1 space-y-5 overflow-y-auto px-3 pb-3"
+            >
               {modules.map((mod) => {
                 const { ungrouped, sections } = splitMenus(mod);
                 return (
@@ -567,6 +668,8 @@ export function DashboardLayout() {
                           key={item.code}
                           item={item}
                           allMenuPaths={allMenuPaths}
+                          highlighted={highlightedMenu?.code === item.code}
+                          onHighlight={() => highlightMenu(item.code)}
                           onNavigate={() => setOpen(false)}
                         />
                       ))}
@@ -587,6 +690,8 @@ export function DashboardLayout() {
                                 key={item.code}
                                 item={item}
                                 allMenuPaths={allMenuPaths}
+                                highlighted={highlightedMenu?.code === item.code}
+                                onHighlight={() => highlightMenu(item.code)}
                                 onNavigate={() => setOpen(false)}
                               />
                             ))}
@@ -657,30 +762,40 @@ function SidebarMenuLink({
   item,
   allMenuPaths,
   onNavigate,
+  highlighted = false,
+  onHighlight,
 }: {
   item: SidebarNavMenu;
   allMenuPaths: string[];
   onNavigate: () => void;
+  highlighted?: boolean;
+  onHighlight?: () => void;
 }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const Icon = getNavIcon(item.icon);
   const isActive = isSidebarMenuActive(pathname, item.path, allMenuPaths);
+  const iconClass = isActive
+    ? "text-white"
+    : highlighted
+      ? "text-teal-600"
+      : "text-ink-400";
   return (
     <Link
+      id={sidebarMenuItemId(item.code)}
       to={item.path}
       onClick={onNavigate}
+      onMouseEnter={onHighlight}
       aria-current={isActive ? "page" : undefined}
       className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${
         isActive
-          ? "bg-teal-500 text-white shadow-sm"
-          : "text-ink-700 hover:bg-cream-50"
+          ? `bg-teal-500 text-white shadow-sm${highlighted ? " ring-2 ring-inset ring-white/70" : ""}`
+          : highlighted
+            ? "bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-200"
+            : "text-ink-700 hover:bg-cream-50"
       }`}
     >
-      <Icon
-        className={`size-4 ${isActive ? "text-white" : "text-ink-400"}`}
-        aria-hidden
-      />
+      <Icon className={`size-4 ${iconClass}`} aria-hidden />
       {item.label ?? t(item.nameKey)}
     </Link>
   );

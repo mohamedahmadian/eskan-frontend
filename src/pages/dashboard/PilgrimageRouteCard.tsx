@@ -209,8 +209,8 @@ export function PilgrimageRouteCard({
   const arrivals = useMemo(() => {
     const map = new Map<string, string>()
     for (const item of [...(travelQuery.data ?? [])].reverse()) {
-      if (item.walkingRouteStageId && !map.has(item.walkingRouteStageId)) {
-        map.set(item.walkingRouteStageId, item.createdAt)
+      if (item.walkingStationId && !map.has(item.walkingStationId)) {
+        map.set(item.walkingStationId, item.createdAt)
       }
     }
     return map
@@ -242,10 +242,10 @@ export function PilgrimageRouteCard({
     const lastTravel = [...(travelQuery.data ?? [])].sort(
       (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
     )[0]
-    if (lastTravel?.walkingRouteStage) {
+    if (lastTravel?.walkingStation) {
       return (
-        lastTravel.walkingRouteStage.name?.trim() ||
-        `${t('walkingRoutes.stage')} ${formatNumber(lastTravel.walkingRouteStage.stageNumber, locale)}`
+        lastTravel.walkingStation.name?.trim() ||
+        t('walkingRoutes.stage')
       )
     }
     return ''
@@ -385,7 +385,7 @@ export function PilgrimageRouteCard({
         longitude: coords?.lng ?? null,
         notes: accountQuery.data?.locationNotes ?? null,
         reservationId,
-        walkingRouteStageId: stage.id ?? null,
+        walkingStationId: stage.stationId ?? null,
         source: 'STATION',
       })
       const index = stages.findIndex((item) => stageKey(item) === stageKey(stage))
@@ -597,7 +597,7 @@ export function PilgrimageRouteCard({
                           >
                             {title}
                           </span>
-                          {stage.id && arrivals.get(stage.id) ? (
+                          {stage.stationId && arrivals.get(stage.stationId) ? (
                             <span
                               className={`mt-1 text-center leading-tight ${
                                 enlarge ? 'text-[10px] sm:text-xs' : 'text-[9px]'
@@ -606,7 +606,7 @@ export function PilgrimageRouteCard({
                               <span className={`mb-0.5 block ${passed ? 'text-[#16a34a]' : 'text-ink-400'}`}>
                                 {t('dashboard.arrivedAt')}
                               </span>
-                              <DateText value={arrivals.get(stage.id)} withTime stacked />
+                              <DateText value={arrivals.get(stage.stationId)} withTime stacked />
                             </span>
                           ) : null}
                         </button>

@@ -38,7 +38,7 @@ export type UserLocationPayload = {
   longitude: number | null
   notes: string | null
   reservationId?: string | null
-  walkingRouteStageId?: string | null
+  walkingStationId?: string | null
   source?: 'MANUAL' | 'APP' | 'STATION'
 }
 

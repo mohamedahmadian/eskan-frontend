@@ -345,10 +345,27 @@ export function ReceptionDesk({
             icon={UserRound}
             title={profile.person.fullName}
             action={
-              <OpenUserPanelButton
-                userId={profile.person.id}
-                status={profile.person.status}
-              />
+              <div className="flex flex-col items-stretch gap-1.5">
+                <OpenUserPanelButton
+                  userId={profile.person.id}
+                  status={profile.person.status}
+                  label={t('reception.viewPilgrimSystem')}
+                />
+                <Button
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      `/reservations/new?forUser=${encodeURIComponent(profile.person.id)}`,
+                    )
+                  }
+                  className="whitespace-normal text-start leading-5"
+                >
+                  <Plus className="size-4 shrink-0" aria-hidden />
+                  {t('reception.createVisitYear', {
+                    year: formatNumber(profile.currentYear, locale),
+                  })}
+                </Button>
+              </div>
             }
             chips={
               <>
@@ -447,37 +464,43 @@ export function ReceptionDesk({
               title={t('reception.caravanSection')}
               subtitle={t('reception.caravanSubtitle')}
             >
-              <div className="space-y-5 p-5 sm:p-6">
+              <div className="space-y-3 p-4 sm:p-5">
                 <FormSectionTitle icon={Tent}>{t('reception.currentCaravans')}</FormSectionTitle>
                 {profile.caravanManager.caravans.length === 0 ? (
                   <FormEmptyHint>{t('reception.noCaravans')}</FormEmptyHint>
                 ) : (
-                  <ul className="grid gap-3 sm:grid-cols-2">
+                  <ul className="overflow-hidden rounded-2xl border border-line bg-white">
                     {profile.caravanManager.caravans.map((caravan) => (
                       <li
                         key={caravan.id}
-                        className="rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50 to-white p-4"
+                        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-3 py-2 last:border-b-0"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-semibold text-ink-900">{caravan.name}</p>
-                          <span className="text-[11px] font-medium text-ink-500">
-                            {caravan.isActive ? t('geo.active') : t('geo.inactive')}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-ink-500">
+                        <p className="min-w-0 flex-1 text-sm font-semibold text-ink-900">
+                          {caravan.name}
+                        </p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            caravan.isActive
+                              ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-100'
+                              : 'bg-cream-100 text-ink-500 ring-1 ring-line'
+                          }`}
+                        >
+                          {caravan.isActive ? t('geo.active') : t('geo.inactive')}
+                        </span>
+                        <span className="text-xs text-ink-500">
                           {nameOf(caravan.city)}
                           {caravan.licenseNumber
                             ? ` · ${localizeDigits(caravan.licenseNumber, locale)}`
                             : ''}
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-ink-700">
+                        </span>
+                        <span className="text-xs font-medium text-ink-700">
                           {t('reception.peopleCount', {
                             count: formatNumber(caravan.totalCount, locale),
                           })}
-                        </p>
+                        </span>
                         <Link
                           to={`/caravans/${caravan.id}`}
-                          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:text-teal-800"
+                          className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:text-teal-800"
                         >
                           {t('reception.openCaravan')}
                           <ExternalLink className="size-3.5" aria-hidden />
@@ -542,21 +565,6 @@ export function ReceptionDesk({
             icon={UserRound}
             title={t('reception.pilgrimSection')}
             subtitle={t('reception.pilgrimSubtitle')}
-            action={
-              <Button
-                type="button"
-                onClick={() =>
-                  navigate(
-                    `/reservations/new?forUser=${encodeURIComponent(profile.person.id)}`,
-                  )
-                }
-              >
-                <Plus className="size-4" aria-hidden />
-                {t('reception.createVisitYear', {
-                  year: formatNumber(profile.currentYear, locale),
-                })}
-              </Button>
-            }
           >
             <div className="space-y-3 p-4 sm:p-5">
               <FormSectionTitle icon={History}>{t('reception.visitHistory')}</FormSectionTitle>
@@ -652,6 +660,12 @@ function VisitList({
               <span className="min-w-0 flex-1 text-sm text-ink-600">
                 {visit.partyName ?? '—'}
               </span>
+              {showApprovedCounts && routeName ? (
+                <span className="inline-flex min-w-0 max-w-56 items-center gap-1 text-xs text-ink-600">
+                  <Footprints className="size-3.5 shrink-0 text-mint-600" aria-hidden />
+                  <span className="truncate">{routeName}</span>
+                </span>
+              ) : null}
               {showApprovedCounts ? (
                 <span className="grid grid-cols-[auto_auto_auto] items-center gap-x-3 gap-y-3 text-xs font-medium text-ink-800">
                   <span className="font-normal text-ink-500">

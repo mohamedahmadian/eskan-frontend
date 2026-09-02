@@ -87,7 +87,7 @@ export function ReservationWalkingRoutePreview({
         latitude: coords?.lat ?? null,
         longitude: coords?.lng ?? null,
         reservationId,
-        walkingRouteStageId: stage.id ?? null,
+        walkingStationId: stage.stationId ?? null,
         source: 'STATION',
       })
       toast.success(t('location.saved'))

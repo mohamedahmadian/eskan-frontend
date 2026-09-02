@@ -100,8 +100,8 @@ export function ReservationContactsStep({
     reservation.status !== 'COMPLETED' &&
     reservation.status !== 'CANCELLED' &&
     reservation.status !== 'REJECTED'
-  const prevStep = neighborFlowStep(reservation.type, 'contacts', -1)
-  const nextStep = neighborFlowStep(reservation.type, 'contacts', 1)
+  const prevStep = neighborFlowStep(reservation.type, 'contacts', -1, reservation)
+  const nextStep = neighborFlowStep(reservation.type, 'contacts', 1, reservation)
 
   const assignSelf = useMutation({
     mutationFn: async () => {

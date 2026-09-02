@@ -11,10 +11,12 @@ export function OpenUserPanelButton({
   userId,
   status,
   iconOnly = false,
+  label: labelProp,
 }: {
   userId: string
   status?: UserStatus | null
   iconOnly?: boolean
+  label?: string
 }) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -25,7 +27,7 @@ export function OpenUserPanelButton({
   }
 
   const inactive = status === 'INACTIVE'
-  const label = t('auth.enterUserPanel')
+  const label = labelProp ?? t('auth.enterUserPanel')
 
   async function onClick() {
     if (inactive) {

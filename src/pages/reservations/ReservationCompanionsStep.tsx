@@ -119,7 +119,7 @@ export function CompanionsStep({
     reservation.status !== "COMPLETED" &&
     reservation.status !== "CANCELLED" &&
     reservation.status !== "REJECTED";
-  const nextStep = neighborFlowStep(reservation.type, "companions", 1);
+  const nextStep = neighborFlowStep(reservation.type, "companions", 1, reservation);
   const [panel, setPanel] = useState<CompanionPanel | null>(null);
   const [editingMember, setEditingMember] = useState<ReservationMember | null>(
     null,

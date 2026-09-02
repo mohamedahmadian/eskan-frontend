@@ -5,6 +5,7 @@ import {
   Calendar,
   CalendarDays,
   FileText,
+  Globe2,
   Info,
   LayoutGrid,
   Plus,
@@ -28,11 +29,13 @@ import {
   fieldClassName,
   formShellClassName,
 } from '../../components/ui/Form'
+import { CheckboxField } from '../../components/ui/CheckboxField'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { addDaysIso, currentPersianYear, persianYearOptions } from '../../lib/datetime'
-import type { PlacementGenderPolicy, ReceptionSettings, ReservationType } from '../../types/app'
+import { useGeoName } from '../../lib/geo'
+import type { Country, PlacementGenderPolicy, ReceptionSettings, ReservationType } from '../../types/app'
 import { ReceptionMultilineItems } from './ReceptionTypeContent'
 
 type DraftPlan = {
@@ -43,24 +46,66 @@ type DraftPlan = {
   description: string
 }
 
-type Draft = Omit<ReceptionSettings, 'year' | 'exists' | 'insurancePlans'> & {
+type FeatureCountryIdsKey =
+  | 'mashhadPlacementCountryIds'
+  | 'routePlacementCountryIds'
+  | 'companionsCountryIds'
+  | 'insuranceCountryIds'
+  | 'individualCountryIds'
+  | 'groupCountryIds'
+  | 'caravanCountryIds'
+
+type Draft = Omit<
+  ReceptionSettings,
+  | 'year'
+  | 'exists'
+  | 'insurancePlans'
+  | 'mashhadPlacementCountries'
+  | 'routePlacementCountries'
+  | 'companionsCountries'
+  | 'insuranceCountries'
+  | 'individualCountries'
+  | 'groupCountries'
+  | 'caravanCountries'
+> & {
   insurancePlans: DraftPlan[]
-}
-type ReceptionTab = ReservationType | 'PLACEMENT' | 'INSURANCE' | 'OCCASIONS'
+} & Record<FeatureCountryIdsKey, string[]>
 
-let planKeySeq = 0
-function nextPlanKey() {
-  planKeySeq += 1
-  return `plan-${planKeySeq}`
+function idsOf(list?: { id: string }[]) {
+  return (list ?? []).map((item) => item.id)
 }
 
-function emptyPlan(): DraftPlan {
-  return {
-    key: nextPlanKey(),
-    coverageAmount: 0,
-    premiumAmount: 0,
-    description: '',
-  }
+function toggleCountryId(ids: string[], countryId: string, on: boolean) {
+  return on ? [...ids, countryId] : ids.filter((id) => id !== countryId)
+}
+
+function CountryCheckboxGrid({
+  label,
+  ids,
+  countries,
+  nameOf,
+  onChange,
+}: {
+  label: string
+  ids: string[]
+  countries: Country[]
+  nameOf: (country: Country) => string
+  onChange: (ids: string[]) => void
+}) {
+  return (
+    <FormField icon={Globe2} label={label}>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {countries.map((country) => (
+          <CheckboxField
+            key={country.id}
+            checked={ids.includes(country.id)}
+            onChange={(on) => onChange(toggleCountryId(ids, country.id, on))}
+            label={nameOf(country)}
+          />
+        ))}
+      </div>
+    </FormField>
+  )
 }
 
 const emptyDraft = (): Draft => ({
@@ -87,13 +132,57 @@ const emptyDraft = (): Draft => ({
   caravanIntro: '',
   caravanRules: '',
   placementGenderPolicy: 'SINGLE_GENDER',
+  mashhadPlacementCountryIds: [],
+  routePlacementCountryIds: [],
+  companionsCountryIds: [],
+  insuranceCountryIds: [],
+  individualCountryIds: [],
+  groupCountryIds: [],
+  caravanCountryIds: [],
   insuranceOrganization: '',
   insurancePlans: [],
   imamRezaMartyrdomDate: null,
   prophetDemiseDate: null,
 })
 
+let planKeySeq = 0
+function nextPlanKey() {
+  planKeySeq += 1
+  return `plan-${planKeySeq}`
+}
+
+function emptyPlan(): DraftPlan {
+  return {
+    key: nextPlanKey(),
+    coverageAmount: 0,
+    premiumAmount: 0,
+    description: '',
+  }
+}
+
+type ReceptionTab = ReservationType | 'PLACEMENT' | 'INSURANCE' | 'OCCASIONS'
+
 function toDraft(data: ReceptionSettings | Draft): Draft {
+  const countryIds =
+    'mashhadPlacementCountryIds' in data
+      ? {
+          mashhadPlacementCountryIds: data.mashhadPlacementCountryIds,
+          routePlacementCountryIds: data.routePlacementCountryIds,
+          companionsCountryIds: data.companionsCountryIds,
+          insuranceCountryIds: data.insuranceCountryIds,
+          individualCountryIds: data.individualCountryIds,
+          groupCountryIds: data.groupCountryIds,
+          caravanCountryIds: data.caravanCountryIds,
+        }
+      : {
+          mashhadPlacementCountryIds: idsOf(data.mashhadPlacementCountries),
+          routePlacementCountryIds: idsOf(data.routePlacementCountries),
+          companionsCountryIds: idsOf(data.companionsCountries),
+          insuranceCountryIds: idsOf(data.insuranceCountries),
+          individualCountryIds: idsOf(data.individualCountries),
+          groupCountryIds: idsOf(data.groupCountries),
+          caravanCountryIds: idsOf(data.caravanCountries),
+        }
   return {
     individualEnabled: data.individualEnabled,
     individualMaleCapacity: data.individualMaleCapacity,
@@ -118,6 +207,7 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     caravanIntro: data.caravanIntro ?? '',
     caravanRules: data.caravanRules ?? '',
     placementGenderPolicy: data.placementGenderPolicy ?? 'SINGLE_GENDER',
+    ...countryIds,
     insuranceOrganization: data.insuranceOrganization ?? '',
     insurancePlans: (data.insurancePlans ?? []).map((plan) => ({
       key: 'id' in plan && plan.id ? plan.id : nextPlanKey(),
@@ -157,6 +247,7 @@ function typeKeys(type: ReservationType) {
       placement: 'individualPlacementMode',
       intro: 'individualIntro',
       rules: 'individualRules',
+      countries: 'individualCountryIds',
       hint: 'autoApproveHintIndividual',
       title: 'individual',
     } as const
@@ -170,6 +261,7 @@ function typeKeys(type: ReservationType) {
       placement: 'groupPlacementMode',
       intro: 'groupIntro',
       rules: 'groupRules',
+      countries: 'groupCountryIds',
       hint: 'autoApproveHintGroup',
       title: 'group',
     } as const
@@ -182,6 +274,7 @@ function typeKeys(type: ReservationType) {
     placement: 'caravanPlacementMode',
     intro: 'caravanIntro',
     rules: 'caravanRules',
+    countries: 'caravanCountryIds',
     hint: 'autoApproveHintCaravan',
     title: 'caravan',
   } as const
@@ -225,10 +318,19 @@ function ReceptionTypeTabNav({
 export function ReceptionSettingsPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
+  const nameOf = useGeoName()
   const queryClient = useQueryClient()
   const [year, setYear] = useState(String(currentPersianYear()))
   const [tab, setTab] = useState<ReceptionTab>('INDIVIDUAL')
   const [draft, setDraft] = useState<Draft>(emptyDraft)
+
+  const countries = useQuery({
+    queryKey: ['countries', 'lookup'],
+    queryFn: async () => {
+      const { data } = await api.get<Country[]>('/countries', { params: { activeOnly: true } })
+      return data
+    },
+  })
 
   const settings = useQuery({
     queryKey: ['reception-settings', year],
@@ -445,6 +547,28 @@ export function ReceptionSettingsPage() {
                   </p>
                 </>
               ) : null}
+              <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.typeCountriesHint')}</p>
+              <CountryCheckboxGrid
+                label={t('receptionSettings.typeCountries')}
+                ids={draft[keys.countries]}
+                countries={countries.data ?? []}
+                nameOf={nameOf}
+                onChange={(ids) => patch(keys.countries, ids)}
+              />
+              {type === 'CARAVAN' ? (
+                <>
+                  <p className="text-sm leading-7 text-ink-500">
+                    {t('receptionSettings.companionsCountriesHint')}
+                  </p>
+                  <CountryCheckboxGrid
+                    label={t('receptionSettings.companionsCountries')}
+                    ids={draft.companionsCountryIds}
+                    countries={countries.data ?? []}
+                    nameOf={nameOf}
+                    onChange={(ids) => patch('companionsCountryIds', ids)}
+                  />
+                </>
+              ) : null}
               <FormField
                 icon={Info}
                 label={t('receptionSettings.intro')}
@@ -505,9 +629,33 @@ export function ReceptionSettingsPage() {
               offLabel={t('receptionSettings.placementGenderSingle')}
             />
           </FormField>
+          <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.featureCountriesHint')}</p>
+          {(
+            [
+              ['mashhadPlacementCountryIds', 'mashhadPlacementCountries'],
+              ['routePlacementCountryIds', 'routePlacementCountries'],
+            ] as const
+          ).map(([key, labelKey]) => (
+            <CountryCheckboxGrid
+              key={key}
+              label={t(`receptionSettings.${labelKey}`)}
+              ids={draft[key]}
+              countries={countries.data ?? []}
+              nameOf={nameOf}
+              onChange={(ids) => patch(key, ids)}
+            />
+          ))}
         </section>
         <section data-tab="INSURANCE" className={panelClass('INSURANCE')}>
           <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.insuranceHint')}</p>
+          <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.insuranceCountriesHint')}</p>
+          <CountryCheckboxGrid
+            label={t('receptionSettings.insuranceCountries')}
+            ids={draft.insuranceCountryIds}
+            countries={countries.data ?? []}
+            nameOf={nameOf}
+            onChange={(ids) => patch('insuranceCountryIds', ids)}
+          />
           <FormField
             icon={Building2}
             label={t('receptionSettings.insuranceOrganization')}

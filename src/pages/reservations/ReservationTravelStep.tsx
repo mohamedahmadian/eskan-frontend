@@ -5,9 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { AppForm, Button, cardClassName } from '../../components/ui/Form'
-import { useAuth } from '../../auth/AuthProvider'
 import { api, getApiErrorMessage } from '../../lib/api'
-import type { Country, Reservation } from '../../types/app'
+import type { Reservation } from '../../types/app'
 import {
   ReservationTravelFields,
   travelDatesError,
@@ -36,7 +35,6 @@ export function ReservationTravelStep({
   mode?: 'owner' | 'admin'
 }) {
   const { t } = useTranslation()
-  const { user } = useAuth()
   const locked = mode === 'owner' && Boolean(reservation.basicInfoLockedAt)
   const sendForReview = reservation.status === 'DRAFT'
   const dualCounts = mode === 'admin'
@@ -100,17 +98,6 @@ export function ReservationTravelStep({
   const effectiveMax = subSteps[Math.min(maxReachedIndex, subSteps.length - 1)] ?? subSteps[0]
   const lastStep = stepIndex >= subSteps.length - 1
 
-  const countries = useQuery({
-    queryKey: ['countries', 'lookup'],
-    queryFn: async () => {
-      const { data } = await api.get<Country[]>('/countries', {
-        params: { activeOnly: true },
-      })
-      return data
-    },
-  })
-  const iranId = countries.data?.find((item) => item.iso2 === 'IR')?.id ?? ''
-  const applicantCountryId = user?.countryId || iranId
   const applicant = reservation.createdBy
   const existingReservationsQuery = useQuery({
     queryKey: [
@@ -152,11 +139,7 @@ export function ReservationTravelStep({
     onSuccess: () => {
       toast.success(
         sendForReview
-          ? t(
-              reservation.internationalWorkflow
-                ? 'reservations.internationalCompleted'
-                : 'reservations.submitted',
-            )
+          ? t('reservations.submitted')
           : t('reservations.updated'),
       )
       onChanged()
@@ -329,7 +312,7 @@ export function ReservationTravelStep({
           }
           type={reservation.type}
           locked={locked}
-          countryId={mode === 'admin' ? undefined : applicantCountryId}
+          countryId={reservation.originCountry?.id}
           activeSubStep={activeSubStep}
           dualCounts={dualCounts}
           selectedParty={selectedParty}

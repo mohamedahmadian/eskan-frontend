@@ -158,6 +158,10 @@ import { WalkingRouteCreatePage } from "./pages/walking-routes/WalkingRouteCreat
 import { WalkingRouteDetailPage } from "./pages/walking-routes/WalkingRouteDetailPage";
 import { WalkingRouteEditPage } from "./pages/walking-routes/WalkingRouteEditPage";
 import { WalkingRoutesListPage } from "./pages/walking-routes/WalkingRoutesListPage";
+import { WalkingStationCreatePage } from "./pages/walking-stations/WalkingStationCreatePage";
+import { WalkingStationDetailPage } from "./pages/walking-stations/WalkingStationDetailPage";
+import { WalkingStationEditPage } from "./pages/walking-stations/WalkingStationEditPage";
+import { WalkingStationsListPage } from "./pages/walking-stations/WalkingStationsListPage";
 import { SupplierCreatePage } from "./pages/suppliers/SupplierCreatePage";
 import { SupplierDetailPage } from "./pages/suppliers/SupplierDetailPage";
 import { SupplierEditPage } from "./pages/suppliers/SupplierEditPage";
@@ -574,6 +578,28 @@ export default function App() {
                   <Route
                     path="/base-info/entry-borders/:id/edit"
                     element={<EntryBorderEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/base-info/walking-stations" />
+                  }
+                >
+                  <Route
+                    path="/base-info/walking-stations"
+                    element={<WalkingStationsListPage />}
+                  />
+                  <Route
+                    path="/base-info/walking-stations/new"
+                    element={<WalkingStationCreatePage />}
+                  />
+                  <Route
+                    path="/base-info/walking-stations/:id"
+                    element={<WalkingStationDetailPage />}
+                  />
+                  <Route
+                    path="/base-info/walking-stations/:id/edit"
+                    element={<WalkingStationEditPage />}
                   />
                 </Route>
                 <Route

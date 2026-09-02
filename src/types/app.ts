@@ -916,6 +916,7 @@ export type PilgrimReport = PilgrimReportSummary &
 
 export type WalkingRouteStage = {
   id?: string;
+  stationId: string;
   cityId: string;
   city: GeoName & {
     id: string;
@@ -928,6 +929,9 @@ export type WalkingRouteStage = {
   name: string | null;
   latitude: number | null;
   longitude: number | null;
+  neshanAddress: string | null;
+  maleCount: number;
+  femaleCount: number;
   managerName: string | null;
   managerPhone: string | null;
   managerTelegram: string | null;
@@ -937,6 +941,36 @@ export type WalkingRouteStage = {
   distanceToPreviousKm: number | null;
   distanceToMashhadKm: number | null;
   description: string | null;
+};
+
+export type WalkingStation = {
+  id: string;
+  cityId: string;
+  city: GeoName & {
+    id: string;
+    provinceId: string;
+    latitude: number | null;
+    longitude: number | null;
+    province: GeoName & { id: string; countryId: string };
+  };
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  neshanAddress: string | null;
+  maleCount: number;
+  femaleCount: number;
+  occupiedMaleCount?: number;
+  occupiedFemaleCount?: number;
+  managerName: string | null;
+  managerPhone: string | null;
+  managerTelegram: string | null;
+  managerWhatsapp: string | null;
+  managerEitaa: string | null;
+  distanceToMashhadKm: number | null;
+  description: string | null;
+  routes: { id: string; name: string; stageNumber: number }[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ActiveWalkingRoute = {
@@ -960,6 +994,62 @@ export type WalkingRoute = {
   stages: WalkingRouteStage[];
   createdAt: string;
   updatedAt: string;
+};
+
+export const reservationStationStayStatuses = {
+  RESERVED: "RESERVED",
+  CANCELLED: "CANCELLED",
+  EVACUATED: "EVACUATED",
+} as const;
+
+export type ReservationStationStayStatus =
+  (typeof reservationStationStayStatuses)[keyof typeof reservationStationStayStatuses];
+
+export type ReservationRoutePlacementStage = {
+  stageId: string;
+  stageNumber: number;
+  stationId: string;
+  name: string;
+  city: GeoName & { id: string; provinceId: string };
+  maleCount: number;
+  femaleCount: number;
+  managerName: string | null;
+  managerPhone: string | null;
+  stay: {
+    id: string;
+    stayDate: string;
+    status: ReservationStationStayStatus;
+    maleCount: number;
+    femaleCount: number;
+  } | null;
+};
+
+export type ReservationRoutePlacement = {
+  walkingRoute: { id: string; name: string } | null;
+  maleCount: number;
+  femaleCount: number;
+  stages: ReservationRoutePlacementStage[];
+};
+
+export type WalkingStationStay = {
+  id: string;
+  stayDate: string;
+  maleCount: number;
+  femaleCount: number;
+  status: ReservationStationStayStatus;
+  reservedAt: string;
+  cancelledAt: string | null;
+  evacuatedAt: string | null;
+  reservation: {
+    id: string;
+    code: string;
+    type: ReservationType;
+    status: ReservationStatus;
+    year: number;
+  };
+  reservedBy: { id: string; fullName: string };
+  cancelledBy: { id: string; fullName: string } | null;
+  evacuatedBy: { id: string; fullName: string } | null;
 };
 
 export type FoodSupplier = {
@@ -1652,6 +1742,13 @@ export const placementStatuses = {
 export type PlacementStatus =
   (typeof placementStatuses)[keyof typeof placementStatuses];
 
+export type ReservationFeatures = {
+  companions: boolean;
+  insurance: boolean;
+  mashhadPlacement: boolean;
+  routePlacement: boolean;
+};
+
 export const allocationSources = {
   SYSTEM: "SYSTEM",
   MANUAL: "MANUAL",
@@ -1929,11 +2026,10 @@ export type ReservationTravelHistoryItem = {
   id: string;
   reservationId: string;
   userId: string;
-  walkingRouteStageId: string | null;
-  walkingRouteStage: {
+  walkingStationId: string | null;
+  walkingStation: {
     id: string;
     name: string | null;
-    stageNumber: number;
     latitude: number | null;
     longitude: number | null;
   } | null;
@@ -2012,6 +2108,8 @@ export type ReservationListItem = {
   returnedToStatus?: ReservationStatus | null;
   createWizardStep?: string | null;
   walkingRoute?: { id: string; name: string } | null;
+  originCountry?: (GeoName & { id: string; iso2: string }) | null;
+  features?: ReservationFeatures;
   internationalWorkflow?: boolean;
   iraqiWorkflow?: boolean;
   honoraryAssignments?: ReservationHonoraryAssignment[];
@@ -2207,6 +2305,13 @@ export type ReceptionSettings = {
   caravanIntro: string;
   caravanRules: string;
   placementGenderPolicy: PlacementGenderPolicy;
+  mashhadPlacementCountries: (GeoName & { id: string; iso2: string })[];
+  routePlacementCountries: (GeoName & { id: string; iso2: string })[];
+  companionsCountries: (GeoName & { id: string; iso2: string })[];
+  insuranceCountries: (GeoName & { id: string; iso2: string })[];
+  individualCountries: (GeoName & { id: string; iso2: string })[];
+  groupCountries: (GeoName & { id: string; iso2: string })[];
+  caravanCountries: (GeoName & { id: string; iso2: string })[];
   insuranceOrganization: string;
   insurancePlans: ReceptionInsurancePlan[];
   imamRezaMartyrdomDate: string | null;

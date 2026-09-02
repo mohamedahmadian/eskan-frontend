@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   CreditCard,
   Footprints,
+  Globe2,
   HeartHandshake,
   MapPin,
   Mars,
@@ -345,6 +346,7 @@ export function ReservationTravelSummary({
         </section>
 
         {origin ||
+        reservation.originCountry ||
         reservation.caravan ||
         reservation.group ||
         reservation.caravanManager ? (
@@ -365,6 +367,14 @@ export function ReservationTravelSummary({
                   label={t('reservations.groupName')}
                   value={reservation.group.name}
                   tone="ink"
+                />
+              ) : null}
+              {reservation.originCountry ? (
+                <FactTile
+                  icon={Globe2}
+                  label={t('reservations.originCountry')}
+                  value={nameOf(reservation.originCountry)}
+                  tone="mint"
                 />
               ) : null}
               {reservation.caravan || reservation.group || origin ? (

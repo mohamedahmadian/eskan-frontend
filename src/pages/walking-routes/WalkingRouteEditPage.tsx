@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LoadingState, PageHeader, EntityNameSubtitle, userFormShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import type { City, Country, EntryBorder, WalkingRoute } from '../../types/app'
+import type { Country, EntryBorder, WalkingRoute } from '../../types/app'
 import { WalkingRouteForm } from './WalkingRouteForm'
 
 export function WalkingRouteEditPage() {
@@ -30,18 +30,6 @@ export function WalkingRouteEditPage() {
     },
   })
 
-  const iranId = countries.data?.find((country) => country.iso2 === 'IR')?.id ?? ''
-  const iranCities = useQuery({
-    queryKey: ['cities', 'lookup', 'IR', iranId],
-    enabled: Boolean(iranId),
-    queryFn: async () => {
-      const { data } = await api.get<City[]>('/cities', {
-        params: { countryId: iranId, activeOnly: true },
-      })
-      return data
-    },
-  })
-
   const entryBorders = useQuery({
     queryKey: ['entry-borders', 'lookup'],
     queryFn: async () => {
@@ -50,7 +38,7 @@ export function WalkingRouteEditPage() {
     },
   })
 
-  if (!item.data || !countries.data || !iranCities.data || !entryBorders.data) {
+  if (!item.data || !countries.data || !entryBorders.data) {
     return <LoadingState />
   }
 
@@ -63,7 +51,6 @@ export function WalkingRouteEditPage() {
       <WalkingRouteForm
         initial={item.data}
         countries={countries.data}
-        iranCities={iranCities.data}
         entryBorders={entryBorders.data}
         onSubmit={async (payload) => {
           await api.patch(`/walking-routes/${id}`, payload)

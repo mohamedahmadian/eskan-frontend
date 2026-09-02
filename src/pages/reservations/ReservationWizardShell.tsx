@@ -73,10 +73,6 @@ export function ReservationWizardShell({
         ? 'grid-cols-2 sm:grid-cols-5'
         : 'grid-cols-4'
 
-  if (reservation.internationalWorkflow) {
-    return <div className="space-y-4">{children}</div>
-  }
-
   return (
     <div className="space-y-4">
       <div className={`${cardClassName} p-4`}>

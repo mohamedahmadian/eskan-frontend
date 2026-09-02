@@ -1,5 +1,4 @@
 import {
-  AlignLeft,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
@@ -8,18 +7,16 @@ import {
   Hash,
   MapPin,
   MapPinned,
-  MessageCircle,
   Milestone,
-  Phone,
   Plus,
   Route,
-  Share2,
   Trash2,
   Type,
-  UserRound,
 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   AppForm,
@@ -30,12 +27,12 @@ import {
 } from '../../components/ui/Form'
 import { FormCard, FormSectionTitle } from '../../components/ui/FormLayout'
 import { CheckboxField } from '../../components/ui/CheckboxField'
-import { OsmMapPicker, type MapFocus } from '../../components/ui/OsmMapPicker'
+import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
-import { formatNumber, parseDigitString } from '../../lib/datetime'
-import { getApiErrorMessage } from '../../lib/api'
-import { useGeoName } from '../../lib/geo'
-import type { City, Country, EntryBorder, WalkingRoute } from '../../types/app'
+import { formatNumber } from '../../lib/datetime'
+import { getApiErrorMessage, api } from '../../lib/api'
+import { stageCoordinates, useGeoName } from '../../lib/geo'
+import type { Country, EntryBorder, WalkingRoute, WalkingStation } from '../../types/app'
 import { WalkingRouteTabNav, type WalkingRouteTab } from './WalkingRouteTabs'
 
 export type WalkingRoutePayload = {
@@ -44,43 +41,18 @@ export type WalkingRoutePayload = {
   entryBorderId: string | null
   originCountryIds: string[]
   stages: {
-    cityId: string
+    walkingStationId: string
     stageNumber: number
-    name: string | null
-    latitude: number | null
-    longitude: number | null
-    managerName: string | null
-    managerPhone: string | null
-    managerTelegram: string | null
-    managerWhatsapp: string | null
-    managerEitaa: string | null
     distanceToNextKm: number | null
     distanceToPreviousKm: number | null
-    distanceToMashhadKm: number | null
-    description: string | null
   }[]
 }
 
 type StageDraft = {
   key: string
-  name: string
-  cityId: string
-  latitude: string
-  longitude: string
-  managerName: string
-  managerPhone: string
-  managerTelegram: string
-  managerWhatsapp: string
-  managerEitaa: string
+  walkingStationId: string
   distanceToNextKm: string
   distanceToPreviousKm: string
-  distanceToMashhadKm: string
-  description: string
-}
-
-function emptyToNull(value: string) {
-  const trimmed = value.trim()
-  return trimmed.length ? trimmed : null
 }
 
 function toNumber(value: string) {
@@ -94,10 +66,6 @@ function toOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function toCoordString(value: number | null | undefined) {
-  return value == null || !Number.isFinite(value) ? '' : String(value)
-}
-
 function newStageKey() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
@@ -105,46 +73,20 @@ function newStageKey() {
 function emptyStage(): StageDraft {
   return {
     key: newStageKey(),
-    name: '',
-    cityId: '',
-    latitude: '',
-    longitude: '',
-    managerName: '',
-    managerPhone: '',
-    managerTelegram: '',
-    managerWhatsapp: '',
-    managerEitaa: '',
+    walkingStationId: '',
     distanceToNextKm: '',
     distanceToPreviousKm: '',
-    distanceToMashhadKm: '',
-    description: '',
   }
-}
-
-function citySelectOptions(
-  cities: City[],
-  name: (item: { nameFa: string; nameEn: string }) => string,
-  emptyLabel: string,
-) {
-  return [
-    { value: '', label: emptyLabel },
-    ...cities.map((city) => ({
-      value: city.id,
-      label: `${name(city)} — ${name(city.province)}`,
-    })),
-  ]
 }
 
 export function WalkingRouteForm({
   initial,
   countries,
-  iranCities,
   entryBorders,
   onSubmit,
 }: {
   initial?: WalkingRoute
   countries: Country[]
-  iranCities: City[]
   entryBorders: EntryBorder[]
   onSubmit: (payload: WalkingRoutePayload) => Promise<void>
 }) {
@@ -164,25 +106,57 @@ export function WalkingRouteForm({
     initial?.stages.length
       ? initial.stages.map((stage) => ({
           key: stage.id ?? newStageKey(),
-          name: stage.name ?? '',
-          cityId: stage.cityId,
-          latitude: toCoordString(stage.latitude),
-          longitude: toCoordString(stage.longitude),
-          managerName: stage.managerName ?? '',
-          managerPhone: stage.managerPhone ?? '',
-          managerTelegram: stage.managerTelegram ?? '',
-          managerWhatsapp: stage.managerWhatsapp ?? '',
-          managerEitaa: stage.managerEitaa ?? '',
+          walkingStationId: stage.stationId,
           distanceToNextKm: stage.distanceToNextKm != null ? String(stage.distanceToNextKm) : '',
           distanceToPreviousKm:
             stage.distanceToPreviousKm != null ? String(stage.distanceToPreviousKm) : '',
-          distanceToMashhadKm:
-            stage.distanceToMashhadKm != null ? String(stage.distanceToMashhadKm) : '',
-          description: stage.description ?? '',
         }))
       : [emptyStage()],
   )
   const [saving, setSaving] = useState(false)
+
+  const stationsQuery = useQuery({
+    queryKey: ['walking-stations', 'lookup'],
+    queryFn: async () => {
+      const { data } = await api.get<WalkingStation[]>('/walking-stations')
+      return data
+    },
+  })
+  const stations = useMemo(() => {
+    const map = new Map<string, WalkingStation>()
+    for (const stage of initial?.stages ?? []) {
+      if (!stage.stationId) continue
+      map.set(stage.stationId, {
+        id: stage.stationId,
+        cityId: stage.cityId,
+        city: stage.city,
+        name: stage.name ?? '',
+        latitude: stage.latitude,
+        longitude: stage.longitude,
+        neshanAddress: stage.neshanAddress ?? null,
+        maleCount: stage.maleCount ?? 0,
+        femaleCount: stage.femaleCount ?? 0,
+        managerName: stage.managerName,
+        managerPhone: stage.managerPhone,
+        managerTelegram: stage.managerTelegram,
+        managerWhatsapp: stage.managerWhatsapp,
+        managerEitaa: stage.managerEitaa,
+        distanceToMashhadKm: stage.distanceToMashhadKm,
+        description: stage.description,
+        routes: [],
+        createdAt: '',
+        updatedAt: '',
+      })
+    }
+    for (const item of stationsQuery.data ?? []) {
+      map.set(item.id, item)
+    }
+    return [...map.values()]
+  }, [initial?.stages, stationsQuery.data])
+  const stationById = useMemo(
+    () => new Map(stations.map((item) => [item.id, item])),
+    [stations],
+  )
 
   function panelClass(id: WalkingRouteTab) {
     return `space-y-4 ${tab === id ? '' : 'hidden'}`
@@ -205,15 +179,19 @@ export function WalkingRouteForm({
     })
   }
 
-  function stageMapFocus(stage: StageDraft): MapFocus | null {
-    if (toOptionalNumber(stage.latitude) != null && toOptionalNumber(stage.longitude) != null) {
-      return null
-    }
-    const city = iranCities.find((item) => item.id === stage.cityId)
-    if (city?.latitude != null && city?.longitude != null) {
-      return { lat: city.latitude, lng: city.longitude, zoom: 13 }
-    }
-    return null
+  function stationOptions(currentId: string) {
+    const taken = new Set(
+      stages.map((stage) => stage.walkingStationId).filter((id) => id && id !== currentId),
+    )
+    return [
+      { value: '', label: t('walkingRoutes.selectStation') },
+      ...stations
+        .filter((item) => !taken.has(item.id))
+        .map((item) => ({
+          value: item.id,
+          label: `${item.name} — ${geoName(item.city)}`,
+        })),
+    ]
   }
 
   async function submit(event: FormEvent) {
@@ -223,14 +201,20 @@ export function WalkingRouteForm({
       setTab('originCountries')
       return
     }
-    const filledStages = stages.filter((stage) => stage.cityId)
+    const filledStages = stages.filter((stage) => stage.walkingStationId)
     if (!filledStages.length) {
       toast.error(t('walkingRoutes.stagesRequired'))
       setTab('stages')
       return
     }
-    if (filledStages.some((stage) => !stage.name.trim())) {
-      toast.error(t('walkingRoutes.stationNameRequired'))
+    if (filledStages.length !== stages.length) {
+      toast.error(t('walkingRoutes.stationRequired'))
+      setTab('stages')
+      return
+    }
+    const ids = filledStages.map((stage) => stage.walkingStationId)
+    if (new Set(ids).size !== ids.length) {
+      toast.error(t('walkingRoutes.stationDuplicate'))
       setTab('stages')
       return
     }
@@ -242,20 +226,10 @@ export function WalkingRouteForm({
         entryBorderId: entryBorderId || null,
         originCountryIds,
         stages: filledStages.map((stage, index) => ({
-          cityId: stage.cityId,
+          walkingStationId: stage.walkingStationId,
           stageNumber: index + 1,
-          name: emptyToNull(stage.name),
-          latitude: toOptionalNumber(stage.latitude),
-          longitude: toOptionalNumber(stage.longitude),
-          managerName: emptyToNull(stage.managerName),
-          managerPhone: emptyToNull(stage.managerPhone),
-          managerTelegram: emptyToNull(stage.managerTelegram),
-          managerWhatsapp: emptyToNull(stage.managerWhatsapp),
-          managerEitaa: emptyToNull(stage.managerEitaa),
           distanceToNextKm: toOptionalNumber(stage.distanceToNextKm),
           distanceToPreviousKm: toOptionalNumber(stage.distanceToPreviousKm),
-          distanceToMashhadKm: toOptionalNumber(stage.distanceToMashhadKm),
-          description: emptyToNull(stage.description),
         })),
       })
     } catch (error) {
@@ -354,260 +328,166 @@ export function WalkingRouteForm({
 
           <div data-tab="stages" className={panelClass('stages')}>
             <div className="space-y-4">
-              {stages.map((stage, index) => (
-                <article
-                  key={stage.key}
-                  className="space-y-4 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/80 to-white p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <FormSectionTitle icon={Milestone} className="mb-0">
-                      {t('walkingRoutes.stage')} {formatNumber(index + 1, locale)}
-                    </FormSectionTitle>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        icon
-                        disabled={index === 0}
-                        onClick={() => moveStage(index, -1)}
-                        title={t('walkingRoutes.moveUp')}
-                        aria-label={t('walkingRoutes.moveUp')}
-                      >
-                        <ArrowUp className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        icon
-                        disabled={index === stages.length - 1}
-                        onClick={() => moveStage(index, 1)}
-                        title={t('walkingRoutes.moveDown')}
-                        aria-label={t('walkingRoutes.moveDown')}
-                      >
-                        <ArrowDown className="size-4" />
-                      </Button>
-                      {stages.length > 1 ? (
+              {stages.map((stage, index) => {
+                const station = stationById.get(stage.walkingStationId)
+                const coords = station ? stageCoordinates(station) : null
+                return (
+                  <article
+                    key={stage.key}
+                    className="space-y-4 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/80 to-white p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <FormSectionTitle icon={Milestone} className="mb-0">
+                        {t('walkingRoutes.stage')} {formatNumber(index + 1, locale)}
+                      </FormSectionTitle>
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           type="button"
                           variant="ghost"
                           icon
-                          onClick={() =>
-                            setStages((current) => current.filter((_, i) => i !== index))
-                          }
-                          title={t('walkingRoutes.removeStage')}
-                          aria-label={t('walkingRoutes.removeStage')}
+                          disabled={index === 0}
+                          onClick={() => moveStage(index, -1)}
+                          title={t('walkingRoutes.moveUp')}
+                          aria-label={t('walkingRoutes.moveUp')}
                         >
-                          <Trash2 className="size-4" />
+                          <ArrowUp className="size-4" />
                         </Button>
-                      ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          icon
+                          disabled={index === stages.length - 1}
+                          onClick={() => moveStage(index, 1)}
+                          title={t('walkingRoutes.moveDown')}
+                          aria-label={t('walkingRoutes.moveDown')}
+                        >
+                          <ArrowDown className="size-4" />
+                        </Button>
+                        {stages.length > 1 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            icon
+                            onClick={() =>
+                              setStages((current) => current.filter((_, i) => i !== index))
+                            }
+                            title={t('walkingRoutes.removeStage')}
+                            aria-label={t('walkingRoutes.removeStage')}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      icon={Hash}
-                      label={t('walkingRoutes.stage')}
-                      htmlFor={`stage-number-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-number-${stage.key}`}
-                        className={fieldClassName}
-                        value={formatNumber(index + 1, locale)}
-                        readOnly
-                      />
-                    </FormField>
-                    <FormField
-                      icon={Type}
-                      label={t('walkingRoutes.stationName')}
-                      htmlFor={`stage-name-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-name-${stage.key}`}
-                        className={fieldClassName}
-                        value={stage.name}
-                        required
-                        minLength={1}
-                        onChange={(e) => updateStage(index, { name: e.target.value })}
-                      />
-                    </FormField>
-                    <FormField
-                      icon={MapPin}
-                      label={t('walkingRoutes.city')}
-                      htmlFor={`stage-city-${stage.key}`}
-                    >
-                      <SearchSelect
-                        id={`stage-city-${stage.key}`}
-                        value={stage.cityId}
-                        required
-                        placeholder={t('walkingRoutes.selectCity')}
-                        onChange={(cityId) => updateStage(index, { cityId })}
-                        options={citySelectOptions(
-                          iranCities,
-                          geoName,
-                          t('walkingRoutes.selectCity'),
-                        )}
-                      />
-                    </FormField>
-                  </div>
-                  <FormField icon={MapPinned} label={t('walkingRoutes.location')}>
-                    <OsmMapPicker
-                      latitude={stage.latitude}
-                      longitude={stage.longitude}
-                      active={tab === 'stages'}
-                      focus={stageMapFocus(stage)}
-                      onChange={(latitude, longitude) =>
-                        updateStage(index, { latitude, longitude })
-                      }
-                    />
-                  </FormField>
-                  <FormSectionTitle icon={UserRound}>
-                    {t('walkingRoutes.sectionManager')}
-                  </FormSectionTitle>
-                  <FormField
-                    icon={UserRound}
-                    label={t('walkingRoutes.managerName')}
-                    htmlFor={`stage-manager-${stage.key}`}
-                  >
-                    <input
-                      id={`stage-manager-${stage.key}`}
-                      className={fieldClassName}
-                      value={stage.managerName}
-                      onChange={(e) => updateStage(index, { managerName: e.target.value })}
-                    />
-                  </FormField>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      icon={Phone}
-                      label={t('walkingRoutes.managerPhone')}
-                      htmlFor={`stage-phone-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-phone-${stage.key}`}
-                        className={`${fieldClassName} digit-field`}
-                        value={stage.managerPhone}
-                        onChange={(e) =>
-                          updateStage(index, {
-                            managerPhone: parseDigitString(e.target.value).slice(0, 15),
-                          })
-                        }
-                      />
-                    </FormField>
-                    <FormField
-                      icon={Phone}
-                      label={t('walkingRoutes.managerWhatsapp')}
-                      htmlFor={`stage-whatsapp-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-whatsapp-${stage.key}`}
-                        className={`${fieldClassName} digit-field`}
-                        value={stage.managerWhatsapp}
-                        onChange={(e) =>
-                          updateStage(index, {
-                            managerWhatsapp: parseDigitString(e.target.value).slice(0, 15),
-                          })
-                        }
-                      />
-                    </FormField>
-                    <FormField
-                      icon={MessageCircle}
-                      label={t('walkingRoutes.managerTelegram')}
-                      htmlFor={`stage-telegram-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-telegram-${stage.key}`}
-                        className={fieldClassName}
-                        dir="ltr"
-                        value={stage.managerTelegram}
-                        onChange={(e) => updateStage(index, { managerTelegram: e.target.value })}
-                      />
-                    </FormField>
-                    <FormField
-                      icon={Share2}
-                      label={t('walkingRoutes.managerEitaa')}
-                      htmlFor={`stage-eitaa-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-eitaa-${stage.key}`}
-                        className={fieldClassName}
-                        dir="ltr"
-                        value={stage.managerEitaa}
-                        onChange={(e) => updateStage(index, { managerEitaa: e.target.value })}
-                      />
-                    </FormField>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <FormField
-                      icon={ArrowUpDown}
-                      label={t('walkingRoutes.distanceToPreviousKm')}
-                      htmlFor={`stage-prev-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-prev-${stage.key}`}
-                        className={fieldClassName}
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={stage.distanceToPreviousKm}
-                        onChange={(e) =>
-                          updateStage(index, { distanceToPreviousKm: e.target.value })
-                        }
-                      />
-                    </FormField>
-                    <FormField
-                      icon={ArrowUpDown}
-                      label={t('walkingRoutes.distanceToNextKm')}
-                      htmlFor={`stage-next-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-next-${stage.key}`}
-                        className={fieldClassName}
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={stage.distanceToNextKm}
-                        onChange={(e) => updateStage(index, { distanceToNextKm: e.target.value })}
-                      />
-                    </FormField>
-                    <FormField
-                      icon={Milestone}
-                      label={t('walkingRoutes.stageDistanceToMashhadKm')}
-                      htmlFor={`stage-mashhad-${stage.key}`}
-                    >
-                      <input
-                        id={`stage-mashhad-${stage.key}`}
-                        className={fieldClassName}
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={stage.distanceToMashhadKm}
-                        onChange={(e) =>
-                          updateStage(index, { distanceToMashhadKm: e.target.value })
-                        }
-                      />
-                    </FormField>
-                  </div>
-                  <FormField
-                    icon={AlignLeft}
-                    label={t('walkingRoutes.description')}
-                    htmlFor={`stage-desc-${stage.key}`}
-                  >
-                    <textarea
-                      id={`stage-desc-${stage.key}`}
-                      className={fieldClassName}
-                      rows={3}
-                      value={stage.description}
-                      onChange={(e) => updateStage(index, { description: e.target.value })}
-                    />
-                  </FormField>
-                </article>
-              ))}
-              <Button
-                type="button"
-                variant="soft"
-                onClick={() => setStages([...stages, emptyStage()])}
-              >
-                <Plus className="size-4" aria-hidden />
-                {t('walkingRoutes.addStage')}
-              </Button>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        icon={Hash}
+                        label={t('walkingRoutes.stage')}
+                        htmlFor={`stage-number-${stage.key}`}
+                      >
+                        <input
+                          id={`stage-number-${stage.key}`}
+                          className={fieldClassName}
+                          value={formatNumber(index + 1, locale)}
+                          readOnly
+                        />
+                      </FormField>
+                      <FormField
+                        icon={Milestone}
+                        label={t('walkingRoutes.stationName')}
+                        htmlFor={`stage-station-${stage.key}`}
+                      >
+                        <SearchSelect
+                          id={`stage-station-${stage.key}`}
+                          value={stage.walkingStationId}
+                          required
+                          placeholder={t('walkingRoutes.selectStation')}
+                          onChange={(walkingStationId) =>
+                            updateStage(index, { walkingStationId })
+                          }
+                          options={stationOptions(stage.walkingStationId)}
+                        />
+                      </FormField>
+                    </div>
+                    {station ? (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <p className="text-sm text-ink-600">
+                          <MapPin className="me-1 inline size-4 text-teal-600" aria-hidden />
+                          {geoName(station.city)}
+                          {station.city.province ? ` — ${geoName(station.city.province)}` : ''}
+                        </p>
+                        {station.distanceToMashhadKm != null ? (
+                          <p className="text-sm text-ink-600">
+                            {t('walkingRoutes.stageDistanceToMashhadKm')}:{' '}
+                            {formatNumber(station.distanceToMashhadKm, locale)} {t('walkingRoutes.km')}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {coords ? (
+                      <FormField icon={MapPinned} label={t('walkingRoutes.location')}>
+                        <OsmMapPicker
+                          latitude={String(coords.lat)}
+                          longitude={String(coords.lng)}
+                          active={tab === 'stages'}
+                          onChange={() => undefined}
+                          readOnly
+                        />
+                      </FormField>
+                    ) : null}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        icon={ArrowUpDown}
+                        label={t('walkingRoutes.distanceToPreviousKm')}
+                        htmlFor={`stage-prev-${stage.key}`}
+                      >
+                        <input
+                          id={`stage-prev-${stage.key}`}
+                          className={fieldClassName}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={stage.distanceToPreviousKm}
+                          onChange={(e) =>
+                            updateStage(index, { distanceToPreviousKm: e.target.value })
+                          }
+                        />
+                      </FormField>
+                      <FormField
+                        icon={ArrowUpDown}
+                        label={t('walkingRoutes.distanceToNextKm')}
+                        htmlFor={`stage-next-${stage.key}`}
+                      >
+                        <input
+                          id={`stage-next-${stage.key}`}
+                          className={fieldClassName}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={stage.distanceToNextKm}
+                          onChange={(e) => updateStage(index, { distanceToNextKm: e.target.value })}
+                        />
+                      </FormField>
+                    </div>
+                  </article>
+                )
+              })}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="soft"
+                  onClick={() => setStages([...stages, emptyStage()])}
+                >
+                  <Plus className="size-4" aria-hidden />
+                  {t('walkingRoutes.addStage')}
+                </Button>
+                <Link to="/base-info/walking-stations/new">
+                  <Button type="button" variant="ghost">
+                    <Milestone className="size-4" aria-hidden />
+                    {t('walkingRoutes.createStation')}
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
 
