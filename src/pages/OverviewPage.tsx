@@ -1,6 +1,7 @@
 import {
   Footprints,
   HandHeart,
+  HeartHandshake,
   MessageSquare,
   Plus,
   Send,
@@ -17,7 +18,9 @@ import { api } from '../lib/api'
 import { cardClassName, listShellClassName } from '../components/ui/Form'
 import { formatNumber } from '../lib/datetime'
 import { usesDedicatedHomeDashboard, isAdmin, isLicenseIssuer, isGovernmentOrgOfficer } from '../lib/roles'
+import type { ParticipationCampaign } from '../types/app'
 import { HeadquartersServiceYearsCard } from './dashboard/HeadquartersServiceYearsCard'
+import { CampaignCard } from './participations/CampaignCard'
 import { GovernmentOrgOfficerDashboard } from './dashboard/GovernmentOrgOfficerDashboard'
 import { LicenseIssuerDashboard } from './dashboard/LicenseIssuerDashboard'
 import { UserHomeDashboard } from './dashboard/UserHomeDashboard'
@@ -58,6 +61,13 @@ function AdminOverview() {
     queryKey: ['stats'],
     queryFn: async () => {
       const { data } = await api.get<{ pilgrims: number; caravans: number }>('/stats')
+      return data
+    },
+  })
+  const campaigns = useQuery({
+    queryKey: ['participation-campaigns', 'showcase'],
+    queryFn: async () => {
+      const { data } = await api.get<ParticipationCampaign[]>('/participation-campaigns/showcase')
       return data
     },
   })
@@ -116,6 +126,12 @@ function AdminOverview() {
             tone="teal"
           />
           <QuickCard
+            to="/participations"
+            icon={HeartHandshake}
+            label={t('modules.participations')}
+            tone="teal"
+          />
+          <QuickCard
             to="/settings"
             icon={Settings}
             label={t('nav.settings')}
@@ -155,6 +171,29 @@ function AdminOverview() {
       <p className={`${cardClassName} px-5 py-4 text-sm text-ink-700`}>
         {t('dashboard.internationalNote')}
       </p>
+
+      {campaigns.data?.length ? (
+        <section>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-medium text-ink-500">{t('dashboard.participationsTitle')}</h2>
+              <p className="mt-1 text-xs text-ink-400">{t('dashboard.participationsHint')}</p>
+            </div>
+            <Link to="/participations" className="text-sm font-medium text-teal-700 hover:text-teal-800">
+              {t('dashboard.viewAll')}
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {campaigns.data.slice(0, 3).map((item) => (
+              <CampaignCard
+                key={item.id}
+                item={item}
+                to={`/participations/campaigns/${item.id}`}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <HeadquartersServiceYearsCard />
     </div>

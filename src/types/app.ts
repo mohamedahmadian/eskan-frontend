@@ -1299,6 +1299,37 @@ export type HeadquartersServiceSummary = {
   phones: HeadquartersSummaryPhone[];
 };
 
+export type HeadquartersNews = {
+  id: string;
+  title: string;
+  summary: string | null;
+  body: string;
+  publishedAt: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const announcementAudiences = {
+  PILGRIMS: "PILGRIMS",
+  CARAVAN_MANAGERS: "CARAVAN_MANAGERS",
+  ACCOMMODATION_MANAGERS: "ACCOMMODATION_MANAGERS",
+} as const;
+
+export type AnnouncementAudience =
+  (typeof announcementAudiences)[keyof typeof announcementAudiences];
+
+export type HeadquartersAnnouncement = {
+  id: string;
+  title: string;
+  body: string;
+  audience: AnnouncementAudience;
+  publishedAt: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type OrgUnitManager = {
   id: string;
   fullName: string;
@@ -2668,6 +2699,75 @@ export type HonoraryServantStats = {
   total: number;
   currentYear: number;
   year: number;
+};
+
+export const cryptoCurrencies = [
+  'USDT',
+  'BTC',
+  'ETH',
+  'TON',
+  'TRX',
+  'USDC',
+  'LTC',
+  'BNB',
+] as const;
+
+export type CryptoCurrency = (typeof cryptoCurrencies)[number];
+
+export type BankAccount = {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  cardNumber: string | null;
+  iban: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CryptoWallet = {
+  id: string;
+  currency: CryptoCurrency | string;
+  network: string | null;
+  address: string;
+  label: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CampaignParticipant = {
+  id: string;
+  campaignId: string;
+  fullName: string;
+  phone: string | null;
+  shareCount: number;
+  paidAmount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ParticipationCampaign = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  description: string | null;
+  imageId: string | null;
+  isActive: boolean;
+  totalAmount: number;
+  sharePrice: number;
+  bankAccountId: string | null;
+  cryptoWalletId: string | null;
+  bankAccount: BankAccount | null;
+  cryptoWallet: CryptoWallet | null;
+  totalShares: number;
+  purchasedShares: number;
+  remainingShares: number;
+  participantCount: number;
+  progressPercent: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 

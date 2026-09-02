@@ -4,10 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { useBrandDisplay } from '../../hooks/useHeadquartersSummary'
-import { languages, type AppLanguage } from '../../i18n'
-import { usePreferredLocale } from '../../hooks/usePreferredLocale'
 import { AppLogo } from '../brand/AppLogo'
 import { AdminFooter } from '../layout/AdminFooter'
+import { LocaleSwitcher } from '../layout/LocaleSwitcher'
 
 export function AuthGuestLayout({
   children,
@@ -23,7 +22,6 @@ export function AuthGuestLayout({
   const { t } = useTranslation()
   const { user } = useAuth()
   const { title: brandTitle, name: brandName, logoSrc, branding } = useBrandDisplay()
-  const { locale, setLocale } = usePreferredLocale()
 
   return (
     <div className="flex min-h-svh flex-col bg-cream-50">
@@ -46,30 +44,7 @@ export function AuthGuestLayout({
             </div>
           </Link>
           <div className="ms-auto flex items-center gap-2">
-            <div
-              role="group"
-              aria-label={t('settings.locale')}
-              className="flex max-w-[min(100%,18rem)] flex-wrap justify-end gap-1"
-            >
-              {(Object.keys(languages) as AppLanguage[]).map((code) => {
-                const selected = locale === code
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setLocale(code)}
-                    className={`rounded-full px-2 py-1 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:px-2.5 ${
-                      selected
-                        ? 'bg-teal-500 text-white shadow-sm'
-                        : 'bg-cream-50 text-ink-600 ring-1 ring-line hover:bg-teal-50 hover:text-teal-800'
-                    }`}
-                  >
-                    {t(`languages.${code}`)}
-                  </button>
-                )
-              })}
-            </div>
+            <LocaleSwitcher />
           </div>
         </div>
       </header>

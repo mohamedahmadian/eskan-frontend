@@ -782,6 +782,66 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "unitCaravanLiaisons.subtitle",
     };
   }
+  if (pathname.startsWith("/headquarters/news/new")) {
+    return {
+      titleKey: "headquartersNews.create",
+      subtitleKey: "headquartersNews.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/headquarters/news/")
+  ) {
+    return {
+      titleKey: "headquartersNews.edit",
+      subtitleKey: "headquartersNews.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/headquarters/news/") &&
+    pathname !== "/headquarters/news"
+  ) {
+    return {
+      titleKey: "headquartersNews.details",
+      subtitleKey: "headquartersNews.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/headquarters/news")) {
+    return {
+      titleKey: "menus.headquartersNews",
+      subtitleKey: "headquartersNews.subtitle",
+    };
+  }
+  if (pathname.startsWith("/headquarters/announcements/new")) {
+    return {
+      titleKey: "headquartersAnnouncements.create",
+      subtitleKey: "headquartersAnnouncements.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/headquarters/announcements/")
+  ) {
+    return {
+      titleKey: "headquartersAnnouncements.edit",
+      subtitleKey: "headquartersAnnouncements.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/headquarters/announcements/") &&
+    pathname !== "/headquarters/announcements"
+  ) {
+    return {
+      titleKey: "headquartersAnnouncements.details",
+      subtitleKey: "headquartersAnnouncements.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/headquarters/announcements")) {
+    return {
+      titleKey: "menus.headquartersAnnouncements",
+      subtitleKey: "headquartersAnnouncements.subtitle",
+    };
+  }
   if (pathname.startsWith("/sms/settings")) {
     return {
       titleKey: "menus.smsSettings",
@@ -1415,6 +1475,133 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.honoraryServants",
       subtitleKey: "honoraryServants.subtitle",
+    };
+  }
+  if (pathname.includes("/participants/new") && pathname.startsWith("/participations/campaigns/")) {
+    return {
+      titleKey: "campaignParticipants.create",
+      subtitleKey: "campaignParticipants.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/participants/") &&
+    pathname.includes("/edit") &&
+    pathname.startsWith("/participations/campaigns/")
+  ) {
+    return {
+      titleKey: "campaignParticipants.edit",
+      subtitleKey: "campaignParticipants.editSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/participants/") &&
+    pathname.startsWith("/participations/campaigns/")
+  ) {
+    return {
+      titleKey: "campaignParticipants.details",
+      subtitleKey: "campaignParticipants.detailsSubtitle",
+    };
+  }
+  if (pathname.includes("/participants") && pathname.startsWith("/participations/campaigns/")) {
+    return {
+      titleKey: "campaignParticipants.title",
+      subtitleKey: "campaignParticipants.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/campaigns/new")) {
+    return {
+      titleKey: "participationCampaigns.create",
+      subtitleKey: "participationCampaigns.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/participations/campaigns/")
+  ) {
+    return {
+      titleKey: "participationCampaigns.edit",
+      subtitleKey: "participationCampaigns.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/participations/campaigns/") &&
+    pathname !== "/participations/campaigns"
+  ) {
+    return {
+      titleKey: "participationCampaigns.details",
+      subtitleKey: "participationCampaigns.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/campaigns")) {
+    return {
+      titleKey: "menus.participationCampaigns",
+      subtitleKey: "participationCampaigns.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/bank-accounts/new")) {
+    return {
+      titleKey: "bankAccounts.create",
+      subtitleKey: "bankAccounts.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/participations/bank-accounts/")
+  ) {
+    return {
+      titleKey: "bankAccounts.edit",
+      subtitleKey: "bankAccounts.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/participations/bank-accounts/") &&
+    pathname !== "/participations/bank-accounts"
+  ) {
+    return {
+      titleKey: "bankAccounts.details",
+      subtitleKey: "bankAccounts.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/bank-accounts")) {
+    return {
+      titleKey: "menus.bankAccounts",
+      subtitleKey: "bankAccounts.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/crypto-wallets/new")) {
+    return {
+      titleKey: "cryptoWallets.create",
+      subtitleKey: "cryptoWallets.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/participations/crypto-wallets/")
+  ) {
+    return {
+      titleKey: "cryptoWallets.edit",
+      subtitleKey: "cryptoWallets.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/participations/crypto-wallets/") &&
+    pathname !== "/participations/crypto-wallets"
+  ) {
+    return {
+      titleKey: "cryptoWallets.details",
+      subtitleKey: "cryptoWallets.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/crypto-wallets")) {
+    return {
+      titleKey: "menus.cryptoWallets",
+      subtitleKey: "cryptoWallets.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations")) {
+    return {
+      titleKey: "menus.participationsHome",
+      subtitleKey: "participations.subtitle",
     };
   }
   return { titleKey: "menus.overview", subtitleKey: "dashboard.subtitle" };

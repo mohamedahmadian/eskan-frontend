@@ -19,6 +19,7 @@ import {
   Languages,
   Landmark,
   LayoutDashboard,
+  Megaphone,
   Map,
   MapPin,
   MessageSquare,
@@ -46,6 +47,8 @@ import {
   Users,
   UsersRound,
   UtensilsCrossed,
+  Wallet,
+  Newspaper,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -85,6 +88,7 @@ const icons: Record<string, LucideIcon> = {
   history: History,
   'hand-heart': HandHeart,
   landmark: Landmark,
+  megaphone: Megaphone,
   milestone: Milestone,
   languages: Languages,
   package: Package,
@@ -96,7 +100,9 @@ const icons: Record<string, LucideIcon> = {
   'file-check': FileCheck,
   store: Store,
   ticket: Ticket,
+  newspaper: Newspaper,
   'user-round': UserRound,
+  wallet: Wallet,
 }
 
 export function getNavIcon(name: string): LucideIcon {

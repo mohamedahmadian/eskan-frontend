@@ -84,8 +84,27 @@ import { BenefactorCreatePage } from "./pages/benefactors/BenefactorCreatePage";
 import { BenefactorDetailPage } from "./pages/benefactors/BenefactorDetailPage";
 import { BenefactorEditPage } from "./pages/benefactors/BenefactorEditPage";
 import { BenefactorsListPage } from "./pages/benefactors/BenefactorsListPage";
+import { BankAccountCreatePage } from "./pages/participations/BankAccountCreatePage";
+import { BankAccountDetailPage } from "./pages/participations/BankAccountDetailPage";
+import { BankAccountEditPage } from "./pages/participations/BankAccountEditPage";
+import { BankAccountsListPage } from "./pages/participations/BankAccountsListPage";
+import { CampaignCreatePage } from "./pages/participations/CampaignCreatePage";
+import { CampaignDetailPage } from "./pages/participations/CampaignDetailPage";
+import { CampaignEditPage } from "./pages/participations/CampaignEditPage";
+import { CampaignsListPage } from "./pages/participations/CampaignsListPage";
+import { CryptoWalletCreatePage } from "./pages/participations/CryptoWalletCreatePage";
+import { CryptoWalletDetailPage } from "./pages/participations/CryptoWalletDetailPage";
+import { CryptoWalletEditPage } from "./pages/participations/CryptoWalletEditPage";
+import { CryptoWalletsListPage } from "./pages/participations/CryptoWalletsListPage";
+import { ParticipantCreatePage } from "./pages/participations/ParticipantCreatePage";
+import { ParticipantDetailPage } from "./pages/participations/ParticipantDetailPage";
+import { ParticipantEditPage } from "./pages/participations/ParticipantEditPage";
+import { ParticipantsListPage } from "./pages/participations/ParticipantsListPage";
+import { ParticipationsHomePage } from "./pages/participations/ParticipationsHomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { LandingPage } from "./pages/LandingPage";
+import { PublicAnnouncementPage } from "./pages/landing/PublicAnnouncementPage";
+import { PublicNewsPage } from "./pages/landing/PublicNewsPage";
 import { ImpersonateEndedPage } from "./pages/ImpersonateEndedPage";
 import { ImpersonateEntryPage } from "./pages/ImpersonateEntryPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -132,6 +151,14 @@ import { CaravanManagerDetailPage } from "./pages/caravan-managers/CaravanManage
 import { CaravanManagerEditPage } from "./pages/caravan-managers/CaravanManagerEditPage";
 import { CaravanManagerLocationHistoryPage, CaravanManagerLocationPage } from "./pages/caravan-managers/CaravanManagerLocationPage";
 import { CaravanManagersListPage } from "./pages/caravan-managers/CaravanManagersListPage";
+import { HeadquartersNewsCreatePage } from "./pages/headquarters-news/HeadquartersNewsCreatePage";
+import { HeadquartersNewsDetailPage } from "./pages/headquarters-news/HeadquartersNewsDetailPage";
+import { HeadquartersNewsEditPage } from "./pages/headquarters-news/HeadquartersNewsEditPage";
+import { HeadquartersNewsListPage } from "./pages/headquarters-news/HeadquartersNewsListPage";
+import { HeadquartersAnnouncementCreatePage } from "./pages/headquarters-announcements/HeadquartersAnnouncementCreatePage";
+import { HeadquartersAnnouncementDetailPage } from "./pages/headquarters-announcements/HeadquartersAnnouncementDetailPage";
+import { HeadquartersAnnouncementEditPage } from "./pages/headquarters-announcements/HeadquartersAnnouncementEditPage";
+import { HeadquartersAnnouncementsListPage } from "./pages/headquarters-announcements/HeadquartersAnnouncementsListPage";
 import { HeadquartersInfoCreatePage } from "./pages/headquarters-info/HeadquartersInfoCreatePage";
 import { HeadquartersInfoDetailPage } from "./pages/headquarters-info/HeadquartersInfoDetailPage";
 import { HeadquartersInfoEditPage } from "./pages/headquarters-info/HeadquartersInfoEditPage";
@@ -255,6 +282,11 @@ export default function App() {
           <AppToaster />
           <Routes>
             <Route path="/welcome" element={<LandingPage />} />
+            <Route path="/welcome/news/:id" element={<PublicNewsPage />} />
+            <Route
+              path="/welcome/announcements/:id"
+              element={<PublicAnnouncementPage />}
+            />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/impersonate" element={<ImpersonateEntryPage />} />
             <Route path="/impersonate-ended" element={<ImpersonateEndedPage />} />
@@ -919,6 +951,48 @@ export default function App() {
                     element={<UnitCaravanLiaisonsPage />}
                   />
                 </Route>
+                <Route
+                  element={<RequireMenuAccess path="/headquarters/news" />}
+                >
+                  <Route
+                    path="/headquarters/news"
+                    element={<HeadquartersNewsListPage />}
+                  />
+                  <Route
+                    path="/headquarters/news/new"
+                    element={<HeadquartersNewsCreatePage />}
+                  />
+                  <Route
+                    path="/headquarters/news/:id"
+                    element={<HeadquartersNewsDetailPage />}
+                  />
+                  <Route
+                    path="/headquarters/news/:id/edit"
+                    element={<HeadquartersNewsEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/headquarters/announcements" />
+                  }
+                >
+                  <Route
+                    path="/headquarters/announcements"
+                    element={<HeadquartersAnnouncementsListPage />}
+                  />
+                  <Route
+                    path="/headquarters/announcements/new"
+                    element={<HeadquartersAnnouncementCreatePage />}
+                  />
+                  <Route
+                    path="/headquarters/announcements/:id"
+                    element={<HeadquartersAnnouncementDetailPage />}
+                  />
+                  <Route
+                    path="/headquarters/announcements/:id/edit"
+                    element={<HeadquartersAnnouncementEditPage />}
+                  />
+                </Route>
                 <Route element={<RequireMenuAccess path="/my-accommodations" />}>
                   <Route
                     path="/my-accommodations"
@@ -1279,6 +1353,94 @@ export default function App() {
                   <Route
                     path="/my-evaluations/:id"
                     element={<EvaluationDetailPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/participations" />}>
+                  <Route
+                    path="/participations"
+                    element={<ParticipationsHomePage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/participations/campaigns" />
+                  }
+                >
+                  <Route
+                    path="/participations/campaigns"
+                    element={<CampaignsListPage />}
+                  />
+                  <Route
+                    path="/participations/campaigns/new"
+                    element={<CampaignCreatePage />}
+                  />
+                  <Route
+                    path="/participations/campaigns/:id"
+                    element={<CampaignDetailPage />}
+                  />
+                  <Route
+                    path="/participations/campaigns/:id/edit"
+                    element={<CampaignEditPage />}
+                  />
+                  <Route
+                    path="/participations/campaigns/:id/participants"
+                    element={<ParticipantsListPage />}
+                  />
+                  <Route
+                    path="/participations/campaigns/:id/participants/new"
+                    element={<ParticipantCreatePage />}
+                  />
+                  <Route
+                    path="/participations/campaigns/:id/participants/:participantId"
+                    element={<ParticipantDetailPage />}
+                  />
+                  <Route
+                    path="/participations/campaigns/:id/participants/:participantId/edit"
+                    element={<ParticipantEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/participations/bank-accounts" />
+                  }
+                >
+                  <Route
+                    path="/participations/bank-accounts"
+                    element={<BankAccountsListPage />}
+                  />
+                  <Route
+                    path="/participations/bank-accounts/new"
+                    element={<BankAccountCreatePage />}
+                  />
+                  <Route
+                    path="/participations/bank-accounts/:id"
+                    element={<BankAccountDetailPage />}
+                  />
+                  <Route
+                    path="/participations/bank-accounts/:id/edit"
+                    element={<BankAccountEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/participations/crypto-wallets" />
+                  }
+                >
+                  <Route
+                    path="/participations/crypto-wallets"
+                    element={<CryptoWalletsListPage />}
+                  />
+                  <Route
+                    path="/participations/crypto-wallets/new"
+                    element={<CryptoWalletCreatePage />}
+                  />
+                  <Route
+                    path="/participations/crypto-wallets/:id"
+                    element={<CryptoWalletDetailPage />}
+                  />
+                  <Route
+                    path="/participations/crypto-wallets/:id/edit"
+                    element={<CryptoWalletEditPage />}
                   />
                 </Route>
                 <Route

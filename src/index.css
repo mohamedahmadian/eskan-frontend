@@ -957,3 +957,24 @@ th {
     print-color-adjust: exact;
   }
 }
+
+.landing-root {
+  background-image: radial-gradient(
+    ellipse 80% 40% at 50% 0%,
+    rgba(46, 189, 182, 0.07),
+    transparent 55%
+  );
+}
+
+.landing-hero {
+  background:
+    radial-gradient(ellipse 70% 55% at 82% 12%, rgba(63, 214, 190, 0.32), transparent 58%),
+    radial-gradient(ellipse 45% 40% at 8% 88%, rgba(232, 184, 58, 0.16), transparent 52%),
+    linear-gradient(165deg, #0c4d4a 0%, #148f8a 46%, #1aa8a2 100%);
+}
+
+.landing-hero-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-opacity='0.08' stroke-width='1' d='M36 4 44 28 68 36 44 44 36 68 28 44 4 36 28 28Z'/%3E%3C/svg%3E");
+  background-size: 72px 72px;
+  opacity: 0.7;
+}
