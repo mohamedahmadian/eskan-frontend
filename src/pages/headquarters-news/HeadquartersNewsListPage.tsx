@@ -110,6 +110,7 @@ export function HeadquartersNewsListPage() {
                 sortDir={sortDir}
                 onSort={onSort}
               />
+              <th className="px-4 py-3 text-start font-medium">{t('headquartersNews.availableLocales')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>
@@ -132,6 +133,22 @@ export function HeadquartersNewsListPage() {
                 </td>
                 <td className="px-4 py-3">
                   <PublishStatus published={item.isPublished} ns="headquartersNews" />
+                </td>
+                <td className="px-4 py-3">
+                  {(item.translatedLocales ?? []).length ? (
+                    <span className="inline-flex flex-wrap gap-1">
+                      {(item.translatedLocales ?? []).map((locale) => (
+                        <span
+                          key={locale}
+                          className="inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700"
+                        >
+                          {t(`languages.${locale}`, { defaultValue: locale })}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="text-ink-400">{t('headquartersNews.fallbackPersian')}</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <EntityRowActions

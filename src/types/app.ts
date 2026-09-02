@@ -1299,6 +1299,13 @@ export type HeadquartersServiceSummary = {
   phones: HeadquartersSummaryPhone[];
 };
 
+export type HeadquartersNewsTranslation = {
+  locale: string;
+  title: string;
+  summary: string | null;
+  body: string;
+};
+
 export type HeadquartersNews = {
   id: string;
   title: string;
@@ -1306,6 +1313,10 @@ export type HeadquartersNews = {
   body: string;
   publishedAt: string;
   isPublished: boolean;
+  imageId: string | null;
+  translations?: HeadquartersNewsTranslation[];
+  translatedLocales?: string[];
+  contentLocale?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -2768,6 +2779,35 @@ export type ParticipationCampaign = {
   progressPercent: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type PublicCampaign = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  description: string | null;
+  imageId: string | null;
+  isActive: boolean;
+  totalAmount: number;
+  sharePrice: number;
+  totalShares: number;
+  purchasedShares: number;
+  remainingShares: number;
+  participantCount: number;
+  progressPercent: number;
+  bankAccount?: {
+    bankName: string;
+    accountNumber: string;
+    cardNumber: string | null;
+    iban: string;
+  } | null;
+  cryptoWallet?: {
+    label: string;
+    currency: string;
+    network: string | null;
+    address: string;
+  } | null;
 };
 
 

@@ -104,7 +104,9 @@ import { ParticipationsHomePage } from "./pages/participations/ParticipationsHom
 import { LoginPage } from "./pages/LoginPage";
 import { LandingPage } from "./pages/LandingPage";
 import { PublicAnnouncementPage } from "./pages/landing/PublicAnnouncementPage";
+import { PublicCampaignPage } from "./pages/landing/PublicCampaignPage";
 import { PublicNewsPage } from "./pages/landing/PublicNewsPage";
+import { PublicParticipationsPage } from "./pages/landing/PublicParticipationsPage";
 import { ImpersonateEndedPage } from "./pages/ImpersonateEndedPage";
 import { ImpersonateEntryPage } from "./pages/ImpersonateEntryPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -286,6 +288,14 @@ export default function App() {
             <Route
               path="/welcome/announcements/:id"
               element={<PublicAnnouncementPage />}
+            />
+            <Route
+              path="/welcome/participations"
+              element={<PublicParticipationsPage />}
+            />
+            <Route
+              path="/welcome/participations/:id"
+              element={<PublicCampaignPage />}
             />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/impersonate" element={<ImpersonateEntryPage />} />

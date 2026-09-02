@@ -4,14 +4,14 @@ import { Link } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
 import { getImageUrl } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
-import type { ParticipationCampaign } from '../../types/app'
+import type { PublicCampaign } from '../../types/app'
 import { GeoStatus } from '../geo/GeoShared'
 
 export function CampaignCard({
   item,
   to,
 }: {
-  item: ParticipationCampaign
+  item: PublicCampaign
   to: string
 }) {
   const { t, i18n } = useTranslation()

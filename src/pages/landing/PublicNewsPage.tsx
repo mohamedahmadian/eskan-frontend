@@ -5,15 +5,17 @@ import { Link, useParams } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
 import { LoadingState } from '../../components/ui/Form'
 import { FormEmptyHint } from '../../components/ui/FormLayout'
-import { api } from '../../lib/api'
+import { languageDir } from '../../i18n'
+import { api, getImageUrl } from '../../lib/api'
 import type { HeadquartersNews } from '../../types/app'
 import { LandingShell } from './LandingShell'
 
 export function PublicNewsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const { id } = useParams()
   const query = useQuery({
-    queryKey: ['public', 'headquarters-news', id],
+    queryKey: ['public', 'headquarters-news', locale, id],
     enabled: Boolean(id),
     queryFn: async () => {
       const { data } = await api.get<HeadquartersNews>(`/headquarters-news/published/${id}`)
@@ -34,13 +36,24 @@ export function PublicNewsPage() {
         {query.isLoading ? <LoadingState /> : null}
         {query.isError ? <FormEmptyHint>{t('landing.news.notFound')}</FormEmptyHint> : null}
         {query.data ? (
-          <div className="mt-6 rounded-[28px] border border-white bg-white p-6 shadow-[0_12px_32px_rgba(20,40,40,0.06)] sm:p-8">
+          <div
+            className="mt-6 rounded-[28px] border border-white bg-white p-6 shadow-[0_12px_32px_rgba(20,40,40,0.06)] sm:p-8"
+            lang={query.data.contentLocale || locale}
+            dir={languageDir(query.data.contentLocale || locale)}
+          >
             <p className="inline-flex items-center gap-2 text-xs text-ink-400">
               <Newspaper className="size-3.5 text-teal-600" aria-hidden />
               <CalendarDays className="size-3.5" aria-hidden />
               <DateText value={query.data.publishedAt} />
             </p>
             <h1 className="mt-3 text-2xl font-semibold leading-9 text-ink-900">{query.data.title}</h1>
+            {query.data.imageId ? (
+              <img
+                src={getImageUrl(query.data.imageId)}
+                alt=""
+                className="mt-5 h-56 w-full rounded-2xl object-cover sm:h-72"
+              />
+            ) : null}
             {query.data.summary ? (
               <p className="mt-3 text-sm leading-8 text-ink-500">{query.data.summary}</p>
             ) : null}

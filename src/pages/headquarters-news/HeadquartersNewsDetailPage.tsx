@@ -1,4 +1,4 @@
-import { AlignLeft, CalendarDays, Newspaper, ToggleRight, Type } from 'lucide-react'
+import { AlignLeft, CalendarDays, Languages, Newspaper, ToggleRight, Type } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -9,10 +9,16 @@ import {
   PageHeader,
   formShellClassName,
 } from '../../components/ui/Form'
-import { FormCard, FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
+import {
+  FormCard,
+  FormEmptyHint,
+  FormFactTile,
+  FormSectionTitle,
+} from '../../components/ui/FormLayout'
 import { DateText } from '../../components/ui/DateText'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
-import { api } from '../../lib/api'
+import { languageDir } from '../../i18n'
+import { api, getImageUrl } from '../../lib/api'
 import type { HeadquartersNews } from '../../types/app'
 import { PublishStatus } from './PublishStatus'
 
@@ -35,6 +41,8 @@ export function HeadquartersNewsDetailPage() {
     return <LoadingState />
   }
 
+  const translations = item.translations ?? []
+
   return (
     <div className={formShellClassName}>
       <PageHeader
@@ -44,7 +52,14 @@ export function HeadquartersNewsDetailPage() {
       <FormCard icon={Newspaper} title={item.title}>
         <div className="space-y-6 p-5 sm:p-6">
           <section>
-            <FormSectionTitle icon={Newspaper}>{t('headquartersNews.details')}</FormSectionTitle>
+            <FormSectionTitle icon={Newspaper}>{t('headquartersNews.persianContent')}</FormSectionTitle>
+            {item.imageId ? (
+              <img
+                src={getImageUrl(item.imageId)}
+                alt=""
+                className="mb-3 h-52 w-full rounded-2xl object-cover"
+              />
+            ) : null}
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
               <FormFactTile
                 icon={Type}
@@ -82,6 +97,70 @@ export function HeadquartersNewsDetailPage() {
               />
             </div>
           </section>
+
+          <section>
+            <FormSectionTitle icon={Languages}>{t('headquartersNews.translations')}</FormSectionTitle>
+            {translations.length ? (
+              <div className="space-y-4">
+                {translations.map((row) => (
+                  <div key={row.locale} className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                    <FormFactTile
+                      icon={Languages}
+                      label={t('headquartersNews.availableLocales')}
+                      value={t(`languages.${row.locale}`, { defaultValue: row.locale })}
+                      tone="teal"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={Type}
+                      label={t('headquartersNews.titleLabel')}
+                      value={
+                        <span dir={languageDir(row.locale)} lang={row.locale}>
+                          {row.title}
+                        </span>
+                      }
+                      tone="mint"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={AlignLeft}
+                      label={t('headquartersNews.summary')}
+                      value={
+                        row.summary ? (
+                          <span dir={languageDir(row.locale)} lang={row.locale}>
+                            {row.summary}
+                          </span>
+                        ) : (
+                          '—'
+                        )
+                      }
+                      empty={!row.summary}
+                      tone="teal"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={AlignLeft}
+                      label={t('headquartersNews.body')}
+                      value={
+                        <span
+                          className="whitespace-pre-wrap"
+                          dir={languageDir(row.locale)}
+                          lang={row.locale}
+                        >
+                          {row.body}
+                        </span>
+                      }
+                      tone="ink"
+                      className="sm:col-span-2"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <FormEmptyHint>{t('headquartersNews.noTranslations')}</FormEmptyHint>
+            )}
+          </section>
+
           <DetailActions
             editTo={`/headquarters/news/${item.id}/edit`}
             editLabel={t('common.edit')}

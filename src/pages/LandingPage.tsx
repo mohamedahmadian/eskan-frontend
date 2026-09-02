@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { DateText } from '../components/ui/DateText'
 import { FormEmptyHint } from '../components/ui/FormLayout'
+import { languageDir } from '../i18n'
 import { api, getImageUrl } from '../lib/api'
 import { withNext } from '../lib/auth-redirect'
 import { formatGroupedNumber } from '../lib/datetime'
@@ -25,6 +26,7 @@ import type {
   AnnouncementAudience,
   HeadquartersAnnouncement,
   HeadquartersNews,
+  PublicCampaign,
 } from '../types/app'
 import { announcementAudiences } from '../types/app'
 import { LandingShell } from './landing/LandingShell'
@@ -32,21 +34,7 @@ import { ShrineMark } from './landing/ShrineMark'
 
 const HONORARY_APPLY_PATH = '/honorary-apply'
 const PILGRIMAGE_PATH = '/my-reservations/new'
-const PARTICIPATIONS_PATH = '/participations'
-
-type PublicCampaign = {
-  id: string
-  name: string
-  startDate: string
-  endDate: string
-  description: string | null
-  imageId: string | null
-  progressPercent: number
-  participantCount: number
-  purchasedShares: number
-  totalShares: number
-  sharePrice: number
-}
+const PARTICIPATIONS_PATH = '/welcome/participations'
 
 const audienceIcons: Record<AnnouncementAudience, LucideIcon> = {
   PILGRIMS: Users,
@@ -118,10 +106,10 @@ export function LandingPage() {
 
   const volunteerTo = user ? HONORARY_APPLY_PATH : withNext('/register', HONORARY_APPLY_PATH)
   const pilgrimageTo = user ? PILGRIMAGE_PATH : withNext('/register', PILGRIMAGE_PATH)
-  const participationsTo = user ? PARTICIPATIONS_PATH : withNext('/register', PARTICIPATIONS_PATH)
+  const participationsTo = PARTICIPATIONS_PATH
 
   const news = useQuery({
-    queryKey: ['public', 'headquarters-news'],
+    queryKey: ['public', 'headquarters-news', locale],
     queryFn: async () => {
       const { data } = await api.get<HeadquartersNews[]>('/headquarters-news/published')
       return data
@@ -232,7 +220,7 @@ export function LandingPage() {
               {campaigns.data.map((item) => (
                 <Link
                   key={item.id}
-                  to={user ? `/participations/campaigns/${item.id}` : participationsTo}
+                  to={`/welcome/participations/${item.id}`}
                   className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-white bg-white shadow-[0_12px_32px_rgba(20,40,40,0.06)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(46,189,182,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
                 >
                   <div className="relative h-40 overflow-hidden bg-gradient-to-e from-teal-500 via-mint-500 to-teal-400">
@@ -284,17 +272,35 @@ export function LandingPage() {
                 <Link
                   key={item.id}
                   to={`/welcome/news/${item.id}`}
-                  className="group flex h-full flex-col rounded-[28px] border border-white bg-white p-5 shadow-[0_12px_32px_rgba(20,40,40,0.06)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(46,189,182,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+                  className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-white bg-white shadow-[0_12px_32px_rgba(20,40,40,0.06)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(46,189,182,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
                 >
+                  <div className="relative h-40 overflow-hidden bg-gradient-to-e from-teal-500 via-mint-500 to-teal-400">
+                    {item.imageId ? (
+                      <img
+                        src={getImageUrl(item.imageId)}
+                        alt=""
+                        className="size-full object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="flex flex-1 flex-col p-5">
                   <span className="inline-flex items-center gap-2 text-xs text-ink-400">
                     <Newspaper className="size-3.5 text-teal-600" aria-hidden />
                     <DateText value={item.publishedAt} />
                   </span>
-                  <span className="mt-3 block text-base font-semibold leading-7 text-ink-900">
+                  <span
+                    className="mt-3 block text-base font-semibold leading-7 text-ink-900"
+                    lang={item.contentLocale || locale}
+                    dir={languageDir(item.contentLocale || locale)}
+                  >
                     {item.title}
                   </span>
                   {item.summary ? (
-                    <span className="mt-2 line-clamp-2 flex-1 text-sm leading-7 text-ink-500">
+                    <span
+                      className="mt-2 line-clamp-2 flex-1 text-sm leading-7 text-ink-500"
+                      lang={item.contentLocale || locale}
+                      dir={languageDir(item.contentLocale || locale)}
+                    >
                       {item.summary}
                     </span>
                   ) : null}
@@ -302,6 +308,7 @@ export function LandingPage() {
                     {t('landing.news.readMore')}
                     <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
                   </span>
+                  </div>
                 </Link>
               ))}
             </div>
