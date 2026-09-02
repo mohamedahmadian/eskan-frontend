@@ -8,7 +8,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "auth.changePasswordSubtitle",
     };
   }
-  if (pathname.includes("/location/history") || pathname.startsWith("/my-location/history")) {
+  if (
+    pathname.includes("/location/history") ||
+    pathname.startsWith("/my-location/history")
+  ) {
     return {
       titleKey: pathname.startsWith("/my-location/history")
         ? "menus.myLocationHistory"
@@ -184,7 +187,10 @@ export function getPageMeta(pathname: string): {
   if (pathname.startsWith("/my-groups")) {
     return { titleKey: "menus.myGroups", subtitleKey: "myGroups.subtitle" };
   }
-  if (pathname.startsWith("/translator-reservations/") && pathname !== "/translator-reservations") {
+  if (
+    pathname.startsWith("/translator-reservations/") &&
+    pathname !== "/translator-reservations"
+  ) {
     return {
       titleKey: "reservations.adminDetails",
       subtitleKey: "translatorReservations.detailsSubtitle",
@@ -229,7 +235,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "supportRequests.editSubtitle",
     };
   }
-  if (pathname.startsWith("/support-requests/") && pathname !== "/support-requests") {
+  if (
+    pathname.startsWith("/support-requests/") &&
+    pathname !== "/support-requests"
+  ) {
     return {
       titleKey: "supportRequests.details",
       subtitleKey: "supportRequests.detailsSubtitle",
@@ -890,7 +899,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "caravanManagers.createSubtitle",
     };
   }
-  if (pathname.includes("/location") && pathname.startsWith("/caravan-managers/")) {
+  if (
+    pathname.includes("/location") &&
+    pathname.startsWith("/caravan-managers/")
+  ) {
     return {
       titleKey: "location.register",
       subtitleKey: "location.registerSubtitle",
@@ -974,7 +986,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "myAccommodations.createSubtitle",
     };
   }
-  if (pathname.includes("/edit") && pathname.startsWith("/my-accommodations/")) {
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/my-accommodations/")
+  ) {
     return {
       titleKey: "accommodations.edit",
       subtitleKey: "accommodations.editSubtitle",
@@ -1306,6 +1321,141 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "myIceVouchers.subtitle",
     };
   }
+  if (pathname.startsWith("/logistics/ingredients/new")) {
+    return {
+      titleKey: "ingredients.create",
+      subtitleKey: "ingredients.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/logistics/ingredients/")
+  ) {
+    return {
+      titleKey: "ingredients.edit",
+      subtitleKey: "ingredients.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/logistics/ingredients/") &&
+    pathname !== "/logistics/ingredients"
+  ) {
+    return {
+      titleKey: "ingredients.details",
+      subtitleKey: "ingredients.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/logistics/ingredients")) {
+    return {
+      titleKey: "menus.ingredientManagement",
+      subtitleKey: "ingredients.subtitle",
+    };
+  }
+  if (pathname.startsWith("/logistics/foods/new")) {
+    return {
+      titleKey: "foods.create",
+      subtitleKey: "foods.createSubtitle",
+    };
+  }
+  if (pathname.includes("/edit") && pathname.startsWith("/logistics/foods/")) {
+    return {
+      titleKey: "foods.edit",
+      subtitleKey: "foods.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/logistics/foods/") &&
+    pathname !== "/logistics/foods"
+  ) {
+    return {
+      titleKey: "foods.details",
+      subtitleKey: "foods.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/logistics/foods")) {
+    return {
+      titleKey: "menus.foodManagement",
+      subtitleKey: "foods.subtitle",
+    };
+  }
+  if (pathname.startsWith("/logistics/warehouse-calculator")) {
+    return {
+      titleKey: "menus.warehouseCalculator",
+      subtitleKey: "warehouseCalculator.subtitle",
+    };
+  }
+  if (pathname.startsWith("/logistics/restaurants/new")) {
+    return {
+      titleKey: "restaurants.create",
+      subtitleKey: "restaurants.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/logistics/restaurants/")
+  ) {
+    return {
+      titleKey: "restaurants.edit",
+      subtitleKey: "restaurants.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/logistics/restaurants/") &&
+    pathname !== "/logistics/restaurants"
+  ) {
+    return {
+      titleKey: "restaurants.details",
+      subtitleKey: "restaurants.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/logistics/restaurants")) {
+    return {
+      titleKey: "menus.restaurantManagement",
+      subtitleKey: "restaurants.subtitle",
+    };
+  }
+  if (pathname.startsWith("/logistics/restaurant-meal-plans/new")) {
+    return {
+      titleKey: "restaurantMealPlans.create",
+      subtitleKey: "restaurantMealPlans.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/logistics/restaurant-meal-plans/")
+  ) {
+    return {
+      titleKey: "restaurantMealPlans.edit",
+      subtitleKey: "restaurantMealPlans.editSubtitle",
+    };
+  }
+  if (/\/logistics\/restaurant-meal-plans\/[^/]+\/items$/.test(pathname)) {
+    return {
+      titleKey: "restaurantMealPlans.foodItems",
+      subtitleKey: "restaurantMealPlans.foodItemsSubtitle",
+    };
+  }
+  if (/\/logistics\/restaurant-meal-plans\/[^/]+\/distribute$/.test(pathname)) {
+    return {
+      titleKey: "restaurantMealPlans.distribute",
+      subtitleKey: "restaurantMealPlans.distributeSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/logistics/restaurant-meal-plans/") &&
+    pathname !== "/logistics/restaurant-meal-plans"
+  ) {
+    return {
+      titleKey: "restaurantMealPlans.details",
+      subtitleKey: "restaurantMealPlans.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/logistics/restaurant-meal-plans")) {
+    return {
+      titleKey: "menus.restaurantMealPlan",
+      subtitleKey: "restaurantMealPlans.subtitle",
+    };
+  }
   if (pathname.startsWith("/evaluations/campaigns/new")) {
     return {
       titleKey: "evaluations.campaigns.create",
@@ -1384,7 +1534,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "evaluations.list.subtitle",
     };
   }
-  if (pathname.startsWith("/my-evaluations/") && pathname !== "/my-evaluations") {
+  if (
+    pathname.startsWith("/my-evaluations/") &&
+    pathname !== "/my-evaluations"
+  ) {
     return {
       titleKey: "evaluations.details",
       subtitleKey: "evaluations.mine.subtitle",
@@ -1396,7 +1549,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "evaluations.mine.subtitle",
     };
   }
-  if (pathname.startsWith("/honorary-history/") && pathname !== "/honorary-history") {
+  if (
+    pathname.startsWith("/honorary-history/") &&
+    pathname !== "/honorary-history"
+  ) {
     return {
       titleKey: "honoraryServants.details",
       subtitleKey: "honoraryServants.detailsSubtitle",
@@ -1408,7 +1564,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "honoraryServants.historySubtitle",
     };
   }
-  if (pathname.startsWith("/honorary-apply/") && pathname !== "/honorary-apply") {
+  if (
+    pathname.startsWith("/honorary-apply/") &&
+    pathname !== "/honorary-apply"
+  ) {
     return {
       titleKey: "honoraryServants.details",
       subtitleKey: "honoraryServants.detailsSubtitle",
@@ -1456,7 +1615,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "honoraryServants.createSubtitle",
     };
   }
-  if (pathname.includes("/edit") && pathname.startsWith("/honorary-servants/")) {
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/honorary-servants/")
+  ) {
     return {
       titleKey: "honoraryServants.edit",
       subtitleKey: "honoraryServants.editSubtitle",
@@ -1477,7 +1639,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "honoraryServants.subtitle",
     };
   }
-  if (pathname.includes("/participants/new") && pathname.startsWith("/participations/campaigns/")) {
+  if (
+    pathname.includes("/participants/new") &&
+    pathname.startsWith("/participations/campaigns/")
+  ) {
     return {
       titleKey: "campaignParticipants.create",
       subtitleKey: "campaignParticipants.createSubtitle",
@@ -1502,7 +1667,10 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "campaignParticipants.detailsSubtitle",
     };
   }
-  if (pathname.includes("/participants") && pathname.startsWith("/participations/campaigns/")) {
+  if (
+    pathname.includes("/participants") &&
+    pathname.startsWith("/participations/campaigns/")
+  ) {
     return {
       titleKey: "campaignParticipants.title",
       subtitleKey: "campaignParticipants.subtitle",

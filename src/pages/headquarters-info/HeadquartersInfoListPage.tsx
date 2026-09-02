@@ -103,6 +103,16 @@ export function HeadquartersInfoListPage() {
                 onSort={onSort}
               />
               <SortableTh
+                column="neshanAddress"
+                label={t('headquartersInfo.neshanAddress')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <th className="px-4 py-3 text-start font-medium">
+                {t('headquartersInfo.location')}
+              </th>
+              <SortableTh
                 column="phoneCount"
                 label={t('headquartersInfo.phoneCount')}
                 sortBy={sortBy}
@@ -136,6 +146,20 @@ export function HeadquartersInfoListPage() {
                     : '—'}
                 </td>
                 <td className="px-4 py-3">{item.address || '—'}</td>
+                <td className="px-4 py-3">
+                  {item.neshanAddress ? (
+                    <span dir="ltr" className="block max-w-[14rem] truncate">
+                      {item.neshanAddress}
+                    </span>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {item.latitude != null && item.longitude != null
+                    ? t('headquartersInfo.locationSet')
+                    : '—'}
+                </td>
                 <td className="px-4 py-3">{formatNumber(item.phoneCount, locale)}</td>
                 <td className="px-4 py-3">
                   <EntityRowActions

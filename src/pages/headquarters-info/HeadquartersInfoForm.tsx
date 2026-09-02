@@ -5,7 +5,9 @@ import {
   ImagePlus,
   Landmark,
   MapPin,
+  MapPinned,
   MessageCircle,
+  Navigation,
   Share2,
   Type,
 } from 'lucide-react'
@@ -15,15 +17,21 @@ import { toast } from 'sonner'
 import { FileDropField } from '../../components/ui/FileDropField'
 import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
+import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { currentPersianYear } from '../../lib/datetime'
 import { optimizeImageFile } from '../../lib/optimize-image'
 import type { HeadquartersInfo } from '../../types/app'
 
+const MASHHAD_FOCUS = { lat: 36.287, lng: 59.6158, zoom: 13 }
+
 export type HeadquartersInfoPayload = {
   name: string
   title: string | null
   address: string | null
+  neshanAddress: string | null
+  latitude: number | null
+  longitude: number | null
   description: string | null
   activityStartYear: number
   website: string | null
@@ -37,6 +45,16 @@ export type HeadquartersInfoPayload = {
 function emptyToNull(value: string) {
   const trimmed = value.trim()
   return trimmed.length ? trimmed : null
+}
+
+function toCoordString(value: number | null | undefined) {
+  return value == null || !Number.isFinite(value) ? '' : String(value)
+}
+
+function toOptionalNumber(value: string) {
+  if (value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 export function HeadquartersInfoForm({
@@ -54,6 +72,9 @@ export function HeadquartersInfoForm({
     name: initial?.name ?? '',
     title: initial?.title ?? '',
     address: initial?.address ?? '',
+    neshanAddress: initial?.neshanAddress ?? '',
+    latitude: toCoordString(initial?.latitude),
+    longitude: toCoordString(initial?.longitude),
     description: initial?.description ?? '',
     activityStartYear:
       initial?.activityStartYear != null ? String(initial.activityStartYear) : '',
@@ -91,6 +112,9 @@ export function HeadquartersInfoForm({
         name: values.name.trim(),
         title: emptyToNull(values.title),
         address: emptyToNull(values.address),
+        neshanAddress: emptyToNull(values.neshanAddress),
+        latitude: toOptionalNumber(values.latitude),
+        longitude: toOptionalNumber(values.longitude),
         description: emptyToNull(values.description),
         activityStartYear: Number(values.activityStartYear),
         website: emptyToNull(values.website),
@@ -155,6 +179,36 @@ export function HeadquartersInfoForm({
             rows={3}
             value={values.address}
             onChange={(e) => set('address', e.target.value)}
+          />
+        </FormField>
+        <FormField
+          icon={Navigation}
+          label={t('headquartersInfo.neshanAddress')}
+          htmlFor="neshanAddress"
+        >
+          <input
+            id="neshanAddress"
+            className={fieldClassName}
+            dir="ltr"
+            value={values.neshanAddress}
+            onChange={(e) => set('neshanAddress', e.target.value)}
+          />
+        </FormField>
+        <FormField icon={MapPinned} label={t('headquartersInfo.location')}>
+          <OsmMapPicker
+            latitude={values.latitude}
+            longitude={values.longitude}
+            variant="always"
+            showGeolocate
+            focus={
+              values.latitude && values.longitude
+                ? undefined
+                : MASHHAD_FOCUS
+            }
+            onChange={(latitude, longitude) => {
+              set('latitude', latitude)
+              set('longitude', longitude)
+            }}
           />
         </FormField>
         <FormField icon={AlignLeft} label={t('headquartersInfo.description')} htmlFor="description">

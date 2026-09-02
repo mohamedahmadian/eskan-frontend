@@ -24,6 +24,7 @@ import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api, getImageUrl } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
 import type { ParticipationCampaign } from '../../types/app'
+import { CampaignProgressBar } from './CampaignCard'
 import { GeoStatus } from '../geo/GeoShared'
 
 export function CampaignDetailPage() {
@@ -68,20 +69,11 @@ export function CampaignDetailPage() {
             <p className="text-sm leading-7 text-ink-700">{item.description}</p>
           ) : null}
           <FormSectionTitle icon={Coins}>{t('participations.progress')}</FormSectionTitle>
-          <div>
-            <div className="mb-2 flex items-center justify-between text-xs text-ink-500">
-              <span>{t('participations.purchasedShares')}</span>
-              <span className="font-semibold text-teal-700">
-                {n(item.purchasedShares)} / {n(item.totalShares)}
-              </span>
-            </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-cream-100">
-              <div
-                className="h-full rounded-full bg-gradient-to-e from-teal-500 to-mint-500"
-                style={{ width: `${item.progressPercent}%` }}
-              />
-            </div>
-          </div>
+          <CampaignProgressBar
+            percent={item.progressPercent}
+            label={t('participations.purchasedShares')}
+            value={`${n(item.purchasedShares)} / ${n(item.totalShares)}`}
+          />
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             <FormFactTile
               icon={CalendarRange}

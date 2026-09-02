@@ -4,7 +4,9 @@ import {
   Globe,
   Landmark,
   MapPin,
+  MapPinned,
   MessageCircle,
+  Navigation,
   Phone,
   Share2,
   Type,
@@ -26,6 +28,7 @@ import {
   FormFactTile,
   FormSectionTitle,
 } from '../../components/ui/FormLayout'
+import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
@@ -100,6 +103,54 @@ export function HeadquartersInfoDetailPage() {
                 tone="teal"
                 className="sm:col-span-2"
               />
+              <FormFactTile
+                icon={Navigation}
+                label={t('headquartersInfo.neshanAddress')}
+                value={
+                  item.neshanAddress ? (
+                    <NeshanValue value={item.neshanAddress} />
+                  ) : (
+                    '—'
+                  )
+                }
+                empty={!item.neshanAddress}
+                tone="mint"
+                className="sm:col-span-2"
+              />
+              {item.latitude != null && item.longitude != null ? (
+                <div className="sm:col-span-2">
+                  <FormFactTile
+                    icon={MapPinned}
+                    label={t('headquartersInfo.location')}
+                    value={
+                      <span dir="ltr">
+                        {localizeDigits(String(item.latitude), locale)}
+                        {', '}
+                        {localizeDigits(String(item.longitude), locale)}
+                      </span>
+                    }
+                    tone="teal"
+                  />
+                  <div className="mt-3">
+                    <OsmMapPicker
+                      latitude={String(item.latitude)}
+                      longitude={String(item.longitude)}
+                      onChange={() => undefined}
+                      variant="always"
+                      readOnly
+                      heightClass="h-64"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <FormFactTile
+                  icon={MapPinned}
+                  label={t('headquartersInfo.location')}
+                  value="—"
+                  empty
+                  tone="teal"
+                />
+              )}
               <FormFactTile
                 icon={Phone}
                 label={t('headquartersInfo.phoneCount')}
@@ -218,4 +269,21 @@ export function HeadquartersInfoDetailPage() {
       </FormCard>
     </div>
   )
+}
+
+function NeshanValue({ value }: { value: string }) {
+  if (/^https?:\/\//i.test(value)) {
+    return (
+      <a
+        href={value}
+        target="_blank"
+        rel="noopener noreferrer"
+        dir="ltr"
+        className="break-all text-teal-700 hover:underline"
+      >
+        {value}
+      </a>
+    )
+  }
+  return <span dir="ltr">{value}</span>
 }

@@ -103,8 +103,12 @@ import { ParticipantsListPage } from "./pages/participations/ParticipantsListPag
 import { ParticipationsHomePage } from "./pages/participations/ParticipationsHomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { LandingPage } from "./pages/LandingPage";
+import { PublicAboutPage } from "./pages/landing/PublicAboutPage";
 import { PublicAnnouncementPage } from "./pages/landing/PublicAnnouncementPage";
 import { PublicCampaignPage } from "./pages/landing/PublicCampaignPage";
+import { PublicCampaignsPage } from "./pages/landing/PublicCampaignsPage";
+import { PublicContactPage } from "./pages/landing/PublicContactPage";
+import { PublicInKindPage } from "./pages/landing/PublicInKindPage";
 import { PublicNewsPage } from "./pages/landing/PublicNewsPage";
 import { PublicParticipationsPage } from "./pages/landing/PublicParticipationsPage";
 import { PublicAccommodationPage } from "./pages/public-places/PublicAccommodationPage";
@@ -231,6 +235,25 @@ import { IceVoucherDetailPage } from "./pages/ice-vouchers/IceVoucherDetailPage"
 import { IceVoucherReportPage } from "./pages/ice-vouchers/IceVoucherReportPage";
 import { IceVouchersListPage } from "./pages/ice-vouchers/IceVouchersListPage";
 import { LogisticsSettingsPage } from "./pages/ice-vouchers/LogisticsSettingsPage";
+import { FoodCreatePage } from "./pages/nutrition/FoodCreatePage";
+import { FoodDetailPage } from "./pages/nutrition/FoodDetailPage";
+import { FoodEditPage } from "./pages/nutrition/FoodEditPage";
+import { FoodsListPage } from "./pages/nutrition/FoodsListPage";
+import { IngredientCreatePage } from "./pages/nutrition/IngredientCreatePage";
+import { IngredientDetailPage } from "./pages/nutrition/IngredientDetailPage";
+import { IngredientEditPage } from "./pages/nutrition/IngredientEditPage";
+import { IngredientsListPage } from "./pages/nutrition/IngredientsListPage";
+import { WarehouseCalculatorPage } from "./pages/nutrition/WarehouseCalculatorPage";
+import { RestaurantMealPlanCreatePage } from "./pages/restaurant-meal-plans/RestaurantMealPlanCreatePage";
+import { RestaurantMealPlanDetailPage } from "./pages/restaurant-meal-plans/RestaurantMealPlanDetailPage";
+import { RestaurantMealPlanDistributePage } from "./pages/restaurant-meal-plans/RestaurantMealPlanDistributePage";
+import { RestaurantMealPlanEditPage } from "./pages/restaurant-meal-plans/RestaurantMealPlanEditPage";
+import { RestaurantMealPlanItemsPage } from "./pages/restaurant-meal-plans/RestaurantMealPlanItemsPage";
+import { RestaurantMealPlansListPage } from "./pages/restaurant-meal-plans/RestaurantMealPlansListPage";
+import { RestaurantCreatePage } from "./pages/restaurants/RestaurantCreatePage";
+import { RestaurantDetailPage } from "./pages/restaurants/RestaurantDetailPage";
+import { RestaurantEditPage } from "./pages/restaurants/RestaurantEditPage";
+import { RestaurantsListPage } from "./pages/restaurants/RestaurantsListPage";
 import { MyIceVoucherDetailPage } from "./pages/ice-vouchers/MyIceVoucherDetailPage";
 import { MyIceVouchersListPage } from "./pages/ice-vouchers/MyIceVouchersListPage";
 import { EvaluationCampaignCreatePage } from "./pages/evaluations/EvaluationCampaignCreatePage";
@@ -297,9 +320,19 @@ export default function App() {
               element={<PublicParticipationsPage />}
             />
             <Route
+              path="/welcome/participations/campaigns"
+              element={<PublicCampaignsPage />}
+            />
+            <Route
+              path="/welcome/participations/in-kind"
+              element={<PublicInKindPage />}
+            />
+            <Route
               path="/welcome/participations/:id"
               element={<PublicCampaignPage />}
             />
+            <Route path="/welcome/about" element={<PublicAboutPage />} />
+            <Route path="/welcome/contact" element={<PublicContactPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/impersonate" element={<ImpersonateEntryPage />} />
             <Route path="/impersonate-ended" element={<ImpersonateEndedPage />} />
@@ -1306,6 +1339,95 @@ export default function App() {
                   <Route
                     path="/logistics/ice-voucher-report"
                     element={<IceVoucherReportPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/logistics/ingredients" />}
+                >
+                  <Route
+                    path="/logistics/ingredients"
+                    element={<IngredientsListPage />}
+                  />
+                  <Route
+                    path="/logistics/ingredients/new"
+                    element={<IngredientCreatePage />}
+                  />
+                  <Route
+                    path="/logistics/ingredients/:id"
+                    element={<IngredientDetailPage />}
+                  />
+                  <Route
+                    path="/logistics/ingredients/:id/edit"
+                    element={<IngredientEditPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/logistics/foods" />}>
+                  <Route path="/logistics/foods" element={<FoodsListPage />} />
+                  <Route path="/logistics/foods/new" element={<FoodCreatePage />} />
+                  <Route path="/logistics/foods/:id" element={<FoodDetailPage />} />
+                  <Route
+                    path="/logistics/foods/:id/edit"
+                    element={<FoodEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/logistics/warehouse-calculator" />
+                  }
+                >
+                  <Route
+                    path="/logistics/warehouse-calculator"
+                    element={<WarehouseCalculatorPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/logistics/restaurants" />}
+                >
+                  <Route
+                    path="/logistics/restaurants"
+                    element={<RestaurantsListPage />}
+                  />
+                  <Route
+                    path="/logistics/restaurants/new"
+                    element={<RestaurantCreatePage />}
+                  />
+                  <Route
+                    path="/logistics/restaurants/:id"
+                    element={<RestaurantDetailPage />}
+                  />
+                  <Route
+                    path="/logistics/restaurants/:id/edit"
+                    element={<RestaurantEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/logistics/restaurant-meal-plans" />
+                  }
+                >
+                  <Route
+                    path="/logistics/restaurant-meal-plans"
+                    element={<RestaurantMealPlansListPage />}
+                  />
+                  <Route
+                    path="/logistics/restaurant-meal-plans/new"
+                    element={<RestaurantMealPlanCreatePage />}
+                  />
+                  <Route
+                    path="/logistics/restaurant-meal-plans/:id"
+                    element={<RestaurantMealPlanDetailPage />}
+                  />
+                  <Route
+                    path="/logistics/restaurant-meal-plans/:id/items"
+                    element={<RestaurantMealPlanItemsPage />}
+                  />
+                  <Route
+                    path="/logistics/restaurant-meal-plans/:id/distribute"
+                    element={<RestaurantMealPlanDistributePage />}
+                  />
+                  <Route
+                    path="/logistics/restaurant-meal-plans/:id/edit"
+                    element={<RestaurantMealPlanEditPage />}
                   />
                 </Route>
                 <Route

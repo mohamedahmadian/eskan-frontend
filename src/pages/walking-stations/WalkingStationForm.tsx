@@ -39,6 +39,7 @@ export type WalkingStationPayload = {
   cityId: string
   latitude: number | null
   longitude: number | null
+  address: string | null
   neshanAddress: string | null
   maleCount: number
   femaleCount: number
@@ -104,6 +105,7 @@ export function WalkingStationForm({
     cityId: initial?.cityId ?? '',
     latitude: toCoordString(initial?.latitude),
     longitude: toCoordString(initial?.longitude),
+    address: initial?.address ?? '',
     neshanAddress: initial?.neshanAddress ?? '',
     maleCount: String(initial?.maleCount ?? 0),
     femaleCount: String(initial?.femaleCount ?? 0),
@@ -149,6 +151,7 @@ export function WalkingStationForm({
         cityId: values.cityId,
         latitude: toOptionalNumber(values.latitude),
         longitude: toOptionalNumber(values.longitude),
+        address: emptyToNull(values.address),
         neshanAddress: emptyToNull(values.neshanAddress),
         maleCount: toCount(values.maleCount),
         femaleCount: toCount(values.femaleCount),
@@ -240,6 +243,15 @@ export function WalkingStationForm({
               set('latitude', latitude)
               set('longitude', longitude)
             }}
+          />
+        </FormField>
+        <FormField icon={MapPin} label={t('walkingStations.address')} htmlFor="station-address">
+          <textarea
+            id="station-address"
+            className={fieldClassName}
+            rows={3}
+            value={values.address}
+            onChange={(e) => set('address', e.target.value)}
           />
         </FormField>
         <FormField

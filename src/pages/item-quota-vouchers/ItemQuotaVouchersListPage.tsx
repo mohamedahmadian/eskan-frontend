@@ -17,6 +17,7 @@ import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { formatItemUnit, type ItemQuota, type ItemQuotaVoucher, type Paginated } from '../../types/app'
+import { VoucherManagerCell } from './ManagerYearAccommodationHint'
 
 export function ItemQuotaVouchersListPage() {
   const { t, i18n } = useTranslation()
@@ -132,7 +133,12 @@ export function ItemQuotaVouchersListPage() {
                 <td className="px-4 py-3" dir="ltr">
                   {item.code}
                 </td>
-                <td className="px-4 py-3">{item.accommodationManager.fullName}</td>
+                <td className="px-4 py-3">
+                  <VoucherManagerCell
+                    name={item.accommodationManager.fullName}
+                    accommodationName={item.currentAccommodation?.name}
+                  />
+                </td>
                 <td className="px-4 py-3">
                   {formatNumber(item.quantity, locale)} {formatItemUnit(item.quota.unit, t)}
                 </td>

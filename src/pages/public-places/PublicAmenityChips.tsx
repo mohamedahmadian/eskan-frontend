@@ -27,6 +27,38 @@ type AmenitySource = {
   areaSqm?: number | null
 }
 
+export function listPublicAmenityLabels(
+  amenities: AmenitySource,
+  t: (key: string) => string,
+  locale: string,
+  i18nPrefix: 'accommodations' | 'walkingStations',
+) {
+  const items: string[] = []
+  if (amenities.hasLaundry) items.push(t(`${i18nPrefix}.hasLaundry`))
+  if (amenities.hasInternet) items.push(t(`${i18nPrefix}.hasInternet`))
+  if (amenities.hasPrayerRoom) items.push(t(`${i18nPrefix}.hasPrayerRoom`))
+  if (amenities.hasElevator) items.push(t(`${i18nPrefix}.hasElevator`))
+  if (amenities.heatingSystem) {
+    items.push(`${t(`${i18nPrefix}.heatingSystem`)}: ${amenities.heatingSystem}`)
+  }
+  if (amenities.coolingSystem) {
+    items.push(`${t(`${i18nPrefix}.coolingSystem`)}: ${amenities.coolingSystem}`)
+  }
+  if (amenities.parkingCapacity != null) {
+    items.push(`${t(`${i18nPrefix}.parkingCapacity`)} ${formatNumber(amenities.parkingCapacity, locale)}`)
+  }
+  if (amenities.bathroomCount != null) {
+    items.push(`${t(`${i18nPrefix}.bathroomCount`)} ${formatNumber(amenities.bathroomCount, locale)}`)
+  }
+  if (amenities.toiletCount != null) {
+    items.push(`${t(`${i18nPrefix}.toiletCount`)} ${formatNumber(amenities.toiletCount, locale)}`)
+  }
+  if (amenities.areaSqm != null) {
+    items.push(`${t('walkingStations.areaSqm')} ${formatNumber(amenities.areaSqm, locale)}`)
+  }
+  return items
+}
+
 export function hasPublicAmenities(amenities: AmenitySource) {
   return (
     amenities.hasLaundry ||

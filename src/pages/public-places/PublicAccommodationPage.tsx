@@ -25,7 +25,7 @@ import { useGeoName } from '../../lib/geo'
 import { publicAccommodationUrl } from '../../lib/public-place'
 import type { PublicAccommodation } from '../../types/app'
 import { LandingShell } from '../landing/LandingShell'
-import { hasPublicAmenities, PublicAmenityChips } from './PublicAmenityChips'
+import { hasPublicAmenities, listPublicAmenityLabels, PublicAmenityChips } from './PublicAmenityChips'
 import { PublicPlaceCard } from './PublicPlaceCard'
 import { usePlaceCardImage } from './usePlaceCardImage'
 
@@ -104,12 +104,19 @@ export function PublicAccommodationPage() {
             ref={cardRef}
             kind="accommodation"
             name={item.name}
-            place={place}
-            chips={[
-              t(`accommodationTypes.${item.type}`),
-              t(`genderTypes.${item.genderType}`),
-              t(`managementTypes.${item.managementType}`),
+            badges={[t(`managementTypes.${item.managementType}`)]}
+            capacities={{ male: item.maleCapacity, female: item.femaleCapacity }}
+            facts={[
+              ...(item.province ? [{ label: t('geo.province'), value: geoName(item.province) }] : []),
+              ...(item.city ? [{ label: t('geo.city'), value: geoName(item.city) }] : []),
+              ...(item.address?.trim()
+                ? [{ label: t('accommodations.address'), value: item.address, wide: true }]
+                : []),
+              ...(item.neshanAddress?.trim()
+                ? [{ label: t('accommodations.neshanAddress'), value: item.neshanAddress, wide: true }]
+                : []),
             ]}
+            amenities={listPublicAmenityLabels(item, t, locale, 'accommodations')}
             qrUrl={qrUrl}
           />
           <Button type="button" onClick={() => void downloadCard()} disabled={downloading || !qrUrl}>

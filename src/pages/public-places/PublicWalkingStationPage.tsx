@@ -25,7 +25,7 @@ import { stageCoordinates, useGeoName } from '../../lib/geo'
 import { publicWalkingStationUrl } from '../../lib/public-place'
 import type { PublicWalkingStation } from '../../types/app'
 import { LandingShell } from '../landing/LandingShell'
-import { hasPublicAmenities, PublicAmenityChips } from './PublicAmenityChips'
+import { hasPublicAmenities, listPublicAmenityLabels, PublicAmenityChips } from './PublicAmenityChips'
 import { PublicPlaceCard } from './PublicPlaceCard'
 import { usePlaceCardImage } from './usePlaceCardImage'
 
@@ -107,8 +107,56 @@ export function PublicWalkingStationPage() {
             ref={cardRef}
             kind="station"
             name={item.name}
-            place={place}
-            chips={item.routes.map((route) => route.name)}
+            capacities={{ male: item.maleCount, female: item.femaleCount }}
+            distance={
+              item.distanceToMashhadKm != null
+                ? {
+                    label: t('walkingRoutes.stageDistanceToMashhadKm'),
+                    value: `${formatNumber(item.distanceToMashhadKm, locale)} ${t('walkingRoutes.km')}`,
+                  }
+                : null
+            }
+            facts={[
+              { label: t('geo.province'), value: geoName(item.city.province) },
+              { label: t('geo.city'), value: geoName(item.city) },
+              ...(hasText(item.managerName)
+                ? [
+                    {
+                      label: t('publicWalkingStation.managerName'),
+                      value: item.managerName ?? '',
+                      wide: !hasText(item.managerPhone),
+                    },
+                  ]
+                : []),
+              ...(hasText(item.managerPhone)
+                ? [
+                    {
+                      label: t('publicWalkingStation.managerPhone'),
+                      value: item.managerPhone ?? '',
+                      wide: !hasText(item.managerName),
+                    },
+                  ]
+                : []),
+              ...(hasText(item.address)
+                ? [
+                    {
+                      label: t('walkingStations.address'),
+                      value: item.address ?? '',
+                      wide: true,
+                    },
+                  ]
+                : []),
+              ...(hasText(item.neshanAddress)
+                ? [
+                    {
+                      label: t('walkingStations.neshanAddress'),
+                      value: item.neshanAddress ?? '',
+                      wide: true,
+                    },
+                  ]
+                : []),
+            ]}
+            amenities={listPublicAmenityLabels(item, t, locale, 'walkingStations')}
             qrUrl={qrUrl}
           />
           <Button type="button" onClick={() => void downloadCard()} disabled={downloading || !qrUrl}>
@@ -146,6 +194,15 @@ export function PublicWalkingStationPage() {
                   label={t('walkingRoutes.stageDistanceToMashhadKm')}
                   value={`${formatNumber(item.distanceToMashhadKm, locale)} ${t('walkingRoutes.km')}`}
                   tone="mint"
+                />
+              ) : null}
+              {hasText(item.address) ? (
+                <FormFactTile
+                  icon={MapPin}
+                  label={t('walkingStations.address')}
+                  value={<span className="whitespace-pre-wrap">{item.address}</span>}
+                  tone="teal"
+                  className="sm:col-span-2"
                 />
               ) : null}
               {hasText(item.neshanAddress) ? (

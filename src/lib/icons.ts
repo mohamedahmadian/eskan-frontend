@@ -2,8 +2,10 @@ import {
   Building2,
   Boxes,
   Building,
+  Calculator,
   CalendarRange,
   ChartColumn,
+  CookingPot,
   ClipboardList,
   Database,
   FileCheck,
@@ -48,6 +50,7 @@ import {
   UsersRound,
   UtensilsCrossed,
   Wallet,
+  Wheat,
   Newspaper,
   type LucideIcon,
 } from 'lucide-react'
@@ -76,7 +79,9 @@ const icons: Record<string, LucideIcon> = {
   building: Building,
   'building-2': Building2,
   boxes: Boxes,
+  calculator: Calculator,
   'calendar-range': CalendarRange,
+  'cooking-pot': CookingPot,
   'chart-column': ChartColumn,
   'utensils-crossed': UtensilsCrossed,
   hospital: Hospital,
@@ -103,6 +108,7 @@ const icons: Record<string, LucideIcon> = {
   newspaper: Newspaper,
   'user-round': UserRound,
   wallet: Wallet,
+  wheat: Wheat,
 }
 
 export function getNavIcon(name: string): LucideIcon {

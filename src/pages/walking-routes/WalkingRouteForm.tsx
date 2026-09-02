@@ -139,6 +139,7 @@ export function WalkingRouteForm({
         name: stage.name ?? '',
         latitude: stage.latitude,
         longitude: stage.longitude,
+        address: stage.address ?? null,
         neshanAddress: stage.neshanAddress ?? null,
         maleCount: stage.maleCount ?? 0,
         femaleCount: stage.femaleCount ?? 0,

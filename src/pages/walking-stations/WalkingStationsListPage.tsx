@@ -174,6 +174,13 @@ export function WalkingStationsListPage() {
                 onSort={onSort}
               />
               <SortableTh
+                column="address"
+                label={t('walkingStations.address')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
                 column="maleCount"
                 label={t('walkingStations.maleCount')}
                 sortBy={sortBy}
@@ -210,6 +217,7 @@ export function WalkingStationsListPage() {
                 <td className="px-4 py-3">{item.name}</td>
                 <td className="px-4 py-3">{name(item.city.province)}</td>
                 <td className="px-4 py-3">{name(item.city)}</td>
+                <td className="px-4 py-3">{item.address || '—'}</td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center gap-1">
                     <Mars className="size-4 text-sky-400" aria-hidden />

@@ -727,6 +727,7 @@ export type PublicWalkingStation = StationAmenities & {
   };
   latitude: number | null;
   longitude: number | null;
+  address: string | null;
   neshanAddress: string | null;
   maleCount: number;
   femaleCount: number;
@@ -1059,6 +1060,7 @@ export type WalkingRouteStage = StationAmenities & {
   name: string | null;
   latitude: number | null;
   longitude: number | null;
+  address: string | null;
   neshanAddress: string | null;
   maleCount: number;
   femaleCount: number;
@@ -1086,6 +1088,7 @@ export type WalkingStation = StationAmenities & {
   name: string;
   latitude: number | null;
   longitude: number | null;
+  address: string | null;
   neshanAddress: string | null;
   maleCount: number;
   femaleCount: number;
@@ -1394,6 +1397,9 @@ export type HeadquartersInfo = {
   name: string;
   title: string | null;
   address: string | null;
+  neshanAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
   description: string | null;
   activityStartYear: number | null;
   website: string | null;
@@ -1417,6 +1423,11 @@ export type HeadquartersSummaryPhone = {
 export type HeadquartersServiceSummary = {
   name: string | null;
   title: string | null;
+  address: string | null;
+  neshanAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  description: string | null;
   activityStartYear: number | null;
   currentYear: number;
   yearsOfService: number | null;
@@ -1476,6 +1487,22 @@ export type OrgUnitManager = {
   fullName: string;
   phone: string | null;
   nationalId: string | null;
+};
+
+export type PublicOrgUnitManager = {
+  id: string;
+  fullName: string;
+  photoId: string | null;
+};
+
+export type PublicOrgUnit = {
+  id: string;
+  name: string;
+  phone: string | null;
+  description: string | null;
+  eitaaChannel: string | null;
+  telegramChannel: string | null;
+  manager: PublicOrgUnitManager | null;
 };
 
 export type OrgUnit = {
@@ -1715,6 +1742,7 @@ export type ItemQuotaVoucher = {
     nationalId: string | null;
     phone: string | null;
   };
+  currentAccommodation?: { id: string; name: string } | null;
   supplier: Pick<Supplier, "id" | "name" | "phone" | "address" | "type"> | null;
   createdAt: string;
   updatedAt: string;
@@ -2919,6 +2947,27 @@ export type ParticipationCampaign = {
   updatedAt: string;
 };
 
+export type PublicBankAccount = {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  cardNumber: string | null;
+  iban: string;
+};
+
+export type PublicCryptoWallet = {
+  id: string;
+  label: string;
+  currency: string;
+  network: string | null;
+  address: string;
+};
+
+export type PublicPaymentMethods = {
+  bankAccounts: PublicBankAccount[];
+  cryptoWallets: PublicCryptoWallet[];
+};
+
 export type PublicCampaign = {
   id: string;
   name: string;
@@ -2946,6 +2995,174 @@ export type PublicCampaign = {
     network: string | null;
     address: string;
   } | null;
+};
+
+export const ingredientUnits = {
+  GRAM: "GRAM",
+  KILOGRAM: "KILOGRAM",
+  MILLILITER: "MILLILITER",
+  LITER: "LITER",
+  PIECE: "PIECE",
+} as const;
+
+export type IngredientUnit =
+  (typeof ingredientUnits)[keyof typeof ingredientUnits];
+
+export type Ingredient = {
+  id: string;
+  name: string;
+  unit: IngredientUnit;
+  pricePerUnit: number;
+  stockQty: number;
+  description: string | null;
+  foodsCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FoodIngredientLine = {
+  id: string;
+  foodId: string;
+  ingredientId: string;
+  quantity: number;
+  unit: IngredientUnit;
+  cost: number;
+  qtyInIngredientUnit: number;
+  ingredient: {
+    id: string;
+    name: string;
+    unit: IngredientUnit;
+    pricePerUnit: number;
+    stockQty: number;
+    description: string | null;
+  };
+};
+
+export type Food = {
+  id: string;
+  name: string;
+  description: string | null;
+  finalPrice: number;
+  costPrice: number;
+  ingredientsCount: number;
+  ingredients: FoodIngredientLine[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Restaurant = {
+  id: string;
+  name: string;
+  managerName: string | null;
+  managerPhone: string | null;
+  address: string | null;
+  neshanAddress: string | null;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const mealTypes = {
+  BREAKFAST: "BREAKFAST",
+  LUNCH: "LUNCH",
+  DINNER: "DINNER",
+} as const;
+
+export type MealType = (typeof mealTypes)[keyof typeof mealTypes];
+
+export type RestaurantMealPlan = {
+  id: string;
+  restaurantId: string;
+  foodId: string;
+  planDate: string;
+  mealType: MealType;
+  servings: number;
+  distributedServings: number;
+  remainingServings: number;
+  description: string | null;
+  restaurant: Pick<Restaurant, "id" | "name" | "address" | "neshanAddress">;
+  food: Pick<Food, "id" | "name">;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RestaurantMealPlanDistributionManager = {
+  id: string;
+  isPrimary: boolean;
+  user: { id: string; fullName: string; phone: string | null; nationalId: string | null } | null;
+};
+
+export type RestaurantMealPlanDistribution = {
+  id: string;
+  mealPlanId: string;
+  accommodationId: string;
+  servings: number;
+  accommodation: Pick<Accommodation, "id" | "name" | "managementType"> & {
+    managers: RestaurantMealPlanDistributionManager[];
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WarehouseServingsLine = {
+  ingredientId: string;
+  name: string;
+  unit: IngredientUnit;
+  quantityPerServing: number;
+  quantityNeeded: number;
+  stockQty: number;
+  shortage: number;
+  costPerServing: number;
+  costTotal: number;
+};
+
+export type WarehouseServingsResult = {
+  food: {
+    id: string;
+    name: string;
+    finalPrice: number;
+    costPrice: number;
+  };
+  servings: number;
+  costTotal: number;
+  saleTotal: number;
+  lines: WarehouseServingsLine[];
+};
+
+export type WarehouseServingsBatchResult = {
+  items: WarehouseServingsResult[];
+  totals: {
+    foodsCount: number;
+    servings: number;
+    costTotal: number;
+    saleTotal: number;
+    lines: WarehouseServingsLine[];
+  };
+};
+
+export type WarehouseStockResult = {
+  ingredient: {
+    id: string;
+    name: string;
+    unit: IngredientUnit;
+    stockQty: number;
+  };
+  quantity: number;
+  foods: Array<{
+    foodId: string;
+    name: string;
+    quantityPerServing: number;
+    maxServingsByIngredient: number;
+    feasibleServings: number;
+    otherLimits: Array<{
+      ingredientId: string;
+      name: string;
+      unit: IngredientUnit;
+      quantityPerServing: number;
+      stockQty: number;
+      maxServings: number;
+    }>;
+  }>;
 };
 
 

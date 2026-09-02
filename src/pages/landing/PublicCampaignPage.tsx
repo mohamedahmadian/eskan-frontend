@@ -23,6 +23,7 @@ import { api, getImageUrl } from '../../lib/api'
 import { withNext } from '../../lib/auth-redirect'
 import { formatGroupedNumber } from '../../lib/datetime'
 import type { PublicCampaign } from '../../types/app'
+import { CampaignProgressBar } from '../participations/CampaignCard'
 import { LandingShell } from './LandingShell'
 
 export function PublicCampaignPage() {
@@ -48,7 +49,7 @@ export function PublicCampaignPage() {
     <LandingShell>
       <article className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-8">
         <Link
-          to="/welcome/participations"
+          to="/welcome/participations/campaigns"
           className="inline-flex items-center gap-2 rounded-2xl text-sm font-medium text-teal-700 transition hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
         >
           <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />
@@ -82,34 +83,27 @@ export function PublicCampaignPage() {
                 <p className="whitespace-pre-wrap text-sm leading-8 text-ink-700">{item.description}</p>
               ) : null}
 
-              <div>
-                <div className="mb-2 flex items-center justify-between text-xs text-ink-500">
-                  <span>{t('participations.progress')}</span>
-                  <span className="font-semibold text-teal-700">
-                    {n(item.progressPercent)}٪
-                  </span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-cream-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-e from-teal-500 to-mint-500"
-                    style={{ width: `${item.progressPercent}%` }}
-                  />
-                </div>
-              </div>
+              <CampaignProgressBar
+                percent={item.progressPercent}
+                label={t('participations.progress')}
+                value={`${n(item.progressPercent)}٪`}
+              />
 
               <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
                 <FormFactTile
                   icon={Coins}
-                  label={t('participations.sharePrice')}
-                  value={money(item.sharePrice)}
+                  label={t('participations.totalAmount')}
+                  value={money(item.totalAmount)}
                   tone="teal"
                 />
                 <FormFactTile
                   icon={Coins}
-                  label={t('participations.totalAmount')}
-                  value={money(item.totalAmount)}
+                  label={t('participations.sharePrice')}
+                  value={money(item.sharePrice)}
                   tone="mint"
                 />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
                 <FormFactTile
                   icon={Users}
                   label={t('participations.participants')}
@@ -119,83 +113,96 @@ export function PublicCampaignPage() {
                 <FormFactTile
                   icon={HeartHandshake}
                   label={t('participations.purchasedShares')}
-                  value={`${n(item.purchasedShares)} / ${n(item.totalShares)}`}
+                  value={n(item.purchasedShares)}
                   tone="teal"
+                />
+                <FormFactTile
+                  icon={WalletCards}
+                  label={t('participations.collectedAmount')}
+                  value={money(item.purchasedShares * item.sharePrice)}
+                  tone="mint"
                 />
               </div>
 
-              <section className="rounded-3xl border border-teal-100 bg-gradient-to-b from-teal-50/80 to-white p-5 sm:p-6">
+              <section className="space-y-5 rounded-3xl border border-teal-100 bg-gradient-to-b from-teal-50/80 to-white p-5 sm:p-6">
                 <h2 className="text-base font-semibold text-ink-900">
                   {t('landing.participations.payDirect')}
                 </h2>
-                <p className="mt-2 text-sm leading-7 text-ink-600">
-                  {t('landing.participations.payDirectHint', {
-                    price: money(item.sharePrice),
-                  })}
-                </p>
                 {item.bankAccount ? (
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2 sm:gap-3">
-                    <FormFactTile
-                      icon={Landmark}
-                      label={t('bankAccounts.bankName')}
-                      value={item.bankAccount.bankName}
-                      tone="teal"
-                    />
-                    <FormFactTile
-                      icon={Hash}
-                      label={t('bankAccounts.accountNumber')}
-                      copyValue={item.bankAccount.accountNumber}
-                      tone="mint"
-                    />
-                    <FormFactTile
-                      icon={CreditCard}
-                      label={t('bankAccounts.cardNumber')}
-                      copyValue={item.bankAccount.cardNumber}
-                      tone="ink"
-                    />
-                    <FormFactTile
-                      icon={WalletCards}
-                      label={t('bankAccounts.iban')}
-                      copyValue={item.bankAccount.iban}
-                      tone="teal"
-                    />
+                  <div>
+                    <h3 className="mb-2 text-xs font-semibold text-ink-600">
+                      {t('landing.participations.bankSection')}
+                    </h3>
+                    <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                      <FormFactTile
+                        icon={Landmark}
+                        label={t('bankAccounts.bankName')}
+                        value={item.bankAccount.bankName}
+                        tone="teal"
+                      />
+                      <FormFactTile
+                        icon={Hash}
+                        label={t('bankAccounts.accountNumber')}
+                        copyValue={item.bankAccount.accountNumber}
+                        tone="mint"
+                      />
+                      <FormFactTile
+                        icon={CreditCard}
+                        label={t('bankAccounts.cardNumber')}
+                        copyValue={item.bankAccount.cardNumber}
+                        tone="ink"
+                      />
+                      <FormFactTile
+                        icon={WalletCards}
+                        label={t('bankAccounts.iban')}
+                        copyValue={item.bankAccount.iban}
+                        tone="teal"
+                      />
+                    </div>
                   </div>
                 ) : null}
                 {item.cryptoWallet ? (
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2 sm:gap-3">
-                    <FormFactTile
-                      icon={Wallet}
-                      label={t('cryptoWallets.label')}
-                      value={`${item.cryptoWallet.label} (${t(`cryptoCurrencies.${item.cryptoWallet.currency}`, { defaultValue: item.cryptoWallet.currency })})`}
-                      tone="mint"
-                    />
-                    <FormFactTile
-                      icon={Wallet}
-                      label={t('cryptoWallets.address')}
-                      copyValue={item.cryptoWallet.address}
-                      tone="teal"
-                    />
+                  <div>
+                    <h3 className="mb-2 text-xs font-semibold text-ink-600">
+                      {t('landing.participations.cryptoSection')}
+                    </h3>
+                    <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                      <FormFactTile
+                        icon={Wallet}
+                        label={t('cryptoWallets.label')}
+                        value={`${item.cryptoWallet.label} (${t(`cryptoCurrencies.${item.cryptoWallet.currency}`, { defaultValue: item.cryptoWallet.currency })})`}
+                        tone="mint"
+                      />
+                      <FormFactTile
+                        icon={Wallet}
+                        label={t('cryptoWallets.address')}
+                        copyValue={item.cryptoWallet.address}
+                        tone="teal"
+                      />
+                    </div>
                   </div>
                 ) : null}
               </section>
 
               <section className="rounded-3xl border border-line bg-cream-50/70 p-5 sm:p-6">
-                <h2 className="text-base font-semibold text-ink-900">
+                <h2 className="text-center text-base font-semibold text-ink-900">
                   {t('landing.participations.joinSystem')}
                 </h2>
-                <p className="mt-2 text-sm leading-7 text-ink-600">
+                <p className="mt-2 text-center text-sm leading-7 text-ink-600">
                   {t('landing.participations.joinSystemHint')}
                 </p>
                 {user ? (
-                  <Link
-                    to="/"
-                    className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
-                  >
-                    <LogIn className="size-4" aria-hidden />
-                    {t('landing.goToPanel')}
-                  </Link>
+                  <div className="mt-4 flex justify-center">
+                    <Link
+                      to="/"
+                      className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+                    >
+                      <LogIn className="size-4" aria-hidden />
+                      {t('landing.goToPanel')}
+                    </Link>
+                  </div>
                 ) : (
-                  <div className="mt-4 flex flex-wrap gap-3">
+                  <div className="mt-4 flex flex-wrap justify-center gap-3">
                     <Link
                       to={withNext('/register', next)}
                       className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-mint-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-mint-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"

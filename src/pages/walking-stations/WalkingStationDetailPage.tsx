@@ -133,6 +133,15 @@ export function WalkingStationDetailPage() {
               tone="mint"
             />
             <FormFactTile icon={MapPin} label={t('geo.city')} value={name(item.city)} tone="ink" />
+            {hasText(item.address) ? (
+              <FormFactTile
+                icon={MapPin}
+                label={t('walkingStations.address')}
+                value={<span className="whitespace-pre-wrap">{item.address}</span>}
+                tone="mint"
+                className="sm:col-span-2"
+              />
+            ) : null}
             {hasText(item.neshanAddress) ? (
               <FormFactTile
                 icon={Navigation}

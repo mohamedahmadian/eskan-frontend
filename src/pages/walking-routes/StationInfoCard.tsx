@@ -174,6 +174,15 @@ export function StationInfoCard({
                 tone="ink"
               />
             ) : null}
+            {hasText(stage.address) ? (
+              <FormFactTile
+                icon={MapPin}
+                label={t('walkingStations.address')}
+                value={<span className="whitespace-pre-wrap">{stage.address}</span>}
+                tone="mint"
+                className="sm:col-span-2"
+              />
+            ) : null}
             {hasText(stage.neshanAddress) ? (
               <FormFactTile
                 icon={Navigation}

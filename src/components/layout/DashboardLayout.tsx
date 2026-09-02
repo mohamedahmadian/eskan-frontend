@@ -7,6 +7,7 @@ import {
   PackageOpen,
   Search,
   Snowflake,
+  UtensilsCrossed,
   UsersRound,
   X,
 } from "lucide-react";
@@ -109,6 +110,17 @@ const menuSections: Record<string, MenuSectionDef[]> = {
         "logistics.ice-voucher-report",
         "logistics.my-ice-vouchers",
         "logistics.settings",
+      ],
+    },
+    {
+      titleKey: "menus.nutritionSection",
+      icon: UtensilsCrossed,
+      codes: [
+        "logistics.ingredients",
+        "logistics.foods",
+        "logistics.warehouse-calculator",
+        "logistics.restaurants",
+        "logistics.restaurant-meal-plans",
       ],
     },
   ],
@@ -711,7 +723,7 @@ export function DashboardLayout() {
                   const impersonating = Boolean(user?.impersonating);
                   setOpen(false);
                   logout();
-                  if (!impersonating) navigate("/login");
+                  if (!impersonating) navigate("/welcome");
                 }}
               >
                 <LogOut className="size-4 shrink-0" aria-hidden />

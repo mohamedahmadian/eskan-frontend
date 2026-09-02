@@ -7,6 +7,38 @@ import { formatGroupedNumber } from '../../lib/datetime'
 import type { PublicCampaign } from '../../types/app'
 import { GeoStatus } from '../geo/GeoShared'
 
+export function CampaignProgressBar({
+  percent,
+  label,
+  value,
+}: {
+  percent: number
+  label: string
+  value: string
+}) {
+  const clamped = Math.min(100, Math.max(0, Number.isFinite(percent) ? percent : 0))
+  const fill = clamped > 0 ? Math.max(clamped, 3) : 0
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between text-xs text-ink-500">
+        <span>{label}</span>
+        <span className="font-semibold text-teal-700">{value}</span>
+      </div>
+      <div
+        className="h-3 overflow-hidden rounded-full ring-1 ring-inset ring-ink-900/8"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={clamped}
+        aria-label={label}
+        style={{
+          background: `linear-gradient(to inline-end, #2ebdb6 0% ${fill}%, #d8d5cc ${fill}% 100%)`,
+        }}
+      />
+    </div>
+  )
+}
+
 export function CampaignCard({
   item,
   to,
@@ -51,20 +83,11 @@ export function CampaignCard({
         {item.description ? (
           <p className="line-clamp-2 text-sm leading-6 text-ink-600">{item.description}</p>
         ) : null}
-        <div>
-          <div className="mb-2 flex items-center justify-between text-xs text-ink-500">
-            <span>{t('participations.progress')}</span>
-            <span className="font-semibold text-teal-700">
-              {formatGroupedNumber(item.progressPercent, locale)}٪
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-cream-100">
-            <div
-              className="h-full rounded-full bg-gradient-to-e from-teal-500 to-mint-500"
-              style={{ width: `${item.progressPercent}%` }}
-            />
-          </div>
-        </div>
+        <CampaignProgressBar
+          percent={item.progressPercent}
+          label={t('participations.progress')}
+          value={`${formatGroupedNumber(item.progressPercent, locale)}٪`}
+        />
         <div className="mt-auto grid grid-cols-2 gap-2">
           <div className="rounded-2xl bg-teal-50 px-3 py-2.5">
             <p className="inline-flex items-center gap-1 text-[11px] text-teal-700">

@@ -67,6 +67,7 @@ export function WalkingStationCreatePage() {
           },
           latitude: null,
           longitude: null,
+          address: null,
           neshanAddress: null,
           maleCount: 0,
           femaleCount: 0,

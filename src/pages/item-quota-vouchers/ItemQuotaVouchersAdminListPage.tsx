@@ -27,6 +27,7 @@ import {
   type Paginated,
   type Supplier,
 } from '../../types/app'
+import { VoucherManagerCell } from './ManagerYearAccommodationHint'
 import { VOUCHERS_ADMIN_BASE, voucherDetailPath, voucherEditPath } from './voucher-paths'
 
 export function ItemQuotaVouchersAdminListPage() {
@@ -242,7 +243,12 @@ export function ItemQuotaVouchersAdminListPage() {
                   {item.code}
                 </td>
                 <td className="px-4 py-3">{item.quota.name}</td>
-                <td className="px-4 py-3">{item.accommodationManager.fullName}</td>
+                <td className="px-4 py-3">
+                  <VoucherManagerCell
+                    name={item.accommodationManager.fullName}
+                    accommodationName={item.currentAccommodation?.name}
+                  />
+                </td>
                 <td className="px-4 py-3">
                   {formatNumber(item.quantity, locale)} {formatItemUnit(item.quota.unit, t)}
                 </td>

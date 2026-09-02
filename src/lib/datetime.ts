@@ -254,6 +254,25 @@ export function formatGroupedNumber(value: number, locale: string) {
   return localizeDigits(withSeparator, locale)
 }
 
+/** Integer grouping plus optional decimals (for stock like ۱۰۰٬۰۰۰ or ۱٫۵). */
+export function formatGroupedQuantity(value: number, locale: string, fractionDigits = 3) {
+  if (!Number.isFinite(value)) {
+    return ''
+  }
+  const sign = value < 0 ? '-' : ''
+  const abs = Math.abs(value)
+  const factor = 10 ** fractionDigits
+  const rounded = Math.round(abs * factor) / factor
+  const intPart = Math.trunc(rounded)
+  const frac = Math.round((rounded - intPart) * factor)
+  const grouped = `${sign}${formatGroupedNumber(intPart, locale)}`
+  if (frac === 0) {
+    return grouped
+  }
+  const fracStr = String(frac).padStart(fractionDigits, '0').replace(/0+$/, '')
+  return `${grouped}.${localizeDigits(fracStr, locale)}`
+}
+
 export function currentPersianYear() {
   return new DateObject({ calendar: persian }).year
 }

@@ -14,6 +14,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { formatItemUnit, type ItemQuota, type ItemQuotaVoucher, type ManagedUser, type Supplier } from '../../types/app'
+import { ManagerYearAccommodationHint } from './ManagerYearAccommodationHint'
 
 export type ItemQuotaVoucherPayload = {
   quotaId: string
@@ -235,6 +236,9 @@ export function ItemQuotaVoucherForm({
             })),
           ]}
         />
+        {values.accommodationManagerId ? (
+          <ManagerYearAccommodationHint managerId={values.accommodationManagerId} />
+        ) : null}
       </FormField>
       {selectedQuota ? (
         <p className="text-sm text-ink-500">
