@@ -8,6 +8,7 @@ import {
   MapPin,
   MapPinned,
   Mars,
+  Milestone,
   Navigation,
   Phone,
   Route,
@@ -17,6 +18,7 @@ import {
   Venus,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
@@ -39,6 +41,11 @@ import type {
 } from "../../types/app";
 import { showMashhadPlacement, showRoutePlacement, workingHeadcount } from "./reservation-steps";
 import { ReservationRoutePlacementPanel } from "./ReservationRoutePlacementPanel";
+import {
+  ReservationPlacementSmsButton,
+  buildMashhadPlacementSmsBody,
+  reservationSmsPhone,
+} from "./ReservationPlacementSms";
 import { PlacementStatusBadge } from "./ReservationStatusBadge";
 
 type StayTone = "teal" | "mint";
@@ -137,6 +144,13 @@ export function ReservationPlacementPanel({
     <FormCard
       icon={LayoutGrid}
       title={t("reservations.placementPanelTitle")}
+      action={
+        <ReservationPlacementSmsButton
+          title={t("reservations.smsPreviewTitle")}
+          phone={reservationSmsPhone(reservation)}
+          body={buildMashhadPlacementSmsBody(reservation, locale, t)}
+        />
+      }
       chips={
         <span
           className={`inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ${
@@ -563,12 +577,63 @@ export function ReservationPlacementStep({
   reservation: Reservation;
   footer?: ReactNode;
 }) {
+  const { t } = useTranslation();
   const mashhad = showMashhadPlacement(reservation);
   const route = showRoutePlacement(reservation);
+  const [tab, setTab] = useState<"mashhad" | "route">("mashhad");
+  const shownTab =
+    tab === "mashhad" && mashhad
+      ? "mashhad"
+      : tab === "route" && route
+        ? "route"
+        : mashhad
+          ? "mashhad"
+          : "route";
+  const tabs = [
+    {
+      id: "mashhad" as const,
+      icon: Building2,
+      label: t("reservations.placementTabMashhad"),
+      enabled: mashhad,
+    },
+    {
+      id: "route" as const,
+      icon: Milestone,
+      label: t("reservations.placementTabRoute"),
+      enabled: route,
+    },
+  ];
+
   return (
     <div className="space-y-4">
-      {mashhad ? <ReservationPlacementPanel reservation={reservation} /> : null}
-      {route ? <ReservationRoutePlacementPanel reservation={reservation} /> : null}
+      <nav className={`grid grid-cols-2 gap-2 p-2 ${cardClassName}`}>
+        {tabs.map((item) => {
+          const Icon = item.icon;
+          const active = shownTab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              disabled={!item.enabled}
+              onClick={() => setTab(item.id)}
+              className={`flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:px-3 sm:text-sm ${
+                active
+                  ? "bg-teal-500 text-white shadow-sm"
+                  : "bg-cream-50 text-ink-700 hover:bg-cream-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-cream-50"
+              }`}
+            >
+              <Icon className="size-4 shrink-0" aria-hidden />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+      {shownTab === "mashhad" && mashhad ? (
+        <ReservationPlacementPanel reservation={reservation} />
+      ) : null}
+      {shownTab === "route" && route ? (
+        <ReservationRoutePlacementPanel reservation={reservation} />
+      ) : null}
       {footer}
     </div>
   );

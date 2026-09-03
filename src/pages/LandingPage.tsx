@@ -173,7 +173,7 @@ export function LandingPage() {
               {news.data.slice(0, 3).map((item) => (
                 <Link
                   key={item.id}
-                  to={`/welcome/news/${item.id}`}
+                  to={`/news/${item.id}`}
                   className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-white bg-white shadow-[0_12px_32px_rgba(20,40,40,0.06)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(46,189,182,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
                 >
                   <div className="relative h-40 overflow-hidden bg-gradient-to-e from-teal-500 via-mint-500 to-teal-400">
@@ -260,7 +260,7 @@ export function LandingPage() {
                   {audienceItems.map((item) => (
                     <Link
                       key={item.id}
-                      to={`/welcome/announcements/${item.id}`}
+                      to={`/announcements/${item.id}`}
                       className="group flex items-start gap-4 rounded-[24px] border border-white bg-white px-5 py-4 shadow-[0_10px_28px_rgba(20,40,40,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(46,189,182,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
                     >
                       <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">

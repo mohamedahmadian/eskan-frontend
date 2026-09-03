@@ -62,7 +62,7 @@ export function ReservationInsuranceSummary({
   const members = reservation.members
   const summary = summarizeInsurance(members ?? [])
   const individual = reservation.type === 'INDIVIDUAL'
-  const hasPayment = summary.approved > 0 || Boolean(summary.lastPaidAt)
+  const hasPayment = summary.approved > 0 || summary.paid > 0 || Boolean(summary.lastPaidAt)
   const amountText = `${formatGroupedNumber(summary.paidAmount, locale)} ${t('receptionSettings.toman')}`
 
   if (members === undefined) {
@@ -89,6 +89,17 @@ export function ReservationInsuranceSummary({
       icon: ShieldCheck,
       tone: 'mint',
     },
+    ...(summary.paid > 0
+      ? [
+          {
+            key: 'paid',
+            label: t('reservations.insuranceAwaitingApprovalCount'),
+            value: summary.paid,
+            icon: Clock3,
+            tone: 'amber' as Tone,
+          },
+        ]
+      : []),
     {
       key: 'pending',
       label: t('reservations.insurancePendingCount'),

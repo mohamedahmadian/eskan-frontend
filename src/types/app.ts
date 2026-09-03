@@ -1094,6 +1094,7 @@ export type WalkingStation = StationAmenities & {
   femaleCount: number;
   occupiedMaleCount?: number;
   occupiedFemaleCount?: number;
+  managerUserId: string | null;
   managerName: string | null;
   managerPhone: string | null;
   managerTelegram: string | null;
@@ -1146,12 +1147,17 @@ export type ReservationRoutePlacementStage = {
   city: GeoName & { id: string; provinceId: string };
   maleCount: number;
   femaleCount: number;
+  occupiedMaleCount: number;
+  occupiedFemaleCount: number;
   managerName: string | null;
   managerPhone: string | null;
+  address: string | null;
   stay: {
     id: string;
     stayDate: string;
+    mealType: 'LUNCH' | 'DINNER';
     status: ReservationStationStayStatus;
+    present: boolean;
     maleCount: number;
     femaleCount: number;
   } | null;
@@ -1164,12 +1170,21 @@ export type ReservationRoutePlacement = {
   stages: ReservationRoutePlacementStage[];
 };
 
+export type WalkingStationStayPerson = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+};
+
 export type WalkingStationStay = {
   id: string;
   stayDate: string;
+  mealType: 'LUNCH' | 'DINNER';
   maleCount: number;
   femaleCount: number;
   status: ReservationStationStayStatus;
+  present: boolean;
   reservedAt: string;
   cancelledAt: string | null;
   evacuatedAt: string | null;
@@ -1179,10 +1194,54 @@ export type WalkingStationStay = {
     type: ReservationType;
     status: ReservationStatus;
     year: number;
+    createdBy: WalkingStationStayPerson;
+    caravanManager: WalkingStationStayPerson | null;
+    walkingStartDate?: string | null;
+    walkingRoute?: { id: string; name: string } | null;
+    caravan?: { id: string; name: string } | null;
+    group: {
+      id: string;
+      name?: string;
+      manager: WalkingStationStayPerson | null;
+    } | null;
+    person?: WalkingStationStayPerson;
+    partyName?: string | null;
   };
+  station?: { id: string; name: string } | null;
   reservedBy: { id: string; fullName: string };
   cancelledBy: { id: string; fullName: string } | null;
   evacuatedBy: { id: string; fullName: string } | null;
+};
+
+export type StationStayFile = WalkingStationStay;
+
+export type StationReport = {
+  year: number;
+  stationId: string | null;
+  stations: { id: string; name: string; maleCount: number; femaleCount: number }[];
+  totals: {
+    stays: number;
+    reserved: number;
+    present: number;
+    absent: number;
+    cancelled: number;
+    evacuated: number;
+    male: number;
+    female: number;
+    reservations: number;
+  };
+  capacity: { male: number; female: number } | null;
+  byDay: {
+    date: string;
+    total: number;
+    present: number;
+    absent: number;
+    male: number;
+    female: number;
+  }[];
+  byMeal: { mealType: string; count: number }[];
+  byType: { type: string; count: number }[];
+  byMonth: { month: number; total: number; present: number; absent: number }[];
 };
 
 export type FoodSupplier = {
@@ -1986,6 +2045,7 @@ export type ReservationMemberInsuranceStatus =
 export const reservationMemberInsurancePaidMethods = {
   MANAGEMENT: "MANAGEMENT",
   ONLINE_GATEWAY: "ONLINE_GATEWAY",
+  BANK_RECEIPT: "BANK_RECEIPT",
 } as const;
 
 export type ReservationMemberInsurancePaidMethod =
@@ -2046,6 +2106,7 @@ export type ReservationPerson = {
   fullName: string;
   nationalId: string | null;
   phone: string | null;
+  eitaa?: string | null;
   gender: UserGender | null;
   birthDate: string | null;
   status: UserStatus;
@@ -2062,6 +2123,8 @@ export type ReservationMember = {
   insuranceCoverageAmount: number | null;
   insurancePlanId: string | null;
   insurancePaymentRef: string | null;
+  insuranceReceiptDate: string | null;
+  insuranceReceiptBankName: string | null;
   insurancePaidMethod: ReservationMemberInsurancePaidMethod | null;
   insurancePaidById: string | null;
   insurancePaidBy: ReservationPerson | null;
@@ -2293,6 +2356,7 @@ export type ReservationListItem = {
     id: string;
     name: string;
     managerUserId: string | null;
+    eitaa?: string | null;
     maleCount?: number;
     femaleCount?: number;
     totalCount?: number;
@@ -2521,9 +2585,19 @@ export type ReceptionSettings = {
   caravanCountries: (GeoName & { id: string; iso2: string })[];
   caravanContactsCountries: (GeoName & { id: string; iso2: string })[];
   insuranceOrganization: string;
+  insuranceBankAccountId: string | null;
+  insuranceBankAccount: PublicBankAccount | null;
   insurancePlans: ReceptionInsurancePlan[];
   imamRezaMartyrdomDate: string | null;
   prophetDemiseDate: string | null;
+  helpTravel: string;
+  helpReview: string;
+  helpCompanions: string;
+  helpCompanionsCaravan: string;
+  helpContacts: string;
+  helpInsurance: string;
+  helpComplete: string;
+  helpPlacement: string;
 };
 
 export type ReceptionCapacitySlice = {

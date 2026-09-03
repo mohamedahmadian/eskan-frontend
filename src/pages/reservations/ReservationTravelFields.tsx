@@ -25,7 +25,13 @@ import { OsmMapPicker, type MapOverlayMarker, type MapOverlays } from "../../com
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
 import { api, getApiErrorMessage } from "../../lib/api";
-import { currentPersianYear, formatNumber } from "../../lib/datetime";
+import {
+  currentPersianYear,
+  formatGregorianDate,
+  formatHijriDate,
+  formatNumber,
+  todayIsoDate,
+} from "../../lib/datetime";
 import { stageCoordinates, useGeoName } from "../../lib/geo";
 import type {
   City,
@@ -66,6 +72,22 @@ function firstWalkingStage(route: WalkingRoute | undefined) {
   return [...(route?.stages ?? [])].sort((a, b) => a.stageNumber - b.stageNumber)[0];
 }
 
+export function walkingRouteOriginError(
+  route: WalkingRoute | null | undefined,
+  pilgrimCountryId: string | null | undefined,
+  t: (key: string, options?: Record<string, string>) => string,
+  nameOf: (item: { nameFa: string; nameEn?: string | null }) => string,
+): string | null {
+  if (!route?.originCountries?.length || !pilgrimCountryId) return null;
+  if (route.originCountries.some((country) => country.id === pilgrimCountryId)) {
+    return null;
+  }
+  const countries = [...route.originCountries]
+    .map((country) => nameOf(country))
+    .join("، ");
+  return t("reservations.walkingRouteOriginOnly", { countries });
+}
+
 export function travelDatesError(
   values: Pick<
     TravelValues,
@@ -76,6 +98,9 @@ export function travelDatesError(
 ) {
   if (!values.walkingRouteId) {
     return t("reservations.walkingRouteRequired");
+  }
+  if (!values.walkingStartDate) {
+    return t("reservations.walkingStartRequired");
   }
   if (!values.stayStartDate) {
     return t("reservations.stayStartRequired");
@@ -93,7 +118,7 @@ export function travelDatesError(
   if (
     values.stayEndDate &&
     values.stayStartDate &&
-    values.stayEndDate <= values.stayStartDate
+    values.stayEndDate < values.stayStartDate
   ) {
     return t("reservations.stayRangeInvalid");
   }
@@ -480,7 +505,22 @@ export function ReservationDateFields({
   showOccasionHint?: boolean;
   error?: string | null;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
+  const n = (value: number) => formatNumber(value, locale);
+  const todayIso = todayIsoDate();
+  const stayDays = (() => {
+    if (!values.stayStartDate || !values.stayEndDate) return 0;
+    const toUtc = (iso: string) => {
+      const [year, month, day] = iso.split("-").map(Number);
+      return Date.UTC(year, month - 1, day);
+    };
+    const diffDays = Math.round(
+      (toUtc(values.stayEndDate) - toUtc(values.stayStartDate)) / 86_400_000,
+    );
+    if (diffDays < 0) return 0;
+    return diffDays + 1; // include both start and end dates
+  })();
 
   return (
     <div className="space-y-4">
@@ -492,7 +532,15 @@ export function ReservationDateFields({
           value={values.stayStartDate}
           locked={locked}
           required
-          onChange={(stayStartDate) => onChange({ stayStartDate })}
+          minDate={todayIso}
+          showEquivalentsBadges
+          onChange={(stayStartDate) => {
+            const patch: Partial<TravelValues> = { stayStartDate };
+            if (stayStartDate && values.stayEndDate && values.stayEndDate < stayStartDate) {
+              patch.stayEndDate = stayStartDate;
+            }
+            onChange(patch);
+          }}
         />
         <DateValueField
           id="stayEndDate"
@@ -501,9 +549,19 @@ export function ReservationDateFields({
           value={values.stayEndDate}
           locked={locked}
           required
+          minDate={values.stayStartDate || todayIso}
+          showEquivalentsBadges
           onChange={(stayEndDate) => onChange({ stayEndDate })}
         />
       </div>
+      {stayDays > 0 ? (
+        <div className="rounded-[22px] border border-teal-100 bg-gradient-to-e from-teal-50 via-white to-teal-50 px-4 py-3 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-teal-800">
+            <Calendar className="size-4" aria-hidden />
+            {t("reservations.stayDays", { count: n(stayDays) })}
+          </p>
+        </div>
+      ) : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       {showOccasionHint ? <OccasionStayHint /> : null}
     </div>
@@ -612,6 +670,13 @@ export function ReservationOptionalGeoFields({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locked, selectedRoute, values.originCityId, values.walkingRouteId]);
 
+  const routeOriginError = walkingRouteOriginError(
+    selectedRoute,
+    countryId,
+    t,
+    nameOf,
+  );
+
   const overlays = useMemo<MapOverlays | null>(() => {
     if (!stages.length) return null;
     const path: { lat: number; lng: number }[] = [];
@@ -678,28 +743,12 @@ export function ReservationOptionalGeoFields({
         label={t("reservations.walkingStartDate")}
         value={values.walkingStartDate}
         locked={locked}
+        required
         onChange={(walkingStartDate) => onChange({ walkingStartDate })}
       />
-      <aside
-        className="relative overflow-hidden rounded-[22px] border-2 border-teal-200 bg-gradient-to-b from-teal-50 via-white to-mint-50 p-4 shadow-[0_12px_28px_rgba(46,189,182,0.16)]"
-        role="alert"
-      >
-        <div
-          className="absolute inset-x-0 top-0 h-1 bg-gradient-to-e from-teal-400 via-mint-400 to-teal-500"
-          aria-hidden
-        />
-        <div className="flex items-start gap-3 pt-1">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
-            <Info className="size-5" aria-hidden />
-          </span>
-          <p className="pt-1.5 text-sm font-medium leading-7 text-ink-800">
-            {t("reservations.walkingRouteStationHint")}
-          </p>
-        </div>
-      </aside>
       <FormField
         icon={Route}
-        label={`${t("reservations.walkingRoute")} *`}
+        label={`${t("reservations.walkingRouteSelectTitle")} *`}
       >
         <SearchSelect
           value={values.walkingRouteId}
@@ -716,6 +765,9 @@ export function ReservationOptionalGeoFields({
           placeholder={t("reservations.walkingRoute")}
           disabled={locked}
         />
+        {routeOriginError ? (
+          <p className="mt-2 text-sm text-red-700">{routeOriginError}</p>
+        ) : null}
       </FormField>
       {values.walkingRouteId ? (
         overlays ? (
@@ -734,6 +786,25 @@ export function ReservationOptionalGeoFields({
         ) : (
           <p className="text-sm text-ink-500">{t("walkingRoutes.stationsNoMap")}</p>
         )
+      ) : null}
+      {values.walkingRouteId ? (
+        <aside
+          className="relative overflow-hidden rounded-[22px] border-2 border-teal-200 bg-gradient-to-b from-teal-50 via-white to-mint-50 p-4 shadow-[0_12px_28px_rgba(46,189,182,0.16)]"
+          role="note"
+        >
+          <div
+            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-e from-teal-400 via-mint-400 to-teal-500"
+            aria-hidden
+          />
+          <div className="flex items-start gap-3 pt-1">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
+              <Info className="size-5" aria-hidden />
+            </span>
+            <p className="pt-1.5 text-sm font-medium leading-7 text-ink-800">
+              {t("reservations.walkingRouteStationHint")}
+            </p>
+          </div>
+        </aside>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField icon={Building2} label={t("reservations.walkingStartProvince")}>
@@ -869,6 +940,7 @@ function DateValueField({
   required,
   minDate,
   maxDate,
+  showEquivalentsBadges,
   onChange,
 }: {
   id: string;
@@ -879,8 +951,26 @@ function DateValueField({
   required?: boolean;
   minDate?: string;
   maxDate?: string;
+  showEquivalentsBadges?: boolean;
   onChange: (value: string) => void;
 }) {
+  const { i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
+
+  function EquivalentsBadges({ value }: { value?: string | null }) {
+    if (!value) return null;
+    return (
+      <div className="flex flex-wrap gap-2">
+        <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-700 ring-1 ring-teal-100" dir="ltr">
+          {formatGregorianDate(value, locale)}
+        </span>
+        <span className="inline-flex items-center rounded-full bg-mint-50 px-2 py-0.5 text-[11px] font-semibold text-mint-700 ring-1 ring-mint-100" dir="rtl" lang="ar">
+          {formatHijriDate(value, locale)}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <FormField icon={Icon} label={required ? `${label} *` : label} htmlFor={id}>
       {locked ? (
@@ -888,17 +978,20 @@ function DateValueField({
           <p className="text-sm text-ink-800">
             {value ? <DateText value={value} /> : "—"}
           </p>
-          <HijriDateText value={value} />
+          {showEquivalentsBadges ? <EquivalentsBadges value={value} /> : <HijriDateText value={value} />}
         </div>
       ) : (
-        <PersianDateField
-          id={id}
-          value={value}
-          minDate={minDate}
-          maxDate={maxDate}
-          showHijri
-          onChange={(next) => onChange(next ?? "")}
-        />
+        <div className="space-y-1.5">
+          <PersianDateField
+            id={id}
+            value={value}
+            minDate={minDate}
+            maxDate={maxDate}
+            showHijri={!showEquivalentsBadges}
+            onChange={(next) => onChange(next ?? "")}
+          />
+          {showEquivalentsBadges ? <EquivalentsBadges value={value} /> : null}
+        </div>
       )}
     </FormField>
   );

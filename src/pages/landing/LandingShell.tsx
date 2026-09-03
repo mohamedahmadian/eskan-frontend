@@ -1,4 +1,4 @@
-import { LogIn, Menu, UserPlus, X } from "lucide-react";
+import { LogIn, Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, useLocation } from "react-router-dom";
@@ -9,14 +9,14 @@ import { LocaleSwitcher } from "../../components/layout/LocaleSwitcher";
 import { useBrandDisplay } from "../../hooks/useHeadquartersSummary";
 
 const navItems = [
-  { to: "/welcome", end: true, labelKey: "landing.nav.home" },
+  { to: "/", end: true, labelKey: "landing.nav.home" },
   {
-    to: "/welcome/participations",
+    to: "/participations",
     end: false,
     labelKey: "landing.nav.participations",
   },
-  { to: "/welcome/about", end: false, labelKey: "landing.nav.about" },
-  { to: "/welcome/contact", end: false, labelKey: "landing.nav.contact" },
+  { to: "/about", end: false, labelKey: "landing.nav.about" },
+  { to: "/contact", end: false, labelKey: "landing.nav.contact" },
 ] as const;
 
 function navLinkClass(active: boolean) {
@@ -66,8 +66,8 @@ export function LandingShell({ children }: { children: ReactNode }) {
   return (
     <div className="landing-root flex min-h-svh flex-col bg-cream-50">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-3 sm:px-8">
-          <Link to="/welcome" className="shrink-0" aria-label={brandTitle}>
+        <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-3 sm:gap-3 sm:px-8">
+          <Link to="/" className="shrink-0" aria-label={brandTitle}>
             <AppLogo
               src={logoSrc}
               className={
@@ -77,55 +77,42 @@ export function LandingShell({ children }: { children: ReactNode }) {
               }
             />
           </Link>
+          <button
+            type="button"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl text-ink-700 ring-1 ring-line transition hover:bg-cream-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 lg:hidden"
+            aria-expanded={menuOpen}
+            aria-controls="landing-nav-menu"
+            aria-label={
+              menuOpen ? t("landing.nav.close") : t("landing.nav.open")
+            }
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? (
+              <X className="size-5" aria-hidden />
+            ) : (
+              <Menu className="size-5" aria-hidden />
+            )}
+          </button>
           <LandingNavLinks className="hidden min-w-0 flex-1 items-center gap-0.5 lg:flex" />
           <div className="ms-auto flex min-w-0 items-center justify-end gap-2">
             <LocaleSwitcher />
             {user ? (
               <Link
                 to="/"
-                className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-teal-500 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+                className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-teal-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:px-3.5"
               >
                 <LogIn className="size-4" aria-hidden />
-                <span className="hidden sm:inline">
-                  {t("landing.goToPanel")}
-                </span>
+                <span>{t("landing.goToPanel")}</span>
               </Link>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-line bg-white px-3 py-2 text-sm font-medium text-ink-700 transition hover:bg-cream-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:px-3.5"
-                >
-                  <LogIn className="size-4" aria-hidden />
-                  <span className="hidden sm:inline">{t("landing.login")}</span>
-                </Link>
-                <Link
-                  to="/register"
-                  className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-teal-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:px-3.5"
-                >
-                  <UserPlus className="size-4" aria-hidden />
-                  <span className="hidden sm:inline">
-                    {t("landing.register")}
-                  </span>
-                </Link>
-              </>
+              <Link
+                to="/login"
+                className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-teal-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-teal-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:px-3.5"
+              >
+                <LogIn className="size-4" aria-hidden />
+                <span>{t("landing.login")}</span>
+              </Link>
             )}
-            <button
-              type="button"
-              className="inline-flex size-10 items-center justify-center rounded-2xl text-ink-700 ring-1 ring-line transition hover:bg-cream-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 lg:hidden"
-              aria-expanded={menuOpen}
-              aria-controls="landing-nav-menu"
-              aria-label={
-                menuOpen ? t("landing.nav.close") : t("landing.nav.open")
-              }
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              {menuOpen ? (
-                <X className="size-5" aria-hidden />
-              ) : (
-                <Menu className="size-5" aria-hidden />
-              )}
-            </button>
           </div>
         </div>
         {menuOpen ? (

@@ -27,7 +27,7 @@ export function AuthGuestLayout({
     <div className="flex min-h-svh flex-col bg-cream-50">
       <header className="z-20 shrink-0 border-b border-line/70 bg-white/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
-          <Link to={user ? '/' : '/welcome'} className="flex min-w-0 items-center gap-3">
+          <Link to="/" className="flex min-w-0 items-center gap-3">
             <AppLogo
               src={logoSrc}
               className={

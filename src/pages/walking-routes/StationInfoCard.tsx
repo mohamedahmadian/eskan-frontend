@@ -1,11 +1,14 @@
 import {
   AlignLeft,
   ArrowUpDown,
+  BadgeCheck,
   Bath,
   BookOpen,
+  CalendarDays,
   Car,
   Droplets,
   Flame,
+  Map as MapIcon,
   MapPin,
   MapPinned,
   Mars,
@@ -19,20 +22,39 @@ import {
   Snowflake,
   Type,
   UserRound,
+  UtensilsCrossed,
   Venus,
   Wifi,
   X,
+  type LucideIcon,
 } from 'lucide-react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import { DateText } from '../../components/ui/DateText'
 import { Button } from '../../components/ui/Form'
-import { FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
+import { FormEmptyHint, FormFactTile, FormMetaChip, FormSectionTitle } from '../../components/ui/FormLayout'
+import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { languageDir } from '../../i18n'
 import { formatNumber } from '../../lib/datetime'
 import { geoName, stageCoordinates, useGeoName } from '../../lib/geo'
 import type { WalkingRouteStage } from '../../types/app'
 import { StationNearbyPlaces } from './StationNearbyPlaces'
+
+export type StationStayPreview = {
+  stayDate: string
+  mealType: 'LUNCH' | 'DINNER'
+  present?: boolean
+}
+
+const stationInfoTabs = ['info', 'amenities', 'map'] as const
+type StationInfoTab = (typeof stationInfoTabs)[number]
+
+const stationInfoTabIcons: Record<StationInfoTab, LucideIcon> = {
+  info: Milestone,
+  amenities: Shirt,
+  map: MapIcon,
+}
 
 function hasText(value: string | null | undefined) {
   return Boolean(value?.trim())
@@ -51,16 +73,20 @@ export function StationInfoCard({
   locale,
   onClose,
   headerAction,
+  stay,
   className,
 }: {
   stage: WalkingRouteStage
   locale: string
   onClose?: () => void
   headerAction?: ReactNode
+  stay?: StationStayPreview | null
   className?: string
 }) {
   const { t } = useTranslation()
+  const [tab, setTab] = useState<StationInfoTab>('info')
   const name = useGeoName()
+  const coords = stageCoordinates(stage)
   const n = (value: number) => formatNumber(value, locale)
   const km = (value: number | null | undefined) =>
     value == null ? '' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
@@ -69,12 +95,14 @@ export function StationInfoCard({
   const countValue = (value: number | null | undefined) =>
     value == null ? '—' : n(value)
   const title = stageTitle(stage, locale, `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`)
+  const hasManagerContact = hasText(stage.managerName) || hasText(stage.managerPhone)
   const hasManager =
-    hasText(stage.managerName) ||
-    hasText(stage.managerPhone) ||
+    hasManagerContact ||
     hasText(stage.managerTelegram) ||
     hasText(stage.managerWhatsapp) ||
     hasText(stage.managerEitaa)
+  const hasStay = Boolean(stay)
+  const hasActions = Boolean(headerAction || onClose)
 
   return (
     <article
@@ -89,8 +117,14 @@ export function StationInfoCard({
           className="pointer-events-none absolute -end-6 -bottom-10 size-24 rounded-full bg-mint-100/70"
           aria-hidden
         />
-        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div
+          className={`relative grid gap-3 ${
+            hasStay
+              ? 'sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center'
+              : 'sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start'
+          }`}
+        >
+          <div className="flex min-w-0 items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
               <Milestone className="size-5" aria-hidden />
             </span>
@@ -99,13 +133,52 @@ export function StationInfoCard({
                 {t('walkingRoutes.stage')} {n(stage.stageNumber)}
               </p>
               <h3 className="text-sm font-semibold leading-6 text-ink-900 sm:truncate">{title}</h3>
-              <p className="mt-0.5 text-xs text-ink-500 sm:truncate">
+              {hasManagerContact ? (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {hasText(stage.managerName) ? (
+                    <FormMetaChip icon={UserRound} label={stage.managerName} />
+                  ) : null}
+                  {hasText(stage.managerPhone) ? (
+                    <FormMetaChip icon={Phone} copyValue={stage.managerPhone} />
+                  ) : null}
+                </div>
+              ) : null}
+              <p className={`${hasManagerContact ? 'mt-1.5' : 'mt-0.5'} text-xs text-ink-500 sm:truncate`}>
                 {name(stage.city.province)} · {name(stage.city)}
               </p>
             </div>
           </div>
-          {headerAction || onClose ? (
-            <div className="flex shrink-0 items-center gap-2">
+          {hasStay && stay ? (
+            <div className="flex flex-col items-center gap-2">
+              <p className="inline-flex flex-wrap items-center justify-center gap-1.5 text-sm font-bold text-teal-800">
+                <span className="flex size-6 items-center justify-center rounded-full bg-teal-500 text-white shadow-[0_6px_12px_rgba(46,189,182,0.32)]">
+                  <BadgeCheck className="size-4" aria-hidden />
+                </span>
+                {t('reservations.routePlacementStatReserved')}
+                {stay.present ? (
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200">
+                    {t('walkingStations.present')}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-700 ring-1 ring-rose-200">
+                    {t('walkingStations.absent')}
+                  </span>
+                )}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-base font-semibold text-ink-800 shadow-[0_6px_14px_rgba(20,40,40,0.06)] ring-1 ring-teal-100">
+                  <CalendarDays className="size-5 text-teal-600" aria-hidden />
+                  <DateText value={stay.stayDate} />
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-base font-semibold text-ink-800 shadow-[0_6px_14px_rgba(20,40,40,0.06)] ring-1 ring-teal-100">
+                  <UtensilsCrossed className="size-5 text-teal-600" aria-hidden />
+                  {t(`reservations.stationMeals.${stay.mealType}`)}
+                </span>
+              </div>
+            </div>
+          ) : null}
+          {hasActions ? (
+            <div className={`flex shrink-0 items-center gap-2 ${hasStay ? 'sm:justify-self-end' : ''}`}>
               {headerAction ? <div className="min-w-0 flex-1 sm:flex-none">{headerAction}</div> : null}
               {onClose ? (
                 <Button
@@ -120,15 +193,37 @@ export function StationInfoCard({
                 </Button>
               ) : null}
             </div>
+          ) : hasStay ? (
+            <div aria-hidden className="hidden sm:block" />
           ) : null}
         </div>
       </header>
 
+      <nav className="flex flex-wrap gap-2 border-b border-teal-100 bg-cream-50/80 px-4 py-2.5 sm:px-5">
+        {stationInfoTabs.map((item) => {
+          const Icon = stationInfoTabIcons[item]
+          const active = tab === item
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setTab(item)}
+              className={`inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium transition ${
+                active
+                  ? 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]'
+                  : 'bg-white text-ink-700 hover:bg-cream-100'
+              }`}
+            >
+              <Icon className={`size-3.5 ${active ? 'text-white' : 'text-teal-600'}`} aria-hidden />
+              {t(item === 'info' ? 'walkingStations.tabs.infoBrief' : `walkingStations.tabs.${item}`)}
+            </button>
+          )
+        })}
+      </nav>
+
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
+        {tab === 'info' ? (
         <section className="space-y-2">
-          <FormSectionTitle icon={MapPin} className="mb-0">
-            {t('walkingRoutes.sectionStation')}
-          </FormSectionTitle>
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             {hasText(stage.name) ? (
               <FormFactTile
@@ -215,11 +310,10 @@ export function StationInfoCard({
             ) : null}
           </div>
         </section>
+        ) : null}
 
+        {tab === 'amenities' ? (
         <section className="space-y-2">
-          <FormSectionTitle icon={Shirt} className="mb-0">
-            {t('walkingStations.sectionAmenities')}
-          </FormSectionTitle>
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             <FormFactTile
               icon={Shirt}
@@ -289,8 +383,9 @@ export function StationInfoCard({
             />
           </div>
         </section>
+        ) : null}
 
-        {hasManager ? (
+        {tab === 'info' && hasManager ? (
           <section className="space-y-2">
             <FormSectionTitle icon={UserRound} className="mb-0">
               {t('walkingRoutes.sectionManager')}
@@ -340,12 +435,33 @@ export function StationInfoCard({
           </section>
         ) : null}
 
+        {tab === 'info' ? (
         <StationNearbyPlaces
           cityId={stage.cityId}
-          latitude={stageCoordinates(stage)?.lat}
-          longitude={stageCoordinates(stage)?.lng}
+          latitude={coords?.lat}
+          longitude={coords?.lng}
           compact
         />
+        ) : null}
+
+        {tab === 'map' ? (
+          coords ? (
+            <div className="overflow-hidden rounded-2xl ring-1 ring-teal-100">
+              <OsmMapPicker
+                key={stage.stationId || stageKey(stage)}
+                latitude={String(coords.lat)}
+                longitude={String(coords.lng)}
+                onChange={() => undefined}
+                active
+                variant="always"
+                readOnly
+                heightClass="h-72 sm:h-80"
+              />
+            </div>
+          ) : (
+            <FormEmptyHint>{t('walkingRoutes.stationsNoMap')}</FormEmptyHint>
+          )
+        ) : null}
       </div>
     </article>
   )

@@ -10,6 +10,7 @@ const roleClass: Record<string, string> = {
   HEADQUARTERS_REPRESENTATIVE: 'bg-teal-50 text-teal-800 ring-teal-100',
   LICENSE_ISSUER: 'bg-mint-50 text-mint-800 ring-mint-100',
   UNIT_MANAGER: 'bg-cream-100 text-ink-700 ring-line',
+  STATION_MANAGER: 'bg-teal-50 text-teal-800 ring-teal-100',
 }
 
 const chipClass =

@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -167,6 +168,43 @@ const HONORARY_SERVICE_MENUS: SidebarNavMenu[] = [
 
 function isHonoraryServiceModule(mod: NavModule) {
   return mod.code === "honorary-service" || mod.nameKey === "modules.honoraryService";
+}
+
+const PILGRIM_CAMPAIGNS_MENU: SidebarNavMenu = {
+  code: "participations.campaigns",
+  nameKey: "menus.participationCampaigns",
+  path: "/participations/campaigns",
+  icon: "megaphone",
+  sortOrder: 2,
+};
+
+function isParticipationsModule(mod: NavModule) {
+  return mod.code === "participations" || mod.nameKey === "modules.participations";
+}
+
+function withPilgrimCampaignsNav(
+  modules: NavModule[],
+  user: { roles?: { code: string }[] } | null | undefined,
+): NavModule[] {
+  if (!isPilgrim(user) || isAdmin(user)) return modules;
+  const existing = modules.find(isParticipationsModule);
+  const campaignMenu =
+    existing?.menus.find(
+      (item) =>
+        item.code === "participations.campaigns" ||
+        item.path === "/participations/campaigns",
+    ) ?? PILGRIM_CAMPAIGNS_MENU;
+  const rest = modules.filter((mod) => !isParticipationsModule(mod));
+  return [
+    ...rest,
+    {
+      code: existing?.code ?? "participations",
+      nameKey: existing?.nameKey ?? "modules.participations",
+      icon: existing?.icon ?? "heart-handshake",
+      sortOrder: existing?.sortOrder ?? 8,
+      menus: [campaignMenu],
+    },
+  ].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 function isLegacyHonoraryApplyMenu(item: SidebarNavMenu) {
@@ -352,7 +390,7 @@ function menuMatchesSearch(
   );
 }
 
-export function DashboardLayout() {
+export function DashboardLayout({ children }: { children?: ReactNode }) {
   const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
@@ -480,7 +518,10 @@ export function DashboardLayout() {
         };
       })
       .filter((mod) => mod.menus.length > 0);
-    return filterSidebarModules(withHonoraryServiceNav(next), user);
+    return filterSidebarModules(
+      withPilgrimCampaignsNav(withHonoraryServiceNav(next), user),
+      user,
+    );
   }, [pilgrimageYearMenus, user]);
 
   const modules = useMemo(() => {
@@ -723,7 +764,7 @@ export function DashboardLayout() {
                   const impersonating = Boolean(user?.impersonating);
                   setOpen(false);
                   logout();
-                  if (!impersonating) navigate("/welcome");
+                  if (!impersonating) navigate("/");
                 }}
               >
                 <LogOut className="size-4 shrink-0" aria-hidden />
@@ -759,7 +800,7 @@ export function DashboardLayout() {
               }`}
             >
               <PageTransition>
-                <Outlet />
+                {children ?? <Outlet />}
               </PageTransition>
             </main>
             <AdminFooter branding={branding} compactEnd={showQuickToolsFab} />

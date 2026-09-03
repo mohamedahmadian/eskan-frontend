@@ -48,7 +48,7 @@ export function CampaignSlider({ items }: { items: PublicCampaign[] }) {
         className="overflow-hidden rounded-[32px] border border-white bg-white shadow-[0_12px_32px_rgba(20,40,40,0.06)]"
       >
         <Link
-          to={`/welcome/participations/${item.id}`}
+          to={`/participations/${item.id}`}
           className="group grid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"
           aria-live="polite"
           aria-atomic="true"

@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthProvider'
 import {
   PaginationBar,
   SearchBar,
@@ -9,17 +10,65 @@ import {
   EntityRowActions,
   SortableTh,
 } from '../../components/ui/ListControls'
-import { Button, PageHeader, listShellClassName } from '../../components/ui/Form'
+import { Button, LoadingState, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { DateText } from '../../components/ui/DateText'
+import { FormEmptyHint } from '../../components/ui/FormLayout'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
-import type { Paginated, ParticipationCampaign } from '../../types/app'
+import { isAdmin } from '../../lib/roles'
+import type { Paginated, ParticipationCampaign, PublicCampaign } from '../../types/app'
 import { GeoStatus } from '../geo/GeoShared'
+import { CampaignCard } from './CampaignCard'
 
 export function CampaignsListPage() {
+  const { user } = useAuth()
+  if (!isAdmin(user)) {
+    return <PilgrimCampaignsBrowse />
+  }
+  return <AdminCampaignsList />
+}
+
+function PilgrimCampaignsBrowse() {
+  const { t } = useTranslation()
+  const query = useQuery({
+    queryKey: ['public', 'participation-campaigns'],
+    queryFn: async () => {
+      const { data } = await api.get<PublicCampaign[]>('/participation-campaigns/public')
+      return data
+    },
+  })
+
+  if (query.isLoading) {
+    return <LoadingState />
+  }
+
+  return (
+    <div className={`${listShellClassName} space-y-6`}>
+      <PageHeader
+        title={t('menus.participationCampaigns')}
+        subtitle={t('participations.subtitle')}
+      />
+      {query.data?.length ? (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {query.data.map((item) => (
+            <CampaignCard
+              key={item.id}
+              item={item}
+              to={`/participations/campaigns/${item.id}`}
+            />
+          ))}
+        </div>
+      ) : (
+        <FormEmptyHint>{t('participations.empty')}</FormEmptyHint>
+      )}
+    </div>
+  )
+}
+
+function AdminCampaignsList() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()

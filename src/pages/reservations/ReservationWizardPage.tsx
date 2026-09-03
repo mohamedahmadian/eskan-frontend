@@ -42,7 +42,6 @@ import { ReservationStepReadonly } from "./ReservationStepReadonly";
 import { ReservationCompleteSummary } from "./ReservationCompleteSummary";
 import { ReservationPlacementStep } from "./ReservationPlacementPanel";
 import { ReservationTravelSummary } from "./ReservationTravelSummary";
-import { ReservationTimeline } from "./ReservationTimeline";
 import { ReservationWizardShell } from "./ReservationWizardShell";
 import { InsuranceStep } from "./ReservationInsuranceStep";
 import { ReservationPermitPanel } from "./ReservationPermitPanel";
@@ -203,11 +202,6 @@ export function ReservationWizardPage() {
           />
         )}
       </ReservationWizardShell>
-      {reservation.status === "PENDING_MANAGEMENT_REVIEW" ? null : (
-        <div className="mt-4">
-          <ReservationTimeline reservation={reservation} />
-        </div>
-      )}
     </div>
   );
 }

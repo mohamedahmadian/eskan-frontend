@@ -109,7 +109,11 @@ export function ReservationWizardShell({
         </div>
         {audience === 'owner' && viewedStep ? (
           <div className="mt-3">
-            <StepGuideButton step={viewedStep} reservationType={type} />
+            <StepGuideButton
+              step={viewedStep}
+              reservationType={type}
+              year={reservation.year}
+            />
           </div>
         ) : null}
       </div>

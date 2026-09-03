@@ -1,6 +1,15 @@
+const PUBLIC_LANDING_PREFIXES = [
+  '/participations',
+  '/news/',
+  '/announcements/',
+] as const
+
 export function isPublicSessionPath(pathname: string) {
   return (
-    pathname.startsWith('/welcome') ||
+    pathname === '/' ||
+    pathname === '/about' ||
+    pathname === '/contact' ||
+    PUBLIC_LANDING_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/register') ||

@@ -75,10 +75,10 @@ export function InsuranceStatusBadge({
   status: ReservationMemberInsuranceStatus
 }) {
   const { t } = useTranslation()
-  const display = status === 'PAID' ? 'APPROVED' : status
+  const display = status
   const labels: Record<ReservationMemberInsuranceStatus, string> = {
     PENDING: t('reservations.insurancePending'),
-    PAID: t('reservations.insuranceApproved'),
+    PAID: t('reservations.insurancePaidAwaitingApproval'),
     APPROVED: t('reservations.insuranceApproved'),
     REJECTED: t('reservations.insuranceRejected'),
   }

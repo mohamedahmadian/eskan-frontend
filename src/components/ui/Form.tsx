@@ -237,15 +237,18 @@ export function EntityNameSubtitle({
   name,
   icon: Icon,
   copyValue,
+  label,
 }: {
   name: string
   icon: LucideIcon
   copyValue?: string | null
+  label?: string
 }) {
   return (
     <span className="inline-flex max-w-full items-center gap-2 rounded-2xl bg-teal-50 px-3 py-1.5 text-sm font-medium text-teal-800">
       <Icon className="size-4 shrink-0" aria-hidden />
       <span className="truncate">
+        {label ? <span>{label} : </span> : null}
         {copyValue ? <CopyableDigits value={copyValue} /> : name}
       </span>
     </span>

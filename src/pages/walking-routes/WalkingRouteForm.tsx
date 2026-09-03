@@ -143,6 +143,7 @@ export function WalkingRouteForm({
         neshanAddress: stage.neshanAddress ?? null,
         maleCount: stage.maleCount ?? 0,
         femaleCount: stage.femaleCount ?? 0,
+        managerUserId: null,
         managerName: stage.managerName,
         managerPhone: stage.managerPhone,
         managerTelegram: stage.managerTelegram,

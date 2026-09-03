@@ -1,29 +1,43 @@
 import { CircleHelp, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui/Form'
-import { reservationHelpMedia } from './reservation-help'
+import { api } from '../../lib/api'
+import type { ReceptionSettings, ReservationType } from '../../types/app'
+import {
+  reservationHelpKey,
+  reservationHelpMedia,
+  reservationHelpText,
+} from './reservation-help'
 import type { ReservationStepCode } from './reservation-steps'
-import type { ReservationType } from '../../types/app'
 
 export function StepGuideButton({
   step,
   reservationType,
+  year,
 }: {
   step: ReservationStepCode
   reservationType?: ReservationType
+  year: number
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [imageOpen, setImageOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
-  const helpKey =
-    step === 'companions' && reservationType === 'CARAVAN'
-      ? 'companionsCaravan'
-      : step
+  const helpKey = reservationHelpKey(step, reservationType)
+  const settings = useQuery({
+    queryKey: ['reception-settings', year],
+    queryFn: async () => {
+      const { data } = await api.get<ReceptionSettings>(`/reception-settings/${year}`)
+      return data
+    },
+  })
   const title = t(`reservations.helpContent.${helpKey}.title`)
   const description = t(`reservations.helpContent.${helpKey}.description`)
-  const body = t(`reservations.helpContent.${helpKey}.body`)
+  const body =
+    reservationHelpText(settings.data, helpKey) ||
+    t(`reservations.helpContent.${helpKey}.body`)
   const media = reservationHelpMedia[step]
 
   useEffect(() => {
@@ -44,7 +58,12 @@ export function StepGuideButton({
 
   return (
     <>
-      <Button type="button" variant="ghost" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="primary"
+        className="bg-teal-600 shadow-[0_8px_20px_rgba(13,148,136,0.38)] hover:bg-teal-700"
+        onClick={() => setOpen(true)}
+      >
         <CircleHelp className="size-4" aria-hidden />
         {t('reservations.help')}
       </Button>
@@ -81,7 +100,7 @@ export function StepGuideButton({
               </Button>
             </div>
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-              <p className="text-sm leading-7 text-ink-700">{body}</p>
+              <p className="whitespace-pre-wrap text-sm leading-7 text-ink-700">{body}</p>
               {media.image ? (
                 <button
                   type="button"

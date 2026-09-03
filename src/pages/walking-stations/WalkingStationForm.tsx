@@ -10,15 +10,11 @@ import {
   MapPinned,
   Mars,
   Maximize2,
-  MessageCircle,
   Milestone,
   Navigation,
-  Phone,
-  Share2,
   Shirt,
   Snowflake,
   Type,
-  UserRound,
   Venus,
   Wifi,
 } from 'lucide-react'
@@ -26,13 +22,17 @@ import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppForm, FormActions, FormField, ToggleField, fieldClassName } from '../../components/ui/Form'
-import { FormCard, FormSectionTitle, formCardBodyClassName } from '../../components/ui/FormLayout'
+import { FormCard, FormSectionTitle } from '../../components/ui/FormLayout'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
+import { useAuth } from '../../auth/AuthProvider'
 import { getApiErrorMessage } from '../../lib/api'
-import { parseDigitString, toLatinDigits } from '../../lib/datetime'
+import { toLatinDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
+import { isAdmin } from '../../lib/roles'
 import type { City, Province, WalkingStation } from '../../types/app'
+import { StationManagerPicker, type StationManagerChoice } from './StationManagerPicker'
+import { WalkingStationFormTabNav, type WalkingStationFormTab } from './WalkingStationFormTabs'
 
 export type WalkingStationPayload = {
   name: string
@@ -43,11 +43,7 @@ export type WalkingStationPayload = {
   neshanAddress: string | null
   maleCount: number
   femaleCount: number
-  managerName: string | null
-  managerPhone: string | null
-  managerTelegram: string | null
-  managerWhatsapp: string | null
-  managerEitaa: string | null
+  managerUserId: string | null
   distanceToMashhadKm: number | null
   description: string | null
   hasLaundry: boolean
@@ -97,7 +93,10 @@ export function WalkingStationForm({
   onSubmit: (payload: WalkingStationPayload) => Promise<void>
 }) {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const admin = isAdmin(user)
   const name = useGeoName()
+  const [tab, setTab] = useState<WalkingStationFormTab>('info')
   const [saving, setSaving] = useState(false)
   const [values, setValues] = useState({
     name: initial?.name ?? '',
@@ -109,11 +108,6 @@ export function WalkingStationForm({
     neshanAddress: initial?.neshanAddress ?? '',
     maleCount: String(initial?.maleCount ?? 0),
     femaleCount: String(initial?.femaleCount ?? 0),
-    managerName: initial?.managerName ?? '',
-    managerPhone: initial?.managerPhone ?? '',
-    managerTelegram: initial?.managerTelegram ?? '',
-    managerWhatsapp: initial?.managerWhatsapp ?? '',
-    managerEitaa: initial?.managerEitaa ?? '',
     distanceToMashhadKm:
       initial?.distanceToMashhadKm != null ? String(initial.distanceToMashhadKm) : '',
     description: initial?.description ?? '',
@@ -128,6 +122,16 @@ export function WalkingStationForm({
     toiletCount: initial?.toiletCount != null ? String(initial.toiletCount) : '',
     areaSqm: initial?.areaSqm != null ? String(initial.areaSqm) : '',
   })
+  const [manager, setManager] = useState<StationManagerChoice | null>(
+    initial?.managerUserId
+      ? {
+          id: initial.managerUserId,
+          fullName: initial.managerName ?? '',
+          nationalId: null,
+          phone: initial.managerPhone,
+        }
+      : null,
+  )
 
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({ ...current, [key]: value }))
@@ -142,6 +146,10 @@ export function WalkingStationForm({
       ? { lat: selectedCity.latitude, lng: selectedCity.longitude, zoom: 13 }
       : null
 
+  function panelClass(id: WalkingStationFormTab) {
+    return `space-y-4 ${tab === id ? '' : 'hidden'}`
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     setSaving(true)
@@ -155,11 +163,7 @@ export function WalkingStationForm({
         neshanAddress: emptyToNull(values.neshanAddress),
         maleCount: toCount(values.maleCount),
         femaleCount: toCount(values.femaleCount),
-        managerName: emptyToNull(values.managerName),
-        managerPhone: emptyToNull(values.managerPhone),
-        managerTelegram: emptyToNull(values.managerTelegram),
-        managerWhatsapp: emptyToNull(values.managerWhatsapp),
-        managerEitaa: emptyToNull(values.managerEitaa),
+        managerUserId: manager?.id ?? null,
         distanceToMashhadKm: toOptionalNumber(values.distanceToMashhadKm),
         description: emptyToNull(values.description),
         hasLaundry: values.hasLaundry,
@@ -186,329 +190,292 @@ export function WalkingStationForm({
       title={initial ? initial.name || t('walkingStations.edit') : t('walkingStations.create')}
       subtitle={initial ? undefined : t('walkingStations.createSubtitle')}
     >
-      <AppForm onSubmit={submit} className={formCardBodyClassName}>
-        <FormField icon={Type} label={t('walkingStations.name')} htmlFor="station-name">
-          <input
-            id="station-name"
-            className={fieldClassName}
-            value={values.name}
-            onChange={(e) => set('name', e.target.value)}
-            required
-            minLength={1}
-          />
-        </FormField>
-        <FormField icon={MapPinned} label={t('geo.province')} htmlFor="station-province">
-          <SearchSelect
-            id="station-province"
-            value={values.provinceId}
-            required
-            onChange={(next) => {
-              set('provinceId', next)
-              set('cityId', '')
-              onProvinceChange(next)
-            }}
-            placeholder={t('geo.selectProvince')}
-            options={[
-              { value: '', label: t('geo.selectProvince') },
-              ...provinces.map((province) => ({
-                value: province.id,
-                label: name(province),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={MapPin} label={t('geo.city')} htmlFor="station-city">
-          <SearchSelect
-            id="station-city"
-            value={values.cityId}
-            required
-            disabled={!values.provinceId}
-            onChange={(next) => set('cityId', next)}
-            placeholder={t('geo.selectCity')}
-            options={[
-              { value: '', label: t('geo.selectCity') },
-              ...cities.map((city) => ({
-                value: city.id,
-                label: name(city),
-              })),
-            ]}
-          />
-        </FormField>
-        <FormField icon={MapPinned} label={t('walkingStations.location')}>
-          <OsmMapPicker
-            latitude={values.latitude}
-            longitude={values.longitude}
-            focus={mapFocus}
-            onChange={(latitude, longitude) => {
-              set('latitude', latitude)
-              set('longitude', longitude)
-            }}
-          />
-        </FormField>
-        <FormField icon={MapPin} label={t('walkingStations.address')} htmlFor="station-address">
-          <textarea
-            id="station-address"
-            className={fieldClassName}
-            rows={3}
-            value={values.address}
-            onChange={(e) => set('address', e.target.value)}
-          />
-        </FormField>
-        <FormField
-          icon={Navigation}
-          label={t('walkingStations.neshanAddress')}
-          htmlFor="station-neshan"
+      <div className="space-y-4 p-5 sm:p-6">
+        <WalkingStationFormTabNav tab={tab} onChange={setTab} />
+        <AppForm
+          onSubmit={submit}
+          onInvalid={(event) => {
+            const panel = (event.target as HTMLElement | null)?.closest('[data-tab]')
+            const next = panel?.getAttribute('data-tab') as WalkingStationFormTab | null
+            if (next) setTab(next)
+          }}
+          className="space-y-4"
         >
-          <input
-            id="station-neshan"
-            className={fieldClassName}
-            value={values.neshanAddress}
-            onChange={(e) => set('neshanAddress', e.target.value)}
+          <div data-tab="info" className={panelClass('info')}>
+            <FormField icon={Type} label={t('walkingStations.name')} htmlFor="station-name">
+              <input
+                id="station-name"
+                className={fieldClassName}
+                value={values.name}
+                onChange={(e) => set('name', e.target.value)}
+                required
+                minLength={1}
+              />
+            </FormField>
+            <FormField icon={MapPinned} label={t('geo.province')} htmlFor="station-province">
+              <SearchSelect
+                id="station-province"
+                value={values.provinceId}
+                required
+                onChange={(next) => {
+                  set('provinceId', next)
+                  set('cityId', '')
+                  onProvinceChange(next)
+                }}
+                placeholder={t('geo.selectProvince')}
+                options={[
+                  { value: '', label: t('geo.selectProvince') },
+                  ...provinces.map((province) => ({
+                    value: province.id,
+                    label: name(province),
+                  })),
+                ]}
+              />
+            </FormField>
+            <FormField icon={MapPin} label={t('geo.city')} htmlFor="station-city">
+              <SearchSelect
+                id="station-city"
+                value={values.cityId}
+                required
+                disabled={!values.provinceId}
+                onChange={(next) => set('cityId', next)}
+                placeholder={t('geo.selectCity')}
+                options={[
+                  { value: '', label: t('geo.selectCity') },
+                  ...cities.map((city) => ({
+                    value: city.id,
+                    label: name(city),
+                  })),
+                ]}
+              />
+            </FormField>
+            {admin ? <StationManagerPicker value={manager} onChange={setManager} /> : null}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                icon={Mars}
+                label={t('walkingStations.maleCount')}
+                htmlFor="station-male"
+              >
+                <input
+                  id="station-male"
+                  className={fieldClassName}
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={values.maleCount}
+                  onChange={(e) => set('maleCount', e.target.value)}
+                />
+              </FormField>
+              <FormField
+                icon={Venus}
+                label={t('walkingStations.femaleCount')}
+                htmlFor="station-female"
+              >
+                <input
+                  id="station-female"
+                  className={fieldClassName}
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={values.femaleCount}
+                  onChange={(e) => set('femaleCount', e.target.value)}
+                />
+              </FormField>
+            </div>
+            <FormField
+              icon={Milestone}
+              label={t('walkingRoutes.stageDistanceToMashhadKm')}
+              htmlFor="station-mashhad"
+            >
+              <input
+                id="station-mashhad"
+                className={fieldClassName}
+                type="number"
+                min={0}
+                step="0.01"
+                value={values.distanceToMashhadKm}
+                onChange={(e) => set('distanceToMashhadKm', e.target.value)}
+              />
+            </FormField>
+            <FormField
+              icon={AlignLeft}
+              label={t('walkingRoutes.description')}
+              htmlFor="station-description"
+            >
+              <textarea
+                id="station-description"
+                className={fieldClassName}
+                rows={4}
+                value={values.description}
+                onChange={(e) => set('description', e.target.value)}
+              />
+            </FormField>
+          </div>
+
+          <div data-tab="amenities" className={panelClass('amenities')}>
+            <FormSectionTitle icon={Shirt}>{t('walkingStations.sectionAmenities')}</FormSectionTitle>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <AmenityCheck
+                icon={Shirt}
+                label={t('walkingStations.hasLaundry')}
+                checked={values.hasLaundry}
+                onChange={(checked) => set('hasLaundry', checked)}
+                onLabel={t('walkingStations.equipped')}
+                offLabel={t('walkingStations.notEquipped')}
+              />
+              <AmenityCheck
+                icon={Wifi}
+                label={t('walkingStations.hasInternet')}
+                checked={values.hasInternet}
+                onChange={(checked) => set('hasInternet', checked)}
+                onLabel={t('walkingStations.equipped')}
+                offLabel={t('walkingStations.notEquipped')}
+              />
+              <AmenityCheck
+                icon={BookOpen}
+                label={t('walkingStations.hasPrayerRoom')}
+                checked={values.hasPrayerRoom}
+                onChange={(checked) => set('hasPrayerRoom', checked)}
+                onLabel={t('walkingStations.equipped')}
+                offLabel={t('walkingStations.notEquipped')}
+              />
+              <AmenityCheck
+                icon={ArrowUpDown}
+                label={t('walkingStations.hasElevator')}
+                checked={values.hasElevator}
+                onChange={(checked) => set('hasElevator', checked)}
+                onLabel={t('walkingStations.equipped')}
+                offLabel={t('walkingStations.notEquipped')}
+              />
+            </div>
+            <FormField
+              icon={Flame}
+              label={t('walkingStations.heatingSystem')}
+              htmlFor="station-heating"
+            >
+              <input
+                id="station-heating"
+                className={fieldClassName}
+                value={values.heatingSystem}
+                onChange={(e) => set('heatingSystem', e.target.value)}
+              />
+            </FormField>
+            <FormField
+              icon={Snowflake}
+              label={t('walkingStations.coolingSystem')}
+              htmlFor="station-cooling"
+            >
+              <input
+                id="station-cooling"
+                className={fieldClassName}
+                value={values.coolingSystem}
+                onChange={(e) => set('coolingSystem', e.target.value)}
+              />
+            </FormField>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <FormField
+                icon={Car}
+                label={t('walkingStations.parkingCapacity')}
+                htmlFor="station-parking"
+              >
+                <input
+                  id="station-parking"
+                  className={fieldClassName}
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={values.parkingCapacity}
+                  onChange={(e) => set('parkingCapacity', e.target.value)}
+                />
+              </FormField>
+              <FormField
+                icon={Bath}
+                label={t('walkingStations.bathroomCount')}
+                htmlFor="station-bath"
+              >
+                <input
+                  id="station-bath"
+                  className={fieldClassName}
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={values.bathroomCount}
+                  onChange={(e) => set('bathroomCount', e.target.value)}
+                />
+              </FormField>
+              <FormField
+                icon={Droplets}
+                label={t('walkingStations.toiletCount')}
+                htmlFor="station-toilet"
+              >
+                <input
+                  id="station-toilet"
+                  className={fieldClassName}
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={values.toiletCount}
+                  onChange={(e) => set('toiletCount', e.target.value)}
+                />
+              </FormField>
+              <FormField icon={Maximize2} label={t('walkingStations.areaSqm')} htmlFor="station-area">
+                <input
+                  id="station-area"
+                  className={fieldClassName}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={values.areaSqm}
+                  onChange={(e) => set('areaSqm', e.target.value)}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div data-tab="location" className={panelClass('location')}>
+            <FormField icon={MapPinned} label={t('walkingStations.location')}>
+              <OsmMapPicker
+                latitude={values.latitude}
+                longitude={values.longitude}
+                focus={mapFocus}
+                active={tab === 'location'}
+                onChange={(latitude, longitude) => {
+                  set('latitude', latitude)
+                  set('longitude', longitude)
+                }}
+              />
+            </FormField>
+            <FormField icon={MapPin} label={t('walkingStations.address')} htmlFor="station-address">
+              <textarea
+                id="station-address"
+                className={fieldClassName}
+                rows={3}
+                value={values.address}
+                onChange={(e) => set('address', e.target.value)}
+              />
+            </FormField>
+            <FormField
+              icon={Navigation}
+              label={t('walkingStations.neshanAddress')}
+              htmlFor="station-neshan"
+            >
+              <input
+                id="station-neshan"
+                className={fieldClassName}
+                value={values.neshanAddress}
+                onChange={(e) => set('neshanAddress', e.target.value)}
+              />
+            </FormField>
+          </div>
+
+          <FormActions
+            submitLabel={t('walkingStations.save')}
+            cancelLabel={t('walkingStations.cancel')}
+            submitting={saving}
+            onCancel={() => history.back()}
           />
-        </FormField>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            icon={Mars}
-            label={t('walkingStations.maleCount')}
-            htmlFor="station-male"
-          >
-            <input
-              id="station-male"
-              className={fieldClassName}
-              type="number"
-              min={0}
-              step={1}
-              value={values.maleCount}
-              onChange={(e) => set('maleCount', e.target.value)}
-            />
-          </FormField>
-          <FormField
-            icon={Venus}
-            label={t('walkingStations.femaleCount')}
-            htmlFor="station-female"
-          >
-            <input
-              id="station-female"
-              className={fieldClassName}
-              type="number"
-              min={0}
-              step={1}
-              value={values.femaleCount}
-              onChange={(e) => set('femaleCount', e.target.value)}
-            />
-          </FormField>
-        </div>
-        <FormField
-          icon={Milestone}
-          label={t('walkingRoutes.stageDistanceToMashhadKm')}
-          htmlFor="station-mashhad"
-        >
-          <input
-            id="station-mashhad"
-            className={fieldClassName}
-            type="number"
-            min={0}
-            step="0.01"
-            value={values.distanceToMashhadKm}
-            onChange={(e) => set('distanceToMashhadKm', e.target.value)}
-          />
-        </FormField>
-        <FormSectionTitle icon={Shirt}>{t('walkingStations.sectionAmenities')}</FormSectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <AmenityCheck
-            icon={Shirt}
-            label={t('walkingStations.hasLaundry')}
-            checked={values.hasLaundry}
-            onChange={(checked) => set('hasLaundry', checked)}
-            onLabel={t('walkingStations.equipped')}
-            offLabel={t('walkingStations.notEquipped')}
-          />
-          <AmenityCheck
-            icon={Wifi}
-            label={t('walkingStations.hasInternet')}
-            checked={values.hasInternet}
-            onChange={(checked) => set('hasInternet', checked)}
-            onLabel={t('walkingStations.equipped')}
-            offLabel={t('walkingStations.notEquipped')}
-          />
-          <AmenityCheck
-            icon={BookOpen}
-            label={t('walkingStations.hasPrayerRoom')}
-            checked={values.hasPrayerRoom}
-            onChange={(checked) => set('hasPrayerRoom', checked)}
-            onLabel={t('walkingStations.equipped')}
-            offLabel={t('walkingStations.notEquipped')}
-          />
-          <AmenityCheck
-            icon={ArrowUpDown}
-            label={t('walkingStations.hasElevator')}
-            checked={values.hasElevator}
-            onChange={(checked) => set('hasElevator', checked)}
-            onLabel={t('walkingStations.equipped')}
-            offLabel={t('walkingStations.notEquipped')}
-          />
-        </div>
-        <FormField
-          icon={Flame}
-          label={t('walkingStations.heatingSystem')}
-          htmlFor="station-heating"
-        >
-          <input
-            id="station-heating"
-            className={fieldClassName}
-            value={values.heatingSystem}
-            onChange={(e) => set('heatingSystem', e.target.value)}
-          />
-        </FormField>
-        <FormField
-          icon={Snowflake}
-          label={t('walkingStations.coolingSystem')}
-          htmlFor="station-cooling"
-        >
-          <input
-            id="station-cooling"
-            className={fieldClassName}
-            value={values.coolingSystem}
-            onChange={(e) => set('coolingSystem', e.target.value)}
-          />
-        </FormField>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <FormField
-            icon={Car}
-            label={t('walkingStations.parkingCapacity')}
-            htmlFor="station-parking"
-          >
-            <input
-              id="station-parking"
-              className={fieldClassName}
-              type="number"
-              min={0}
-              step={1}
-              value={values.parkingCapacity}
-              onChange={(e) => set('parkingCapacity', e.target.value)}
-            />
-          </FormField>
-          <FormField
-            icon={Bath}
-            label={t('walkingStations.bathroomCount')}
-            htmlFor="station-bath"
-          >
-            <input
-              id="station-bath"
-              className={fieldClassName}
-              type="number"
-              min={0}
-              step={1}
-              value={values.bathroomCount}
-              onChange={(e) => set('bathroomCount', e.target.value)}
-            />
-          </FormField>
-          <FormField
-            icon={Droplets}
-            label={t('walkingStations.toiletCount')}
-            htmlFor="station-toilet"
-          >
-            <input
-              id="station-toilet"
-              className={fieldClassName}
-              type="number"
-              min={0}
-              step={1}
-              value={values.toiletCount}
-              onChange={(e) => set('toiletCount', e.target.value)}
-            />
-          </FormField>
-          <FormField icon={Maximize2} label={t('walkingStations.areaSqm')} htmlFor="station-area">
-            <input
-              id="station-area"
-              className={fieldClassName}
-              type="number"
-              min={0}
-              step="0.01"
-              value={values.areaSqm}
-              onChange={(e) => set('areaSqm', e.target.value)}
-            />
-          </FormField>
-        </div>
-        <FormSectionTitle icon={UserRound}>{t('walkingRoutes.sectionManager')}</FormSectionTitle>
-        <FormField
-          icon={UserRound}
-          label={t('walkingStations.managerName')}
-          htmlFor="station-manager"
-        >
-          <input
-            id="station-manager"
-            className={fieldClassName}
-            value={values.managerName}
-            onChange={(e) => set('managerName', e.target.value)}
-          />
-        </FormField>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField icon={Phone} label={t('walkingRoutes.managerPhone')} htmlFor="station-phone">
-            <input
-              id="station-phone"
-              className={`${fieldClassName} digit-field`}
-              value={values.managerPhone}
-              onChange={(e) => set('managerPhone', parseDigitString(e.target.value).slice(0, 15))}
-            />
-          </FormField>
-          <FormField
-            icon={Phone}
-            label={t('walkingRoutes.managerWhatsapp')}
-            htmlFor="station-whatsapp"
-          >
-            <input
-              id="station-whatsapp"
-              className={`${fieldClassName} digit-field`}
-              value={values.managerWhatsapp}
-              onChange={(e) =>
-                set('managerWhatsapp', parseDigitString(e.target.value).slice(0, 15))
-              }
-            />
-          </FormField>
-          <FormField
-            icon={MessageCircle}
-            label={t('walkingRoutes.managerTelegram')}
-            htmlFor="station-telegram"
-          >
-            <input
-              id="station-telegram"
-              className={fieldClassName}
-              dir="ltr"
-              value={values.managerTelegram}
-              onChange={(e) => set('managerTelegram', e.target.value)}
-            />
-          </FormField>
-          <FormField icon={Share2} label={t('walkingRoutes.managerEitaa')} htmlFor="station-eitaa">
-            <input
-              id="station-eitaa"
-              className={fieldClassName}
-              dir="ltr"
-              value={values.managerEitaa}
-              onChange={(e) => set('managerEitaa', e.target.value)}
-            />
-          </FormField>
-        </div>
-        <FormField
-          icon={AlignLeft}
-          label={t('walkingRoutes.description')}
-          htmlFor="station-description"
-        >
-          <textarea
-            id="station-description"
-            className={fieldClassName}
-            rows={4}
-            value={values.description}
-            onChange={(e) => set('description', e.target.value)}
-          />
-        </FormField>
-        <FormActions
-          submitLabel={t('walkingStations.save')}
-          cancelLabel={t('walkingStations.cancel')}
-          submitting={saving}
-          onCancel={() => history.back()}
-        />
-      </AppForm>
+        </AppForm>
+      </div>
     </FormCard>
   )
 }

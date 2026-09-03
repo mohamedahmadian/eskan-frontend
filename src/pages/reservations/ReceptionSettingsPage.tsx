@@ -4,9 +4,11 @@ import {
   Building2,
   Calendar,
   CalendarDays,
+  CircleHelp,
   FileText,
   Globe2,
   Info,
+  Landmark,
   LayoutGrid,
   Plus,
   ScrollText,
@@ -35,7 +37,8 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { addDaysIso, currentPersianYear, persianYearOptions } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import type { Country, PlacementGenderPolicy, ReceptionSettings, ReservationType } from '../../types/app'
+import type { BankAccount, Country, PlacementGenderPolicy, ReceptionSettings, ReservationType } from '../../types/app'
+import { reservationHelpField, reservationHelpKeys } from './reservation-help'
 import { ReceptionMultilineItems } from './ReceptionTypeContent'
 
 type DraftPlan = {
@@ -143,9 +146,18 @@ const emptyDraft = (): Draft => ({
   caravanCountryIds: [],
   caravanContactsCountryIds: [],
   insuranceOrganization: '',
+  insuranceBankAccountId: null as string | null,
   insurancePlans: [],
   imamRezaMartyrdomDate: null,
   prophetDemiseDate: null,
+  helpTravel: '',
+  helpReview: '',
+  helpCompanions: '',
+  helpCompanionsCaravan: '',
+  helpContacts: '',
+  helpInsurance: '',
+  helpComplete: '',
+  helpPlacement: '',
 })
 
 let planKeySeq = 0
@@ -163,7 +175,7 @@ function emptyPlan(): DraftPlan {
   }
 }
 
-type ReceptionTab = ReservationType | 'PLACEMENT' | 'INSURANCE' | 'OCCASIONS'
+type ReceptionTab = ReservationType | 'PLACEMENT' | 'INSURANCE' | 'OCCASIONS' | 'GUIDE'
 
 function toDraft(data: ReceptionSettings | Draft): Draft {
   const countryIds =
@@ -214,6 +226,7 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     placementGenderPolicy: data.placementGenderPolicy ?? 'SINGLE_GENDER',
     ...countryIds,
     insuranceOrganization: data.insuranceOrganization ?? '',
+    insuranceBankAccountId: data.insuranceBankAccountId ?? null,
     insurancePlans: (data.insurancePlans ?? []).map((plan) => ({
       key: 'id' in plan && plan.id ? plan.id : nextPlanKey(),
       id: 'id' in plan && plan.id ? plan.id : undefined,
@@ -223,6 +236,14 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     })),
     imamRezaMartyrdomDate: data.imamRezaMartyrdomDate ?? null,
     prophetDemiseDate: data.prophetDemiseDate ?? null,
+    helpTravel: data.helpTravel ?? '',
+    helpReview: data.helpReview ?? '',
+    helpCompanions: data.helpCompanions ?? '',
+    helpCompanionsCaravan: data.helpCompanionsCaravan ?? '',
+    helpContacts: data.helpContacts ?? '',
+    helpInsurance: data.helpInsurance ?? '',
+    helpComplete: data.helpComplete ?? '',
+    helpPlacement: data.helpPlacement ?? '',
   }
 }
 
@@ -240,7 +261,7 @@ function toPayload(draft: Draft) {
 }
 
 const types: ReservationType[] = ['INDIVIDUAL', 'GROUP', 'CARAVAN']
-const tabs: ReceptionTab[] = [...types, 'PLACEMENT', 'INSURANCE', 'OCCASIONS']
+const tabs: ReceptionTab[] = [...types, 'PLACEMENT', 'INSURANCE', 'OCCASIONS', 'GUIDE']
 
 function typeKeys(type: ReservationType) {
   if (type === 'INDIVIDUAL') {
@@ -285,10 +306,28 @@ function typeKeys(type: ReservationType) {
   } as const
 }
 
+function helpStepLabelKey(key: (typeof reservationHelpKeys)[number]) {
+  return key === 'companionsCaravan'
+    ? 'reservations.steps.companionsCaravan'
+    : `reservations.steps.${key}`
+}
+
+function withHelpDefaults(draft: Draft, translate: (key: string) => string): Draft {
+  const next = { ...draft }
+  for (const key of reservationHelpKeys) {
+    const field = reservationHelpField[key]
+    if (!next[field].trim()) {
+      next[field] = translate(`reservations.helpContent.${key}.body`)
+    }
+  }
+  return next
+}
+
 function tabLabel(item: ReceptionTab, t: (key: string) => string) {
   if (item === 'PLACEMENT') return t('receptionSettings.placement')
   if (item === 'INSURANCE') return t('receptionSettings.insurance')
   if (item === 'OCCASIONS') return t('receptionSettings.occasions')
+  if (item === 'GUIDE') return t('receptionSettings.guide')
   return t(`receptionSettings.${typeKeys(item).title}`)
 }
 
@@ -345,10 +384,18 @@ export function ReceptionSettingsPage() {
     },
   })
 
+  const bankAccounts = useQuery({
+    queryKey: ['bank-accounts', 'lookup'],
+    queryFn: async () => {
+      const { data } = await api.get<BankAccount[]>('/bank-accounts')
+      return data.filter((item) => item.isActive)
+    },
+  })
+
   useEffect(() => {
     if (!settings.data) return
-    setDraft(toDraft(settings.data))
-  }, [settings.data])
+    setDraft(withHelpDefaults(toDraft(settings.data), t))
+  }, [settings.data, t])
 
   const save = useMutation({
     mutationFn: async (payload: Draft) => {
@@ -686,6 +733,26 @@ export function ReceptionSettingsPage() {
               maxLength={200}
             />
           </FormField>
+          <FormField
+            icon={Landmark}
+            label={t('receptionSettings.insuranceBankAccount')}
+            htmlFor="insuranceBankAccountId"
+          >
+            <SearchSelect
+              id="insuranceBankAccountId"
+              value={draft.insuranceBankAccountId ?? ''}
+              onChange={(next) => patch('insuranceBankAccountId', next || null)}
+              placeholder={t('receptionSettings.selectInsuranceBankAccount')}
+              options={[
+                { value: '', label: t('receptionSettings.none') },
+                ...(bankAccounts.data ?? []).map((item) => ({
+                  value: item.id,
+                  label: `${item.bankName} — ${item.accountNumber}`,
+                })),
+              ]}
+            />
+          </FormField>
+          <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.insuranceBankAccountHint')}</p>
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-ink-800">
@@ -810,6 +877,30 @@ export function ReceptionSettingsPage() {
               {occasionError}
             </p>
           ) : null}
+        </section>
+        <section data-tab="GUIDE" className={panelClass('GUIDE')}>
+          <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.guideHint')}</p>
+          <p className="text-sm leading-7 text-ink-500">{t('receptionSettings.guideEmptyHint')}</p>
+          {reservationHelpKeys.map((key) => {
+            const field = reservationHelpField[key]
+            return (
+              <FormField
+                key={key}
+                icon={CircleHelp}
+                label={t(helpStepLabelKey(key))}
+                htmlFor={field}
+              >
+                <textarea
+                  id={field}
+                  className={`${fieldClassName} min-h-28`}
+                  value={draft[field]}
+                  onChange={(event) => patch(field, event.target.value)}
+                  maxLength={4000}
+                  placeholder={t(`reservations.helpContent.${key}.body`)}
+                />
+              </FormField>
+            )
+          })}
         </section>
         <FormActions submitLabel={t('receptionSettings.save')} submitting={save.isPending} />
       </AppForm>

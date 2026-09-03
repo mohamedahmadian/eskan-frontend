@@ -1,22 +1,24 @@
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { AppForm, Button, cardClassName } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
-import type { Reservation } from '../../types/app'
+import { useGeoName } from '../../lib/geo'
+import type { Reservation, WalkingRoute } from '../../types/app'
 import {
   ReservationTravelFields,
   travelDatesError,
+  walkingRouteOriginError,
   type TravelValues,
 } from './ReservationTravelFields'
 import {
   RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
   fetchSubjectReservationSpans,
 } from './reservation-date-overlap'
-import { workingHeadcount, requestedHeadcount } from './reservation-steps'
+import { workingHeadcount, requestedHeadcount, pilgrimOriginCountryId } from './reservation-steps'
 import { TravelSubStepBar } from './TravelSubStepBar'
 import {
   inferTravelSubMaxReached,
@@ -35,6 +37,8 @@ export function ReservationTravelStep({
   mode?: 'owner' | 'admin'
 }) {
   const { t } = useTranslation()
+  const nameOf = useGeoName()
+  const queryClient = useQueryClient()
   const locked = mode === 'owner' && Boolean(reservation.basicInfoLockedAt)
   const sendForReview = reservation.status === 'DRAFT'
   const dualCounts = mode === 'admin'
@@ -97,6 +101,16 @@ export function ReservationTravelStep({
   const maxReachedIndex = Math.max(stepIndex, subSteps.indexOf(maxReached), subSteps.indexOf(inferredMax))
   const effectiveMax = subSteps[Math.min(maxReachedIndex, subSteps.length - 1)] ?? subSteps[0]
   const lastStep = stepIndex >= subSteps.length - 1
+
+  const pilgrimCountryId = useMemo(
+    () =>
+      pilgrimOriginCountryId({
+        userCountryId: reservation.originCountry?.id,
+        caravanCity: reservation.caravan?.city,
+        groupCity: reservation.group?.city,
+      }),
+    [reservation.originCountry?.id, reservation.caravan?.city, reservation.group?.city],
+  )
 
   const applicant = reservation.createdBy
   const existingReservationsQuery = useQuery({
@@ -161,6 +175,38 @@ export function ReservationTravelStep({
       if (dateError) {
         toast.error(dateError)
         return false
+      }
+      if (
+        (activeSubStep === 'dates' || activeSubStep === 'optional') &&
+        values.walkingRouteId &&
+        pilgrimCountryId
+      ) {
+        let route =
+          queryClient.getQueryData<WalkingRoute>([
+            'walking-route',
+            values.walkingRouteId,
+          ]) ?? null
+        if (!route) {
+          route = await queryClient.fetchQuery({
+            queryKey: ['walking-route', values.walkingRouteId],
+            queryFn: async () => {
+              const { data } = await api.get<WalkingRoute>(
+                `/walking-routes/${values.walkingRouteId}`,
+              )
+              return data
+            },
+          })
+        }
+        const routeError = walkingRouteOriginError(
+          route,
+          pilgrimCountryId,
+          t,
+          nameOf,
+        )
+        if (routeError) {
+          toast.error(routeError)
+          return false
+        }
       }
       return true
     } catch (error) {
@@ -312,7 +358,7 @@ export function ReservationTravelStep({
           }
           type={reservation.type}
           locked={locked}
-          countryId={reservation.originCountry?.id}
+          countryId={pilgrimCountryId}
           activeSubStep={activeSubStep}
           dualCounts={dualCounts}
           selectedParty={selectedParty}

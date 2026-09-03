@@ -48,7 +48,7 @@ export function ReservationStepNav({
   nextIcon = 'next',
 }: {
   onPrev?: () => void
-  onNext: () => void
+  onNext?: () => void
   nextLabel?: string
   nextPending?: boolean
   nextDisabled?: boolean
@@ -57,7 +57,7 @@ export function ReservationStepNav({
 }) {
   const { t } = useTranslation()
   const disabled = Boolean(nextPending || nextDisabled)
-  const showReason = Boolean(nextDisabled && nextTitle)
+  const showReason = Boolean(onNext && nextDisabled && nextTitle)
 
   return (
     <div className="space-y-3 border-t border-line px-5 py-4 sm:px-6">
@@ -74,24 +74,26 @@ export function ReservationStepNav({
             {t('reservations.prevStep')}
           </Button>
         ) : null}
-        <Button
-          type="button"
-          className="ms-auto"
-          disabled={disabled}
-          aria-describedby={showReason ? 'step-next-blocked-reason' : undefined}
-          onClick={() => {
-            if (disabled) return
-            scrollPageToTop()
-            onNext()
-          }}
-        >
-          {nextLabel ?? t('reservations.nextStep')}
-          {nextIcon === 'complete' ? (
-            <Check className="size-4" aria-hidden />
-          ) : (
-            <ChevronLeft className="size-4" aria-hidden />
-          )}
-        </Button>
+        {onNext ? (
+          <Button
+            type="button"
+            className="ms-auto"
+            disabled={disabled}
+            aria-describedby={showReason ? 'step-next-blocked-reason' : undefined}
+            onClick={() => {
+              if (disabled) return
+              scrollPageToTop()
+              onNext()
+            }}
+          >
+            {nextLabel ?? t('reservations.nextStep')}
+            {nextIcon === 'complete' ? (
+              <Check className="size-4" aria-hidden />
+            ) : (
+              <ChevronLeft className="size-4" aria-hidden />
+            )}
+          </Button>
+        ) : null}
       </div>
       {showReason ? (
         <StepBlockedNotice

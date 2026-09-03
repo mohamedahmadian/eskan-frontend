@@ -46,7 +46,7 @@ export function LoginPage() {
       <FormCard
         icon={KeyRound}
         title={t('auth.loginTitle')}
-        action={<AuthBackButton to="/welcome" />}
+        action={<AuthBackButton to="/" />}
       >
         <AppForm className={formCardBodyClassName} onSubmit={onSubmit} autoFocusFirst>
           <FormField icon={User} label={t('auth.username')} htmlFor="username">

@@ -257,7 +257,6 @@ export function UserForm({
   const usernameCheckSeq = useRef(0)
   const emailCheckSeq = useRef(0)
   const isCreate = !initial?.id
-  const personalFieldsLocked = isCreate && !selfProfile && !nationalIdReady
 
   useEffect(() => {
     const id = pendingFocusId.current
@@ -295,8 +294,9 @@ export function UserForm({
   const selectedCountryId = countryId || (isCreate ? iranCountryId : '')
   const isIranian = !iranCountryId || !selectedCountryId || selectedCountryId === iranCountryId
   const phoneRequired = selfProfile ? isIranian : true
-  const identityRequired = !selfProfile
+  const identityRequired = !selfProfile && isIranian
   const identityIsPassport = selfProfile && !isIranian
+  const personalFieldsLocked = isCreate && !selfProfile && identityRequired && !nationalIdReady
   const provinces = useQuery({
     queryKey: ['provinces', 'lookup', selectedCountryId],
     enabled: Boolean(selectedCountryId),
@@ -377,7 +377,7 @@ export function UserForm({
         setFieldError('nationalId', message)
         return false
       }
-    } else if (!isValidIranianNationalId(value)) {
+    } else if (isIranian && !isValidIranianNationalId(value)) {
       lastNationalIdCheck.current = value
       setNationalIdReady(false)
       setIdentityStatus('idle')
@@ -616,7 +616,7 @@ export function UserForm({
         failField('personal', 'nationalId', t('users.passportRequired'))
         return
       }
-    } else if (identityValue && !isValidIranianNationalId(identityValue)) {
+    } else if (isIranian && identityValue && !isValidIranianNationalId(identityValue)) {
       failField('personal', 'nationalId', t('users.nationalIdInvalid'))
       return
     }
@@ -1141,6 +1141,7 @@ export function UserForm({
               setCountryId(next)
               setProvinceId('')
               setCityId('')
+              clearError('nationalId')
             }}
             placeholder={t('geo.selectCountry')}
             options={[
@@ -1238,7 +1239,8 @@ export function UserForm({
         <FormField icon={MessageCircle} label={t('users.telegram')} htmlFor="telegram">
           <input
             id="telegram"
-            className={fieldClassName}
+            className={`${fieldClassName} latin-field`}
+            dir="ltr"
             value={telegram}
             onChange={(e) => setTelegram(e.target.value)}
           />
@@ -1246,7 +1248,8 @@ export function UserForm({
         <FormField icon={MessageCircle} label={t('users.bale')} htmlFor="bale">
           <input
             id="bale"
-            className={fieldClassName}
+            className={`${fieldClassName} latin-field`}
+            dir="ltr"
             value={bale}
             onChange={(e) => setBale(e.target.value)}
           />
@@ -1254,7 +1257,8 @@ export function UserForm({
         <FormField icon={MessageCircle} label={t('users.eitaa')} htmlFor="eitaa">
           <input
             id="eitaa"
-            className={fieldClassName}
+            className={`${fieldClassName} latin-field`}
+            dir="ltr"
             value={eitaa}
             onChange={(e) => setEitaa(e.target.value)}
           />
@@ -1262,7 +1266,8 @@ export function UserForm({
         <FormField icon={Phone} label={t('users.whatsapp')} htmlFor="whatsapp">
           <input
             id="whatsapp"
-            className={fieldClassName}
+            className={`${fieldClassName} latin-field`}
+            dir="ltr"
             value={whatsapp}
             onChange={(e) => setWhatsapp(e.target.value)}
           />
@@ -1270,7 +1275,8 @@ export function UserForm({
         <FormField icon={Share2} label={t('users.otherSocial')} htmlFor="otherSocial">
           <input
             id="otherSocial"
-            className={fieldClassName}
+            className={`${fieldClassName} latin-field`}
+            dir="ltr"
             value={otherSocial}
             onChange={(e) => setOtherSocial(e.target.value)}
           />

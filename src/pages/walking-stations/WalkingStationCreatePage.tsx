@@ -71,6 +71,7 @@ export function WalkingStationCreatePage() {
           neshanAddress: null,
           maleCount: 0,
           femaleCount: 0,
+          managerUserId: null,
           managerName: null,
           managerPhone: null,
           managerTelegram: null,

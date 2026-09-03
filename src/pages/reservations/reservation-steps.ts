@@ -373,6 +373,19 @@ export function isReceptionTypeAvailable(
   )
 }
 
+/** Pilgrim origin country from party city or applicant profile — not from walking route. */
+export function pilgrimOriginCountryId(options: {
+  userCountryId?: string | null
+  caravanCity?: { province?: { countryId?: string } | null } | null
+  groupCity?: { province?: { countryId?: string } | null } | null
+}): string | undefined {
+  const partyCountry =
+    options.caravanCity?.province?.countryId ??
+    options.groupCity?.province?.countryId
+  if (partyCountry) return partyCountry
+  return options.userCountryId ?? undefined
+}
+
 export function validReturnStatuses(type: ReservationType): ReservationStatus[] {
   if (type === 'INDIVIDUAL') return ['DRAFT', 'INSURANCE']
   if (type === 'GROUP') return ['DRAFT', 'COMPANIONS', 'INSURANCE']
@@ -414,7 +427,7 @@ export function capacityKey(type: ReservationType) {
 }
 
 export function isInsuranceAccepted(status: ReservationMemberInsuranceStatus) {
-  return status === 'PAID' || status === 'APPROVED'
+  return status === 'APPROVED'
 }
 
 export function insurancePaidMethodLabel(
@@ -441,8 +454,10 @@ export function summarizeInsurance(
   const paid = members.filter((item) => item.insuranceStatus === 'PAID').length
   const approved = members.filter((item) => item.insuranceStatus === 'APPROVED').length
   const rejected = members.filter((item) => item.insuranceStatus === 'REJECTED').length
-  const accepted = members.filter((item) => isInsuranceAccepted(item.insuranceStatus))
-  const paidAmount = accepted.reduce(
+  const submitted = members.filter(
+    (item) => item.insuranceStatus === 'PAID' || isInsuranceAccepted(item.insuranceStatus),
+  )
+  const paidAmount = submitted.reduce(
     (sum, item) => sum + (item.insurancePaidAmount ?? fallbackPremium),
     0,
   )
@@ -455,12 +470,12 @@ export function summarizeInsurance(
   return {
     total: members.length,
     pending,
-    paid: 0,
-    approved: paid + approved,
+    paid,
+    approved,
     rejected,
     paidAmount,
     lastPaidAt,
-    completed: members.length > 0 && pending === 0 && rejected === 0,
+    completed: members.length > 0 && pending === 0 && paid === 0 && rejected === 0 && approved === members.length,
   }
 }
 

@@ -57,7 +57,7 @@ export function PublicParticipationsPage() {
       tone: "teal",
     },
     {
-      to: "/welcome/participations/campaigns",
+      to: "/participations/campaigns",
       icon: Coins,
       titleKey: "landing.participations.cashTitle",
       hintKey: "landing.participations.cashHint",
@@ -65,7 +65,7 @@ export function PublicParticipationsPage() {
       tone: "mint",
     },
     {
-      to: "/welcome/participations/in-kind",
+      to: "/participations/in-kind",
       icon: Gift,
       titleKey: "landing.participations.inKindTitle",
       hintKey: "landing.participations.inKindHint",
@@ -78,7 +78,7 @@ export function PublicParticipationsPage() {
     <LandingShell>
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-8">
         <Link
-          to="/welcome"
+          to="/"
           className="inline-flex items-center gap-2 rounded-2xl text-sm font-medium text-teal-700 transition hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
         >
           <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />

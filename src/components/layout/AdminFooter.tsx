@@ -7,6 +7,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthProvider'
 import { BaleIcon, EitaaIcon, InstagramIcon, TelegramIcon } from '../brand/SocialBrandIcon'
 import { APP_VERSION } from '../../lib/app-version'
 import { localizeDigits, parseDigitString } from '../../lib/datetime'
@@ -78,8 +79,10 @@ export function AdminFooter({
   compactEnd?: boolean
 }) {
   const { t, i18n } = useTranslation()
+  const { user } = useAuth()
   const { pathname } = useLocation()
   const isMobile = useMobileFooterViewport()
+  const persistOpen = !user
   const [open, setOpen] = useState(true)
   const [hideCycle, setHideCycle] = useState(0)
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -99,7 +102,7 @@ export function AdminFooter({
   const hasContacts = phones.length > 0 || links.length > 0
   const versionLabel = t('nav.appVersion')
   const versionText = localizeDigits(APP_VERSION, locale)
-  const collapsed = isMobile && !open
+  const collapsed = isMobile && !persistOpen && !open
 
   useEffect(() => {
     setOpen(true)
@@ -107,10 +110,10 @@ export function AdminFooter({
   }, [pathname])
 
   useEffect(() => {
-    if (!isMobile || !open) return
+    if (persistOpen || !isMobile || !open) return
     const timer = window.setTimeout(() => setOpen(false), AUTO_HIDE_MS)
     return () => window.clearTimeout(timer)
-  }, [isMobile, open, hideCycle])
+  }, [persistOpen, isMobile, open, hideCycle])
 
   function revealFooter() {
     setOpen(true)

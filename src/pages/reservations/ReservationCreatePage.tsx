@@ -17,7 +17,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -34,7 +34,7 @@ import {
 import { FormMetaChip } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { addDaysIso, currentPersianYear, formatNumber } from '../../lib/datetime'
-import { isIranCountry } from '../../lib/geo'
+import { isIranCountry, useGeoName } from '../../lib/geo'
 import { isCaravanManager } from '../../lib/roles'
 import type {
   Country,
@@ -46,6 +46,7 @@ import type {
   Reservation,
   ReservationPermitOptions,
   ReservationType,
+  WalkingRoute,
 } from '../../types/app'
 import {
   CAPACITY_WARNING_RATIO,
@@ -54,6 +55,7 @@ import {
   isOwnerCreateDraft,
   partyMaxSize,
   isReceptionTypeAvailable,
+  pilgrimOriginCountryId,
 } from './reservation-steps'
 import {
   ReceptionRulesModal,
@@ -76,6 +78,7 @@ import {
   OccasionStayHint,
   ReservationTravelInfoFields,
   ReservationApplicantFields,
+  walkingRouteOriginError,
   type TravelValues,
 } from './ReservationTravelFields'
 import {
@@ -304,6 +307,7 @@ function furtherCreateStep(
 export function ReservationCreatePage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
+  const nameOf = useGeoName()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
@@ -409,36 +413,20 @@ export function ReservationCreatePage() {
       : !isAdminCreate
         ? user
         : null
-  const originCountryId = draftQuery.data?.originCountry?.id ?? ''
+  const pilgrimCountryId = useMemo(
+    () =>
+      pilgrimOriginCountryId({
+        userCountryId:
+          subject && 'countryId' in subject ? subject.countryId : user?.countryId,
+        caravanCity: draftQuery.data?.caravan?.city,
+        groupCity: draftQuery.data?.group?.city,
+      }),
+    [subject, user?.countryId, draftQuery.data?.caravan?.city, draftQuery.data?.group?.city],
+  )
   const admissionTypes: ReservationType[] = types
   const skipLicenseStep =
-    type === 'CARAVAN' && Boolean(originCountryId) && !isIranCountry(originCountryId, iranId)
-  const createOptions = (
-    nextType: ReservationType | '' = type,
-    skipParty = skipCaravanParty,
-  ): CreateStepOptions => ({
-    skipCaravanParty: skipParty,
-    skipLicense: nextType === 'CARAVAN' && Boolean(originCountryId) && !isIranCountry(originCountryId, iranId),
-  })
-  const steps = useMemo(
-    () =>
-      stepsForCreateType(type, {
-        skipCaravanParty,
-        skipLicense: skipLicenseStep,
-      }),
-    [type, skipCaravanParty, skipLicenseStep],
-  )
-  const stepIndex = steps.indexOf(step)
-  const maxReachedIndex = Math.max(stepIndex, steps.indexOf(maxReachedStep))
-  const lastStep = stepIndex === steps.length - 1
+    type === 'CARAVAN' && Boolean(pilgrimCountryId) && !isIranCountry(pilgrimCountryId, iranId)
   const partyKind: PartyKind | null = type === 'GROUP' || type === 'CARAVAN' ? type : null
-  const finalSubmitBlocked =
-    lastStep &&
-    !skipLicenseStep &&
-    type === 'CARAVAN' &&
-    permitDraft.source === 'ISSUED_LICENSE' &&
-    Boolean(permitDraft.issuedLicenseId) &&
-    isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
   const needsPartyCity = !subject?.cityId
   const subjectReady = !isAdminCreate || Boolean(subject) || Boolean(draftParam && draftHydrated)
   const subjectNationalId =
@@ -476,6 +464,40 @@ export function ReservationCreatePage() {
       return data
     },
   })
+
+  const availableTypes = useMemo(() => {
+    if (!settings.isSuccess || !settings.data) return null
+    return admissionTypes.filter((item) => isReceptionTypeAvailable(settings.data, item))
+  }, [admissionTypes, settings.data, settings.isSuccess])
+  const skipTypeStep = Boolean(availableTypes?.length === 1)
+  const createOptions = (
+    nextType: ReservationType | '' = type,
+    skipParty = skipCaravanParty,
+  ): CreateStepOptions => ({
+    skipCaravanParty: skipParty,
+    skipLicense: nextType === 'CARAVAN' && Boolean(pilgrimCountryId) && !isIranCountry(pilgrimCountryId, iranId),
+    skipType: skipTypeStep,
+  })
+  const steps = useMemo(
+    () =>
+      stepsForCreateType(type, {
+        skipCaravanParty,
+        skipLicense: skipLicenseStep,
+        skipType: skipTypeStep,
+      }),
+    [type, skipCaravanParty, skipLicenseStep, skipTypeStep],
+  )
+  const autoTypeHandledRef = useRef(false)
+  const stepIndex = steps.indexOf(step)
+  const maxReachedIndex = Math.max(stepIndex, steps.indexOf(maxReachedStep))
+  const lastStep = stepIndex === steps.length - 1
+  const finalSubmitBlocked =
+    lastStep &&
+    !skipLicenseStep &&
+    type === 'CARAVAN' &&
+    permitDraft.source === 'ISSUED_LICENSE' &&
+    Boolean(permitDraft.issuedLicenseId) &&
+    isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
 
   useEffect(() => {
     if (!draftParam) {
@@ -726,9 +748,6 @@ export function ReservationCreatePage() {
         setDraftId(data.id)
         navigate(createWizardPath(data.id, createBase, forUserId || undefined), { replace: true })
         await refresh()
-        if (!options?.silent) {
-          toast.success(t('reservations.draftSaved'))
-        }
         savedId = data.id
       }
       await queryClient.invalidateQueries({ queryKey: ['reservations'] })
@@ -802,6 +821,13 @@ export function ReservationCreatePage() {
       setSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    if (draftId || step !== 'type' || submitting || autoTypeHandledRef.current) return
+    if (!availableTypes || availableTypes.length !== 1) return
+    autoTypeHandledRef.current = true
+    void goAfterType(availableTypes[0])
+  }, [draftId, step, submitting, availableTypes])
 
   async function goToCreateStep(next: CreateStep) {
     if (next === step) return
@@ -934,6 +960,34 @@ export function ReservationCreatePage() {
       if (dateError) {
         toast.error(dateError)
         return false
+      }
+      if (values.walkingRouteId && pilgrimCountryId) {
+        let route =
+          queryClient.getQueryData<WalkingRoute>([
+            'walking-route',
+            values.walkingRouteId,
+          ]) ?? null
+        if (!route) {
+          route = await queryClient.fetchQuery({
+            queryKey: ['walking-route', values.walkingRouteId],
+            queryFn: async () => {
+              const { data } = await api.get<WalkingRoute>(
+                `/walking-routes/${values.walkingRouteId}`,
+              )
+              return data
+            },
+          })
+        }
+        const routeError = walkingRouteOriginError(
+          route,
+          pilgrimCountryId,
+          t,
+          nameOf,
+        )
+        if (routeError) {
+          toast.error(routeError)
+          return false
+        }
       }
       return true
     } catch (error) {
@@ -1225,32 +1279,30 @@ export function ReservationCreatePage() {
       >
         {step === 'type' ? (
           <>
-            <div className="flex flex-col gap-4">
-              {admissionTypes.map((item) => {
-                const Icon = typeIcons[item]
-                const enabled = isReceptionTypeAvailable(
-                  settings.data,
-                  item,
-                  originCountryId || undefined,
-                )
-                const selected = type === item
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    disabled={!enabled || submitting}
-                    data-enter-ignore=""
-                    onClick={() => void goAfterType(item)}
-                    className={`w-full rounded-[22px] border p-5 text-start transition-[box-shadow,transform,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:p-6 ${
-                      selected
-                        ? 'border-teal-500 bg-teal-50 shadow-[0_16px_36px_rgba(46,189,182,0.24),0_0_0_4px_rgba(255,255,255,0.95),0_0_0_7px_rgba(46,189,182,0.32)]'
-                        : 'border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]'
-                    } ${!enabled || submitting ? 'cursor-not-allowed' : `cursor-pointer ${typeCardHoverClass}`}`}
-                  >
-                    {settings.isSuccess && !enabled ? (
-                      <CreateUnavailableNotice className="mb-4" />
-                    ) : null}
-                    <div className={!enabled && settings.isSuccess ? 'opacity-55' : undefined}>
+            {availableTypes === null ? (
+              <LoadingState />
+            ) : availableTypes.length === 0 ? (
+              <CreateUnavailableNotice />
+            ) : availableTypes.length === 1 && !type ? (
+              <LoadingState />
+            ) : (
+              <div className="flex flex-col gap-4">
+                {availableTypes.map((item) => {
+                  const Icon = typeIcons[item]
+                  const selected = type === item
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      disabled={submitting}
+                      data-enter-ignore=""
+                      onClick={() => void goAfterType(item)}
+                      className={`w-full rounded-[22px] border p-5 text-start transition-[box-shadow,transform,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:p-6 ${
+                        selected
+                          ? 'border-teal-500 bg-teal-50 shadow-[0_16px_36px_rgba(46,189,182,0.24),0_0_0_4px_rgba(255,255,255,0.95),0_0_0_7px_rgba(46,189,182,0.32)]'
+                          : 'border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]'
+                      } ${submitting ? 'cursor-not-allowed' : `cursor-pointer ${typeCardHoverClass}`}`}
+                    >
                       <div className="flex items-center gap-3">
                         <span
                           className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${
@@ -1266,11 +1318,11 @@ export function ReservationCreatePage() {
                         settings={settings.data}
                         className="mt-4"
                       />
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             <RequiredHidden value={type} />
           </>
         ) : null}
@@ -1335,7 +1387,7 @@ export function ReservationCreatePage() {
             onChange={patchValues}
             showOccasionHint={false}
             error={datesOverlapError}
-            countryId={draftQuery.data?.originCountry?.id}
+            countryId={pilgrimCountryId}
           />
         ) : null}
 

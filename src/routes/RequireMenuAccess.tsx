@@ -6,6 +6,8 @@ import {
   canAccessMyEvaluations,
   canAccessMyGroups,
   canAccessMyReservations,
+  isAdmin,
+  isPilgrim,
 } from '../lib/roles'
 
 export function hasMenuAccess(path: string, modules: { menus: { path: string }[] }[]) {
@@ -24,6 +26,20 @@ export function hasModuleAccess(
   return modules.some((mod) => mod.code === code)
 }
 
+export function canAccessParticipationCampaigns(
+  user:
+    | {
+        roles?: { code: string }[]
+        modules?: { menus: { path: string }[] }[]
+      }
+    | null
+    | undefined,
+) {
+  if (!user) return false
+  if (hasMenuAccess('/participations/campaigns', user.modules ?? [])) return true
+  return isPilgrim(user)
+}
+
 export function RequireMenuAccess({
   path,
   allowModule,
@@ -36,7 +52,8 @@ export function RequireMenuAccess({
   const allowed = Boolean(
     user &&
       (hasMenuAccess(path, user.modules) ||
-        (allowModule ? hasModuleAccess(allowModule, user.modules) : false)),
+        (allowModule ? hasModuleAccess(allowModule, user.modules) : false) ||
+        (path === '/participations/campaigns' && isPilgrim(user))),
   )
 
   if (!user || !allowed) {
@@ -63,5 +80,17 @@ export function RequireMenuAccess({
     return <Navigate to="/" replace />
   }
 
+  return <Outlet />
+}
+
+export function RequireAdmin({
+  fallback = '/',
+}: {
+  fallback?: string
+}) {
+  const { user } = useAuth()
+  if (!isAdmin(user)) {
+    return <Navigate to={fallback} replace />
+  }
   return <Outlet />
 }

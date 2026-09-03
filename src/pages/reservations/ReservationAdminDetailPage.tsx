@@ -2,10 +2,13 @@ import {
   ArrowRight,
   ClipboardCheck,
   CreditCard,
+  Footprints,
   HandHeart,
   IdCard,
+  MapPin,
   Phone,
   RotateCcw,
+  Settings2,
   Smartphone,
   StickyNote,
   Tent,
@@ -29,14 +32,15 @@ import {
   fieldClassName,
   listShellClassName,
 } from '../../components/ui/Form'
+import { FormMetaChip } from '../../components/ui/FormLayout'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { SearchSelect } from '../../components/ui/SearchSelect'
-import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
-import { canAssignReservationHonorary, showReservationHonoraryAssignments } from '../../lib/honorary-services'
+import { useGeoName } from '../../lib/geo'
+import { canAssignReservationHonorary } from '../../lib/honorary-services'
 import { isAdmin } from '../../lib/roles'
 import type { Reservation, ReservationPerson, ReservationStatus } from '../../types/app'
 import {
@@ -44,7 +48,6 @@ import {
   isInsuranceAccepted,
   ownerFlowSteps,
   validRewindStatuses,
-  applicantHintKey,
   applicantSectionKey,
   type ReservationStepCode,
 } from './reservation-steps'
@@ -127,9 +130,10 @@ export function ReservationAdminDetailPage() {
   const canRejectMidStage =
     !rejected && reservation.status !== 'CANCELLED' && reservation.status !== 'COMPLETED'
   const rewindTargets = admin ? validRewindStatuses(reservation.type, reservation.status) : []
-  const headerBtnClass = 'h-8 gap-1 !rounded-xl !px-2.5 !py-1 text-xs shadow-none'
   const showHonoraryAssign = admin && canAssignReservationHonorary(reservation)
+  const honoraryCount = reservation.honoraryAssignments?.length ?? 0
   const fileInfoOnly = !admin || translatorView
+  const showReviewActions = admin && (pendingReview || canRejectMidStage)
 
   return (
     <div className={listShellClassName}>
@@ -143,101 +147,17 @@ export function ReservationAdminDetailPage() {
         }
         backTo={translatorView ? '/translator-reservations' : undefined}
         action={
-          admin ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {pendingReview ? (
-              <ReservationReviewActions
-                reservation={reservation}
-                onChanged={refresh}
-                compact
-                requireRejectReason
-              />
-            ) : canRejectMidStage ? (
-              <ReservationReviewActions
-                reservation={reservation}
-                onChanged={refresh}
-                compact
-                rejectOnly
-                requireRejectReason
-              />
-            ) : null}
-            <Button
-              type="button"
-              variant={issuedModal === 'sim' ? 'primary' : 'ghost'}
-              className={headerBtnClass}
-              aria-pressed={issuedModal === 'sim'}
-              onClick={() => {
-                setToolPanel(null)
-                setHonoraryModal(false)
-                setIssuedModal((current) => (current === 'sim' ? null : 'sim'))
-              }}
-            >
-              <Smartphone className="size-3.5" aria-hidden />
-              {t('reservations.trackSimCard')}
-            </Button>
-            <Button
-              type="button"
-              variant={issuedModal === 'bank' ? 'primary' : 'ghost'}
-              className={headerBtnClass}
-              aria-pressed={issuedModal === 'bank'}
-              onClick={() => {
-                setToolPanel(null)
-                setHonoraryModal(false)
-                setIssuedModal((current) => (current === 'bank' ? null : 'bank'))
-              }}
-            >
-              <CreditCard className="size-3.5" aria-hidden />
-              {t('reservations.trackMobile')}
-            </Button>
-            {showHonoraryAssign ? (
-              <Button
-                type="button"
-                variant={honoraryModal ? 'primary' : 'ghost'}
-                className={headerBtnClass}
-                aria-pressed={honoraryModal}
-                onClick={() => {
-                  setToolPanel(null)
-                  setIssuedModal(null)
-                  setHonoraryModal((current) => !current)
-                }}
-              >
-                <HandHeart className="size-3.5" aria-hidden />
-                {t('reservations.assignHonorary')}
-              </Button>
-            ) : null}
-            {rewindTargets.length ? (
-              <Button
-                type="button"
-                variant={toolPanel === 'return' ? 'primary' : 'soft'}
-                className={headerBtnClass}
-                aria-pressed={toolPanel === 'return'}
-                onClick={() => {
-                  setIssuedModal(null)
-                  setHonoraryModal(false)
-                  setToolPanel((current) => (current === 'return' ? null : 'return'))
-                }}
-              >
-                <RotateCcw className="size-3.5" aria-hidden />
-                {t('reservations.returnForCorrection')}
-              </Button>
-            ) : null}
-          </div>
+          showReviewActions ? (
+            <ReservationReviewActions
+              reservation={reservation}
+              onChanged={refresh}
+              compact
+              rejectOnly={!pendingReview}
+              requireRejectReason
+            />
           ) : undefined
         }
       />
-
-      {toolPanel === 'return' && rewindTargets.length ? (
-        <ReturnForCorrectionCard
-          key={`${reservation.id}-${reservation.status}`}
-          reservation={reservation}
-          returnOptions={rewindTargets}
-          onChanged={() => {
-            setToolPanel(null)
-            refresh()
-          }}
-          onClose={() => setToolPanel(null)}
-        />
-      ) : null}
 
       {issuedModal ? (
         <ReservationIssuedServicesModal
@@ -259,32 +179,7 @@ export function ReservationAdminDetailPage() {
         />
       ) : null}
 
-      <ApplicantCard
-        person={
-          reservation.type === 'CARAVAN' && reservation.caravanManager
-            ? reservation.caravanManager
-            : reservation.createdBy
-        }
-        type={reservation.type}
-      />
-
-      {admin &&
-      !fileInfoOnly &&
-      reservation.status !== 'COMPLETED' &&
-      showReservationHonoraryAssignments(reservation, showHonoraryAssign) ? (
-        <div className="mb-4">
-          <ReservationHonoraryBox
-            reservation={reservation}
-            canAssign={showHonoraryAssign}
-            onChanged={refresh}
-            onAssign={() => {
-              setIssuedModal(null)
-              setToolPanel(null)
-              setHonoraryModal(true)
-            }}
-          />
-        </div>
-      ) : null}
+      <ApplicantCard reservation={reservation} />
 
       {rejected && reservation.rejectionReason ? (
         <div className={`${cardClassName} mb-4 flex items-start gap-3 border-red-100 p-4`}>
@@ -389,6 +284,100 @@ export function ReservationAdminDetailPage() {
           </div>
         </section>
       ) : null}
+
+      {honoraryCount > 0 ? (
+        <div className="mt-4">
+          <ReservationHonoraryBox
+            reservation={reservation}
+            canAssign={showHonoraryAssign}
+            onChanged={refresh}
+            onAssign={() => {
+              setIssuedModal(null)
+              setToolPanel(null)
+              setHonoraryModal(true)
+            }}
+          />
+        </div>
+      ) : null}
+
+      {toolPanel === 'return' && rewindTargets.length ? (
+        <div className="mt-4">
+          <ReturnForCorrectionCard
+            key={`${reservation.id}-${reservation.status}`}
+            reservation={reservation}
+            returnOptions={rewindTargets}
+            onChanged={() => {
+              setToolPanel(null)
+              refresh()
+            }}
+            onClose={() => setToolPanel(null)}
+          />
+        </div>
+      ) : null}
+
+      {admin ? (
+        <section className={`${cardClassName} mt-4 overflow-hidden`}>
+          <ReservationSectionHeader icon={Settings2} title={t('common.actions')} />
+          <div className="flex flex-wrap items-center justify-center gap-2 p-5 sm:p-6">
+            <Button
+              type="button"
+              variant={issuedModal === 'sim' ? 'primary' : 'ghost'}
+              aria-pressed={issuedModal === 'sim'}
+              onClick={() => {
+                setToolPanel(null)
+                setHonoraryModal(false)
+                setIssuedModal((current) => (current === 'sim' ? null : 'sim'))
+              }}
+            >
+              <Smartphone className="size-4" aria-hidden />
+              {t('reservations.trackSimCard')}
+            </Button>
+            <Button
+              type="button"
+              variant={issuedModal === 'bank' ? 'primary' : 'ghost'}
+              aria-pressed={issuedModal === 'bank'}
+              onClick={() => {
+                setToolPanel(null)
+                setHonoraryModal(false)
+                setIssuedModal((current) => (current === 'bank' ? null : 'bank'))
+              }}
+            >
+              <CreditCard className="size-4" aria-hidden />
+              {t('reservations.trackMobile')}
+            </Button>
+            {showHonoraryAssign ? (
+              <Button
+                type="button"
+                variant={honoraryModal ? 'primary' : 'ghost'}
+                aria-pressed={honoraryModal}
+                onClick={() => {
+                  setToolPanel(null)
+                  setIssuedModal(null)
+                  setHonoraryModal((current) => !current)
+                }}
+              >
+                <HandHeart className="size-4" aria-hidden />
+                {t('reservations.manageHonorary')}
+              </Button>
+            ) : null}
+            {rewindTargets.length ? (
+              <Button
+                type="button"
+                variant={toolPanel === 'return' ? 'primary' : 'soft'}
+                aria-pressed={toolPanel === 'return'}
+                onClick={() => {
+                  setIssuedModal(null)
+                  setHonoraryModal(false)
+                  setToolPanel((current) => (current === 'return' ? null : 'return'))
+                }}
+              >
+                <RotateCcw className="size-4" aria-hidden />
+                {t('reservations.setFileStep')}
+              </Button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }
@@ -399,94 +388,50 @@ function receptionSearchPath(person: ReservationPerson) {
   return `/reception?q=${encodeURIComponent(q)}`
 }
 
-function ApplicantCard({
-  person,
-  type,
-}: {
-  person: ReservationPerson
-  type: Reservation['type']
-}) {
+function ApplicantCard({ reservation }: { reservation: Reservation }) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const Icon = type === 'CARAVAN' ? Tent : type === 'GROUP' ? Users : UserRound
+  const nameOf = useGeoName()
+  const person =
+    reservation.type === 'CARAVAN' && reservation.caravanManager
+      ? reservation.caravanManager
+      : reservation.createdBy
+  const Icon = reservation.type === 'CARAVAN' ? Tent : reservation.type === 'GROUP' ? Users : UserRound
   const searchTo =
     hasMenuAccess('/reception', user?.modules ?? []) ? receptionSearchPath(person) : null
+  const city = reservation.originCity ? nameOf(reservation.originCity) : ''
+  const route = reservation.walkingRoute?.name?.trim() || ''
+  const nameChip = <FormMetaChip icon={UserRound} label={personName(person)} />
+
   return (
     <section className={`${cardClassName} mb-4 overflow-hidden`}>
       <ReservationSectionHeader
         icon={Icon}
-        title={t(applicantSectionKey(type))}
-        hint={t(applicantHintKey(type))}
+        title={t(applicantSectionKey(reservation.type))}
         action={<OpenUserPanelButton userId={person.id} status={person.status} />}
+        chips={
+          <>
+            {searchTo ? (
+              <Link
+                to={searchTo}
+                title={t('reception.openFromFile')}
+                aria-label={t('reception.openFromFile')}
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+              >
+                {nameChip}
+              </Link>
+            ) : (
+              nameChip
+            )}
+            {person.phone ? <FormMetaChip icon={Phone} copyValue={person.phone} /> : null}
+            {person.nationalId ? <FormMetaChip icon={IdCard} copyValue={person.nationalId} /> : null}
+            {city ? <FormMetaChip icon={MapPin} label={city} /> : null}
+            {route ? <FormMetaChip icon={Footprints} label={route} /> : null}
+          </>
+        }
       />
-      <div className="grid gap-2 p-5 sm:grid-cols-3 sm:gap-3 sm:p-6">
-        <ApplicantTile
-          icon={UserRound}
-          label={t('users.fullName')}
-          value={personName(person)}
-          to={searchTo}
-          toLabel={t('reception.openFromFile')}
-        />
-        <ApplicantTile
-          icon={Phone}
-          label={t('users.phone')}
-          value={<CopyableDigits value={person.phone} />}
-        />
-        <ApplicantTile
-          icon={IdCard}
-          label={t('users.nationalId')}
-          value={<CopyableDigits value={person.nationalId} />}
-        />
-      </div>
     </section>
   )
-}
-
-function ApplicantTile({
-  icon: Icon,
-  label,
-  value,
-  to,
-  toLabel,
-}: {
-  icon: typeof UserRound
-  label: string
-  value: ReactNode
-  to?: string | null
-  toLabel?: string
-}) {
-  const body = (
-    <>
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
-        <Icon className="size-4" aria-hidden />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-ink-500">{label}</p>
-        <p
-          className={`mt-0.5 break-words text-sm font-semibold ${
-            to ? 'text-teal-800 underline-offset-2 group-hover:underline' : 'text-ink-900'
-          }`}
-        >
-          {value}
-        </p>
-      </div>
-    </>
-  )
-  const className =
-    'flex items-center gap-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50 to-white px-3 py-3'
-  if (to) {
-    return (
-      <Link
-        to={to}
-        title={toLabel}
-        aria-label={toLabel}
-        className={`group ${className} transition hover:border-teal-300 hover:shadow-[0_8px_16px_rgba(46,189,182,0.12)]`}
-      >
-        {body}
-      </Link>
-    )
-  }
-  return <div className={className}>{body}</div>
 }
 
 function AdminEditableStep({
@@ -686,7 +631,7 @@ function ReturnForCorrectionCard({
   }
 
   return (
-    <section className={`${cardClassName} relative mb-4 overflow-hidden`}>
+    <section className={`${cardClassName} relative overflow-hidden`}>
       {onClose ? (
         <button
           type="button"
@@ -699,7 +644,7 @@ function ReturnForCorrectionCard({
       ) : null}
       <ReservationSectionHeader
         icon={RotateCcw}
-        title={t('reservations.returnForCorrection')}
+        title={t('reservations.setFileStep')}
         hint={t(hintKey)}
       />
       <div className="p-5 sm:p-6">

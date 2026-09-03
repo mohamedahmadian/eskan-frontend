@@ -12,9 +12,6 @@ export function ProtectedRoute() {
   }
 
   if (!user) {
-    if (location.pathname === '/') {
-      return <Navigate to="/welcome" replace />
-    }
     const next = `${location.pathname}${location.search}`
     return <Navigate to={withNext('/login', next)} replace />
   }

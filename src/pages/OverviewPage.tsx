@@ -17,12 +17,19 @@ import { useAuth } from '../auth/AuthProvider'
 import { api } from '../lib/api'
 import { cardClassName, listShellClassName } from '../components/ui/Form'
 import { formatNumber } from '../lib/datetime'
-import { usesDedicatedHomeDashboard, isAdmin, isLicenseIssuer, isGovernmentOrgOfficer } from '../lib/roles'
+import {
+  usesDedicatedHomeDashboard,
+  isAdmin,
+  isLicenseIssuer,
+  isGovernmentOrgOfficer,
+  isStationManager,
+} from '../lib/roles'
 import type { ParticipationCampaign } from '../types/app'
 import { HeadquartersServiceYearsCard } from './dashboard/HeadquartersServiceYearsCard'
 import { CampaignCard } from './participations/CampaignCard'
 import { GovernmentOrgOfficerDashboard } from './dashboard/GovernmentOrgOfficerDashboard'
 import { LicenseIssuerDashboard } from './dashboard/LicenseIssuerDashboard'
+import { StationManagerDashboard } from './dashboard/StationManagerDashboard'
 import { UserHomeDashboard } from './dashboard/UserHomeDashboard'
 
 const quickTone = {
@@ -207,6 +214,9 @@ export function OverviewPage() {
   }
   if (!isAdmin(user) && isGovernmentOrgOfficer(user)) {
     return <GovernmentOrgOfficerDashboard />
+  }
+  if (!isAdmin(user) && isStationManager(user)) {
+    return <StationManagerDashboard />
   }
   if (usesDedicatedHomeDashboard(user)) {
     return <UserHomeDashboard />

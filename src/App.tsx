@@ -91,7 +91,6 @@ import { BankAccountsListPage } from "./pages/participations/BankAccountsListPag
 import { CampaignCreatePage } from "./pages/participations/CampaignCreatePage";
 import { CampaignDetailPage } from "./pages/participations/CampaignDetailPage";
 import { CampaignEditPage } from "./pages/participations/CampaignEditPage";
-import { CampaignsListPage } from "./pages/participations/CampaignsListPage";
 import { CryptoWalletCreatePage } from "./pages/participations/CryptoWalletCreatePage";
 import { CryptoWalletDetailPage } from "./pages/participations/CryptoWalletDetailPage";
 import { CryptoWalletEditPage } from "./pages/participations/CryptoWalletEditPage";
@@ -102,11 +101,9 @@ import { ParticipantEditPage } from "./pages/participations/ParticipantEditPage"
 import { ParticipantsListPage } from "./pages/participations/ParticipantsListPage";
 import { ParticipationsHomePage } from "./pages/participations/ParticipationsHomePage";
 import { LoginPage } from "./pages/LoginPage";
-import { LandingPage } from "./pages/LandingPage";
 import { PublicAboutPage } from "./pages/landing/PublicAboutPage";
 import { PublicAnnouncementPage } from "./pages/landing/PublicAnnouncementPage";
 import { PublicCampaignPage } from "./pages/landing/PublicCampaignPage";
-import { PublicCampaignsPage } from "./pages/landing/PublicCampaignsPage";
 import { PublicContactPage } from "./pages/landing/PublicContactPage";
 import { PublicInKindPage } from "./pages/landing/PublicInKindPage";
 import { PublicNewsPage } from "./pages/landing/PublicNewsPage";
@@ -118,7 +115,6 @@ import { ImpersonateEndedPage } from "./pages/ImpersonateEndedPage";
 import { ImpersonateEntryPage } from "./pages/ImpersonateEntryPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { RegisterPage } from "./pages/RegisterPage";
-import { OverviewPage } from "./pages/OverviewPage";
 import { PilgrimCardPage } from "./pages/pilgrims/PilgrimCardPage";
 import { PilgrimCreatePage } from "./pages/pilgrims/PilgrimCreatePage";
 import { PilgrimDetailPage } from "./pages/pilgrims/PilgrimDetailPage";
@@ -198,6 +194,9 @@ import { WalkingStationCreatePage } from "./pages/walking-stations/WalkingStatio
 import { WalkingStationDetailPage } from "./pages/walking-stations/WalkingStationDetailPage";
 import { WalkingStationEditPage } from "./pages/walking-stations/WalkingStationEditPage";
 import { WalkingStationsListPage } from "./pages/walking-stations/WalkingStationsListPage";
+import { MyWalkingStationsListPage } from "./pages/walking-stations/MyWalkingStationsListPage";
+import { StationReportPage } from "./pages/walking-stations/StationReportPage";
+import { StationReservationHistoryPage } from "./pages/walking-stations/StationReservationHistoryPage";
 import { SupplierCreatePage } from "./pages/suppliers/SupplierCreatePage";
 import { SupplierDetailPage } from "./pages/suppliers/SupplierDetailPage";
 import { SupplierEditPage } from "./pages/suppliers/SupplierEditPage";
@@ -278,8 +277,11 @@ import { HonoraryServiceTypeCreatePage } from "./pages/honorary-servants/Honorar
 import { HonoraryServiceTypeDetailPage } from "./pages/honorary-servants/HonoraryServiceTypeDetailPage";
 import { HonoraryServiceTypeEditPage } from "./pages/honorary-servants/HonoraryServiceTypeEditPage";
 import { HonoraryServiceTypesListPage } from "./pages/honorary-servants/HonoraryServiceTypesListPage";
+import { CampaignsEntry } from "./routes/CampaignsEntry";
+import { HomePage } from "./routes/HomePage";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
-import { RequireMenuAccess } from "./routes/RequireMenuAccess";
+import { WelcomeRedirect } from "./routes/WelcomeRedirect";
+import { RequireAdmin, RequireMenuAccess } from "./routes/RequireMenuAccess";
 import { PublicIceVoucherPage } from "./pages/public-vouchers/PublicIceVoucherPage";
 import { PublicItemVoucherPage } from "./pages/public-vouchers/PublicItemVoucherPage";
 
@@ -309,30 +311,31 @@ export default function App() {
           <NavigationHistoryProvider>
           <AppToaster />
           <Routes>
-            <Route path="/welcome" element={<LandingPage />} />
-            <Route path="/welcome/news/:id" element={<PublicNewsPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/news/:id" element={<PublicNewsPage />} />
             <Route
-              path="/welcome/announcements/:id"
+              path="/announcements/:id"
               element={<PublicAnnouncementPage />}
             />
             <Route
-              path="/welcome/participations"
+              path="/participations"
               element={<PublicParticipationsPage />}
             />
             <Route
-              path="/welcome/participations/campaigns"
-              element={<PublicCampaignsPage />}
+              path="/participations/campaigns"
+              element={<CampaignsEntry />}
             />
             <Route
-              path="/welcome/participations/in-kind"
+              path="/participations/in-kind"
               element={<PublicInKindPage />}
             />
             <Route
-              path="/welcome/participations/:id"
+              path="/participations/:id"
               element={<PublicCampaignPage />}
             />
-            <Route path="/welcome/about" element={<PublicAboutPage />} />
-            <Route path="/welcome/contact" element={<PublicContactPage />} />
+            <Route path="/about" element={<PublicAboutPage />} />
+            <Route path="/contact" element={<PublicContactPage />} />
+            <Route path="/welcome/*" element={<WelcomeRedirect />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/impersonate" element={<ImpersonateEntryPage />} />
             <Route path="/impersonate-ended" element={<ImpersonateEndedPage />} />
@@ -345,7 +348,6 @@ export default function App() {
             <Route path="/s/:id" element={<PublicWalkingStationPage />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
-                <Route path="/" element={<OverviewPage />} />
                 <Route path="/honorary-apply" element={<HonoraryApplyPage />} />
                 <Route
                   path="/honorary-apply/:id"
@@ -1042,6 +1044,40 @@ export default function App() {
                     element={<HeadquartersAnnouncementEditPage />}
                   />
                 </Route>
+                <Route
+                  element={<RequireMenuAccess path="/my-walking-stations" />}
+                >
+                  <Route
+                    path="/my-walking-stations"
+                    element={<MyWalkingStationsListPage />}
+                  />
+                  <Route
+                    path="/my-walking-stations/:id"
+                    element={<WalkingStationDetailPage />}
+                  />
+                  <Route
+                    path="/my-walking-stations/:id/edit"
+                    element={<WalkingStationEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/station-report" />}
+                >
+                  <Route
+                    path="/station-report"
+                    element={<StationReportPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/station-reservation-history" />
+                  }
+                >
+                  <Route
+                    path="/station-reservation-history"
+                    element={<StationReservationHistoryPage />}
+                  />
+                </Route>
                 <Route element={<RequireMenuAccess path="/my-accommodations" />}>
                   <Route
                     path="/my-accommodations"
@@ -1505,37 +1541,35 @@ export default function App() {
                   }
                 >
                   <Route
-                    path="/participations/campaigns"
-                    element={<CampaignsListPage />}
-                  />
-                  <Route
-                    path="/participations/campaigns/new"
-                    element={<CampaignCreatePage />}
-                  />
-                  <Route
                     path="/participations/campaigns/:id"
                     element={<CampaignDetailPage />}
                   />
-                  <Route
-                    path="/participations/campaigns/:id/edit"
-                    element={<CampaignEditPage />}
-                  />
-                  <Route
-                    path="/participations/campaigns/:id/participants"
-                    element={<ParticipantsListPage />}
-                  />
-                  <Route
-                    path="/participations/campaigns/:id/participants/new"
-                    element={<ParticipantCreatePage />}
-                  />
-                  <Route
-                    path="/participations/campaigns/:id/participants/:participantId"
-                    element={<ParticipantDetailPage />}
-                  />
-                  <Route
-                    path="/participations/campaigns/:id/participants/:participantId/edit"
-                    element={<ParticipantEditPage />}
-                  />
+                  <Route element={<RequireAdmin fallback="/participations/campaigns" />}>
+                    <Route
+                      path="/participations/campaigns/new"
+                      element={<CampaignCreatePage />}
+                    />
+                    <Route
+                      path="/participations/campaigns/:id/edit"
+                      element={<CampaignEditPage />}
+                    />
+                    <Route
+                      path="/participations/campaigns/:id/participants"
+                      element={<ParticipantsListPage />}
+                    />
+                    <Route
+                      path="/participations/campaigns/:id/participants/new"
+                      element={<ParticipantCreatePage />}
+                    />
+                    <Route
+                      path="/participations/campaigns/:id/participants/:participantId"
+                      element={<ParticipantDetailPage />}
+                    />
+                    <Route
+                      path="/participations/campaigns/:id/participants/:participantId/edit"
+                      element={<ParticipantEditPage />}
+                    />
+                  </Route>
                 </Route>
                 <Route
                   element={

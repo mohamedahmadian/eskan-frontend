@@ -6,15 +6,19 @@ import {
   CheckCheck,
   Clock3,
   CreditCard,
+  FileText,
+  Landmark,
+  Receipt,
   Shield,
   ShieldCheck,
   UserRound,
   Users,
   Wallet,
+  X,
   XCircle,
   type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
@@ -30,9 +34,17 @@ import { DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { Button, LoadingState, cardClassName } from '../../components/ui/Form'
 import { CheckboxField } from '../../components/ui/CheckboxField'
+import { FormField, fieldClassName } from '../../components/ui/Form'
+import { PersianDateField } from '../../components/ui/PersianDateField'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatGroupedNumber, formatNumber } from '../../lib/datetime'
-import type { ReceptionInsurancePlan, ReceptionSettings, Reservation, ReservationMember } from '../../types/app'
+import type {
+  PublicBankAccount,
+  ReceptionInsurancePlan,
+  ReceptionSettings,
+  Reservation,
+  ReservationMember,
+} from '../../types/app'
 import {
   canPayInsurance,
   insurancePaidMethodLabel,
@@ -46,6 +58,16 @@ import { ReservationIdentityChips, ReservationSectionHeader } from './Reservatio
 import { InsuranceStatusBadge } from './ReservationStatusBadge'
 
 const chartValueLabel = { fill: '#3f3a34', fontSize: 12, fontWeight: 600 }
+
+type InsurancePaymentTab = 'online' | 'receipt'
+
+type PayInsurancePayload = {
+  memberIds: string[]
+  method: InsurancePaymentTab
+  receiptDate?: string
+  receiptTrackingNo?: string
+  receiptBankName?: string
+}
 
 type Tone = 'teal' | 'mint' | 'ink' | 'amber' | 'red'
 
@@ -100,12 +122,12 @@ export function InsuranceStep({
   const groupSelect = reservation.type !== 'INDIVIDUAL'
   const allAccepted =
     members.length > 0 && members.every((item) => isInsuranceAccepted(item.insuranceStatus))
-  const permitReady =
-    reservation.type !== 'CARAVAN' ||
-    (reservation.hasPermit && reservation.permitStatus === 'APPROVED')
-  const canCompleteFile = allAccepted && permitReady
   const [selected, setSelected] = useState<string[]>([])
   const [selectedPlanId, setSelectedPlanId] = useState<string>('')
+  const [paymentTab, setPaymentTab] = useState<InsurancePaymentTab>('online')
+  const [receiptDate, setReceiptDate] = useState('')
+  const [receiptTrackingNo, setReceiptTrackingNo] = useState('')
+  const [receiptBankName, setReceiptBankName] = useState('')
   const showNav =
     reservation.status !== 'COMPLETED' &&
     reservation.status !== 'CANCELLED' &&
@@ -120,6 +142,8 @@ export function InsuranceStep({
     },
   })
   const plans = settings.data?.insurancePlans ?? []
+  const insuranceBankAccount = settings.data?.insuranceBankAccount ?? null
+  const receiptPaymentEnabled = mode === 'user' && Boolean(insuranceBankAccount)
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null
   const premium = selectedPlan?.premiumAmount ?? 0
   const summary = summarizeInsurance(members, premium)
@@ -136,23 +160,38 @@ export function InsuranceStep({
   }, [settings.data?.insurancePlans])
 
   const pay = useMutation({
-    mutationFn: async (memberIds: string[]) => {
+    mutationFn: async (payload: PayInsurancePayload) => {
       if (!selectedPlanId) {
         throw new Error('NO_PLAN')
       }
+      const body: Record<string, unknown> = {
+        memberIds: payload.memberIds,
+        insurancePlanId: selectedPlanId,
+        method: payload.method === 'receipt' ? 'RECEIPT' : 'ONLINE',
+      }
+      if (payload.method === 'receipt') {
+        body.receiptDate = payload.receiptDate
+        body.receiptTrackingNo = payload.receiptTrackingNo
+        body.receiptBankName = payload.receiptBankName
+      }
       const { data } = await api.post<Reservation>(
         `/reservations/${reservation.id}/insurance/pay`,
-        { memberIds, insurancePlanId: selectedPlanId },
+        body,
       )
-      return data
+      return { data, method: payload.method }
     },
-    onSuccess: (data) => {
+    onSuccess: ({ data, method }) => {
       toast.success(
         data.status === 'COMPLETED'
           ? t('reservations.insuranceCompleted')
-          : t('reservations.insurancePaidOk'),
+          : method === 'receipt'
+            ? t('reservations.insuranceReceiptSubmittedOk')
+            : t('reservations.insurancePaidOk'),
       )
       setSelected([])
+      setReceiptDate('')
+      setReceiptTrackingNo('')
+      setReceiptBankName('')
       onChanged()
     },
     onError: (error) => {
@@ -162,20 +201,6 @@ export function InsuranceStep({
       }
       toast.error(getApiErrorMessage(error, t('common.error')))
     },
-  })
-
-  const complete = useMutation({
-    mutationFn: async () => {
-      const { data } = await api.post<Reservation>(
-        `/reservations/${reservation.id}/insurance/complete`,
-      )
-      return data
-    },
-    onSuccess: () => {
-      toast.success(t('reservations.insuranceCompleted'))
-      onChanged()
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
   if (!canSeeMembers) {
@@ -192,12 +217,42 @@ export function InsuranceStep({
     )
   }
 
+  function buildReceiptPayload(memberIds: string[]): PayInsurancePayload | null {
+    const tracking = receiptTrackingNo.trim()
+    const bank = receiptBankName.trim()
+    if (!receiptDate) {
+      toast.error(t('reservations.insuranceReceiptDate'))
+      return null
+    }
+    if (!tracking) {
+      toast.error(t('reservations.insuranceReceiptTrackingNo'))
+      return null
+    }
+    if (!bank) {
+      toast.error(t('reservations.insuranceReceiptBankName'))
+      return null
+    }
+    return {
+      memberIds,
+      method: 'receipt',
+      receiptDate,
+      receiptTrackingNo: tracking,
+      receiptBankName: bank,
+    }
+  }
+
   function payOne(id: string) {
     if (!selectedPlanId) {
       toast.error(t('reservations.insuranceSelectPlan'))
       return
     }
-    pay.mutate([id])
+    if (mode === 'user' && paymentTab === 'receipt') {
+      const payload = buildReceiptPayload([id])
+      if (!payload) return
+      pay.mutate(payload)
+      return
+    }
+    pay.mutate({ memberIds: [id], method: 'online' })
   }
 
   function paySelected() {
@@ -209,7 +264,13 @@ export function InsuranceStep({
       toast.error(t('reservations.insuranceNoneSelected'))
       return
     }
-    pay.mutate(selected)
+    if (mode === 'user' && paymentTab === 'receipt') {
+      const payload = buildReceiptPayload(selected)
+      if (!payload) return
+      pay.mutate(payload)
+      return
+    }
+    pay.mutate({ memberIds: selected, method: 'online' })
   }
 
   const payableIds = payable.map((item) => item.id)
@@ -228,11 +289,9 @@ export function InsuranceStep({
       <ReservationSectionHeader
         icon={Shield}
         title={t('reservations.steps.insurance')}
-        hint={
-          allAccepted
-            ? t('reservations.insurancePaidHint')
-            : t(mode === 'admin' ? 'reservations.insuranceStepHintAdmin' : 'reservations.insuranceStepHint')
-        }
+        hint={t(
+          mode === 'admin' ? 'reservations.insuranceStepHintAdmin' : 'reservations.insuranceStepHint',
+        )}
         badge={
           allAccepted ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-teal-500 px-2 py-0.5 text-[11px] font-medium text-white">
@@ -254,6 +313,7 @@ export function InsuranceStep({
         />
         {groupSelect ? (
           <GroupInsuranceBody
+            reservationId={reservation.id}
             members={members}
             summary={summary}
             locale={locale}
@@ -267,17 +327,30 @@ export function InsuranceStep({
             onToggleAll={toggleAll}
             onSelectAll={selectAll}
             onPayOne={payOne}
+            onChanged={onChanged}
           />
         ) : (
           <IndividualInsuranceBody
             member={members[0]}
+            reservationId={reservation.id}
             amount={moneyText(premium, locale, t)}
             paidAmount={moneyText(members[0]?.insurancePaidAmount ?? premium, locale, t)}
             paying={pay.isPending}
             mode={mode}
             locale={locale}
             canPayPlan={Boolean(selectedPlanId)}
+            paymentTab={paymentTab}
+            onPaymentTabChange={setPaymentTab}
+            receiptPaymentEnabled={receiptPaymentEnabled}
+            insuranceBankAccount={insuranceBankAccount}
+            receiptDate={receiptDate}
+            receiptTrackingNo={receiptTrackingNo}
+            receiptBankName={receiptBankName}
+            onReceiptDateChange={setReceiptDate}
+            onReceiptTrackingNoChange={setReceiptTrackingNo}
+            onReceiptBankNameChange={setReceiptBankName}
             onPay={() => members[0] && payOne(members[0].id)}
+            onChanged={onChanged}
           />
         )}
         {groupSelect && payable.length ? (
@@ -287,33 +360,23 @@ export function InsuranceStep({
             locale={locale}
             paying={pay.isPending}
             mode={mode}
+            paymentTab={paymentTab}
+            onPaymentTabChange={setPaymentTab}
+            receiptPaymentEnabled={receiptPaymentEnabled}
+            insuranceBankAccount={insuranceBankAccount}
+            receiptDate={receiptDate}
+            receiptTrackingNo={receiptTrackingNo}
+            receiptBankName={receiptBankName}
+            onReceiptDateChange={setReceiptDate}
+            onReceiptTrackingNoChange={setReceiptTrackingNo}
+            onReceiptBankNameChange={setReceiptBankName}
             onPay={paySelected}
           />
         ) : null}
       </div>
       {showNav ? (
         <ReservationStepNav
-          nextPending={complete.isPending}
-          nextDisabled={!canCompleteFile}
-          nextTitle={
-            !permitReady
-              ? t('reservations.permitNotReady')
-              : t('reservations.insuranceNotReady')
-          }
-          nextLabel={t('reservations.completeInsurance')}
-          nextIcon="complete"
           onPrev={prevStep && onGoToStep ? () => onGoToStep(prevStep) : undefined}
-          onNext={() => {
-            if (!permitReady) {
-              toast.error(t('reservations.permitNotReady'))
-              return
-            }
-            if (!allAccepted) {
-              toast.error(t('reservations.insuranceNotReady'))
-              return
-            }
-            complete.mutate()
-          }}
         />
       ) : null}
     </section>
@@ -322,32 +385,58 @@ export function InsuranceStep({
 
 function IndividualInsuranceBody({
   member,
+  reservationId,
   amount,
   paidAmount,
   paying,
   mode,
   locale,
   canPayPlan,
+  paymentTab,
+  onPaymentTabChange,
+  receiptPaymentEnabled,
+  insuranceBankAccount,
+  receiptDate,
+  receiptTrackingNo,
+  receiptBankName,
+  onReceiptDateChange,
+  onReceiptTrackingNoChange,
+  onReceiptBankNameChange,
   onPay,
+  onChanged,
 }: {
   member?: ReservationMember
+  reservationId: string
   amount: string
   paidAmount: string
   paying: boolean
   mode: 'user' | 'admin'
   locale: string
   canPayPlan: boolean
+  paymentTab: InsurancePaymentTab
+  onPaymentTabChange: (tab: InsurancePaymentTab) => void
+  receiptPaymentEnabled: boolean
+  insuranceBankAccount: PublicBankAccount | null
+  receiptDate: string
+  receiptTrackingNo: string
+  receiptBankName: string
+  onReceiptDateChange: (value: string) => void
+  onReceiptTrackingNoChange: (value: string) => void
+  onReceiptBankNameChange: (value: string) => void
   onPay: () => void
+  onChanged: () => void
 }) {
   const { t } = useTranslation()
   if (!member) return null
   const accepted = isInsuranceAccepted(member.insuranceStatus)
+  const awaitingApproval = member.insuranceStatus === 'PAID'
+  const canPay = canPayInsurance(member.insuranceStatus)
 
   return (
     <>
       <section>
         <SectionTitle icon={Wallet}>{t('reservations.insurancePremium')}</SectionTitle>
-        {accepted ? (
+        {accepted || awaitingApproval ? (
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             {member.insuranceCoverageAmount != null ? (
               <FactTile
@@ -388,20 +477,31 @@ function IndividualInsuranceBody({
         ) : (
           <FactTile icon={Banknote} label={t('reservations.insurancePremium')} value={amount} tone="teal" />
         )}
-        <p className="mt-3 text-sm leading-7 text-ink-700">
-          {accepted
-            ? t('reservations.insuranceIndividualPaid')
-            : t('reservations.insuranceIndividualBody', { amount })}
-        </p>
-        {accepted ? null : (
-          <p className="mt-1 text-sm leading-7 text-ink-500">
-            {t(
-              mode === 'admin'
-                ? 'reservations.insuranceIndividualHintAdmin'
-                : 'reservations.insuranceIndividualHint',
-            )}
+        {accepted ? null : awaitingApproval ? (
+          <p className="mt-3 text-sm leading-7 text-teal-800">
+            {t('reservations.insuranceReceiptAwaitingApproval')}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm leading-7 text-ink-700">
+            {t('reservations.insuranceIndividualBody', { amount })}
           </p>
         )}
+        {awaitingApproval || member.insurancePaidMethod === 'BANK_RECEIPT' ? (
+          <InsuranceReceiptDetails member={member} locale={locale} className="mt-4" />
+        ) : null}
+        {mode === 'admin' && awaitingApproval ? (
+          <AdminInsuranceReview
+            reservationId={reservationId}
+            member={member}
+            onChanged={onChanged}
+            className="mt-4"
+          />
+        ) : null}
+        {mode === 'admin' && !accepted && !awaitingApproval ? (
+          <p className="mt-1 text-sm leading-7 text-ink-500">
+            {t('reservations.insuranceIndividualHintAdmin')}
+          </p>
+        ) : null}
         {member.insuranceStatus === 'REJECTED' ? (
           <p className="mt-3 text-sm leading-7 text-red-700">
             {t('reservations.insuranceRejectedHint')}
@@ -410,26 +510,60 @@ function IndividualInsuranceBody({
               : ''}
           </p>
         ) : null}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {canPayInsurance(member.insuranceStatus) ? (
-            <Button type="button" disabled={paying || !canPayPlan} onClick={onPay}>
-              {mode === 'admin' ? (
-                <Banknote className="size-4" aria-hidden />
-              ) : (
-                <CreditCard className="size-4" aria-hidden />
-              )}
-              {t(mode === 'admin' ? 'reservations.insurancePayManual' : 'reservations.insurancePayOnline')}
-            </Button>
-          ) : (
+        {canPay ? (
+          <div className="mt-4 space-y-4">
+            {mode === 'user' ? (
+              <InsurancePaymentTabs
+                tab={paymentTab}
+                onChange={onPaymentTabChange}
+                receiptEnabled={receiptPaymentEnabled}
+                onOnlineActivate={onPay}
+                canPayOnline={canPayPlan && !paying}
+              />
+            ) : null}
+            {mode === 'user' && paymentTab === 'receipt' && receiptPaymentEnabled && insuranceBankAccount ? (
+              <>
+                <InsuranceBankAccountInfo account={insuranceBankAccount} />
+                <InsuranceReceiptForm
+                  receiptDate={receiptDate}
+                  receiptTrackingNo={receiptTrackingNo}
+                  receiptBankName={receiptBankName}
+                  onReceiptDateChange={onReceiptDateChange}
+                  onReceiptTrackingNoChange={onReceiptTrackingNoChange}
+                  onReceiptBankNameChange={onReceiptBankNameChange}
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    onPay()
+                  }}
+                  submitting={paying}
+                  disabled={!canPayPlan}
+                />
+              </>
+            ) : mode === 'admin' ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="button" disabled={paying || !canPayPlan} onClick={onPay}>
+                  <Banknote className="size-4" aria-hidden />
+                  {t('reservations.insurancePayManual')}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : accepted || awaitingApproval ? (
+          <div className="mt-4">
             <InsuranceStatusBadge status={member.insuranceStatus} />
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <InsuranceStatusBadge status={member.insuranceStatus} />
+          </div>
+        )}
       </section>
     </>
   )
 }
 
 function GroupInsuranceBody({
+  reservationId,
   members,
   summary,
   locale,
@@ -443,7 +577,9 @@ function GroupInsuranceBody({
   onToggleAll,
   onSelectAll,
   onPayOne,
+  onChanged,
 }: {
+  reservationId: string
   members: ReservationMember[]
   summary: ReturnType<typeof summarizeInsurance>
   locale: string
@@ -457,10 +593,11 @@ function GroupInsuranceBody({
   onToggleAll: (checked: boolean) => void
   onSelectAll: () => void
   onPayOne: (id: string) => void
+  onChanged: () => void
 }) {
   const { t } = useTranslation()
   const n = (value: number) => formatNumber(value, locale)
-  const hasPayment = summary.approved > 0 || Boolean(summary.lastPaidAt)
+  const hasPayment = summary.approved > 0 || summary.paid > 0 || Boolean(summary.lastPaidAt)
   const tiles: { key: string; label: string; value: number; Icon: LucideIcon; tone: Tone }[] = [
     {
       key: 'total',
@@ -476,6 +613,17 @@ function GroupInsuranceBody({
       Icon: ShieldCheck,
       tone: 'mint',
     },
+    ...(summary.paid > 0
+      ? [
+          {
+            key: 'paid',
+            label: t('reservations.insuranceAwaitingApprovalCount'),
+            value: summary.paid,
+            Icon: Clock3,
+            tone: 'amber' as Tone,
+          },
+        ]
+      : []),
     {
       key: 'pending',
       label: t('reservations.insurancePendingCount'),
@@ -493,6 +641,16 @@ function GroupInsuranceBody({
   ]
   const chartData = [
     { key: 'approved', name: t('reservations.insuranceApprovedCount'), value: summary.approved, fill: '#059669' },
+    ...(summary.paid > 0
+      ? [
+          {
+            key: 'paid',
+            name: t('reservations.insuranceAwaitingApprovalCount'),
+            value: summary.paid,
+            fill: '#2ebdb6',
+          },
+        ]
+      : []),
     { key: 'pending', name: t('reservations.insurancePendingCount'), value: summary.pending, fill: '#f59e0b' },
     { key: 'rejected', name: t('reservations.insuranceRejectedCount'), value: summary.rejected, fill: '#ef4444' },
   ].filter((item) => item.value > 0)
@@ -649,6 +807,9 @@ function GroupInsuranceBody({
                     </td>
                     <td className="px-3 py-2">
                       <InsuranceStatusBadge status={item.insuranceStatus} />
+                      {item.insuranceStatus === 'PAID' ? (
+                        <InsuranceReceiptDetails member={item} locale={locale} compact className="mt-2" />
+                      ) : null}
                       {item.insuranceStatus === 'REJECTED' ? (
                         <p className="mt-1 text-xs text-red-700">
                           {t('reservations.insuranceRejectedHint')}
@@ -656,6 +817,15 @@ function GroupInsuranceBody({
                             ? ` ${t('reservations.rejectionReason')}: ${item.insuranceManualNote}`
                             : ''}
                         </p>
+                      ) : null}
+                      {mode === 'admin' && item.insuranceStatus === 'PAID' ? (
+                        <AdminInsuranceReview
+                          reservationId={reservationId}
+                          member={item}
+                          onChanged={onChanged}
+                          compact
+                          className="mt-2"
+                        />
                       ) : null}
                     </td>
                     <td className="px-3 py-2">
@@ -706,6 +876,18 @@ function GroupInsuranceBody({
                 <div className="mt-2">
                   <InsuranceStatusBadge status={item.insuranceStatus} />
                 </div>
+                {item.insuranceStatus === 'PAID' ? (
+                  <InsuranceReceiptDetails member={item} locale={locale} compact className="mt-2" />
+                ) : null}
+                {mode === 'admin' && item.insuranceStatus === 'PAID' ? (
+                  <AdminInsuranceReview
+                    reservationId={reservationId}
+                    member={item}
+                    onChanged={onChanged}
+                    compact
+                    className="mt-2"
+                  />
+                ) : null}
                 {item.insurancePaidMethod ? (
                   <p className="mt-1 text-xs text-ink-600">
                     {insurancePaidMethodLabel(item.insurancePaidMethod, t)}
@@ -746,6 +928,16 @@ function InsuranceSelectionBar({
   locale,
   paying,
   mode,
+  paymentTab,
+  onPaymentTabChange,
+  receiptPaymentEnabled,
+  insuranceBankAccount,
+  receiptDate,
+  receiptTrackingNo,
+  receiptBankName,
+  onReceiptDateChange,
+  onReceiptTrackingNoChange,
+  onReceiptBankNameChange,
   onPay,
 }: {
   selectedCount: number
@@ -753,13 +945,32 @@ function InsuranceSelectionBar({
   locale: string
   paying: boolean
   mode: 'user' | 'admin'
+  paymentTab: InsurancePaymentTab
+  onPaymentTabChange: (tab: InsurancePaymentTab) => void
+  receiptPaymentEnabled: boolean
+  insuranceBankAccount: PublicBankAccount | null
+  receiptDate: string
+  receiptTrackingNo: string
+  receiptBankName: string
+  onReceiptDateChange: (value: string) => void
+  onReceiptTrackingNoChange: (value: string) => void
+  onReceiptBankNameChange: (value: string) => void
   onPay: () => void
 }) {
   const { t } = useTranslation()
   const n = (value: number) => formatNumber(value, locale)
 
   return (
-    <section aria-live="polite">
+    <section aria-live="polite" className="space-y-4">
+      {mode === 'user' ? (
+        <InsurancePaymentTabs
+          tab={paymentTab}
+          onChange={onPaymentTabChange}
+          receiptEnabled={receiptPaymentEnabled}
+          onOnlineActivate={onPay}
+          canPayOnline={selectedCount > 0 && !paying}
+        />
+      ) : null}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
         <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 sm:gap-3">
           <FactTile
@@ -775,24 +986,38 @@ function InsuranceSelectionBar({
             tone="mint"
           />
         </div>
-        <div className="flex items-center">
-          <Button
-            type="button"
-            className="w-full lg:min-h-[4.25rem] lg:w-auto"
-            disabled={!selectedCount || paying}
-            onClick={onPay}
-          >
-            {mode === 'admin' ? (
+        {mode === 'user' && paymentTab === 'receipt' && receiptPaymentEnabled && insuranceBankAccount ? (
+          <div className="w-full space-y-4 lg:flex-1">
+            <InsuranceBankAccountInfo account={insuranceBankAccount} />
+            <InsuranceReceiptForm
+              receiptDate={receiptDate}
+              receiptTrackingNo={receiptTrackingNo}
+              receiptBankName={receiptBankName}
+              onReceiptDateChange={onReceiptDateChange}
+              onReceiptTrackingNoChange={onReceiptTrackingNoChange}
+              onReceiptBankNameChange={onReceiptBankNameChange}
+              onSubmit={(event) => {
+                event.preventDefault()
+                onPay()
+              }}
+              submitting={paying}
+              disabled={!selectedCount}
+              submitLabel={t('reservations.insurancePayMany', { count: n(selectedCount) })}
+            />
+          </div>
+        ) : mode === 'admin' ? (
+          <div className="flex items-center">
+            <Button
+              type="button"
+              className="w-full lg:min-h-[4.25rem] lg:w-auto"
+              disabled={!selectedCount || paying}
+              onClick={onPay}
+            >
               <Banknote className="size-4" aria-hidden />
-            ) : (
-              <CreditCard className="size-4" aria-hidden />
-            )}
-            {t(
-              mode === 'admin' ? 'reservations.insurancePayManualMany' : 'reservations.insurancePayMany',
-              { count: n(selectedCount) },
-            )}
-          </Button>
-        </div>
+              {t('reservations.insurancePayManualMany', { count: n(selectedCount) })}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </section>
   )
@@ -1006,5 +1231,286 @@ function MetricTile({
       <p className="text-lg font-bold leading-none text-ink-900">{value}</p>
       <p className="text-[10px] text-ink-400">{unit}</p>
     </article>
+  )
+}
+
+function InsurancePaymentTabs({
+  tab,
+  onChange,
+  receiptEnabled,
+  onOnlineActivate,
+  canPayOnline = true,
+}: {
+  tab: InsurancePaymentTab
+  onChange: (tab: InsurancePaymentTab) => void
+  receiptEnabled: boolean
+  onOnlineActivate?: () => void
+  canPayOnline?: boolean
+}) {
+  const { t } = useTranslation()
+
+  function selectOnline() {
+    if (tab !== 'online') onChange('online')
+    if (canPayOnline) onOnlineActivate?.()
+  }
+
+  return (
+    <nav className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        disabled={!canPayOnline}
+        onClick={selectOnline}
+        className={`inline-flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-sm font-medium transition ${
+          tab === 'online'
+            ? 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]'
+            : 'bg-white text-ink-700 ring-1 ring-line hover:bg-cream-50'
+        } ${!canPayOnline ? 'cursor-not-allowed opacity-60' : ''}`}
+      >
+        <CreditCard className={`size-3.5 ${tab === 'online' ? 'text-white' : 'text-teal-600'}`} aria-hidden />
+        {t('reservations.insurancePaymentTabOnline')}
+      </button>
+      {receiptEnabled ? (
+        <button
+          type="button"
+          onClick={() => onChange('receipt')}
+          className={`inline-flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-sm font-medium transition ${
+            tab === 'receipt'
+              ? 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]'
+              : 'bg-white text-ink-700 ring-1 ring-line hover:bg-cream-50'
+          }`}
+        >
+          <Receipt className={`size-3.5 ${tab === 'receipt' ? 'text-white' : 'text-teal-600'}`} aria-hidden />
+          {t('reservations.insurancePaymentTabReceipt')}
+        </button>
+      ) : null}
+    </nav>
+  )
+}
+
+function InsuranceBankAccountInfo({ account }: { account: PublicBankAccount }) {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-2 rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
+      <p className="text-sm leading-7 text-ink-700">{t('reservations.insuranceReceiptHint')}</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <FactTile
+          icon={Landmark}
+          label={t('reservations.insuranceReceiptBankName')}
+          value={account.bankName}
+          tone="teal"
+        />
+        <FactTile
+          icon={Wallet}
+          label={t('reservations.insuranceReceiptAccountNumber')}
+          value={<CopyableDigits value={account.accountNumber} />}
+          tone="mint"
+        />
+        {account.cardNumber ? (
+          <FactTile
+            icon={CreditCard}
+            label={t('reservations.insuranceReceiptCardNumber')}
+            value={<CopyableDigits value={account.cardNumber} />}
+            tone="teal"
+          />
+        ) : null}
+        <FactTile
+          icon={FileText}
+          label={t('reservations.insuranceReceiptIban')}
+          value={<CopyableDigits value={account.iban} />}
+          tone="mint"
+        />
+      </div>
+    </div>
+  )
+}
+
+function InsuranceReceiptForm({
+  receiptDate,
+  receiptTrackingNo,
+  receiptBankName,
+  onReceiptDateChange,
+  onReceiptTrackingNoChange,
+  onReceiptBankNameChange,
+  onSubmit,
+  submitting,
+  disabled,
+  submitLabel,
+}: {
+  receiptDate: string
+  receiptTrackingNo: string
+  receiptBankName: string
+  onReceiptDateChange: (value: string) => void
+  onReceiptTrackingNoChange: (value: string) => void
+  onReceiptBankNameChange: (value: string) => void
+  onSubmit: (event: FormEvent) => void
+  submitting: boolean
+  disabled?: boolean
+  submitLabel?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <form onSubmit={onSubmit} className="space-y-3 rounded-2xl border border-line bg-white p-4">
+      <SectionTitle icon={Receipt}>{t('reservations.insuranceReceiptDetails')}</SectionTitle>
+      <div className="grid gap-3 lg:grid-cols-3">
+        <FormField icon={Landmark} label={t('reservations.insuranceReceiptBankName')} htmlFor="insuranceReceiptBankName">
+          <input
+            id="insuranceReceiptBankName"
+            className={fieldClassName}
+            value={receiptBankName}
+            onChange={(event) => onReceiptBankNameChange(event.target.value)}
+            maxLength={120}
+            required
+          />
+        </FormField>
+        <FormField icon={FileText} label={t('reservations.insuranceReceiptTrackingNo')} htmlFor="insuranceReceiptTrackingNo">
+          <input
+            id="insuranceReceiptTrackingNo"
+            className={fieldClassName}
+            value={receiptTrackingNo}
+            onChange={(event) => onReceiptTrackingNoChange(event.target.value)}
+            maxLength={100}
+            required
+          />
+        </FormField>
+        <FormField icon={CalendarDays} label={t('reservations.insuranceReceiptDate')} htmlFor="insuranceReceiptDate">
+          <PersianDateField
+            id="insuranceReceiptDate"
+            value={receiptDate}
+            onChange={onReceiptDateChange}
+            required
+          />
+        </FormField>
+      </div>
+      <Button type="submit" disabled={submitting || disabled}>
+        <Check className="size-4" aria-hidden />
+        {submitLabel ?? t('reservations.insuranceReceiptSubmit')}
+      </Button>
+    </form>
+  )
+}
+
+function InsuranceReceiptDetails({
+  member,
+  locale,
+  compact,
+  className = '',
+}: {
+  member: ReservationMember
+  locale: string
+  compact?: boolean
+  className?: string
+}) {
+  const { t } = useTranslation()
+  if (member.insurancePaidMethod !== 'BANK_RECEIPT') return null
+  const items = [
+    {
+      label: t('reservations.insuranceReceiptDate'),
+      value: member.insuranceReceiptDate ? <DateText value={member.insuranceReceiptDate} /> : '—',
+    },
+    {
+      label: t('reservations.insuranceReceiptTrackingNo'),
+      value: member.insurancePaymentRef ? <CopyableDigits value={member.insurancePaymentRef} /> : '—',
+    },
+    {
+      label: t('reservations.insuranceReceiptBankName'),
+      value: member.insuranceReceiptBankName ?? '—',
+    },
+  ]
+  if (compact) {
+    return (
+      <div className={`space-y-1 text-xs text-ink-600 ${className}`}>
+        {items.map((item) => (
+          <p key={item.label}>
+            <span className="text-ink-400">{item.label}:</span> {item.value}
+          </p>
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className={`grid gap-2 sm:grid-cols-3 ${className}`}>
+      {items.map((item) => (
+        <FactTile key={item.label} icon={FileText} label={item.label} value={item.value} tone="ink" />
+      ))}
+    </div>
+  )
+}
+
+function AdminInsuranceReview({
+  reservationId,
+  member,
+  onChanged,
+  compact,
+  className = '',
+}: {
+  reservationId: string
+  member: ReservationMember
+  onChanged: () => void
+  compact?: boolean
+  className?: string
+}) {
+  const { t } = useTranslation()
+  const [note, setNote] = useState('')
+  const review = useMutation({
+    mutationFn: async (status: 'APPROVED' | 'REJECTED') => {
+      const { data } = await api.patch<Reservation>(
+        `/reservations/${reservationId}/members/${member.id}/insurance`,
+        { status, note: status === 'REJECTED' ? note.trim() : undefined },
+      )
+      return data
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data.status === 'COMPLETED'
+          ? t('reservations.insuranceCompleted')
+          : t('common.saved'),
+      )
+      setNote('')
+      onChanged()
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
+  })
+
+  return (
+    <div className={`space-y-2 ${className}`}>
+      {!compact ? (
+        <FormField icon={FileText} label={t('reservations.reviewNotes')} htmlFor={`insurance-note-${member.id}`}>
+          <textarea
+            id={`insurance-note-${member.id}`}
+            className={fieldClassName}
+            rows={2}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder={t('reservations.reviewNotesPlaceholder')}
+          />
+        </FormField>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="soft"
+          disabled={review.isPending}
+          onClick={() => review.mutate('APPROVED')}
+        >
+          <Check className="size-4" aria-hidden />
+          {t('reservations.insuranceApproveReceipt')}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={review.isPending}
+          onClick={() => {
+            if (!note.trim()) {
+              toast.error(t('reservations.rejectionReason'))
+              return
+            }
+            review.mutate('REJECTED')
+          }}
+        >
+          <X className="size-4 text-red-600" aria-hidden />
+          {t('reservations.insuranceRejectReceipt')}
+        </Button>
+      </div>
+    </div>
   )
 }

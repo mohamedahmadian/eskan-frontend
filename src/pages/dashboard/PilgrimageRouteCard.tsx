@@ -30,6 +30,7 @@ import { resolveWalkingProgress, stageCoordinates } from '../../lib/geo'
 import type {
   City,
   ManagedUser,
+  ReservationRoutePlacement,
   ReservationTravelHistoryList,
   WalkingRoute,
   WalkingRouteStage,
@@ -179,7 +180,7 @@ export function PilgrimageRouteCard({
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<RouteTab>('steps')
   const [currentIndex, setCurrentIndex] = useState(-1)
-  const [showPassedStations, setShowPassedStations] = useState(false)
+  const [showPassedStations, setShowPassedStations] = useState(true)
   const [previewId, setPreviewId] = useState<string | null>(null)
   const [savingHere, setSavingHere] = useState(false)
 
@@ -206,6 +207,23 @@ export function PilgrimageRouteCard({
       return data.items
     },
   })
+  const placementQuery = useQuery({
+    queryKey: ['reservations', reservationId, 'route-placement'],
+    queryFn: async () => {
+      const { data } = await api.get<ReservationRoutePlacement>(
+        `/reservations/${reservationId}/route-placement`,
+      )
+      return data
+    },
+    retry: false,
+  })
+  const staysByStation = useMemo(() => {
+    const map = new Map<string, NonNullable<ReservationRoutePlacement['stages'][number]['stay']>>()
+    for (const item of placementQuery.data?.stages ?? []) {
+      if (item.stay) map.set(item.stationId, item.stay)
+    }
+    return map
+  }, [placementQuery.data])
   const arrivals = useMemo(() => {
     const map = new Map<string, string>()
     for (const item of [...(travelQuery.data ?? [])].reverse()) {
@@ -510,6 +528,17 @@ export function PilgrimageRouteCard({
               <Button
                 type="button"
                 variant="soft"
+                icon
+                aria-label={
+                  showPassedStations
+                    ? t('dashboard.hidePassedStations')
+                    : t('dashboard.showPassedStations')
+                }
+                title={
+                  showPassedStations
+                    ? t('dashboard.hidePassedStations')
+                    : t('dashboard.showPassedStations')
+                }
                 onClick={() => setShowPassedStations((open) => !open)}
               >
                 {showPassedStations ? (
@@ -517,9 +546,6 @@ export function PilgrimageRouteCard({
                 ) : (
                   <Eye className="size-4" aria-hidden />
                 )}
-                {showPassedStations
-                  ? t('dashboard.hidePassedStations')
-                  : t('dashboard.showPassedStations')}
               </Button>
               </div>
             ) : null}
@@ -644,6 +670,7 @@ export function PilgrimageRouteCard({
             locale={locale}
             className="h-auto"
             headerAction={hereAction(preview)}
+            stay={preview.stationId ? staysByStation.get(preview.stationId) ?? null : null}
           />
         ) : null}
       </div>

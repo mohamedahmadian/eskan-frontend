@@ -51,6 +51,10 @@ export function isHonoraryServant(user: RoleUser) {
   return hasRole(user, 'HONORARY_SERVANT')
 }
 
+export function isStationManager(user: RoleUser) {
+  return hasRole(user, 'STATION_MANAGER')
+}
+
 /** زائر فقط با گروه یا مدیریت اسکان منوهای گروه/اسکان/ارزیابی را می‌بیند */
 export function pilgrimHasGroupOrHousingAccess(user: RoleUser) {
   return (

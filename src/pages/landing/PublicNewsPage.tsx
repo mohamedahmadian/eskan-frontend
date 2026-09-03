@@ -27,7 +27,7 @@ export function PublicNewsPage() {
     <LandingShell>
       <article className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-8">
         <Link
-          to="/welcome"
+          to="/"
           className="inline-flex items-center gap-2 rounded-2xl text-sm font-medium text-teal-700 transition hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
         >
           <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />

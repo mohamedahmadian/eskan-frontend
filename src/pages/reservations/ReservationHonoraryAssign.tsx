@@ -16,10 +16,7 @@ import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { api, getApiErrorMessage } from '../../lib/api'
-import {
-  canAssignReservationHonorary,
-  showReservationHonoraryAssignments,
-} from '../../lib/honorary-services'
+import { canAssignReservationHonorary } from '../../lib/honorary-services'
 import { formatNumber } from '../../lib/datetime'
 import type {
   HonoraryServantPerson,
@@ -41,8 +38,8 @@ export function ReservationHonoraryBox({
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
-  if (!showReservationHonoraryAssignments(reservation, canAssign)) return null
   const items = reservation.honoraryAssignments ?? []
+  if (!items.length) return null
   const allowAssign = Boolean(canAssign && canAssignReservationHonorary(reservation))
 
   function confirmRemove(item: ReservationHonoraryAssignment) {
@@ -71,17 +68,11 @@ export function ReservationHonoraryBox({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-medium text-ink-500">{t('reservations.honoraryAssignments')}</p>
-          {items.length === 0 ? (
-            <p className="mt-0.5 text-sm font-semibold text-ink-400">
-              {t('reservations.honoraryAssignmentsUnset')}
-            </p>
-          ) : (
-            <p className="mt-0.5 text-sm font-semibold text-ink-900">
-              {t('reservations.honoraryAssignmentsCount', {
-                count: formatNumber(items.length, locale),
-              })}
-            </p>
-          )}
+          <p className="mt-0.5 text-sm font-semibold text-ink-900">
+            {t('reservations.honoraryAssignmentsCount', {
+              count: formatNumber(items.length, locale),
+            })}
+          </p>
         </div>
         {allowAssign && onAssign ? (
           <Button
@@ -95,34 +86,32 @@ export function ReservationHonoraryBox({
           </Button>
         ) : null}
       </div>
-      {items.length ? (
-        <ul className="divide-y divide-teal-100/80 border-t border-teal-100 bg-white">
-          {items.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 px-3 py-2.5">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium text-ink-500">{item.serviceType.name}</p>
-                <p className="mt-0.5 text-sm font-semibold text-ink-900">{item.user.fullName}</p>
-                {item.user.phone ? (
-                  <div className="mt-0.5">
-                    <CopyableDigits value={item.user.phone} />
-                  </div>
-                ) : null}
-              </div>
-              {allowAssign ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="size-8 shrink-0 !p-0 text-red-600"
-                  aria-label={t('common.delete')}
-                  onClick={() => confirmRemove(item)}
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                </Button>
+      <ul className="divide-y divide-teal-100/80 border-t border-teal-100 bg-white">
+        {items.map((item) => (
+          <li key={item.id} className="flex items-center gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-medium text-ink-500">{item.serviceType.name}</p>
+              <p className="mt-0.5 text-sm font-semibold text-ink-900">{item.user.fullName}</p>
+              {item.user.phone ? (
+                <div className="mt-0.5">
+                  <CopyableDigits value={item.user.phone} />
+                </div>
               ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+            </div>
+            {allowAssign ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="size-8 shrink-0 !p-0 text-red-600"
+                aria-label={t('common.delete')}
+                onClick={() => confirmRemove(item)}
+              >
+                <Trash2 className="size-4" aria-hidden />
+              </Button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
     </article>
   )
 }

@@ -406,6 +406,36 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "entryBorders.subtitle",
     };
   }
+  if (pathname.startsWith("/my-walking-stations")) {
+    if (pathname.includes("/edit")) {
+      return {
+        titleKey: "walkingStations.edit",
+        subtitleKey: "walkingStations.editSubtitle",
+      };
+    }
+    if (pathname !== "/my-walking-stations") {
+      return {
+        titleKey: "walkingStations.details",
+        subtitleKey: "walkingStations.detailsSubtitle",
+      };
+    }
+    return {
+      titleKey: "menus.myWalkingStations",
+      subtitleKey: "myWalkingStations.subtitle",
+    };
+  }
+  if (pathname.startsWith("/station-report")) {
+    return {
+      titleKey: "stationReport.title",
+      subtitleKey: "stationReport.subtitle",
+    };
+  }
+  if (pathname.startsWith("/station-reservation-history")) {
+    return {
+      titleKey: "stationHistory.title",
+      subtitleKey: "stationHistory.subtitle",
+    };
+  }
   if (pathname.startsWith("/base-info/walking-stations/new")) {
     return {
       titleKey: "walkingStations.create",

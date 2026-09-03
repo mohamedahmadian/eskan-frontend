@@ -2,7 +2,7 @@ import { Milestone } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   EntityNameSubtitle,
@@ -13,11 +13,14 @@ import {
 import { api } from '../../lib/api'
 import type { City, Country, Province, WalkingStation } from '../../types/app'
 import { WalkingStationForm } from './WalkingStationForm'
+import { walkingStationBasePath } from './walkingStationPaths'
 
 export function WalkingStationEditPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const basePath = walkingStationBasePath(pathname)
   const item = useQuery({
     queryKey: ['walking-station', id],
     enabled: Boolean(id),
@@ -78,7 +81,7 @@ export function WalkingStationEditPage() {
         onSubmit={async (payload) => {
           await api.patch(`/walking-stations/${id}`, payload)
           toast.success(t('walkingStations.updated'))
-          navigate(`/base-info/walking-stations/${id}`)
+          navigate(`${basePath}/${id}`)
         }}
       />
     </div>

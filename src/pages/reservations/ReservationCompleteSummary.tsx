@@ -274,14 +274,16 @@ export function ReservationCompleteSummary({
 
         <section>
           <SectionTitle icon={HeartHandshake}>{t('reservations.createSteps.services')}</SectionTitle>
-          <div className="mb-2.5">
-            <ReservationHonoraryBox
-              reservation={reservation}
-              canAssign={canAssignHonorary}
-              onAssign={onAssignHonorary}
-              onChanged={onHonoraryChanged}
-            />
-          </div>
+          {audience !== 'admin' ? (
+            <div className="mb-2.5">
+              <ReservationHonoraryBox
+                reservation={reservation}
+                canAssign={canAssignHonorary}
+                onAssign={onAssignHonorary}
+                onChanged={onHonoraryChanged}
+              />
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
             <FactTile
               icon={Shield}

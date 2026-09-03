@@ -109,7 +109,12 @@ export function ReservationTitleMeta({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {reservation.code ? (
-        <EntityNameSubtitle name={reservation.code} icon={Hash} copyValue={reservation.code} />
+        <EntityNameSubtitle
+          name={reservation.code}
+          icon={Hash}
+          copyValue={reservation.code}
+          label={t('reservations.fileCode')}
+        />
       ) : null}
       {partyName ? (
         <EntityNameSubtitle
