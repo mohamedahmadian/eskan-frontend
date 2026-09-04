@@ -56,7 +56,7 @@ import type {
   ReservationMember,
   ReservationPerson,
 } from "../../types/app";
-import { neighborFlowStep, stepLabelKey, type ReservationStepCode } from "./reservation-steps";
+import { neighborFlowStep, showSimBankRequests, stepLabelKey, type ReservationStepCode } from "./reservation-steps";
 import { ReservationStepNav } from "./ReservationStepNav";
 import { CompanionExcelImport } from "./CompanionExcelImport";
 import { PreviousMembersPanel } from "./PreviousMembersPanel";
@@ -227,6 +227,7 @@ export function CompanionsStep({
         reservationId={reservation.id}
         members={members}
         isCaravan={isCaravan}
+        showServiceRequests={showSimBankRequests(reservation)}
         onChanged={onChanged}
         onAddNew={() => {
           setEditingMember(null);
@@ -260,6 +261,8 @@ export function CompanionsStep({
           <MemberLookupForm
             reservationId={reservation.id}
             isCaravan={isCaravan}
+            iraqi={Boolean(reservation.iraqiWorkflow)}
+            showServiceRequests={showSimBankRequests(reservation)}
             editing={editingMember}
             onAdded={() => {
               setEditingMember(null);
@@ -523,12 +526,16 @@ function CompanionFormModal({
 function MemberLookupForm({
   reservationId,
   isCaravan = false,
+  iraqi = false,
+  showServiceRequests = false,
   onAdded,
   editing,
   onCancelEdit,
 }: {
   reservationId: string;
   isCaravan?: boolean;
+  iraqi?: boolean;
+  showServiceRequests?: boolean;
   onAdded: () => void;
   editing?: ReservationMember | null;
   onCancelEdit?: () => void;
@@ -565,8 +572,9 @@ function MemberLookupForm({
   useEffect(() => {
     if (!editing) return;
     setLookupNationalId("");
-    setNationalId(editing.user.nationalId ?? "");
-    setPassportNumber("");
+    const identity = editing.user.nationalId ?? "";
+    setNationalId(iraqi ? "" : identity);
+    setPassportNumber(iraqi ? identity : "");
     setPerson({
       firstName: editing.user.firstName,
       lastName: editing.user.lastName,
@@ -582,7 +590,7 @@ function MemberLookupForm({
     requestAnimationFrame(() => {
       firstNameRef.current?.focus({ preventScroll: true });
     });
-  }, [editing]);
+  }, [editing, iraqi]);
 
   useEffect(() => {
     if (status !== "idle") return;
@@ -591,6 +599,59 @@ function MemberLookupForm({
 
   async function lookup(event?: FormEvent) {
     event?.preventDefault();
+    if (iraqi) {
+      const passport = normalizePassportNumber(lookupNationalId);
+      if (!passport) {
+        setMissingNationalId(null);
+        setNationalId("");
+        setPassportNumber("");
+        setPerson({});
+        setGender("MALE");
+        setBirthDate("");
+        setStatus("new");
+        return;
+      }
+      if (passport.length < 5) {
+        toast.error(t("reservations.passportInvalid"));
+        return;
+      }
+      setLooking(true);
+      try {
+        const { data } = await api.post<LookupResponse>(
+          "/pilgrims/identity-lookup",
+          { passportNumber: passport },
+        );
+        if (data.found) {
+          await api.post(`/reservations/${reservationId}/members`, {
+            passportNumber: passport,
+            requestsSimCard: showServiceRequests ? requestsSimCard : false,
+            requestsBankCard: showServiceRequests ? requestsBankCard : false,
+          });
+          toast.success(
+            t(
+              isCaravan
+                ? "reservations.memberAddedCaravan"
+                : "reservations.memberAdded",
+            ),
+          );
+          resetForm();
+          onAdded();
+          return;
+        }
+        setPerson({});
+        setGender("MALE");
+        setBirthDate("");
+        setNationalId("");
+        setPassportNumber(passport);
+        setMissingNationalId(passport);
+        setStatus("new");
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, t("common.error")));
+      } finally {
+        setLooking(false);
+      }
+      return;
+    }
     const id = normalizeNationalId(lookupNationalId);
     if (!id) {
       setMissingNationalId(null);
@@ -615,8 +676,8 @@ function MemberLookupForm({
       if (data.found) {
         await api.post(`/reservations/${reservationId}/members`, {
           nationalId: id,
-          requestsSimCard,
-          requestsBankCard,
+          requestsSimCard: showServiceRequests ? requestsSimCard : false,
+          requestsBankCard: showServiceRequests ? requestsBankCard : false,
         });
         toast.success(
           t(
@@ -645,11 +706,18 @@ function MemberLookupForm({
 
   const save = useMutation({
     mutationFn: async () => {
-      const id = normalizeNationalId(nationalId);
+      const id = iraqi ? "" : normalizeNationalId(nationalId);
       if (id && !isValidIranianNationalId(id)) {
         throw new Error(t("users.nationalIdInvalid"));
       }
-      const passport = normalizePassportNumber(passportNumber);
+      const passport = iraqi
+        ? normalizePassportNumber(passportNumber)
+        : "";
+      if (iraqi) {
+        if (!passport || passport.length < 5) {
+          throw new Error(t("reservations.passportInvalid"));
+        }
+      }
       const payload = {
         nationalId: id || null,
         passportNumber: passport || null,
@@ -658,8 +726,8 @@ function MemberLookupForm({
         gender: gender === "FEMALE" ? "FEMALE" : "MALE",
         phone: person.phone || null,
         birthDate: birthDate || null,
-        requestsSimCard,
-        requestsBankCard,
+        requestsSimCard: showServiceRequests ? requestsSimCard : false,
+        requestsBankCard: showServiceRequests ? requestsBankCard : false,
       };
       if (editing) {
         await api.patch(
@@ -689,7 +757,9 @@ function MemberLookupForm({
     },
     onError: (error) =>
       toast.error(
-        error instanceof Error && error.message === t("users.nationalIdInvalid")
+        error instanceof Error &&
+        (error.message === t("users.nationalIdInvalid") ||
+          error.message === t("reservations.passportInvalid"))
           ? error.message
           : getApiErrorMessage(error, t("common.error")),
       ),
@@ -710,24 +780,25 @@ function MemberLookupForm({
           </SectionTitle>
           <AppForm
             autoFocusFirst={false}
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               void lookup();
             }}
           >
             <FormField
-              icon={IdCard}
-              label={t("users.nationalId")}
+              icon={iraqi ? BookUser : IdCard}
+              label={iraqi ? t("users.passportNumber") : t("users.nationalId")}
               htmlFor="companion-nid"
             >
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   id="companion-nid"
                   ref={lookupRef}
-                  className={`min-w-0 flex-1 ${fieldClassName}`}
+                  className={`min-w-0 flex-1 ${fieldClassName} ${iraqi ? "" : "digit-field"}`}
                   value={lookupNationalId}
                   onChange={(event) => setLookupNationalId(event.target.value)}
-                  inputMode="numeric"
+                  inputMode={iraqi ? "text" : "numeric"}
                 />
                 <Button
                   type="submit"
@@ -741,7 +812,7 @@ function MemberLookupForm({
                 </Button>
               </div>
             </FormField>
-            {!showForm ? (
+            {!showForm && showServiceRequests ? (
               <MemberServiceRequestFields
                 requestsSimCard={requestsSimCard}
                 requestsBankCard={requestsBankCard}
@@ -762,22 +833,41 @@ function MemberLookupForm({
           className="space-y-4"
         >
           {status === "new" && missingNationalId ? (
-            <NationalIdNotFoundNotice nationalId={missingNationalId} />
+            <NationalIdNotFoundNotice
+              nationalId={missingNationalId}
+              iraqi={iraqi}
+            />
           ) : null}
           <div className="grid gap-3 sm:grid-cols-3">
-            <FormField
-              icon={IdCard}
-              label={t("users.nationalId")}
-              htmlFor="companion-nid-new"
-            >
-              <input
-                id="companion-nid-new"
-                className={fieldClassName}
-                value={nationalId}
-                onChange={(event) => setNationalId(event.target.value)}
-                inputMode="numeric"
-              />
-            </FormField>
+            {iraqi ? (
+              <FormField
+                icon={BookUser}
+                label={t("users.passportNumber")}
+                htmlFor="companion-passport"
+              >
+                <input
+                  id="companion-passport"
+                  className={fieldClassName}
+                  value={passportNumber}
+                  onChange={(event) => setPassportNumber(event.target.value)}
+                  required
+                />
+              </FormField>
+            ) : (
+              <FormField
+                icon={IdCard}
+                label={t("users.nationalId")}
+                htmlFor="companion-nid-new"
+              >
+                <input
+                  id="companion-nid-new"
+                  className={`${fieldClassName} digit-field`}
+                  value={nationalId}
+                  onChange={(event) => setNationalId(event.target.value)}
+                  inputMode="numeric"
+                />
+              </FormField>
+            )}
             <FormField
               icon={UserRound}
               label={t("users.firstName")}
@@ -845,24 +935,14 @@ function MemberLookupForm({
               />
             </FormField>
           </div>
-          <FormField
-            icon={BookUser}
-            label={t("users.passportNumber")}
-            htmlFor="companion-passport"
-          >
-            <input
-              id="companion-passport"
-              className={fieldClassName}
-              value={passportNumber}
-              onChange={(event) => setPassportNumber(event.target.value)}
+          {showServiceRequests ? (
+            <MemberServiceRequestFields
+              requestsSimCard={requestsSimCard}
+              requestsBankCard={requestsBankCard}
+              onSimChange={setRequestsSimCard}
+              onBankChange={setRequestsBankCard}
             />
-          </FormField>
-          <MemberServiceRequestFields
-            requestsSimCard={requestsSimCard}
-            requestsBankCard={requestsBankCard}
-            onSimChange={setRequestsSimCard}
-            onBankChange={setRequestsBankCard}
-          />
+          ) : null}
           <FormActions
             submitLabel={
               status === "edit"
@@ -919,7 +999,13 @@ function MemberServiceRequestFields({
   );
 }
 
-function NationalIdNotFoundNotice({ nationalId }: { nationalId: string }) {
+function NationalIdNotFoundNotice({
+  nationalId,
+  iraqi = false,
+}: {
+  nationalId: string;
+  iraqi?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <aside
@@ -935,11 +1021,19 @@ function NationalIdNotFoundNotice({ nationalId }: { nationalId: string }) {
           <SearchX className="size-5" aria-hidden />
         </span>
         <p className="pt-2 text-sm font-semibold leading-7 text-ink-900">
-          {t("reservations.nationalIdNotFoundBefore")}
+          {t(
+            iraqi
+              ? "reservations.passportNotFoundBefore"
+              : "reservations.nationalIdNotFoundBefore",
+          )}
           <span className="mx-1.5 inline-flex items-center rounded-lg bg-white px-2 py-0.5 font-bold tracking-wide text-ink-900 shadow-sm ring-1 ring-gold-100">
             <CopyableDigits value={nationalId} />
           </span>
-          {t("reservations.nationalIdNotFoundAfter")}
+          {t(
+            iraqi
+              ? "reservations.passportNotFoundAfter"
+              : "reservations.nationalIdNotFoundAfter",
+          )}
         </p>
       </div>
     </aside>
@@ -950,6 +1044,7 @@ function MembersList({
   reservationId,
   members,
   isCaravan = false,
+  showServiceRequests = false,
   onChanged,
   onEdit,
   onAddNew,
@@ -959,6 +1054,7 @@ function MembersList({
   reservationId?: string;
   members: ReservationMember[];
   isCaravan?: boolean;
+  showServiceRequests?: boolean;
   onChanged?: () => void;
   onEdit?: (member: ReservationMember) => void;
   onAddNew?: () => void;
@@ -1046,6 +1142,7 @@ function MembersList({
         members={members}
         inputId="companions-member-search"
         showContact
+        showServiceRequests={showServiceRequests}
         bareSearch
         isCaravan={isCaravan}
         renderActions={

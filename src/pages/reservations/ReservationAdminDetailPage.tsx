@@ -133,7 +133,7 @@ export function ReservationAdminDetailPage() {
   const showHonoraryAssign = admin && canAssignReservationHonorary(reservation)
   const honoraryCount = reservation.honoraryAssignments?.length ?? 0
   const fileInfoOnly = !admin || translatorView
-  const showReviewActions = admin && (pendingReview || canRejectMidStage)
+  const showFileRejectActions = admin && canRejectMidStage && !pendingReview
 
   return (
     <div className={listShellClassName}>
@@ -146,17 +146,6 @@ export function ReservationAdminDetailPage() {
           />
         }
         backTo={translatorView ? '/translator-reservations' : undefined}
-        action={
-          showReviewActions ? (
-            <ReservationReviewActions
-              reservation={reservation}
-              onChanged={refresh}
-              compact
-              rejectOnly={!pendingReview}
-              requireRejectReason
-            />
-          ) : undefined
-        }
       />
 
       {issuedModal ? (
@@ -374,6 +363,14 @@ export function ReservationAdminDetailPage() {
                 <RotateCcw className="size-4" aria-hidden />
                 {t('reservations.setFileStep')}
               </Button>
+            ) : null}
+            {showFileRejectActions ? (
+              <ReservationReviewActions
+                reservation={reservation}
+                onChanged={refresh}
+                rejectOnly
+                requireRejectReason
+              />
             ) : null}
           </div>
         </section>

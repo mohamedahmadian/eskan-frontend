@@ -5,7 +5,7 @@ import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { formatNumber, toLatinDigits } from '../../lib/datetime'
 import type { ReservationMember } from '../../types/app'
 import { insurancePaidMethodLabel } from './reservation-steps'
-import { InsuranceStatusBadge } from './ReservationStatusBadge'
+import { InsuranceStatusBadge, MemberInsuranceAmountBadges } from './ReservationStatusBadge'
 
 const PAGE_SIZE = 5
 
@@ -29,6 +29,7 @@ export function ReservationMembersGrid({
   inputId = 'reservation-members-search',
   showInsurance = false,
   showContact = false,
+  showServiceRequests = false,
   isCaravan = false,
   beforeTable,
   bareSearch = false,
@@ -38,6 +39,7 @@ export function ReservationMembersGrid({
   inputId?: string
   showInsurance?: boolean
   showContact?: boolean
+  showServiceRequests?: boolean
   isCaravan?: boolean
   beforeTable?: ReactNode
   bareSearch?: boolean
@@ -116,6 +118,7 @@ export function ReservationMembersGrid({
         )}
         placeholder={t('reservations.membersSearchPlaceholder')}
         inputId={inputId}
+        autoFocus={false}
         hideSubmit
         bare={bareSearch}
       />
@@ -132,12 +135,16 @@ export function ReservationMembersGrid({
                   <>
                     <th className="px-4 py-3 text-start font-medium">{t('users.gender')}</th>
                     <th className="px-4 py-3 text-start font-medium">{t('users.phone')}</th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t('reservations.memberRequestsSimCard')}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium">
-                      {t('reservations.memberRequestsBankCard')}
-                    </th>
+                    {showServiceRequests ? (
+                      <>
+                        <th className="px-4 py-3 text-start font-medium">
+                          {t('reservations.memberRequestsSimCard')}
+                        </th>
+                        <th className="px-4 py-3 text-start font-medium">
+                          {t('reservations.memberRequestsBankCard')}
+                        </th>
+                      </>
+                    ) : null}
                   </>
                 ) : null}
                 {showInsurance ? (
@@ -177,18 +184,27 @@ export function ReservationMembersGrid({
                         <td className="px-4 py-3">
                           <CopyableDigits value={item.user.phone} />
                         </td>
-                        <td className="px-4 py-3">
-                          {item.requestsSimCard ? t('common.yes') : t('common.no')}
-                        </td>
-                        <td className="px-4 py-3">
-                          {item.requestsBankCard ? t('common.yes') : t('common.no')}
-                        </td>
+                        {showServiceRequests ? (
+                          <>
+                            <td className="px-4 py-3">
+                              {item.requestsSimCard ? t('common.yes') : t('common.no')}
+                            </td>
+                            <td className="px-4 py-3">
+                              {item.requestsBankCard ? t('common.yes') : t('common.no')}
+                            </td>
+                          </>
+                        ) : null}
                       </>
                     ) : null}
                     {showInsurance ? (
                       <>
                         <td className="px-4 py-3">
                           <InsuranceStatusBadge status={item.insuranceStatus} />
+                          <MemberInsuranceAmountBadges
+                            coverageAmount={item.insuranceCoverageAmount}
+                            premiumAmount={item.insurancePaidAmount}
+                            locale={locale}
+                          />
                         </td>
                         <td className="px-4 py-3">
                           {method ? (

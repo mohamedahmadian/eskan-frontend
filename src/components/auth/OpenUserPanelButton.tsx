@@ -12,11 +12,13 @@ export function OpenUserPanelButton({
   status,
   iconOnly = false,
   label: labelProp,
+  className = '',
 }: {
   userId: string
   status?: UserStatus | null
   iconOnly?: boolean
   label?: string
+  className?: string
 }) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -46,6 +48,7 @@ export function OpenUserPanelButton({
       type="button"
       variant={iconOnly ? 'ghost' : 'soft'}
       icon={iconOnly}
+      className={className}
       disabled={pending || inactive}
       title={inactive ? t('auth.impersonateInactive') : label}
       aria-label={label}

@@ -48,6 +48,8 @@ export type PartyDraft = {
 
 export type SelectedParty = {
   id: string
+  maleCount?: number
+  femaleCount?: number
 }
 
 /** زائر، مدیر کاروان، یا حساب بدون نقش: خودش مدیر است. */
@@ -228,7 +230,7 @@ export function ReservationPartyFields({
 
   function choose(item: PartyItem) {
     setCreateOpen(false)
-    onSelect({ id: item.id })
+    onSelect({ id: item.id, maleCount: item.maleCount, femaleCount: item.femaleCount })
     onAdvance?.()
   }
 

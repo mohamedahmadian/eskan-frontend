@@ -1706,6 +1706,114 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "campaignParticipants.subtitle",
     };
   }
+  if (pathname.startsWith("/participations/goods-report")) {
+    return {
+      titleKey: "menus.contributionsGoodsReport",
+      subtitleKey: "contributionGoodsReports.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/report")) {
+    return {
+      titleKey: "menus.contributionsReport",
+      subtitleKey: "contributionReports.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/contributions/new")) {
+    return {
+      titleKey: "contributions.create",
+      subtitleKey: "contributions.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/participations/contributions/")
+  ) {
+    return {
+      titleKey: "contributions.edit",
+      subtitleKey: "contributions.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/participations/contributions/") &&
+    pathname !== "/participations/contributions"
+  ) {
+    return {
+      titleKey: "contributions.details",
+      subtitleKey: "contributions.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/contributions")) {
+    return {
+      titleKey: "menus.contributions",
+      subtitleKey: "contributions.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/goods-units/new")) {
+    return {
+      titleKey: "goodsUnits.create",
+      subtitleKey: "goodsUnits.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/participations/goods-units/")
+  ) {
+    return {
+      titleKey: "goodsUnits.edit",
+      subtitleKey: "goodsUnits.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/participations/goods-units/") &&
+    pathname !== "/participations/goods-units"
+  ) {
+    return {
+      titleKey: "goodsUnits.details",
+      subtitleKey: "goodsUnits.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/goods-units")) {
+    return {
+      titleKey: "menus.goodsUnits",
+      subtitleKey: "goodsUnits.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/goods/new")) {
+    return {
+      titleKey: "contributionGoods.create",
+      subtitleKey: "contributionGoods.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/participations/goods/")
+  ) {
+    return {
+      titleKey: "contributionGoods.edit",
+      subtitleKey: "contributionGoods.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/participations/goods/") &&
+    pathname !== "/participations/goods"
+  ) {
+    return {
+      titleKey: "contributionGoods.details",
+      subtitleKey: "contributionGoods.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/goods")) {
+    return {
+      titleKey: "menus.contributionGoods",
+      subtitleKey: "contributionGoods.subtitle",
+    };
+  }
+  if (pathname.startsWith("/participations/campaigns-report")) {
+    return {
+      titleKey: "menus.campaignsReport",
+      subtitleKey: "campaignReports.subtitle",
+    };
+  }
   if (pathname.startsWith("/participations/campaigns/new")) {
     return {
       titleKey: "participationCampaigns.create",
@@ -1799,7 +1907,13 @@ export function getPageMeta(pathname: string): {
   if (pathname.startsWith("/participations")) {
     return {
       titleKey: "menus.participationsHome",
-      subtitleKey: "participations.subtitle",
+      subtitleKey: "landing.participations.hubHint",
+    };
+  }
+  if (pathname.startsWith("/system-management/data-management")) {
+    return {
+      titleKey: "menus.dataManagement",
+      subtitleKey: "dataManagement.subtitle",
     };
   }
   return { titleKey: "menus.overview", subtitleKey: "dashboard.subtitle" };

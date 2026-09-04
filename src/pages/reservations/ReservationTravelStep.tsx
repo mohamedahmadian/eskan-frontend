@@ -18,7 +18,7 @@ import {
   RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
   fetchSubjectReservationSpans,
 } from './reservation-date-overlap'
-import { workingHeadcount, requestedHeadcount, pilgrimOriginCountryId } from './reservation-steps'
+import { workingHeadcount, requestedHeadcount, pilgrimOriginCountryId, showSimBankRequests } from './reservation-steps'
 import { TravelSubStepBar } from './TravelSubStepBar'
 import {
   inferTravelSubMaxReached,
@@ -366,6 +366,7 @@ export function ReservationTravelStep({
           datesError={datesOverlapError}
           simCardRequestCount={reservation.simCardRequestCount ?? 0}
           bankCardRequestCount={reservation.bankCardRequestCount ?? 0}
+          showSimBankRequests={showSimBankRequests(reservation)}
           subjectUser={
             mode === 'admin'
               ? reservation.type === 'CARAVAN' && reservation.caravanManager

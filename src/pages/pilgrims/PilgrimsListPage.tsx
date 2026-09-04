@@ -218,7 +218,6 @@ export function PilgrimsListPage() {
         onSubmit={onSearch}
         label={t("common.search")}
         placeholder={t("pilgrims.searchPlaceholder")}
-        autoFocus
         filtersActive={filtersActive}
         extra={
           <>

@@ -23,7 +23,7 @@ import { api, getImageUrl } from '../../lib/api'
 import { withNext } from '../../lib/auth-redirect'
 import { formatGroupedNumber } from '../../lib/datetime'
 import type { PublicCampaign } from '../../types/app'
-import { CampaignProgressBar } from '../participations/CampaignCard'
+import { CampaignProgressBar, campaignProgressPercent } from '../participations/CampaignCard'
 import { LandingShell } from './LandingShell'
 
 export function PublicCampaignPage() {
@@ -84,7 +84,7 @@ export function PublicCampaignPage() {
               ) : null}
 
               <CampaignProgressBar
-                percent={item.progressPercent}
+                percent={campaignProgressPercent(item.purchasedShares, item.totalShares, item.progressPercent)}
                 label={t('participations.progress')}
                 value={`${n(item.progressPercent)}٪`}
               />

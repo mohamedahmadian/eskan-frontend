@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { formatGroupedNumber } from '../../lib/datetime'
 import type {
   PlacementStatus,
   ReservationMemberInsuranceStatus,
@@ -83,4 +84,35 @@ export function InsuranceStatusBadge({
     REJECTED: t('reservations.insuranceRejected'),
   }
   return <StatusChip label={labels[display]} tone={insuranceTones[display]} />
+}
+
+export function MemberInsuranceAmountBadges({
+  coverageAmount,
+  premiumAmount,
+  locale,
+}: {
+  coverageAmount?: number | null
+  premiumAmount?: number | null
+  locale: string
+}) {
+  const { t } = useTranslation()
+  const coverage = coverageAmount != null && coverageAmount > 0 ? coverageAmount : null
+  const premium = premiumAmount != null && premiumAmount > 0 ? premiumAmount : null
+  if (coverage == null && premium == null) return null
+  const money = (amount: number) =>
+    `${formatGroupedNumber(amount, locale)} ${t('receptionSettings.toman')}`
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {coverage != null ? (
+        <span className="inline-flex items-center rounded-full bg-mint-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-mint-700 ring-1 ring-mint-100">
+          {t('reservations.insuranceCoverage')}: {money(coverage)}
+        </span>
+      ) : null}
+      {premium != null ? (
+        <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-teal-800 ring-1 ring-teal-100">
+          {t('reservations.insurancePremium')}: {money(premium)}
+        </span>
+      ) : null}
+    </div>
+  )
 }

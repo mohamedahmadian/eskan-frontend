@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
+import { listShellClassName } from "../../components/ui/Form";
 import { withNext } from "../../lib/auth-redirect";
 import { LandingPageHeader } from "./LandingPageHeader";
 import { LandingShell } from "./LandingShell";
@@ -33,7 +34,11 @@ const cardTones = {
 
 type HubTone = keyof typeof cardTones;
 
-export function PublicParticipationsPage() {
+export function PublicParticipationsPage({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const serviceTo = user
@@ -74,9 +79,15 @@ export function PublicParticipationsPage() {
     },
   ];
 
-  return (
-    <LandingShell>
-      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-8">
+  const hub = (
+    <div
+      className={
+        embedded
+          ? `${listShellClassName} space-y-6 pt-4 sm:pt-6`
+          : "mx-auto w-full max-w-6xl px-4 py-10 sm:px-8"
+      }
+    >
+      {embedded ? null : (
         <Link
           to="/"
           className="inline-flex items-center gap-2 rounded-2xl text-sm font-medium text-teal-700 transition hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
@@ -84,49 +95,55 @@ export function PublicParticipationsPage() {
           <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />
           {t("common.back")}
         </Link>
-        <div className="mt-6 mb-8">
-          <LandingPageHeader
-            icon={HeartHandshake}
-            eyebrow={t("landing.participations.title")}
-            title={t("landing.participations.hubTitle")}
-            subtitle={t("landing.participations.hubHint")}
-          />
-        </div>
-        <div className="grid gap-5 lg:grid-cols-3">
-          {sections.map((item) => {
-            const Icon = item.icon;
-            const tone = cardTones[item.tone];
-            return (
-              <Link
-                key={item.titleKey}
-                to={item.to}
-                className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-white bg-white p-6 shadow-[0_12px_32px_rgba(20,40,40,0.06)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(46,189,182,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:p-7"
-              >
-                <span
-                  className={`flex size-14 items-center justify-center rounded-2xl ${tone.icon}`}
-                >
-                  <Icon className="size-7" aria-hidden />
-                </span>
-                <h2 className="mt-5 text-xl font-semibold text-ink-900">
-                  {t(item.titleKey)}
-                </h2>
-                <p className="mt-3 flex-1 text-sm leading-8 text-ink-600">
-                  {t(item.hintKey)}
-                </p>
-                <span
-                  className={`mt-6 inline-flex items-center gap-2 text-sm font-medium ${tone.accent}`}
-                >
-                  {t(item.actionKey)}
-                  <ArrowLeft
-                    className="size-4 ltr:rotate-180 transition group-hover:translate-x-0 group-hover:ltr:-translate-x-0.5 rtl:group-hover:translate-x-0.5"
-                    aria-hidden
-                  />
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+      )}
+      <div className={embedded ? undefined : "mt-6 mb-8"}>
+        <LandingPageHeader
+          icon={HeartHandshake}
+          eyebrow={t("landing.participations.title")}
+          title={t("landing.participations.hubTitle")}
+          subtitle={t("landing.participations.hubHint")}
+        />
       </div>
-    </LandingShell>
+      <div className="grid gap-5 lg:grid-cols-3">
+        {sections.map((item) => {
+          const Icon = item.icon;
+          const tone = cardTones[item.tone];
+          return (
+            <Link
+              key={item.titleKey}
+              to={item.to}
+              className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-white bg-white p-6 shadow-[0_12px_32px_rgba(20,40,40,0.06)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(46,189,182,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:p-7"
+            >
+              <span
+                className={`flex size-14 items-center justify-center rounded-2xl ${tone.icon}`}
+              >
+                <Icon className="size-7" aria-hidden />
+              </span>
+              <h2 className="mt-5 text-xl font-semibold text-ink-900">
+                {t(item.titleKey)}
+              </h2>
+              <p className="mt-3 flex-1 text-sm leading-8 text-ink-600">
+                {t(item.hintKey)}
+              </p>
+              <span
+                className={`mt-6 inline-flex items-center gap-2 text-sm font-medium ${tone.accent}`}
+              >
+                {t(item.actionKey)}
+                <ArrowLeft
+                  className="size-4 ltr:rotate-180 transition group-hover:translate-x-0 group-hover:ltr:-translate-x-0.5 rtl:group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
   );
+
+  if (embedded) {
+    return hub;
+  }
+
+  return <LandingShell>{hub}</LandingShell>;
 }

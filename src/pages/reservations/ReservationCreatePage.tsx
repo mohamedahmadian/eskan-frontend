@@ -110,6 +110,8 @@ const caravanCreateStepsWithoutParty: CreateStep[] = ['type', 'count', 'dates', 
 type MineCaravan = {
   id: string
   walkingRouteId?: string | null
+  maleCount?: number
+  femaleCount?: number
 }
 
 async function fetchMyCaravans() {
@@ -204,6 +206,22 @@ function countsForIndividualGender(gender: 'MALE' | 'FEMALE' | null | undefined)
   if (gender === 'MALE') return { maleCount: '1', femaleCount: '0' }
   if (gender === 'FEMALE') return { maleCount: '0', femaleCount: '1' }
   return { maleCount: '0', femaleCount: '0' }
+}
+
+function countsFromParty(item?: {
+  maleCount?: number | null
+  femaleCount?: number | null
+} | null) {
+  if (!item) return null
+  if (item.maleCount == null && item.femaleCount == null) return null
+  const male = String(item.maleCount ?? 0)
+  const female = String(item.femaleCount ?? 0)
+  return {
+    maleCount: male,
+    femaleCount: female,
+    requestedMaleCount: male,
+    requestedFemaleCount: female,
+  }
 }
 
 function permitFromReservation(reservation: Reservation): CaravanPermitDraft {
@@ -426,6 +444,7 @@ export function ReservationCreatePage() {
   const admissionTypes: ReservationType[] = types
   const skipLicenseStep =
     type === 'CARAVAN' && Boolean(pilgrimCountryId) && !isIranCountry(pilgrimCountryId, iranId)
+  const showSimBank = Boolean(pilgrimCountryId) && !isIranCountry(pilgrimCountryId, iranId)
   const partyKind: PartyKind | null = type === 'GROUP' || type === 'CARAVAN' ? type : null
   const needsPartyCity = !subject?.cityId
   const subjectReady = !isAdminCreate || Boolean(subject) || Boolean(draftParam && draftHydrated)
@@ -519,10 +538,26 @@ export function ReservationCreatePage() {
       valuesFromReservation(reservation),
       settings.data,
     )
+    const partyCounts = countsFromParty(reservation.caravan ?? reservation.group)
+    if (
+      partyCounts &&
+      Number(nextValues.maleCount) === 0 &&
+      Number(nextValues.femaleCount) === 0
+    ) {
+      Object.assign(nextValues, partyCounts)
+    }
     if (skipParty && soleCaravan && !nextValues.caravanId) {
       nextValues.caravanId = soleCaravan.id
       if (soleCaravan.walkingRouteId && !nextValues.walkingRouteId) {
         nextValues.walkingRouteId = soleCaravan.walkingRouteId
+      }
+      const soleCounts = countsFromParty(soleCaravan)
+      if (
+        soleCounts &&
+        Number(nextValues.maleCount) === 0 &&
+        Number(nextValues.femaleCount) === 0
+      ) {
+        Object.assign(nextValues, soleCounts)
       }
     }
     const nextPermit = permitFromReservation(reservation)
@@ -566,12 +601,19 @@ export function ReservationCreatePage() {
   useEffect(() => {
     if (type !== 'CARAVAN' || !skipCaravanParty || !soleCaravan) return
     if (!values.caravanId) {
-      setValues((current) => ({
-        ...current,
-        caravanId: soleCaravan.id,
-        groupId: '',
-        ...(soleCaravan.walkingRouteId ? { walkingRouteId: soleCaravan.walkingRouteId } : {}),
-      }))
+      setValues((current) => {
+        const counts =
+          Number(current.maleCount) === 0 && Number(current.femaleCount) === 0
+            ? countsFromParty(soleCaravan)
+            : null
+        return {
+          ...current,
+          caravanId: soleCaravan.id,
+          groupId: '',
+          ...(counts ?? {}),
+          ...(soleCaravan.walkingRouteId ? { walkingRouteId: soleCaravan.walkingRouteId } : {}),
+        }
+      })
     }
     if (step === 'party') {
       setStep('count')
@@ -653,11 +695,16 @@ export function ReservationCreatePage() {
     return ''
   }
 
-  function applyParty(item: { id: string }, walkingRouteId?: string) {
+  function applyParty(
+    item: { id: string; maleCount?: number; femaleCount?: number },
+    walkingRouteId?: string,
+  ) {
+    const counts = countsFromParty(item)
     setValues((current) => ({
       ...current,
       caravanId: type === 'CARAVAN' ? item.id : '',
       groupId: type === 'GROUP' ? item.id : '',
+      ...(counts ?? {}),
       ...(walkingRouteId ? { walkingRouteId } : {}),
     }))
   }
@@ -797,6 +844,7 @@ export function ReservationCreatePage() {
           ...nextValues,
           caravanId: sole.id,
           groupId: '',
+          ...(countsFromParty(sole) ?? {}),
           ...(sole.walkingRouteId ? { walkingRouteId: sole.walkingRouteId } : {}),
         }
         applyParty(sole, sole.walkingRouteId ?? undefined)
@@ -1142,12 +1190,18 @@ export function ReservationCreatePage() {
   const patchValues = (patch: Partial<TravelValues>) =>
     setValues((current) => ({ ...current, ...patch }))
 
-  async function selectPartyAndAdvance(item: { id: string }) {
+  async function selectPartyAndAdvance(item: {
+    id: string
+    maleCount?: number
+    femaleCount?: number
+  }) {
     if (!type || (type !== 'CARAVAN' && type !== 'GROUP')) return
+    const counts = countsFromParty(item)
     const nextValues: TravelValues = {
       ...values,
       caravanId: type === 'CARAVAN' ? item.id : '',
       groupId: type === 'GROUP' ? item.id : '',
+      ...(counts ?? {}),
     }
     applyParty(item)
     setPartyDraft(emptyPartyDraft(subject))
@@ -1396,6 +1450,7 @@ export function ReservationCreatePage() {
             values={values}
             onChange={patchValues}
             reservationType={type}
+            showSimBankRequests={showSimBank}
             simCardRequestCount={draftQuery.data?.simCardRequestCount ?? 0}
             bankCardRequestCount={draftQuery.data?.bankCardRequestCount ?? 0}
           />

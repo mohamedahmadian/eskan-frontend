@@ -30,7 +30,7 @@ import { FormCardHeaderDecor } from '../../components/ui/FormLayout'
 import { elapsedDurationParts, formatGroupedNumber, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
-import { contactRoles, stepLabelKey, workingHeadcount } from './reservation-steps'
+import { contactRoles, showSimBankRequests, stepLabelKey, workingHeadcount } from './reservation-steps'
 import { ReservationMembersGrid } from './ReservationMembersGrid'
 import { ReservationStatusBadge } from './ReservationStatusBadge'
 import { ReservationCountMetrics } from './ReservationCountMetrics'
@@ -303,38 +303,42 @@ export function ReservationCompleteSummary({
               value={reservation.requestsBus ? t('common.yes') : t('common.no')}
               tone="mint"
             />
-            <FactTile
-              icon={Smartphone}
-              label={
-                individual
-                  ? t('reservations.requestsSimCardShort')
-                  : t('reservations.simCardRequestCount')
-              }
-              value={
-                individual
-                  ? reservation.requestsSimCard
-                    ? t('common.yes')
-                    : t('common.no')
-                  : n(reservation.simCardRequestCount ?? 0)
-              }
-              tone="teal"
-            />
-            <FactTile
-              icon={CreditCard}
-              label={
-                individual
-                  ? t('reservations.requestsBankCardShort')
-                  : t('reservations.bankCardRequestCount')
-              }
-              value={
-                individual
-                  ? reservation.requestsBankCard
-                    ? t('common.yes')
-                    : t('common.no')
-                  : n(reservation.bankCardRequestCount ?? 0)
-              }
-              tone="mint"
-            />
+            {showSimBankRequests(reservation) ? (
+              <>
+                <FactTile
+                  icon={Smartphone}
+                  label={
+                    individual
+                      ? t('reservations.requestsSimCardShort')
+                      : t('reservations.simCardRequestCount')
+                  }
+                  value={
+                    individual
+                      ? reservation.requestsSimCard
+                        ? t('common.yes')
+                        : t('common.no')
+                      : n(reservation.simCardRequestCount ?? 0)
+                  }
+                  tone="teal"
+                />
+                <FactTile
+                  icon={CreditCard}
+                  label={
+                    individual
+                      ? t('reservations.requestsBankCardShort')
+                      : t('reservations.bankCardRequestCount')
+                  }
+                  value={
+                    individual
+                      ? reservation.requestsBankCard
+                        ? t('common.yes')
+                        : t('common.no')
+                      : n(reservation.bankCardRequestCount ?? 0)
+                  }
+                  tone="mint"
+                />
+              </>
+            ) : null}
             <FactTile
               icon={Accessibility}
               label={t('reservations.specialServices')}

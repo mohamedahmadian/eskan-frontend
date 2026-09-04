@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -194,6 +195,11 @@ function withPilgrimCampaignsNav(
         item.code === "participations.campaigns" ||
         item.path === "/participations/campaigns",
     ) ?? PILGRIM_CAMPAIGNS_MENU;
+  const otherMenus = (existing?.menus ?? []).filter(
+    (item) =>
+      item.code !== "participations.campaigns" &&
+      item.path !== "/participations/campaigns",
+  );
   const rest = modules.filter((mod) => !isParticipationsModule(mod));
   return [
     ...rest,
@@ -202,7 +208,9 @@ function withPilgrimCampaignsNav(
       nameKey: existing?.nameKey ?? "modules.participations",
       icon: existing?.icon ?? "heart-handshake",
       sortOrder: existing?.sortOrder ?? 8,
-      menus: [campaignMenu],
+      menus: [...otherMenus, campaignMenu].sort(
+        (a, b) => a.sortOrder - b.sortOrder,
+      ),
     },
   ].sort((a, b) => a.sortOrder - b.sortOrder);
 }
@@ -364,6 +372,44 @@ function sidebarMenuItemId(code: string) {
   return `sidebar-menu-${code}`;
 }
 
+const SIDEBAR_NAV_SCROLL_KEY = "eskan.sidebar-nav-scroll";
+
+function readSidebarNavScroll() {
+  try {
+    const value = Number(sessionStorage.getItem(SIDEBAR_NAV_SCROLL_KEY));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeSidebarNavScroll(value: number) {
+  sidebarNavScrollTop = Math.max(0, value);
+  try {
+    sessionStorage.setItem(SIDEBAR_NAV_SCROLL_KEY, String(Math.round(sidebarNavScrollTop)));
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+let sidebarNavScrollTop = readSidebarNavScroll();
+
+function isElementFullyVisible(container: HTMLElement, item: HTMLElement) {
+  const containerRect = container.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  return itemRect.top >= containerRect.top && itemRect.bottom <= containerRect.bottom;
+}
+
+function scrollItemIntoNav(nav: HTMLElement, item: HTMLElement) {
+  const navRect = nav.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  if (itemRect.top < navRect.top) {
+    nav.scrollTop -= navRect.top - itemRect.top;
+  } else if (itemRect.bottom > navRect.bottom) {
+    nav.scrollTop += itemRect.bottom - navRect.bottom;
+  }
+}
+
 function nextMenuIndex(current: number, delta: number, count: number) {
   if (count <= 0) return 0;
   const index = Math.min(Math.max(current, 0), count - 1);
@@ -401,6 +447,7 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const mainRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const menuSearchRef = useRef<HTMLInputElement>(null);
   const menuSearchHintId = "sidebar-menu-search-hint";
   const menuSearchListId = "sidebar-menu-list";
@@ -451,6 +498,21 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   useEffect(() => {
     mainRef.current?.scrollTo(0, 0);
   }, [location.pathname]);
+
+  const rememberSidebarScroll = useCallback(() => {
+    if (navRef.current) writeSidebarNavScroll(navRef.current.scrollTop);
+  }, []);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    nav.scrollTop = sidebarNavScrollTop;
+    const active = nav.querySelector<HTMLElement>('[aria-current="page"]');
+    if (active && !isElementFullyVisible(nav, active)) {
+      scrollItemIntoNav(nav, active);
+    }
+    writeSidebarNavScroll(nav.scrollTop);
+  }, []);
 
   const showPilgrimageYears = isPilgrim(user) && canAccessMyReservations(user);
   const mineNavQuery = useQuery({
@@ -554,10 +616,11 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
 
   const openMenu = useCallback(
     (item: SidebarNavMenu) => {
+      rememberSidebarScroll();
       setOpen(false);
       navigate(item.path);
     },
-    [navigate],
+    [navigate, rememberSidebarScroll],
   );
 
   const highlightMenu = useCallback(
@@ -705,8 +768,10 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
             )}
 
             <nav
+              ref={navRef}
               id={menuSearchListId}
-              className="flex-1 space-y-5 overflow-y-auto px-3 pb-3"
+              className="flex-1 space-y-5 overflow-y-auto [overflow-anchor:none] px-3 pb-3"
+              onScroll={(event) => writeSidebarNavScroll(event.currentTarget.scrollTop)}
             >
               {modules.map((mod) => {
                 const { ungrouped, sections } = splitMenus(mod);
@@ -723,7 +788,10 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                           allMenuPaths={allMenuPaths}
                           highlighted={highlightedMenu?.code === item.code}
                           onHighlight={() => highlightMenu(item.code)}
-                          onNavigate={() => setOpen(false)}
+                          onNavigate={() => {
+                            rememberSidebarScroll();
+                            setOpen(false);
+                          }}
                         />
                       ))}
                     </div>
@@ -745,7 +813,10 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                                 allMenuPaths={allMenuPaths}
                                 highlighted={highlightedMenu?.code === item.code}
                                 onHighlight={() => highlightMenu(item.code)}
-                                onNavigate={() => setOpen(false)}
+                                onNavigate={() => {
+                                  rememberSidebarScroll();
+                                  setOpen(false);
+                                }}
                               />
                             ))}
                           </div>

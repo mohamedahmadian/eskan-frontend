@@ -51,6 +51,37 @@ function isClipboardIdentifier(raw: string) {
   return Boolean(compact) && /^[+()/\s\-.\d]+$/.test(compact)
 }
 
+/** اگر کل متن کلیپ‌بورد شماره پرونده زیارتی باشد (`1405-12` یا `140512`). */
+export function parseClipboardReservationFile(raw: string): { year: string; seq: string } | null {
+  if (!isClipboardIdentifier(raw)) return null
+  const compact = compactClipboard(raw).replace(/\s+/g, '')
+  const dashed = compact.match(/^(\d{4})-(\d{1,6})$/)
+  if (dashed) return { year: dashed[1], seq: dashed[2] }
+
+  const digits = compact.replace(/\D/g, '')
+  if (!digits || digits !== compact.replace(/-/g, '')) return null
+  if (digits.length === 10 && isValidIranianNationalId(digits)) return null
+  const prefixed = digits.match(/^(1[3-4]\d{2})(\d{1,6})$/)
+  if (!prefixed || digits.length <= 4) return null
+  return { year: prefixed[1], seq: prefixed[2] }
+}
+
+/** اگر کل متن کلیپ‌بورد برای جستجوی پذیرش مناسب باشد. */
+export function parseClipboardReceptionQuery(raw: string): string | null {
+  const nidOrPhone = parseClipboardNationalIdOrPhone(raw)
+  if (nidOrPhone) return nidOrPhone
+
+  const file = parseClipboardReservationFile(raw)
+  if (file) return `${file.year}-${file.seq}`
+
+  const compact = compactClipboard(raw)
+  if (!compact) return null
+  if (/[\n\r]/.test(compact)) return null
+  if (compact.length < 2 || compact.length > 80) return null
+  if (/^https?:\/\//i.test(compact)) return null
+  return compact
+}
+
 /** اگر کل متن کلیپ‌بورد کد ملی یا همراه ایرانی باشد، مقدار نرمال را برمی‌گرداند. */
 export function parseClipboardNationalIdOrPhone(raw: string) {
   if (!isClipboardIdentifier(raw)) return null

@@ -9,14 +9,41 @@ import { useQuickTools } from '../../components/layout/quick-tools-context'
 import { AppForm, Button, cardClassName } from '../../components/ui/Form'
 import { FormEmptyHint } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
+import { parseClipboardReservationFile, readClipboardText } from '../../lib/clipboard'
 import { currentPersianYear, toLatinDigits } from '../../lib/datetime'
 import { isAdmin } from '../../lib/roles'
 import type { Paginated, ReservationListItem } from '../../types/app'
 import { ReservationStatusBadge, ReservationTypeBadge } from './ReservationStatusBadge'
 import { ReservationCodeBadge } from './ReservationCodeBadge'
 
+const SEQ_MAX = 6
+
 function digitsOnly(raw: string, max: number) {
   return toLatinDigits(raw).replace(/\D/g, '').slice(0, max)
+}
+
+function splitYearAndSeq(raw: string, yearHint: string): { year: string; seq: string } {
+  const digits = toLatinDigits(raw).replace(/\D/g, '')
+  const hint = digitsOnly(yearHint, 4)
+
+  if (hint.length === 4 && digits.startsWith(hint) && digits.length > hint.length) {
+    return { year: hint, seq: digits.slice(hint.length).slice(0, SEQ_MAX) }
+  }
+
+  const dashed = toLatinDigits(raw)
+    .trim()
+    .replace(/[\s\u200e\u200f\ufeff]/g, '')
+  const dashedMatch = dashed.match(/^(\d{4})-(\d{1,6})$/)
+  if (dashedMatch) {
+    return { year: dashedMatch[1], seq: dashedMatch[2] }
+  }
+
+  const prefixed = digits.match(/^(1[3-4]\d{2})(\d{1,6})$/)
+  if (prefixed && digits.length > 4) {
+    return { year: prefixed[1], seq: prefixed[2] }
+  }
+
+  return { year: hint, seq: digits.slice(0, SEQ_MAX) }
 }
 
 export function ReservationFileSearchModal({ onClose }: { onClose: () => void }) {
@@ -60,18 +87,54 @@ export function ReservationFileSearchModal({ onClose }: { onClose: () => void })
     }
   }, [onClose])
 
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const raw = await readClipboardText()
+      if (cancelled || raw == null) return
+      const parsed = parseClipboardReservationFile(raw)
+      if (!parsed) return
+      let applied = false
+      setSeq((prev) => {
+        if (prev) return prev
+        applied = true
+        return parsed.seq
+      })
+      if (!applied) return
+      setYear(parsed.year)
+      requestAnimationFrame(() => {
+        const el = seqRef.current
+        if (!el) return
+        el.focus()
+        el.select()
+      })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  function listPath(yearDigits: string) {
+    const path = adminList ? '/reservations' : '/my-reservations'
+    return `${path}?year=${yearDigits}`
+  }
+
   function openFile(row: ReservationListItem) {
     onClose()
     navigate(adminList ? `/reservations/${row.id}` : `/my-reservations/${row.id}`)
   }
 
+  function openList(yearDigits: string) {
+    onClose()
+    navigate(listPath(yearDigits))
+  }
+
   async function onSearch(event: FormEvent) {
     event.preventDefault()
     const yearDigits = digitsOnly(year, 4) || currentYear
-    const seqDigits = digitsOnly(seq, 6)
+    const seqDigits = digitsOnly(seq, SEQ_MAX)
     if (!seqDigits) {
-      toast.error(t('quickTools.searchFileNumberRequired'))
-      seqRef.current?.focus()
+      openList(yearDigits)
       return
     }
     const q = `${yearDigits}-${seqDigits}`
@@ -111,7 +174,7 @@ export function ReservationFileSearchModal({ onClose }: { onClose: () => void })
   }
 
   const boxClass =
-    'rounded-2xl border border-line bg-cream-50 py-2.5 text-center text-sm text-ink-900 placeholder:text-ink-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-200'
+    'rounded-2xl border border-line bg-cream-50 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-200'
 
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
@@ -147,7 +210,7 @@ export function ReservationFileSearchModal({ onClose }: { onClose: () => void })
                 </label>
                 <input
                   id="reservation-file-year"
-                  className={`${boxClass} digit-field w-20 shrink-0 px-2`}
+                  className={`${boxClass} digit-field w-20 shrink-0 px-2 text-center`}
                   value={year}
                   onChange={(event) => setYear(digitsOnly(event.target.value, 4))}
                   onBlur={() => {
@@ -166,9 +229,13 @@ export function ReservationFileSearchModal({ onClose }: { onClose: () => void })
                 <input
                   ref={seqRef}
                   id="reservation-file-seq"
-                  className={`${boxClass} digit-field min-w-16 w-0 flex-1 px-3`}
+                  className={`${boxClass} digit-field min-w-16 w-0 flex-1 px-3 !text-left`}
                   value={seq}
-                  onChange={(event) => setSeq(digitsOnly(event.target.value, 6))}
+                  onChange={(event) => {
+                    const parsed = splitYearAndSeq(event.target.value, year)
+                    if (parsed.year && parsed.year !== year) setYear(parsed.year)
+                    setSeq(parsed.seq)
+                  }}
                   placeholder={t('quickTools.searchFileNumber')}
                   inputMode="numeric"
                   autoComplete="off"

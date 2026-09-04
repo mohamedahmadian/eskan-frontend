@@ -1,4 +1,4 @@
-import { AlignLeft, Compass, HandHeart, MapPin, MapPinned, Navigation, Phone } from 'lucide-react'
+import { AlignLeft, Compass, HandHeart, IdCard, MapPin, MapPinned, Navigation, Phone, UserRound } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -10,9 +10,11 @@ import { useGeoName } from '../../lib/geo'
 import type { Benefactor, City, Province } from '../../types/app'
 
 export type BenefactorPayload = {
-  name: string
-  provinceId: string
-  cityId: string
+  firstName: string
+  lastName: string
+  nationalId: string | null
+  provinceId: string | null
+  cityId: string | null
   phone: string | null
   address: string | null
   neshanAddress: string | null
@@ -49,7 +51,9 @@ export function BenefactorForm({
   const name = useGeoName()
   const [saving, setSaving] = useState(false)
   const [values, setValues] = useState({
-    name: initial?.name ?? '',
+    firstName: initial?.firstName ?? '',
+    lastName: initial?.lastName ?? '',
+    nationalId: initial?.nationalId ?? '',
     provinceId: initial?.provinceId ?? '',
     cityId: initial?.cityId ?? '',
     phone: initial?.phone ?? '',
@@ -69,9 +73,11 @@ export function BenefactorForm({
     setSaving(true)
     try {
       await onSubmit({
-        name: values.name.trim(),
-        provinceId: values.provinceId,
-        cityId: values.cityId,
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        nationalId: emptyToNull(values.nationalId),
+        provinceId: emptyToNull(values.provinceId),
+        cityId: emptyToNull(values.cityId),
         phone: emptyToNull(values.phone),
         address: emptyToNull(values.address),
         neshanAddress: emptyToNull(values.neshanAddress),
@@ -86,18 +92,50 @@ export function BenefactorForm({
     }
   }
 
+  const title = initial
+    ? initial.name || `${values.firstName} ${values.lastName}`.trim() || t('benefactors.edit')
+    : t('benefactors.create')
+
   return (
     <FormCard
       icon={HandHeart}
-      title={initial ? initial.name || t('benefactors.edit') : t('benefactors.create')}
+      title={title}
       subtitle={initial ? undefined : t('benefactors.createSubtitle')}
     >
     <AppForm onSubmit={submit} className={formCardBodyClassName}>
+      <FormField icon={UserRound} label={t('benefactors.firstName')} htmlFor="firstName">
+        <input
+          id="firstName"
+          className={fieldClassName}
+          value={values.firstName}
+          onChange={(e) => set('firstName', e.target.value)}
+          required
+          minLength={1}
+        />
+      </FormField>
+      <FormField icon={UserRound} label={t('benefactors.lastName')} htmlFor="lastName">
+        <input
+          id="lastName"
+          className={fieldClassName}
+          value={values.lastName}
+          onChange={(e) => set('lastName', e.target.value)}
+          required
+          minLength={1}
+        />
+      </FormField>
+      <FormField icon={IdCard} label={t('benefactors.nationalId')} htmlFor="nationalId">
+        <input
+          id="nationalId"
+          className={`${fieldClassName} digit-field`}
+          value={values.nationalId}
+          onChange={(e) => set('nationalId', e.target.value)}
+          inputMode="numeric"
+        />
+      </FormField>
       <FormField icon={MapPinned} label={t('geo.province')} htmlFor="provinceId">
         <SearchSelect
           id="provinceId"
           value={values.provinceId}
-          required
           onChange={(next) => {
             set('provinceId', next)
             set('cityId', '')
@@ -117,7 +155,6 @@ export function BenefactorForm({
         <SearchSelect
           id="cityId"
           value={values.cityId}
-          required
           disabled={!values.provinceId}
           onChange={(next) => set('cityId', next)}
           placeholder={t('geo.selectCity')}
@@ -130,20 +167,10 @@ export function BenefactorForm({
           ]}
         />
       </FormField>
-      <FormField icon={HandHeart} label={t('benefactors.name')} htmlFor="name">
-        <input
-          id="name"
-          className={fieldClassName}
-          value={values.name}
-          onChange={(e) => set('name', e.target.value)}
-          required
-          minLength={2}
-        />
-      </FormField>
       <FormField icon={Phone} label={t('benefactors.phone')} htmlFor="phone">
         <input
           id="phone"
-          className={fieldClassName}
+          className={`${fieldClassName} digit-field`}
           value={values.phone}
           onChange={(e) => set('phone', e.target.value)}
         />

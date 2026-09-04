@@ -94,7 +94,7 @@ export function LandingShell({ children }: { children: ReactNode }) {
             )}
           </button>
           <LandingNavLinks className="hidden min-w-0 flex-1 items-center gap-0.5 lg:flex" />
-          <div className="ms-auto flex min-w-0 items-center justify-end gap-2">
+          <div className="ms-auto flex min-w-0 items-center justify-end gap-4">
             <LocaleSwitcher />
             {user ? (
               <Link

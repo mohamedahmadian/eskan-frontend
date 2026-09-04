@@ -2,6 +2,7 @@ import {
   CalendarRange,
   Coins,
   CreditCard,
+  HandCoins,
   Hash,
   Landmark,
   Megaphone,
@@ -29,7 +30,7 @@ import { api, getImageUrl } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
 import { isAdmin } from '../../lib/roles'
 import type { ParticipationCampaign, PublicCampaign } from '../../types/app'
-import { CampaignProgressBar } from './CampaignCard'
+import { CampaignProgressBar, campaignProgressPercent } from './CampaignCard'
 import { GeoStatus } from '../geo/GeoShared'
 
 export function CampaignDetailPage() {
@@ -90,7 +91,7 @@ function PilgrimCampaignDetail() {
           ) : null}
           <FormSectionTitle icon={Coins}>{t('participations.progress')}</FormSectionTitle>
           <CampaignProgressBar
-            percent={item.progressPercent}
+            percent={campaignProgressPercent(item.purchasedShares, item.totalShares, item.progressPercent)}
             label={t('participations.purchasedShares')}
             value={`${n(item.purchasedShares)} / ${n(item.totalShares)}`}
           />
@@ -232,7 +233,7 @@ function AdminCampaignDetail() {
           ) : null}
           <FormSectionTitle icon={Coins}>{t('participations.progress')}</FormSectionTitle>
           <CampaignProgressBar
-            percent={item.progressPercent}
+            percent={campaignProgressPercent(item.purchasedShares, item.totalShares, item.progressPercent)}
             label={t('participations.purchasedShares')}
             value={`${n(item.purchasedShares)} / ${n(item.totalShares)}`}
           />
@@ -274,6 +275,18 @@ function AdminCampaignDetail() {
               tone="ink"
             />
             <FormFactTile
+              icon={WalletCards}
+              label={t('participations.purchasedShares')}
+              value={n(item.purchasedShares)}
+              tone="teal"
+            />
+            <FormFactTile
+              icon={Hash}
+              label={t('participations.totalShares')}
+              value={n(item.totalShares)}
+              tone="mint"
+            />
+            <FormFactTile
               icon={Landmark}
               label={t('participationCampaigns.bankAccount')}
               value={
@@ -305,12 +318,20 @@ function AdminCampaignDetail() {
             editLabel={t('common.edit')}
             deleteLabel={t('participationCampaigns.delete')}
             extra={
-              <Link to={`/participations/campaigns/${item.id}/participants`}>
-                <Button type="button" variant="soft">
-                  <Users className="size-4" aria-hidden />
-                  {t('participationCampaigns.manageParticipants')}
-                </Button>
-              </Link>
+              <>
+                <Link to={`/participations/campaigns/${item.id}/participants`}>
+                  <Button type="button" variant="soft">
+                    <Users className="size-4" aria-hidden />
+                    {t('participationCampaigns.manageParticipants')}
+                  </Button>
+                </Link>
+                <Link to={`/participations/campaigns/${item.id}/participants/new`}>
+                  <Button type="button" variant="soft">
+                    <HandCoins className="size-4" aria-hidden />
+                    {t('campaignParticipants.create')}
+                  </Button>
+                </Link>
+              </>
             }
             onDelete={() =>
               confirmDelete({

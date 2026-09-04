@@ -17,6 +17,7 @@ import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
+import { isAnonymousBenefactor } from '../../lib/benefactors'
 import { useGeoName } from '../../lib/geo'
 import type { Benefactor, City, Paginated, Province } from '../../types/app'
 
@@ -159,13 +160,14 @@ export function BenefactorsListPage() {
             {rows.map((item) => (
               <tr key={item.id} className="border-t border-line">
                 <td className="px-4 py-3">{item.name}</td>
-                <td className="px-4 py-3">{name(item.province)}</td>
-                <td className="px-4 py-3">{name(item.city)}</td>
+                <td className="px-4 py-3">{item.province ? name(item.province) : '—'}</td>
+                <td className="px-4 py-3">{item.city ? name(item.city) : '—'}</td>
                 <td className="px-4 py-3">{item.phone ? localizeDigits(item.phone, locale) : '—'}</td>
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/base-info/benefactors/${item.id}`}
                     editTo={`/base-info/benefactors/${item.id}/edit`}
+                    canDelete={!isAnonymousBenefactor(item)}
                     onDelete={() =>
                       confirmDelete({
                         message: t('benefactors.confirmDelete'),

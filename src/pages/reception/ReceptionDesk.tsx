@@ -41,17 +41,18 @@ import {
 } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import {
-  parseClipboardNationalIdOrPhone,
+  parseClipboardReceptionQuery,
   readClipboardText,
 } from '../../lib/clipboard'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type {
   ReceptionHousingRow,
-  ReceptionMatch,
   ReceptionPerson,
   ReceptionProfile,
+  ReceptionRecord,
   ReceptionSearchResult,
+  ReceptionSearchScope,
   ReceptionVisit,
 } from '../../types/app'
 import { ReceptionKindChips } from './ReceptionKindChips'
@@ -70,19 +71,59 @@ import {
 type ReceptionPageCache = {
   term: string
   searched: boolean
-  matches: ReceptionMatch[] | null
+  records: ReceptionRecord[] | null
   matchTotal: number
+  resultPage: number
+  resultPageSize: number
   profile: ReceptionProfile | null
+  scope: ReceptionSearchScope
 }
 
+const SEARCH_PAGE_SIZE = 20
+
 let receptionPageCache: ReceptionPageCache | null = null
+
+function recordsFromResult(data: ReceptionSearchResult): ReceptionRecord[] {
+  if (data.records?.length) return data.records
+  return data.matches.map((item) => ({
+    type: 'person' as const,
+    id: item.id,
+    title: item.fullName,
+    phone: item.phone,
+    nationalId: item.nationalId,
+    city: item.city ?? null,
+    person: item,
+  }))
+}
+
+function pathForRecord(record: ReceptionRecord) {
+  if (record.type === 'reservation') return `/reservations/${record.id}`
+  if (record.type === 'accommodation') return `/accommodations/${record.id}`
+  if (record.type === 'walkingStation') return `/base-info/walking-stations/${record.id}`
+  if (record.type === 'caravan') return `/caravans/${record.id}`
+  return `/base-info/benefactors/${record.id}`
+}
+
+function mergeSearchRecords(primary: ReceptionRecord[], extra: ReceptionRecord[]) {
+  const seenPeople = new Set(
+    primary.filter((item) => item.type === 'person').map((item) => item.id),
+  )
+  const seenKeys = new Set(primary.map((item) => `${item.type}:${item.id}`))
+  const uniqueExtra = extra.filter((item) => {
+    if (item.type === 'person' && seenPeople.has(item.id)) return false
+    return !seenKeys.has(`${item.type}:${item.id}`)
+  })
+  return [...primary, ...uniqueExtra]
+}
 
 export function ReceptionDesk({
   variant = 'page',
   onExpandedChange,
+  onNavigateAway,
 }: {
   variant?: 'page' | 'modal'
   onExpandedChange?: (expanded: boolean) => void
+  onNavigateAway?: () => void
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -100,8 +141,16 @@ export function ReceptionDesk({
   const [term, setTerm] = useState(qParam || (cached?.term ?? ''))
   const [searching, setSearching] = useState(qParam.length >= 2)
   const [searched, setSearched] = useState(cached?.searched ?? false)
-  const [matches, setMatches] = useState<ReceptionMatch[] | null>(cached?.matches ?? null)
+  const [records, setRecords] = useState<ReceptionRecord[] | null>(cached?.records ?? null)
   const [matchTotal, setMatchTotal] = useState(cached?.matchTotal ?? 0)
+  const [resultPage, setResultPage] = useState(cached?.resultPage ?? 1)
+  const [resultPageSize, setResultPageSize] = useState(cached?.resultPageSize ?? SEARCH_PAGE_SIZE)
+  const [searchScope, setSearchScope] = useState<ReceptionSearchScope>(cached?.scope ?? 'primary')
+  const [pageLoading, setPageLoading] = useState(false)
+  const searchedQRef = useRef('')
+  const [activeQuery, setActiveQuery] = useState('')
+  const searchSeqRef = useRef(0)
+  const extendedRecordsRef = useRef<ReceptionRecord[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
   const [profile, setProfile] = useState<ReceptionProfile | null>(cached?.profile ?? null)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -121,8 +170,17 @@ export function ReceptionDesk({
 
   useEffect(() => {
     if (variant !== 'page') return
-    receptionPageCache = { term, searched, matches, matchTotal, profile }
-  }, [variant, term, searched, matches, matchTotal, profile])
+    receptionPageCache = {
+      term,
+      searched,
+      records,
+      matchTotal,
+      resultPage,
+      resultPageSize,
+      profile,
+      scope: searchScope,
+    }
+  }, [variant, term, searched, records, matchTotal, resultPage, resultPageSize, profile, searchScope])
 
   useEffect(() => {
     if (variant !== 'modal') return
@@ -130,7 +188,7 @@ export function ReceptionDesk({
     void (async () => {
       const raw = await readClipboardText()
       if (cancelled || raw == null) return
-      const value = parseClipboardNationalIdOrPhone(raw)
+      const value = parseClipboardReceptionQuery(raw)
       if (!value) return
       let applied = false
       setTerm((prev) => {
@@ -168,41 +226,144 @@ export function ReceptionDesk({
     }
   }
 
+  function leaveTo(path: string) {
+    onNavigateAway?.()
+    navigate(path)
+  }
+
+  function openRecord(record: ReceptionRecord) {
+    if (record.type === 'person') {
+      void loadProfile(record.id)
+      return
+    }
+    leaveTo(pathForRecord(record))
+  }
+
   const runSearch = useCallback(
-    async (raw: string, options?: { preferPicker?: boolean }) => {
+    async (
+      raw: string,
+      options?: {
+        preferPicker?: boolean
+        page?: number
+        keepPicker?: boolean
+        scope?: ReceptionSearchScope
+      },
+    ) => {
       const q = raw.trim()
       if (q.length < 2) {
         toast.error(t('reception.queryTooShort'))
         return
       }
-      setSearching(true)
-      setPickerOpen(false)
+      const page = options?.page ?? 1
+      const keepPicker = Boolean(options?.keepPicker)
+      const seq = keepPicker ? searchSeqRef.current : ++searchSeqRef.current
+      if (!keepPicker) {
+        extendedRecordsRef.current = []
+        setSearching(true)
+        setPickerOpen(false)
+        setProfile(null)
+      } else {
+        setPageLoading(true)
+      }
       try {
-        const { data } = await api.get<ReceptionSearchResult>('/reception/search', {
-          params: { q },
+        const primary = await api.get<ReceptionSearchResult>('/reception/search', {
+          params: {
+            q,
+            scope: 'primary',
+            page,
+            pageSize: SEARCH_PAGE_SIZE,
+          },
         })
+        if (seq !== searchSeqRef.current) return
+        const data = primary.data
+        let hits = recordsFromResult(data)
+        if (keepPicker) {
+          hits = mergeSearchRecords(hits, extendedRecordsRef.current)
+        }
+        searchedQRef.current = q
+        setActiveQuery(q)
         setSearched(true)
+        setSearchScope('primary')
         setMatchTotal(data.total)
-        if (data.matches.length === 0) {
-          setProfile(null)
-          setMatches([])
+        setResultPage(data.page ?? page)
+        setResultPageSize(data.pageSize ?? SEARCH_PAGE_SIZE)
+        setRecords(hits)
+
+        if (keepPicker) {
+          setPickerOpen(true)
           return
         }
-        if (data.matches.length === 1 && data.profile && !options?.preferPicker) {
-          setMatches(null)
+
+        if (hits.length > 0) {
+          setSearching(false)
+          setPickerOpen(true)
+        }
+
+        if (page !== 1) {
+          setSearching(false)
+          return
+        }
+
+        const extended = await api.get<ReceptionSearchResult>('/reception/search', {
+          params: { q, scope: 'extended', page: 1, pageSize: SEARCH_PAGE_SIZE },
+        })
+        if (seq !== searchSeqRef.current) return
+        const extra = recordsFromResult(extended.data)
+        extendedRecordsRef.current = extra
+        setRecords((current) => {
+          const base = (current ?? []).filter(
+            (item) => item.type === 'person' || item.type === 'reservation',
+          )
+          return mergeSearchRecords(base.length ? base : recordsFromResult(data), extra)
+        })
+
+        const merged = mergeSearchRecords(recordsFromResult(data), extra)
+        if (merged.length === 0) {
+          setProfile(null)
+          setPickerOpen(false)
+          return
+        }
+
+        const otherTypes = extra.filter((item) => item.type !== 'person')
+        const people = mergeSearchRecords(recordsFromResult(data), extra).filter(
+          (item) => item.type === 'person',
+        )
+        if (
+          !options?.preferPicker &&
+          people.length === 1 &&
+          otherTypes.length === 0 &&
+          extra.every((item) => item.type === 'person') &&
+          data.profile &&
+          data.total === 1
+        ) {
+          setPickerOpen(false)
           setProfile(data.profile)
           return
         }
+        if (
+          !options?.preferPicker &&
+          recordsFromResult(data).length === 0 &&
+          extra.length === 1 &&
+          extra[0].type !== 'person'
+        ) {
+          setPickerOpen(false)
+          onNavigateAway?.()
+          navigate(pathForRecord(extra[0]))
+          return
+        }
         setProfile(null)
-        setMatches(data.matches)
         setPickerOpen(true)
       } catch (error) {
+        if (seq !== searchSeqRef.current) return
         toast.error(getApiErrorMessage(error, t('common.error')))
       } finally {
-        setSearching(false)
+        if (seq === searchSeqRef.current) {
+          setSearching(false)
+          setPageLoading(false)
+        }
       }
     },
-    [t],
+    [t, navigate, onNavigateAway],
   )
 
   useEffect(() => {
@@ -306,9 +467,11 @@ export function ReceptionDesk({
             </AppForm>
           </section>
         </div>
-        {idle && searched && !searching && !loadingProfile ? (
+        {idle && searched && !searching && !loadingProfile && !records?.length ? (
           <div className={`mx-auto w-full max-w-2xl ${isModal ? 'mt-2' : 'mt-4'}`}>
-            <FormEmptyHint>{t('reception.noResults')}</FormEmptyHint>
+            <FormEmptyHint>
+              {t(searchScope === 'extended' ? 'reception.noResultsExtended' : 'reception.noResults')}
+            </FormEmptyHint>
           </div>
         ) : null}
         {idle && !searched && !searching && !isModal ? (
@@ -318,14 +481,26 @@ export function ReceptionDesk({
         ) : null}
       </div>
 
-      {pickerOpen && matches ? (
+      {pickerOpen && records?.length ? (
         <ReceptionMatchModal
-          matches={matches}
+          records={records}
           total={matchTotal}
+          page={resultPage}
+          pageSize={resultPageSize}
+          scope={searchScope}
+          searchKey={activeQuery}
+          loading={pageLoading}
           onClose={() => setPickerOpen(false)}
-          onSelect={(id) => {
+          onSelect={(record) => {
             setPickerOpen(false)
-            void loadProfile(id)
+            openRecord(record)
+          }}
+          onPageChange={(nextPage) => {
+            void runSearch(searchedQRef.current || term, {
+              page: nextPage,
+              keepPicker: true,
+              preferPicker: true,
+            })
           }}
         />
       ) : null}
@@ -345,22 +520,23 @@ export function ReceptionDesk({
             icon={UserRound}
             title={profile.person.fullName}
             action={
-              <div className="flex flex-col items-stretch gap-1.5">
+              <div className="flex max-w-[min(100%,24rem)] items-stretch gap-1.5">
                 <OpenUserPanelButton
                   userId={profile.person.id}
                   status={profile.person.status}
                   label={t('reception.viewPilgrimSystem')}
+                  className="min-w-0 flex-1 whitespace-normal !px-2 !py-1.5 !text-xs leading-4"
                 />
                 <Button
                   type="button"
                   onClick={() =>
-                    navigate(
+                    leaveTo(
                       `/reservations/new?forUser=${encodeURIComponent(profile.person.id)}`,
                     )
                   }
-                  className="whitespace-normal text-start leading-5"
+                  className="min-w-0 flex-1 whitespace-normal text-center !px-2 !py-1.5 !text-xs leading-4"
                 >
-                  <Plus className="size-4 shrink-0" aria-hidden />
+                  <Plus className="size-3.5 shrink-0" aria-hidden />
                   {t('reception.createVisitYear', {
                     year: formatNumber(profile.currentYear, locale),
                   })}
@@ -385,7 +561,7 @@ export function ReceptionDesk({
             <div className="space-y-3 p-4 sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <PersonPhoto photoId={profile.person.photoId} name={profile.person.fullName} />
-                <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2">
+                <div className="grid min-w-0 flex-1 grid-cols-4 gap-1.5">
                   <FormFactTile
                     compact
                     icon={IdCard}
@@ -422,7 +598,7 @@ export function ReceptionDesk({
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => setMoreOpen(true)}>
                   {t('reception.moreDetails')}
                 </Button>

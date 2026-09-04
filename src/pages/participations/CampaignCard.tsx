@@ -7,6 +7,18 @@ import { formatGroupedNumber } from '../../lib/datetime'
 import type { PublicCampaign } from '../../types/app'
 import { GeoStatus } from '../geo/GeoShared'
 
+export function campaignProgressPercent(
+  purchasedShares: number,
+  totalShares: number,
+  fallback?: number,
+) {
+  if (totalShares > 0) {
+    return Math.min(100, Math.max(0, (Number(purchasedShares) / Number(totalShares)) * 100))
+  }
+  const raw = Number(fallback)
+  return Number.isFinite(raw) ? Math.min(100, Math.max(0, raw)) : 0
+}
+
 export function CampaignProgressBar({
   percent,
   label,
@@ -16,25 +28,35 @@ export function CampaignProgressBar({
   label: string
   value: string
 }) {
-  const clamped = Math.min(100, Math.max(0, Number.isFinite(percent) ? percent : 0))
-  const fill = clamped > 0 ? Math.max(clamped, 3) : 0
+  const raw = Number(percent)
+  const clamped = Math.min(100, Math.max(0, Number.isFinite(raw) ? raw : 0))
+  const fill = clamped > 0 ? Math.max(clamped, 6) : 0
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between text-xs text-ink-500">
-        <span>{label}</span>
-        <span className="font-semibold text-teal-700">{value}</span>
-      </div>
+      <p className="mb-2 text-xs text-ink-500">{label}</p>
       <div
-        className="h-3 overflow-hidden rounded-full ring-1 ring-inset ring-ink-900/8"
+        className="relative h-8 overflow-hidden rounded-full bg-cream-100 ring-1 ring-inset ring-ink-900/8"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={clamped}
-        aria-label={label}
-        style={{
-          background: `linear-gradient(to inline-end, #2ebdb6 0% ${fill}%, #d8d5cc ${fill}% 100%)`,
-        }}
-      />
+        aria-valuenow={Math.round(clamped)}
+        aria-label={`${label} ${value}`}
+      >
+        {fill > 0 ? (
+          <div
+            className="absolute inset-y-0 start-0 bg-teal-500"
+            style={{ width: `${fill}%` }}
+          />
+        ) : null}
+        <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <span
+            className="rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-semibold"
+            style={{ color: '#3f3a34' }}
+          >
+            {value}
+          </span>
+        </span>
+      </div>
     </div>
   )
 }
@@ -84,7 +106,7 @@ export function CampaignCard({
           <p className="line-clamp-2 text-sm leading-6 text-ink-600">{item.description}</p>
         ) : null}
         <CampaignProgressBar
-          percent={item.progressPercent}
+          percent={campaignProgressPercent(item.purchasedShares, item.totalShares, item.progressPercent)}
           label={t('participations.progress')}
           value={`${formatGroupedNumber(item.progressPercent, locale)}٪`}
         />

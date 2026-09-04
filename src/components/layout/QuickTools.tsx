@@ -254,7 +254,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== 'Enter' || event.repeat || event.isComposing) return
       const target = event.target as HTMLElement | null
-      if (target?.closest('textarea, [contenteditable="true"]')) return
+      if (target?.closest('textarea, [contenteditable="true"], [data-nested-dialog]')) return
 
       const now = Date.now()
       if (now - lastAt >= DOUBLE_ENTER_MS) {
@@ -707,7 +707,7 @@ function ReceptionSearchModal({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
         <div className={`min-h-0 p-3 sm:p-4 ${expanded ? 'flex-1 overflow-y-auto' : ''}`}>
-          <ReceptionDesk variant="modal" onExpandedChange={setExpanded} />
+          <ReceptionDesk variant="modal" onExpandedChange={setExpanded} onNavigateAway={onClose} />
         </div>
       </div>
     </div>,

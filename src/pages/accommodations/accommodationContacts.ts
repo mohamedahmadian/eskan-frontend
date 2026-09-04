@@ -22,6 +22,7 @@ export type AccommodationContactDraft = {
 
 export type AccommodationContactPayload = {
   role: AccommodationContactRole
+  userId?: string
   nationalId: string
   firstName: string
   lastName: string
@@ -77,6 +78,19 @@ export function toAccommodationContactPayloads(
 ): AccommodationContactPayload[] {
   return accommodationContactRoles.flatMap((role) => {
     const draft = drafts[role]
+    if (draft.userId) {
+      return [
+        {
+          role,
+          userId: draft.userId,
+          nationalId: draft.nationalId.trim(),
+          firstName: draft.firstName.trim(),
+          lastName: draft.lastName.trim(),
+          phone: draft.phone.trim(),
+          birthDate: draft.birthDate.trim() || null,
+        },
+      ]
+    }
     if (!draft.nationalId.trim()) return []
     if (draft.status !== 'found' && draft.status !== 'new') return []
     if (!draft.firstName.trim() || !draft.lastName.trim() || !draft.phone.trim()) {
@@ -104,4 +118,12 @@ export function isAccommodationContactComplete(draft: AccommodationContactDraft)
   }
   if (draft.status === 'new' && !draft.birthDate.trim()) return false
   return true
+}
+
+export function isAccommodationContactAssigned(draft: AccommodationContactDraft) {
+  if (draft.userId) return true
+  if (draft.status === 'found' && (draft.firstName.trim() || draft.lastName.trim())) {
+    return true
+  }
+  return isAccommodationContactComplete(draft)
 }

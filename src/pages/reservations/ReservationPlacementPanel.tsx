@@ -214,6 +214,11 @@ export function ReservationPlacementPanel({
             title={t("reservations.placementStayTitle")}
             gender={individualGender}
             needed={1}
+            accommodated={
+              individualGender === "MALE"
+                ? (reservation.accommodatedMaleCount ?? 0)
+                : (reservation.accommodatedFemaleCount ?? 0)
+            }
             allocation={individualAllocation}
             year={reservation.year}
             locale={locale}
@@ -226,6 +231,7 @@ export function ReservationPlacementPanel({
               gender="MALE"
               title={t("reservations.placementStayMale")}
               needed={counts.male}
+              accommodated={reservation.accommodatedMaleCount ?? 0}
               allocations={maleAllocations}
               year={reservation.year}
               locale={locale}
@@ -236,6 +242,7 @@ export function ReservationPlacementPanel({
               gender="FEMALE"
               title={t("reservations.placementStayFemale")}
               needed={counts.female}
+              accommodated={reservation.accommodatedFemaleCount ?? 0}
               allocations={femaleAllocations}
               year={reservation.year}
               locale={locale}
@@ -256,6 +263,7 @@ function GenderStayColumn({
   gender,
   title,
   needed,
+  accommodated,
   allocations,
   year,
   locale,
@@ -265,6 +273,7 @@ function GenderStayColumn({
   gender: UserGender;
   title: string;
   needed: number;
+  accommodated: number;
   allocations: ReservationAllocationSummary[];
   year: number;
   locale: string;
@@ -280,6 +289,7 @@ function GenderStayColumn({
           title={title}
           gender={gender}
           needed={needed}
+          accommodated={accommodated}
           allocation={allocation}
           year={year}
           locale={locale}
@@ -297,6 +307,7 @@ function StayCard({
   title,
   gender,
   needed,
+  accommodated,
   allocation,
   year,
   locale,
@@ -308,6 +319,7 @@ function StayCard({
   title: string;
   gender: UserGender;
   needed: number;
+  accommodated?: number;
   allocation: ReservationAllocationSummary | null;
   year: number;
   locale: string;
@@ -385,6 +397,11 @@ function StayCard({
                 {statusText}
               </span>
             </div>
+            {accommodated != null && accommodated > needed ? (
+              <span className="mt-1.5 inline-flex items-center rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-semibold text-white">
+                {t("reservations.accommodatedCounts")} · {formatCount(accommodated)}
+              </span>
+            ) : null}
             <p className="mt-1 text-[11px] leading-5 text-ink-500">
               {assigned ? title : t("reservations.placementStatusLabel")}
               {stackedIndex && stackedTotal

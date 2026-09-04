@@ -54,7 +54,6 @@ import {
 import { AccommodationActivityYearFields, AccommodationManagersCard } from './AccommodationManagersCard'
 import { AccommodationTabNav, type AccommodationTab } from './AccommodationTabs'
 import { AccommodationYearAlert } from './AccommodationYearAlert'
-import { AccommodationYearContactsCard } from './AccommodationYearContactsCard'
 import {
   AccommodationContactsPanel,
   firstIncompleteContactRole,
@@ -355,13 +354,12 @@ export function AccommodationForm({
       <div className="space-y-4 p-5 sm:p-6">
       <AccommodationTabNav tab={tab} tabs={tabs} onChange={setTab} />
 
-      {tab === 'managers' && editManagers && initial ? (
-        <div className="space-y-4">
-          <AccommodationManagersCard accommodation={initial} users={users} />
-          <AccommodationYearContactsCard accommodation={initial} />
-        </div>
-      ) : tab === 'managers' && initial && !isAdmin ? (
-        <AccommodationYearContactsCard accommodation={initial} />
+      {tab === 'managers' && initial ? (
+        <AccommodationManagersCard
+          accommodation={initial}
+          users={users}
+          canAssign={editManagers}
+        />
       ) : (
         <AppForm
           onSubmit={submit}

@@ -105,11 +105,11 @@ export function ReservationContactsStep({
 
   const assignSelf = useMutation({
     mutationFn: async () => {
-      if (!me.nationalId) throw new Error(t('reservations.assignMyselfNeedId'))
+      if (!me.id) throw new Error(t('reservations.assignMyselfNeedId'))
       for (const role of emptySelfRoles) {
         await api.put(`/reservations/${reservation.id}/contacts`, {
           role,
-          nationalId: me.nationalId,
+          userId: me.id,
           firstName: me.firstName,
           lastName: me.lastName,
           phone: me.phone,
@@ -193,7 +193,7 @@ export function ReservationContactsStep({
           <Button
             type="button"
             variant="soft"
-            disabled={!me.nationalId || assignSelf.isPending}
+            disabled={!me.id || assignSelf.isPending}
             onClick={() =>
               confirmToast({
                 title: t('reservations.confirmAssignMyself'),
@@ -640,7 +640,7 @@ function ContactRoleCard({
                     : t('reservations.newContactTitle')}
                 </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
                 <FormField icon={UserRound} label={t('users.firstName')} htmlFor={`contact-${role}-first`}>
                   <input
                     id={`contact-${role}-first`}
@@ -661,19 +661,19 @@ function ContactRoleCard({
                     disabled={status === 'found'}
                   />
                 </FormField>
+                <FormField icon={Phone} label={t('users.phone')} htmlFor={`contact-${role}-phone`}>
+                  <input
+                    id={`contact-${role}-phone`}
+                    className={fieldClassName}
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                  />
+                </FormField>
+                <Button type="submit" className="shrink-0" disabled={save.isPending}>
+                  <Check className="size-4" aria-hidden />
+                  {t('caravans.contactSave')}
+                </Button>
               </div>
-              <FormField icon={Phone} label={t('users.phone')} htmlFor={`contact-${role}-phone`}>
-                <input
-                  id={`contact-${role}-phone`}
-                  className={fieldClassName}
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                />
-              </FormField>
-              <Button type="submit" disabled={save.isPending}>
-                <Check className="size-4" aria-hidden />
-                {t('caravans.contactSave')}
-              </Button>
             </div>
           ) : null}
         </AppForm>

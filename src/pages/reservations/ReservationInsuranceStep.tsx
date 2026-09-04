@@ -32,6 +32,7 @@ import {
 import { toast } from 'sonner'
 import { DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
+import { confirmToast } from '../../components/ui/confirmToast'
 import { Button, LoadingState, cardClassName } from '../../components/ui/Form'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { FormField, fieldClassName } from '../../components/ui/Form'
@@ -47,6 +48,7 @@ import type {
 } from '../../types/app'
 import {
   canPayInsurance,
+  currentStepFromStatus,
   insurancePaidMethodLabel,
   isInsuranceAccepted,
   neighborFlowStep,
@@ -55,7 +57,7 @@ import {
 } from './reservation-steps'
 import { ReservationStepNav } from './ReservationStepNav'
 import { ReservationIdentityChips, ReservationSectionHeader } from './ReservationSectionHeader'
-import { InsuranceStatusBadge } from './ReservationStatusBadge'
+import { InsuranceStatusBadge, MemberInsuranceAmountBadges } from './ReservationStatusBadge'
 
 const chartValueLabel = { fill: '#3f3a34', fontSize: 12, fontWeight: 600 }
 
@@ -159,6 +161,21 @@ export function InsuranceStep({
     )
   }, [settings.data?.insurancePlans])
 
+  const completeFile = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<Reservation>(
+        `/reservations/${reservation.id}/insurance/complete`,
+      )
+      return data
+    },
+    onSuccess: (data) => {
+      toast.success(t('reservations.insuranceCompleted'))
+      onChanged()
+      onGoToStep?.(currentStepFromStatus(data.status, data.type, data))
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
+  })
+
   const pay = useMutation({
     mutationFn: async (payload: PayInsurancePayload) => {
       if (!selectedPlanId) {
@@ -193,6 +210,9 @@ export function InsuranceStep({
       setReceiptTrackingNo('')
       setReceiptBankName('')
       onChanged()
+      if (data.status === 'COMPLETED') {
+        onGoToStep?.(currentStepFromStatus(data.status, data.type, data))
+      }
     },
     onError: (error) => {
       if (error instanceof Error && error.message === 'NO_PLAN') {
@@ -318,6 +338,8 @@ export function InsuranceStep({
             summary={summary}
             locale={locale}
             amountText={moneyText(summary.paidAmount, locale, t)}
+            planCoverage={selectedPlan?.coverageAmount ?? 0}
+            planPremium={premium}
             selected={selected}
             allSelected={allSelected}
             canSelect={payableIds.length > 0 && Boolean(selectedPlanId)}
@@ -377,6 +399,20 @@ export function InsuranceStep({
       {showNav ? (
         <ReservationStepNav
           onPrev={prevStep && onGoToStep ? () => onGoToStep(prevStep) : undefined}
+          onNext={
+            allAccepted
+              ? () =>
+                  confirmToast({
+                    title: t('reservations.confirmComplete'),
+                    confirmLabel: t('reservations.steps.complete'),
+                    cancelLabel: t('common.cancel'),
+                    onConfirm: () => completeFile.mutate(),
+                  })
+              : undefined
+          }
+          nextLabel={t('reservations.steps.complete')}
+          nextIcon="complete"
+          nextPending={completeFile.isPending}
         />
       ) : null}
     </section>
@@ -568,6 +604,8 @@ function GroupInsuranceBody({
   summary,
   locale,
   amountText,
+  planCoverage,
+  planPremium,
   selected,
   allSelected,
   canSelect,
@@ -584,6 +622,8 @@ function GroupInsuranceBody({
   summary: ReturnType<typeof summarizeInsurance>
   locale: string
   amountText: string
+  planCoverage: number
+  planPremium: number
   selected: string[]
   allSelected: boolean
   canSelect: boolean
@@ -807,6 +847,11 @@ function GroupInsuranceBody({
                     </td>
                     <td className="px-3 py-2">
                       <InsuranceStatusBadge status={item.insuranceStatus} />
+                      <MemberInsuranceAmountBadges
+                        coverageAmount={item.insuranceCoverageAmount ?? planCoverage}
+                        premiumAmount={item.insurancePaidAmount ?? planPremium}
+                        locale={locale}
+                      />
                       {item.insuranceStatus === 'PAID' ? (
                         <InsuranceReceiptDetails member={item} locale={locale} compact className="mt-2" />
                       ) : null}
@@ -875,6 +920,11 @@ function GroupInsuranceBody({
                 </p>
                 <div className="mt-2">
                   <InsuranceStatusBadge status={item.insuranceStatus} />
+                  <MemberInsuranceAmountBadges
+                    coverageAmount={item.insuranceCoverageAmount ?? planCoverage}
+                    premiumAmount={item.insurancePaidAmount ?? planPremium}
+                    locale={locale}
+                  />
                 </div>
                 {item.insuranceStatus === 'PAID' ? (
                   <InsuranceReceiptDetails member={item} locale={locale} compact className="mt-2" />

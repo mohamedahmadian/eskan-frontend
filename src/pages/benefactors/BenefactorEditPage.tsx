@@ -1,9 +1,10 @@
+import { HandHeart } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
+import { EntityNameSubtitle, LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
 import type { Benefactor, City, Province } from '../../types/app'
 import { BenefactorForm } from './BenefactorForm'
@@ -48,7 +49,10 @@ export function BenefactorEditPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('benefactors.edit')} subtitle={t('benefactors.editSubtitle')} />
+      <PageHeader
+        title={t('benefactors.edit')}
+        subtitle={<EntityNameSubtitle name={item.data.name} icon={HandHeart} />}
+      />
       <BenefactorForm
         initial={item.data}
         provinces={provinces.data}

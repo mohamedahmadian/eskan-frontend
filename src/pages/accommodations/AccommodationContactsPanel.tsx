@@ -31,6 +31,7 @@ import type { ManagedUser } from '../../types/app'
 import {
   accommodationContactRoles,
   emptyAccommodationContactDraft,
+  isAccommodationContactAssigned,
   isAccommodationContactComplete,
   type AccommodationContactDraft,
   type AccommodationContactRole,
@@ -64,7 +65,7 @@ function nextIncompleteRole(
   const start = accommodationContactRoles.indexOf(from)
   for (let i = 1; i <= accommodationContactRoles.length; i += 1) {
     const role = accommodationContactRoles[(start + i) % accommodationContactRoles.length]
-    if (!isAccommodationContactComplete(drafts[role])) return role
+    if (!isAccommodationContactAssigned(drafts[role])) return role
   }
   return null
 }
@@ -73,7 +74,7 @@ export function firstIncompleteContactRole(
   drafts: Record<AccommodationContactRole, AccommodationContactDraft>,
 ): AccommodationContactRole {
   return (
-    accommodationContactRoles.find((role) => !isAccommodationContactComplete(drafts[role])) ??
+    accommodationContactRoles.find((role) => !isAccommodationContactAssigned(drafts[role])) ??
     accommodationContactRoles[0]
   )
 }
@@ -101,6 +102,8 @@ export function AccommodationContactsPanel({
   const RoleIcon = roleIcons[activeRole]
   const nationalIdRef = useRef<HTMLInputElement>(null)
   const complete = isAccommodationContactComplete(draft)
+  const assigned = isAccommodationContactAssigned(draft)
+  const showLookup = !assigned && draft.status !== 'new'
   const [assignmentAlert, setAssignmentAlert] = useState<{
     role: AccommodationContactRole
     name: string
@@ -108,7 +111,7 @@ export function AccommodationContactsPanel({
   } | null>(null)
 
   useEffect(() => {
-    if (draft.status === 'idle' || draft.status === 'looking') {
+    if (draft.status === 'idle' || draft.status === 'looking' || !isAccommodationContactAssigned(draft)) {
       nationalIdRef.current?.focus()
     }
   }, [activeRole, draft.status])
@@ -192,14 +195,14 @@ export function AccommodationContactsPanel({
             <RoleIcon className="size-5" aria-hidden />
           </span>
           <p className="text-base font-semibold text-ink-900">{roleLabel}</p>
-          {!complete ? (
+          {!assigned && draft.status !== 'new' ? (
             <p className="max-w-sm text-sm text-ink-600">
               {t('accommodations.contactSelectHint', { role: roleLabel })}
             </p>
           ) : null}
         </div>
 
-        {complete ? (
+        {assigned ? (
           <AssignedPersonCard
             draft={draft}
             fromSystem={draft.status === 'found'}
@@ -207,7 +210,7 @@ export function AccommodationContactsPanel({
           />
         ) : null}
 
-        {(draft.status === 'idle' || draft.status === 'looking') && !complete ? (
+        {showLookup ? (
           <FormField
             icon={IdCard}
             label={t('users.nationalId')}
@@ -345,7 +348,7 @@ export function AccommodationContactsPanel({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {accommodationContactRoles.map((role) => {
           const item = drafts[role]
-          const done = isAccommodationContactComplete(item)
+          const done = isAccommodationContactAssigned(item)
           const active = role === activeRole
           const Icon = roleIcons[role]
           return (

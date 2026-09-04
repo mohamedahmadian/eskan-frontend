@@ -148,6 +148,14 @@ export function showRoutePlacement(source?: ReservationStepSource | null) {
   return Boolean(source?.features?.routePlacement)
 }
 
+/** تقاضای سیم‌کارت و کارت بانکی فقط برای زائر غیرایرانی. */
+export function showSimBankRequests(source?: {
+  internationalWorkflow?: boolean
+  iraqiWorkflow?: boolean
+} | null) {
+  return Boolean(source?.internationalWorkflow || source?.iraqiWorkflow)
+}
+
 export function stepsForType(
   type: ReservationType,
   source?: ReservationStepSource | boolean,

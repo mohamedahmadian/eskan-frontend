@@ -72,6 +72,7 @@ export function PlacementDetailPage() {
   const [accommodationId, setAccommodationId] = useState('')
   const [gender, setGender] = useState<UserGender | ''>('')
   const [headcount, setHeadcount] = useState('')
+  const [accommodatedCount, setAccommodatedCount] = useState('')
   const [movingId, setMovingId] = useState<string | null>(null)
 
   const detail = useQuery({
@@ -98,11 +99,21 @@ export function PlacementDetailPage() {
   const showAllocateForm =
     Boolean(movingId) || (individual ? !row?.allocations.length : !partyFullyPlaced)
 
+  function currentAccommodatedFor(nextGender: UserGender) {
+    if (!row) return 0
+    const stored =
+      (nextGender === 'MALE' ? row.accommodatedMaleCount : row.accommodatedFemaleCount) ?? 0
+    if (stored > 0) return stored
+    return nextGender === 'MALE' ? row.maleCount : row.femaleCount
+  }
+
   useEffect(() => {
     if (!row || movingId) return
     if (row.type !== reservationTypes.INDIVIDUAL) return
-    setGender(row.maleCount >= 1 ? 'MALE' : 'FEMALE')
+    const nextGender = row.maleCount >= 1 ? 'MALE' : 'FEMALE'
+    setGender(nextGender)
     setHeadcount('1')
+    setAccommodatedCount(String(currentAccommodatedFor(nextGender)))
   }, [row, movingId])
 
   const availability = useQuery({
@@ -158,7 +169,12 @@ export function PlacementDetailPage() {
 
   function fillHeadcountForGender(nextGender: UserGender | '') {
     setGender(nextGender)
-    if (!nextGender || individual) return
+    if (!nextGender) {
+      setAccommodatedCount('')
+      return
+    }
+    setAccommodatedCount(String(currentAccommodatedFor(nextGender)))
+    if (individual) return
     const remaining = remainingNeed(nextGender)
     setHeadcount(remaining > 0 ? String(remaining) : '')
   }
@@ -168,6 +184,9 @@ export function PlacementDetailPage() {
     setAccommodationId('')
     setGender(individualGender || '')
     setHeadcount(individual ? '1' : '')
+    setAccommodatedCount(
+      individualGender ? String(currentAccommodatedFor(individualGender)) : '',
+    )
   }
 
   const allocate = useMutation({
@@ -176,6 +195,7 @@ export function PlacementDetailPage() {
         accommodationId,
         gender: selectedGender,
         headcount: individual ? 1 : Number(headcount),
+        accommodatedCount: Number(accommodatedCount),
         ...(overrideNote
           ? { genderOverride: true, overrideNote }
           : {}),
@@ -193,6 +213,7 @@ export function PlacementDetailPage() {
       toast.success(movingId ? t('placements.movedOk') : t('placements.allocatedOk'))
       resetForm()
       void queryClient.invalidateQueries({ queryKey: ['placements'] })
+      void queryClient.invalidateQueries({ queryKey: ['reservations'] })
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, t('common.error')))
@@ -202,7 +223,7 @@ export function PlacementDetailPage() {
   function submitAllocate() {
     const nextGender = selectedGender
     const nextHeadcount = individual ? '1' : headcount
-    if (!accommodationId || !nextGender || !nextHeadcount) {
+    if (!accommodationId || !nextGender || !nextHeadcount || accommodatedCount === '') {
       toast.error(t('common.error'))
       return
     }
@@ -405,6 +426,7 @@ export function PlacementDetailPage() {
                               setAccommodationId('')
                               setGender(item.gender)
                               setHeadcount(String(item.headcount))
+                              setAccommodatedCount(String(currentAccommodatedFor(item.gender)))
                             }}
                           >
                             <ArrowRightLeft className="size-4" aria-hidden />
@@ -443,72 +465,6 @@ export function PlacementDetailPage() {
                   </p>
                 </FormField>
               ) : null}
-              <FormField
-                icon={Building2}
-                label={movingId ? t('placements.toAccommodation') : t('placements.accommodation')}
-              >
-                <SearchSelect
-                  value={accommodationId}
-                  placeholder={t('placements.selectAccommodation')}
-                  onChange={setAccommodationId}
-                  options={(availability.data ?? [])
-                    .filter((item) => item.id !== movingItem?.accommodationId)
-                    .map((item) => ({
-                      value: item.id,
-                      label: t('placements.optionRemaining', {
-                        name: item.name,
-                        male: n(item.remainingMale),
-                        female: n(item.remainingFemale),
-                      }),
-                    }))}
-                />
-              </FormField>
-              {selected ? (
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  <FormFactTile
-                    compact
-                    icon={BedDouble}
-                    label={t('placements.capacityMale')}
-                    value={n(selected.maleCapacity)}
-                    tone="teal"
-                  />
-                  <FormFactTile
-                    compact
-                    icon={UserCheck}
-                    label={t('placements.assignedCapacityMale')}
-                    value={n(Math.max(0, selected.effectiveMale - selected.remainingMale))}
-                    tone="teal"
-                  />
-                  <FormFactTile
-                    compact
-                    icon={Users}
-                    label={t('placements.remainingCapacityMale')}
-                    value={n(selected.remainingMale)}
-                    tone="teal"
-                  />
-                  <FormFactTile
-                    compact
-                    icon={BedDouble}
-                    label={t('placements.capacityFemale')}
-                    value={n(selected.femaleCapacity)}
-                    tone="mint"
-                  />
-                  <FormFactTile
-                    compact
-                    icon={UserCheck}
-                    label={t('placements.assignedCapacityFemale')}
-                    value={n(Math.max(0, selected.effectiveFemale - selected.remainingFemale))}
-                    tone="mint"
-                  />
-                  <FormFactTile
-                    compact
-                    icon={Users}
-                    label={t('placements.remainingCapacityFemale')}
-                    value={n(selected.remainingFemale)}
-                    tone="mint"
-                  />
-                </div>
-              ) : null}
               {individual ? null : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
@@ -540,15 +496,105 @@ export function PlacementDetailPage() {
                   </FormField>
                 </div>
               )}
+              <FormField
+                icon={Building2}
+                label={movingId ? t('placements.toAccommodation') : t('placements.accommodation')}
+              >
+                <SearchSelect
+                  value={accommodationId}
+                  placeholder={t('placements.selectAccommodation')}
+                  onChange={setAccommodationId}
+                  options={(availability.data ?? [])
+                    .filter((item) => item.id !== movingItem?.accommodationId)
+                    .map((item) => ({
+                      value: item.id,
+                      label: t('placements.optionRemaining', {
+                        name: item.name,
+                        male: n(item.remainingMale),
+                        female: n(item.remainingFemale),
+                      }),
+                    }))}
+                />
+              </FormField>
+              {selected && selectedGender ? (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {selectedGender === 'MALE' ? (
+                    <>
+                      <FormFactTile
+                        compact
+                        icon={BedDouble}
+                        label={t('placements.capacityMale')}
+                        value={n(selected.maleCapacity)}
+                        tone="teal"
+                      />
+                      <FormFactTile
+                        compact
+                        icon={UserCheck}
+                        label={t('placements.assignedCapacity')}
+                        value={n(Math.max(0, selected.effectiveMale - selected.remainingMale))}
+                        tone="teal"
+                      />
+                      <FormFactTile
+                        compact
+                        icon={Users}
+                        label={t('placements.remainingCapacityMale')}
+                        value={n(selected.remainingMale)}
+                        tone="teal"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <FormFactTile
+                        compact
+                        icon={BedDouble}
+                        label={t('placements.capacityFemale')}
+                        value={n(selected.femaleCapacity)}
+                        tone="mint"
+                      />
+                      <FormFactTile
+                        compact
+                        icon={UserCheck}
+                        label={t('placements.assignedCapacity')}
+                        value={n(Math.max(0, selected.effectiveFemale - selected.remainingFemale))}
+                        tone="mint"
+                      />
+                      <FormFactTile
+                        compact
+                        icon={Users}
+                        label={t('placements.remainingCapacityFemale')}
+                        value={n(selected.remainingFemale)}
+                        tone="mint"
+                      />
+                    </>
+                  )}
+                </div>
+              ) : null}
               {usesOverflow ? (
                 <p className="text-sm text-amber-800">{t('placements.overflowWarning')}</p>
               ) : null}
-              <FormActions
-                submitLabel={movingId ? t('placements.move') : t('placements.selectStay')}
-                cancelLabel={movingId ? t('common.cancel') : undefined}
-                onCancel={movingId ? resetForm : undefined}
-                submitting={allocate.isPending}
-              />
+              <div className="flex flex-wrap items-end gap-3">
+                <FormField
+                  icon={Users}
+                  label={t('placements.accommodatedCount')}
+                  htmlFor="placement-accommodated"
+                >
+                  <input
+                    id="placement-accommodated"
+                    type="number"
+                    min={0}
+                    className={`${fieldClassName} w-32`}
+                    value={accommodatedCount}
+                    onChange={(event) => setAccommodatedCount(event.target.value)}
+                    required
+                  />
+                </FormField>
+                <FormActions
+                  submitLabel={movingId ? t('placements.move') : t('placements.selectStay')}
+                  cancelLabel={movingId ? t('common.cancel') : undefined}
+                  onCancel={movingId ? resetForm : undefined}
+                  submitting={allocate.isPending}
+                />
+              </div>
             </AppForm>
           </FormCard>
         </div>

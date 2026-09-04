@@ -17,7 +17,7 @@ const variants = {
     'bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-60 shadow-sm',
   soft: 'bg-mint-500 text-white hover:bg-mint-600 disabled:opacity-60 shadow-sm',
   ghost:
-    'bg-white text-ink-700 hover:bg-cream-100 border border-line',
+    'cursor-pointer bg-white text-ink-700 hover:bg-teal-50 border border-teal-400 shadow-[0_4px_12px_rgba(46,189,182,0.16)]',
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:opacity-60',
 }
 
@@ -41,7 +41,7 @@ export function Button({
 }) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl text-sm font-medium transition ${
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl text-sm font-medium transition ${
         icon ? 'size-9 p-0' : 'px-[0.9rem] py-2.5'
       } ${variants[variant]} ${className}`}
       {...props}

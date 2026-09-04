@@ -1,4 +1,4 @@
-import { CalendarDays, Mars, Trash2, UserRound, Venus } from 'lucide-react'
+import { CalendarDays, Mars, Pencil, Trash2, UserPlus, UserRound, Users, UsersRound, Venus } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -9,15 +9,24 @@ import {
   Button,
   FormActions,
   FormField,
-  cardClassName,
   fieldClassName,
 } from '../../components/ui/Form'
-import { TableCard } from '../../components/ui/ListControls'
+import { formCardBodyClassName } from '../../components/ui/FormLayout'
+import { TableCard, actionsColClassName, ActionsTh } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
-import { genderTypes, type Accommodation, type GenderType, type ManagedUser } from '../../types/app'
+import {
+  genderTypes,
+  type Accommodation,
+  type AccommodationManagerLink,
+  type GenderType,
+  type ManagedUser,
+} from '../../types/app'
 import { managerDisplayName } from './AccommodationYearAlert'
+import { AccommodationYearContactsModal } from './AccommodationYearContactsCard'
+import { AccommodationYearModal } from './AccommodationYearModal'
+import { AccommodationYearReservationsModal } from './AccommodationYearReservationsModal'
 
 const capacityFieldClassName = `${fieldClassName} disabled:cursor-not-allowed disabled:opacity-60`
 
@@ -32,6 +41,7 @@ export function AccommodationActivityYearFields({
   femaleCapacity,
   onFemaleCapacityChange,
   genderType,
+  yearDisabled = false,
   yearInputId = 'assign-manager-year',
   managerInputId = 'assign-manager',
   maleInputId = 'assign-year-male',
@@ -47,6 +57,7 @@ export function AccommodationActivityYearFields({
   femaleCapacity: string
   onFemaleCapacityChange: (value: string) => void
   genderType: GenderType
+  yearDisabled?: boolean
   yearInputId?: string
   managerInputId?: string
   maleInputId?: string
@@ -60,11 +71,12 @@ export function AccommodationActivityYearFields({
       <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor={yearInputId}>
         <input
           id={yearInputId}
-          className={fieldClassName}
+          className={`${fieldClassName} disabled:cursor-not-allowed disabled:opacity-60`}
           inputMode="numeric"
           min={1300}
           max={1600}
           required
+          disabled={yearDisabled}
           value={year}
           onChange={(event) => onYearChange(toLatinDigits(event.target.value))}
         />
@@ -117,13 +129,19 @@ export function AccommodationActivityYearFields({
 export function AccommodationManagersCard({
   accommodation,
   users,
+  canAssign = true,
 }: {
   accommodation: Accommodation
   users: ManagedUser[]
+  canAssign?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const queryClient = useQueryClient()
+  const [assignOpen, setAssignOpen] = useState(false)
+  const [editing, setEditing] = useState<AccommodationManagerLink | null>(null)
+  const [contactsYear, setContactsYear] = useState<number | null>(null)
+  const [caravansYear, setCaravansYear] = useState<number | null>(null)
   const [userId, setUserId] = useState('')
   const [year, setYear] = useState(String(currentPersianYear()))
   const [maleCapacity, setMaleCapacity] = useState(() =>
@@ -149,12 +167,35 @@ export function AccommodationManagersCard({
     setFemaleCapacity(caps.female)
   }
 
+  function openAssign(row?: AccommodationManagerLink) {
+    if (row) {
+      setEditing(row)
+      setYear(String(row.year))
+      setUserId(row.userId ?? '')
+      setMaleCapacity(String(row.maleCapacity))
+      setFemaleCapacity(String(row.femaleCapacity))
+    } else {
+      setEditing(null)
+      setUserId('')
+      applyYear(String(currentPersianYear()))
+    }
+    setAssignOpen(true)
+  }
+
+  function closeAssign() {
+    setAssignOpen(false)
+    setEditing(null)
+  }
+
   async function refresh() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['accommodation', accommodation.id] }),
       queryClient.invalidateQueries({ queryKey: ['accommodations'] }),
       queryClient.invalidateQueries({ queryKey: ['accommodations', 'mine'] }),
       queryClient.invalidateQueries({ queryKey: ['accommodation-managers'] }),
+      queryClient.invalidateQueries({
+        queryKey: ['accommodation', accommodation.id, 'year-reservations'],
+      }),
     ])
   }
 
@@ -173,6 +214,7 @@ export function AccommodationManagersCard({
     },
     onSuccess: async (payload) => {
       setUserId('')
+      closeAssign()
       toast.success(
         payload.userId
           ? t('accommodations.managerAssigned')
@@ -205,34 +247,17 @@ export function AccommodationManagersCard({
 
   return (
     <div className="space-y-4">
-      <article className={`p-6 ${cardClassName}`}>
-        <p className="mb-4 text-sm leading-6 text-ink-600">
-          {t('accommodations.activityYearsHint')}
-        </p>
-        <AppForm
-          onSubmit={(event: FormEvent) => {
-            event.preventDefault()
-            assign.mutate()
-          }}
-          className="space-y-4"
-        >
-          <AccommodationActivityYearFields
-            year={year}
-            onYearChange={applyYear}
-            userId={userId}
-            onUserIdChange={setUserId}
-            users={users}
-            maleCapacity={maleCapacity}
-            onMaleCapacityChange={setMaleCapacity}
-            femaleCapacity={femaleCapacity}
-            onFemaleCapacityChange={setFemaleCapacity}
-            genderType={accommodation.genderType}
-          />
-          <FormActions submitLabel={t('accommodations.assign')} submitting={assign.isPending} />
-        </AppForm>
-      </article>
+      <p className="text-sm leading-6 text-ink-600">{t('accommodations.activityYearsHint')}</p>
+      {canAssign ? (
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => openAssign()}>
+            <UserPlus className="size-4" aria-hidden />
+            {t('accommodations.assign')}
+          </Button>
+        </div>
+      ) : null}
 
-      <TableCard empty={t('accommodations.noManagers')} hasRows={rows.length > 0}>
+      <TableCard empty={t('accommodations.noManagers')} hasRows={rows.length > 0} rowClick={false}>
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
@@ -240,33 +265,112 @@ export function AccommodationManagersCard({
               <th className="px-4 py-3 text-start font-medium">{t('accommodations.managerName')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('accommodations.yearMaleCount')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('accommodations.yearFemaleCount')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+              <ActionsTh />
             </tr>
           </thead>
           <tbody>
             {rows.map((item) => (
               <tr key={item.id} className="border-t border-line">
                 <td className="px-4 py-3">{formatNumber(item.year, locale)}</td>
-                <td className="px-4 py-3">{managerDisplayName(item, t('accommodations.unassignedManager'))}</td>
+                <td className="px-4 py-3">
+                  {managerDisplayName(item, t('accommodations.unassignedManager'))}
+                </td>
                 <td className="px-4 py-3">{formatNumber(item.maleCapacity, locale)}</td>
                 <td className="px-4 py-3">{formatNumber(item.femaleCapacity, locale)}</td>
-                <td className="px-4 py-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    icon
-                    aria-label={t('common.delete')}
-                    title={t('common.delete')}
-                    onClick={() => confirmUnassign(item.id)}
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </Button>
+                <td className={actionsColClassName}>
+                  <div data-row-actions className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
+                    <Button type="button" variant="soft" onClick={() => setContactsYear(item.year)}>
+                      <Users className="size-4" aria-hidden />
+                      {t('accommodations.liaisons')}
+                    </Button>
+                    <Button type="button" variant="soft" onClick={() => setCaravansYear(item.year)}>
+                      <UsersRound className="size-4" aria-hidden />
+                      {t('accommodations.yearPilgrims')}
+                    </Button>
+                    {canAssign ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        icon
+                        aria-label={t('common.edit')}
+                        title={t('common.edit')}
+                        onClick={() => openAssign(item)}
+                      >
+                        <Pencil className="size-4" aria-hidden />
+                      </Button>
+                    ) : null}
+                    {canAssign ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        icon
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                        aria-label={t('common.delete')}
+                        title={t('common.delete')}
+                        onClick={() => confirmUnassign(item.id)}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </Button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </TableCard>
+
+      {assignOpen ? (
+        <AccommodationYearModal
+          icon={UserRound}
+          title={t('accommodations.assign')}
+          onClose={closeAssign}
+        >
+          <AppForm
+            onSubmit={(event: FormEvent) => {
+              event.preventDefault()
+              assign.mutate()
+            }}
+            className={formCardBodyClassName}
+          >
+            <AccommodationActivityYearFields
+              year={year}
+              onYearChange={applyYear}
+              userId={userId}
+              onUserIdChange={setUserId}
+              users={users}
+              maleCapacity={maleCapacity}
+              onMaleCapacityChange={setMaleCapacity}
+              femaleCapacity={femaleCapacity}
+              onFemaleCapacityChange={setFemaleCapacity}
+              genderType={accommodation.genderType}
+              yearDisabled={Boolean(editing)}
+            />
+            <FormActions
+              submitLabel={t('accommodations.assign')}
+              cancelLabel={t('common.cancel')}
+              submitting={assign.isPending}
+              onCancel={closeAssign}
+            />
+          </AppForm>
+        </AccommodationYearModal>
+      ) : null}
+
+      {contactsYear != null ? (
+        <AccommodationYearContactsModal
+          accommodation={accommodation}
+          year={contactsYear}
+          onClose={() => setContactsYear(null)}
+        />
+      ) : null}
+
+      {caravansYear != null ? (
+        <AccommodationYearReservationsModal
+          accommodation={accommodation}
+          year={caravansYear}
+          onClose={() => setCaravansYear(null)}
+        />
+      ) : null}
     </div>
   )
 }

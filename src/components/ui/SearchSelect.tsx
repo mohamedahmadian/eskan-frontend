@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Search } from 'lucide-react'
+import { Check, ChevronDown, Plus, Search } from 'lucide-react'
 import {
   useCallback,
   useEffect,
@@ -123,6 +123,12 @@ function sameSheet(a: SheetPos | null, b: SheetPos) {
   )
 }
 
+const CREATE_VALUE = '__search_select_create__'
+
+function labelsMatch(left: string, right: string) {
+  return left.trim().toLowerCase() === right.trim().toLowerCase()
+}
+
 export function SearchSelect({
   id,
   name,
@@ -132,6 +138,8 @@ export function SearchSelect({
   placeholder,
   required,
   disabled,
+  onCreate,
+  createLabel,
 }: {
   id?: string
   name?: string
@@ -141,6 +149,8 @@ export function SearchSelect({
   placeholder?: string
   required?: boolean
   disabled?: boolean
+  onCreate?: (query: string) => void
+  createLabel?: (query: string) => string
 }) {
   const { t } = useTranslation()
   const generatedId = useId()
@@ -165,6 +175,22 @@ export function SearchSelect({
     if (!term) return options
     return options.filter((option) => option.label.toLowerCase().includes(term))
   }, [options, query])
+
+  const createQuery = query.trim()
+  const canCreate = Boolean(
+    onCreate && createQuery && !options.some((option) => labelsMatch(option.label, createQuery)),
+  )
+
+  const listItems = useMemo(() => {
+    const items: Array<
+      | { kind: 'option'; option: SearchSelectOption }
+      | { kind: 'create'; query: string }
+    > = filtered.map((option) => ({ kind: 'option' as const, option }))
+    if (canCreate) {
+      items.unshift({ kind: 'create', query: createQuery })
+    }
+    return items
+  }, [canCreate, createQuery, filtered])
 
   const updatePlace = useCallback(() => {
     const trigger = triggerRef.current?.getBoundingClientRect()
@@ -221,7 +247,7 @@ export function SearchSelect({
   useLayoutEffect(() => {
     if (!open || sheet) return
     updatePlace()
-  }, [open, sheet, filtered.length, query, updatePlace])
+  }, [open, sheet, listItems.length, query, updatePlace])
 
   useEffect(() => {
     if (!open || sheet) return
@@ -267,10 +293,25 @@ export function SearchSelect({
     setOpen(false)
   }
 
+  function createFromQuery() {
+    if (!canCreate || !onCreate) return
+    onCreate(createQuery)
+    setOpen(false)
+  }
+
+  function activateItem(item: (typeof listItems)[number]) {
+    if (item.kind === 'create') {
+      createFromQuery()
+      return
+    }
+    selectOption(item.option)
+  }
+
   function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    const lastIndex = Math.max(listItems.length - 1, 0)
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      setActiveIndex((current) => Math.min(current + 1, Math.max(filtered.length - 1, 0)))
+      setActiveIndex((current) => Math.min(current + 1, lastIndex))
       return
     }
     if (event.key === 'ArrowUp') {
@@ -280,8 +321,19 @@ export function SearchSelect({
     }
     if (event.key === 'Enter') {
       event.preventDefault()
-      const option = filtered[activeIndex]
-      if (option) selectOption(option)
+      if (canCreate) {
+        createFromQuery()
+        return
+      }
+      const exact = options.find(
+        (option) => option.value && labelsMatch(option.label, createQuery),
+      )
+      if (exact) {
+        selectOption(exact)
+        return
+      }
+      const item = listItems[activeIndex]
+      if (item) activateItem(item)
       return
     }
     if (event.key === 'Escape') {
@@ -293,9 +345,33 @@ export function SearchSelect({
 
   const optionList = (
     <ul role="listbox" className="min-h-0 flex-1 overflow-auto py-1">
-      {filtered.length ? (
-        filtered.map((option, index) => {
+      {listItems.length ? (
+        listItems.map((item, index) => {
           const isActive = index === activeIndex
+          if (item.kind === 'create') {
+            return (
+              <li key={CREATE_VALUE}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  className={`flex w-full items-center gap-2 px-3 text-start text-sm transition touch-manipulation ${
+                    sheet ? 'min-h-11 py-3' : 'py-2'
+                  } ${isActive ? 'bg-teal-50 text-teal-800' : 'text-teal-700'} hover:bg-teal-50`}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onPointerDown={(event) => {
+                    if (event.pointerType === 'mouse' && event.button !== 0) return
+                    event.preventDefault()
+                  }}
+                  onClick={() => createFromQuery()}
+                >
+                  <Plus className="size-4 shrink-0" aria-hidden />
+                  <span>{createLabel?.(item.query) ?? item.query}</span>
+                </button>
+              </li>
+            )
+          }
+          const { option } = item
           const isSelected = option.value === value
           return (
             <li key={`${option.value}-${index}`}>
@@ -346,8 +422,16 @@ export function SearchSelect({
             if (sheet && !searchEnabled) setSearchEnabled(true)
           }}
           onChange={(event) => {
-            setQuery(event.target.value)
-            setActiveIndex(0)
+            const nextQuery = event.target.value
+            setQuery(nextQuery)
+            const term = nextQuery.trim()
+            const creating = Boolean(
+              onCreate && term && !options.some((option) => labelsMatch(option.label, term)),
+            )
+            const matchCount = term
+              ? options.filter((option) => option.label.toLowerCase().includes(term.toLowerCase())).length
+              : options.length
+            setActiveIndex(creating && matchCount ? 1 : 0)
           }}
           onKeyDown={onSearchKeyDown}
           placeholder={t('common.searchList')}

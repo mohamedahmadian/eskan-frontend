@@ -1,18 +1,14 @@
-import {
-  Copy,
-  UserCheck,
-  Users,
-  CalendarDays,
-} from 'lucide-react'
+import { Check, Copy, Trash2, UserCheck, Users, X } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button, FormField, cardClassName, fieldClassName } from '../../components/ui/Form'
-import { FormSectionTitle } from '../../components/ui/FormLayout'
-import { TableCard } from '../../components/ui/ListControls'
+import { confirmToast } from '../../components/ui/confirmToast'
+import { Button } from '../../components/ui/Form'
+import { formCardBodyClassName } from '../../components/ui/FormLayout'
+import { ActionsTh, TableCard, actionsColClassName } from '../../components/ui/ListControls'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import type { Accommodation } from '../../types/app'
 import { PilgrimNameLink } from './PilgrimNameLink'
 import {
@@ -25,23 +21,27 @@ import {
   type AccommodationContactDraft,
   type AccommodationContactRole,
 } from './accommodationContacts'
+import { AccommodationYearModal } from './AccommodationYearModal'
 
-export function AccommodationYearContactsCard({
+export function AccommodationYearContactsModal({
   accommodation,
+  year,
+  onClose,
 }: {
   accommodation: Accommodation
+  year: number
+  onClose: () => void
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const queryClient = useQueryClient()
-  const [year, setYear] = useState(String(currentPersianYear()))
-  const selectedYear = Number(toLatinDigits(year)) || currentPersianYear()
+  const manualRef = useRef<HTMLDivElement>(null)
   const [manualOpen, setManualOpen] = useState(false)
   const [drafts, setDrafts] = useState<
     Record<AccommodationContactRole, AccommodationContactDraft>
   >(() =>
     accommodationContactDraftsFromInitial(
-      accommodation.yearContacts?.filter((item) => item.year === selectedYear),
+      accommodation.yearContacts?.filter((item) => item.year === year),
     ),
   )
   const [activeRole, setActiveRole] = useState<AccommodationContactRole>(
@@ -49,8 +49,25 @@ export function AccommodationYearContactsCard({
   )
 
   const yearRows = (accommodation.yearContacts ?? [])
-    .filter((item) => item.year === selectedYear)
+    .filter((item) => item.year === year)
     .sort((a, b) => a.role.localeCompare(b.role))
+  const yearContactSignature = yearRows.map((item) => `${item.id}:${item.userId}`).join('|')
+
+  useEffect(() => {
+    const nextDrafts = accommodationContactDraftsFromInitial(
+      accommodation.yearContacts?.filter((item) => item.year === year),
+    )
+    setDrafts(nextDrafts)
+    setActiveRole((current) =>
+      nextDrafts[current] ? current : firstIncompleteContactRole(nextDrafts),
+    )
+  }, [year, yearContactSignature])
+
+  useEffect(() => {
+    if (manualOpen) {
+      manualRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [manualOpen])
 
   async function refresh() {
     await Promise.all([
@@ -66,7 +83,7 @@ export function AccommodationYearContactsCard({
       contacts?: ReturnType<typeof toAccommodationContactPayloads>
     }) =>
       api.put(`/accommodations/${accommodation.id}/year-contacts`, {
-        year: selectedYear,
+        year,
         ...payload,
       }),
     onSuccess: async () => {
@@ -79,126 +96,151 @@ export function AccommodationYearContactsCard({
     },
   })
 
-  function onYearChange(next: string) {
-    const latin = toLatinDigits(next)
-    setYear(latin)
-    const y = Number(latin) || currentPersianYear()
+  function openManual() {
     const nextDrafts = accommodationContactDraftsFromInitial(
-      accommodation.yearContacts?.filter((item) => item.year === y),
+      accommodation.yearContacts?.filter((item) => item.year === year),
     )
     setDrafts(nextDrafts)
     setActiveRole(firstIncompleteContactRole(nextDrafts))
-    setManualOpen(false)
+    setManualOpen(true)
+  }
+
+  function confirmDeleteContact(contactId: string) {
+    confirmToast({
+      title: t('accommodations.confirmDeleteYearContact'),
+      confirmLabel: t('common.yesDelete'),
+      cancelLabel: t('common.cancel'),
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/accommodations/${accommodation.id}/year-contacts/${contactId}`)
+          toast.success(t('accommodations.yearContactDeleted'))
+          await refresh()
+        } catch (error) {
+          toast.error(getApiErrorMessage(error, t('common.error')))
+        }
+      },
+    })
   }
 
   return (
-    <div className="space-y-4">
-      <article className={`space-y-4 p-6 ${cardClassName}`}>
-        <FormSectionTitle icon={Users}>{t('accommodations.sectionYearContacts')}</FormSectionTitle>
-        <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor="year-contacts-year">
-          <input
-            id="year-contacts-year"
-            className={fieldClassName}
-            inputMode="numeric"
-            min={1300}
-            max={1600}
-            value={year}
-            onChange={(event) => onYearChange(event.target.value)}
-          />
-        </FormField>
+    <AccommodationYearModal
+      icon={Users}
+      title={t('accommodations.liaisons')}
+      onClose={onClose}
+      className="max-w-3xl"
+    >
+      <div className={formCardBodyClassName}>
+        <p className="text-sm leading-6 text-ink-600">
+          {t('accommodations.yearContactsChooseHint')}
+        </p>
+        <p className="text-sm font-medium text-ink-700">
+          {t('accommodations.year')}: {formatNumber(year, locale)}
+        </p>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="soft"
+            className="max-w-full whitespace-normal"
             disabled={setYearContacts.isPending}
             onClick={() => setYearContacts.mutate({ mode: 'manager' })}
           >
-            <UserCheck className="size-4" aria-hidden />
+            <UserCheck className="size-4 shrink-0" aria-hidden />
             {t('accommodations.yearContactsFromManager')}
           </Button>
           <Button
             type="button"
             variant="soft"
+            className="max-w-full whitespace-normal"
             disabled={setYearContacts.isPending}
             onClick={() => setYearContacts.mutate({ mode: 'fromAccommodation' })}
           >
-            <Copy className="size-4" aria-hidden />
+            <Copy className="size-4 shrink-0" aria-hidden />
             {t('accommodations.yearContactsFromAccommodation')}
           </Button>
           <Button
             type="button"
             variant="ghost"
-            onClick={() => {
-              setDrafts(
-                accommodationContactDraftsFromInitial(
-                  accommodation.yearContacts?.filter((item) => item.year === selectedYear),
-                ),
-              )
-              setManualOpen(true)
-            }}
+            className="max-w-full whitespace-normal"
+            onClick={openManual}
           >
-            <Users className="size-4" aria-hidden />
+            <Users className="size-4 shrink-0" aria-hidden />
             {t('accommodations.yearContactsManual')}
           </Button>
         </div>
-        <p className="text-sm text-ink-500">{t('accommodations.yearContactsHint')}</p>
-      </article>
 
-      <TableCard empty={t('accommodations.noYearContacts')} hasRows={yearRows.length > 0}>
-        <table className="w-full text-sm">
-          <thead className="bg-cream-50 text-ink-700">
-            <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactRole')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactPilgrim')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodations.year')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {yearRows.map((item) => (
-              <tr key={item.id} className="border-t border-line">
-                <td className="px-4 py-3">{t(`accommodations.contactRoles.${item.role}`)}</td>
-                <td className="px-4 py-3">
-                  <PilgrimNameLink
-                    id={item.user?.id || item.userId}
-                    name={item.user.fullName}
-                  />
-                </td>
-                <td className="px-4 py-3">{formatNumber(item.year, locale)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableCard>
-
-      {manualOpen ? (
-        <article className={`space-y-4 p-6 ${cardClassName}`}>
-          <AccommodationContactsPanel
-            drafts={drafts}
-            activeRole={activeRole}
-            onActiveRoleChange={setActiveRole}
-            onDraftChange={(role, draft) =>
-              setDrafts((current) => ({ ...current, [role]: draft }))
-            }
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              disabled={setYearContacts.isPending}
-              onClick={() =>
-                setYearContacts.mutate({
-                  mode: 'manual',
-                  contacts: toAccommodationContactPayloads(drafts),
-                })
+        {manualOpen ? (
+          <div ref={manualRef} className="space-y-4">
+            <AccommodationContactsPanel
+              drafts={drafts}
+              activeRole={activeRole}
+              onActiveRoleChange={setActiveRole}
+              onDraftChange={(role, draft) =>
+                setDrafts((current) => ({ ...current, [role]: draft }))
               }
-            >
-              {t('accommodations.saveYearContacts')}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setManualOpen(false)}>
-              {t('common.cancel')}
-            </Button>
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                disabled={setYearContacts.isPending}
+                onClick={() =>
+                  setYearContacts.mutate({
+                    mode: 'manual',
+                    contacts: toAccommodationContactPayloads(drafts),
+                  })
+                }
+              >
+                <Check className="size-4" aria-hidden />
+                {t('accommodations.saveYearContacts')}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setManualOpen(false)}>
+                <X className="size-4" aria-hidden />
+                {t('common.cancel')}
+              </Button>
+            </div>
           </div>
-        </article>
-      ) : null}
-    </div>
+        ) : null}
+
+        <TableCard empty={t('accommodations.noYearContacts')} hasRows={yearRows.length > 0} rowClick={false}>
+          <table className="w-full text-sm">
+            <thead className="bg-cream-50 text-ink-700">
+              <tr>
+                <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactRole')}</th>
+                <th className="px-4 py-3 text-start font-medium">{t('accommodations.contactPilgrim')}</th>
+                <ActionsTh />
+              </tr>
+            </thead>
+            <tbody>
+              {yearRows.map((item) => (
+                <tr key={item.id} className="border-t border-line">
+                  <td className="px-4 py-3">{t(`accommodations.contactRoles.${item.role}`)}</td>
+                  <td className="px-4 py-3">
+                    <PilgrimNameLink
+                      id={item.user?.id || item.userId}
+                      name={item.user.fullName}
+                    />
+                  </td>
+                  <td className={actionsColClassName}>
+                    <div data-row-actions className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        icon
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                        aria-label={t('common.delete')}
+                        title={t('common.delete')}
+                        onClick={() => confirmDeleteContact(item.id)}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
+      </div>
+    </AccommodationYearModal>
   )
 }

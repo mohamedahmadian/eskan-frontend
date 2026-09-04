@@ -1,5 +1,5 @@
 import { Plus, Users } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -16,13 +16,12 @@ import {
   PageHeader,
   listShellClassName,
 } from '../../components/ui/Form'
-import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
-import type { CampaignParticipant, Paginated, ParticipationCampaign } from '../../types/app'
+import type { Contribution, Paginated, ParticipationCampaign } from '../../types/app'
 
 export function ParticipantsListPage() {
   const { t, i18n } = useTranslation()
@@ -31,6 +30,7 @@ export function ParticipantsListPage() {
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
+  const queryClient = useQueryClient()
 
   const campaign = useQuery({
     queryKey: ['participation-campaign', campaignId],
@@ -42,19 +42,17 @@ export function ParticipantsListPage() {
   })
 
   const query = useQuery({
-    queryKey: ['campaign-participants', campaignId, 'list', q, page, sortBy, sortDir],
+    queryKey: ['contributions', 'campaign', campaignId, 'list', q, page, sortBy, sortDir],
     enabled: Boolean(campaignId),
     queryFn: async () => {
-      const { data } = await api.get<Paginated<CampaignParticipant>>(
-        `/participation-campaigns/${campaignId}/participants`,
-        {
-          params: {
-            page,
-            ...(q ? { q } : {}),
-            ...sortParams,
-          },
+      const { data } = await api.get<Paginated<Contribution>>('/contributions', {
+        params: {
+          page,
+          campaignId,
+          ...(q ? { q } : {}),
+          ...sortParams,
         },
-      )
+      })
       return data
     },
   })
@@ -97,22 +95,22 @@ export function ParticipantsListPage() {
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <SortableTh column="fullName" label={t('campaignParticipants.fullName')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <SortableTh column="phone" label={t('campaignParticipants.phone')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <SortableTh column="shareCount" label={t('campaignParticipants.shareCount')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <SortableTh column="paidAmount" label={t('campaignParticipants.paidAmount')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="benefactor" label={t('contributions.benefactor')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="type" label={t('contributions.type')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="shareCount" label={t('contributions.shareCount')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh column="amount" label={t('contributions.amount')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((item) => (
               <tr key={item.id} className="border-t border-line">
-                <td className="px-4 py-3">{item.fullName}</td>
+                <td className="px-4 py-3">{item.benefactor.name}</td>
+                <td className="px-4 py-3">{t(`contributions.types.${item.type}`)}</td>
                 <td className="px-4 py-3">
-                  {item.phone ? <CopyableDigits value={item.phone} /> : '—'}
+                  {item.shareCount != null ? n(item.shareCount) : '—'}
                 </td>
-                <td className="px-4 py-3">{n(item.shareCount)}</td>
-                <td className="px-4 py-3">{n(item.paidAmount)}</td>
+                <td className="px-4 py-3">{n(item.amount)}</td>
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/participations/campaigns/${campaignId}/participants/${item.id}`}
@@ -121,8 +119,14 @@ export function ParticipantsListPage() {
                       confirmDelete({
                         message: t('campaignParticipants.confirmDelete'),
                         successMessage: t('campaignParticipants.deleted'),
-                        path: `/participation-campaigns/${campaignId}/participants/${item.id}`,
-                        queryKey: ['campaign-participants'],
+                        path: `/contributions/${item.id}`,
+                        queryKey: ['contributions'],
+                        onDeleted: () => {
+                          void queryClient.invalidateQueries({ queryKey: ['participation-campaigns'] })
+                          void queryClient.invalidateQueries({
+                            queryKey: ['participation-campaign', campaignId],
+                          })
+                        },
                       })
                     }
                   />

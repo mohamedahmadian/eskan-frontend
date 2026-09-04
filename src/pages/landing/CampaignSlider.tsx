@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { getImageUrl } from '../../lib/api'
 import { formatGroupedNumber, formatNumber } from '../../lib/datetime'
 import type { PublicCampaign } from '../../types/app'
-import { CampaignProgressBar } from '../participations/CampaignCard'
+import { CampaignProgressBar, campaignProgressPercent } from '../participations/CampaignCard'
 
 const AUTO_MS = 7000
 
@@ -81,7 +81,7 @@ export function CampaignSlider({ items }: { items: PublicCampaign[] }) {
             ) : null}
             <div className="mt-auto">
               <CampaignProgressBar
-                percent={item.progressPercent}
+                percent={campaignProgressPercent(item.purchasedShares, item.totalShares, item.progressPercent)}
                 label={t('participations.progress')}
                 value={`${formatGroupedNumber(item.progressPercent, locale)}٪`}
               />

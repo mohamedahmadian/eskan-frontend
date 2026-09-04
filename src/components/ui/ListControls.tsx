@@ -11,7 +11,15 @@ import {
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react'
-import { type FormEvent, type MouseEvent, type ReactNode, useState } from 'react'
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { formatNumber } from '../../lib/datetime'
@@ -105,6 +113,56 @@ export function FilterPair({
   )
 }
 
+function getNavigableRows(root: ParentNode): HTMLTableRowElement[] {
+  return Array.from(root.querySelectorAll<HTMLTableRowElement>('tbody tr')).filter((row) =>
+    Boolean(row.querySelector('[data-row-view]')),
+  )
+}
+
+function activateListRow(row: HTMLElement) {
+  row.querySelector<HTMLElement>('[data-row-view]')?.click()
+}
+
+function focusListRow(row: HTMLTableRowElement) {
+  const root = row.closest('[data-list-table]')
+  const rows = root ? getNavigableRows(root) : [row]
+  for (const item of rows) {
+    item.tabIndex = item === row ? 0 : -1
+  }
+  row.focus({ preventScroll: true })
+  row.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}
+
+function findListTable(from: HTMLElement): HTMLElement | null {
+  let el: HTMLElement | null = from.parentElement
+  while (el) {
+    const tables = Array.from(el.querySelectorAll<HTMLElement>('[data-list-table]')).filter(
+      (table) => !from.contains(table),
+    )
+    if (tables.length) {
+      const following = tables.find((table) =>
+        Boolean(from.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING),
+      )
+      return following ?? tables[0]
+    }
+    el = el.parentElement
+  }
+  return null
+}
+
+function findListSearch(from: HTMLElement): HTMLInputElement | null {
+  let el: HTMLElement | null = from.parentElement
+  while (el) {
+    const inputs = Array.from(el.querySelectorAll<HTMLInputElement>('[data-list-search]'))
+    const preceding = inputs.find((input) =>
+      Boolean(from.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_PRECEDING),
+    )
+    if (preceding) return preceding
+    el = el.parentElement
+  }
+  return null
+}
+
 export function SearchBar({
   term,
   onTermChange,
@@ -116,7 +174,7 @@ export function SearchBar({
   filtersActive = false,
   extraClassName = 'sm:grid-cols-2',
   inputId = 'list-search',
-  autoFocus = false,
+  autoFocus = true,
   hideSubmit = false,
   bare = false,
 }: {
@@ -130,6 +188,7 @@ export function SearchBar({
   filtersActive?: boolean
   extraClassName?: string
   inputId?: string
+  /** Defaults to true so menu list pages are ready to type after load. */
   autoFocus?: boolean
   hideSubmit?: boolean
   bare?: boolean
@@ -140,6 +199,17 @@ export function SearchBar({
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     onSubmit()
+  }
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'ArrowDown' || event.nativeEvent.isComposing) return
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+    const table = findListTable(event.currentTarget)
+    if (!table) return
+    const rows = getNavigableRows(table)
+    if (!rows.length) return
+    event.preventDefault()
+    focusListRow(rows[0])
   }
 
   function toggleFilters() {
@@ -153,10 +223,13 @@ export function SearchBar({
   const searchInput = (
     <input
       id={inputId}
+      data-list-search=""
       className={`${fieldClassName} min-w-0 ${beside ? 'w-full' : 'flex-1'}`}
       value={term}
       onChange={(e) => onTermChange(e.target.value)}
+      onKeyDown={handleSearchKeyDown}
       placeholder={placeholder}
+      title={t('common.searchToTable')}
       autoFocus={autoFocus}
     />
   )
@@ -170,6 +243,7 @@ export function SearchBar({
   return (
     <AppForm
       data-enter-immediate=""
+      autoFocusFirst={autoFocus}
       onSubmit={handleSubmit}
       className={bare ? 'mb-4' : `mb-4 p-4 ${cardClassName}`}
     >
@@ -226,6 +300,18 @@ export function SearchBar({
   )
 }
 
+/** Shrink-wrap the actions column: content-sized, one row, visual left (RTL last column). */
+export const actionsColClassName = 'w-px min-w-max whitespace-nowrap px-4 py-3'
+
+export function ActionsTh({ className = '' }: { className?: string }) {
+  const { t } = useTranslation()
+  return (
+    <th className={`${actionsColClassName} text-start font-medium ${className}`}>
+      {t('common.actions')}
+    </th>
+  )
+}
+
 export function EntityRowActions({
   viewTo,
   showView = true,
@@ -243,7 +329,7 @@ export function EntityRowActions({
 }) {
   const { t } = useTranslation()
   return (
-    <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
+    <div data-row-actions className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
       {showView ? (
         <Link to={viewTo} data-row-view>
           <Button type="button" variant="ghost">
@@ -363,6 +449,19 @@ export function TableCard({
   rowClick?: boolean
   children: ReactNode
 }) {
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const root = rootRef.current
+    if (!root || !hasRows) return
+    const rows = getNavigableRows(root)
+    const active = document.activeElement
+    const focusedRow = rows.find((row) => row === active || row.contains(active))
+    rows.forEach((row, index) => {
+      row.tabIndex = focusedRow ? (row === focusedRow ? 0 : -1) : index === 0 ? 0 : -1
+    })
+  }, [children, hasRows])
+
   function handleClick(event: MouseEvent<HTMLDivElement>) {
     if (!rowClick) return
     const target = event.target as HTMLElement
@@ -377,17 +476,55 @@ export function TableCard({
     if (!(row instanceof HTMLElement) || !event.currentTarget.contains(row)) {
       return
     }
-    row.querySelector<HTMLElement>('[data-row-view]')?.click()
+    activateListRow(row)
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const key = event.key
+    if (key !== 'ArrowDown' && key !== 'ArrowUp' && key !== 'Enter') return
+    if (event.altKey || event.ctrlKey || event.metaKey || event.nativeEvent.isComposing) return
+
+    const target = event.target as HTMLElement
+    if (target.closest('input, textarea, select, [contenteditable="true"]')) return
+
+    const activeRow = target.closest('tbody tr')
+    if (!(activeRow instanceof HTMLTableRowElement)) return
+
+    const rows = getNavigableRows(event.currentTarget)
+    const idx = rows.indexOf(activeRow)
+    if (idx < 0) return
+
+    if (key === 'Enter') {
+      if (event.shiftKey) return
+      if (target.closest('a, button')) return
+      event.preventDefault()
+      activateListRow(activeRow)
+      return
+    }
+
+    event.preventDefault()
+    if (key === 'ArrowDown') {
+      focusListRow(rows[Math.min(idx + 1, rows.length - 1)])
+      return
+    }
+    if (idx <= 0) {
+      findListSearch(event.currentTarget)?.focus()
+      return
+    }
+    focusListRow(rows[idx - 1])
   }
 
   return (
     <div
-      className={`min-w-0 overflow-hidden rounded-[22px] border border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)] ${
+      ref={rootRef}
+      data-list-table=""
+      className={`min-w-0 overflow-hidden rounded-[22px] border border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)] [&_table:has([data-row-actions])_thead_th:last-child]:w-px [&_table:has([data-row-actions])_thead_th:last-child]:min-w-max [&_table:has([data-row-actions])_thead_th:last-child]:whitespace-nowrap [&_tbody_td:has([data-row-actions])]:w-px [&_tbody_td:has([data-row-actions])]:min-w-max [&_tbody_td:has([data-row-actions])]:whitespace-nowrap [&_tbody_tr[tabindex]]:outline-none [&_tbody_tr[tabindex]:focus]:bg-cream-50 [&_tbody_tr[tabindex]:focus-visible]:shadow-[inset_0_0_0_2px_#5ed4ce] ${
         rowClick
           ? '[&_tbody_tr:has([data-row-view])]:cursor-pointer [&_tbody_tr:has([data-row-view])]:hover:bg-cream-50'
           : ''
       }`}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
     >
       {hasRows ? (
         <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [&_table]:min-w-max">

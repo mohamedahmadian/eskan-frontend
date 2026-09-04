@@ -84,10 +84,25 @@ import { BenefactorCreatePage } from "./pages/benefactors/BenefactorCreatePage";
 import { BenefactorDetailPage } from "./pages/benefactors/BenefactorDetailPage";
 import { BenefactorEditPage } from "./pages/benefactors/BenefactorEditPage";
 import { BenefactorsListPage } from "./pages/benefactors/BenefactorsListPage";
+import { ContributionCreatePage } from "./pages/participations/ContributionCreatePage";
+import { ContributionDetailPage } from "./pages/participations/ContributionDetailPage";
+import { ContributionEditPage } from "./pages/participations/ContributionEditPage";
+import { ContributionGoodCreatePage } from "./pages/participations/ContributionGoodCreatePage";
+import { ContributionGoodDetailPage } from "./pages/participations/ContributionGoodDetailPage";
+import { ContributionGoodEditPage } from "./pages/participations/ContributionGoodEditPage";
+import { ContributionGoodsListPage } from "./pages/participations/ContributionGoodsListPage";
+import { ContributionsListPage } from "./pages/participations/ContributionsListPage";
+import { ContributionGoodsReportPage } from "./pages/participations/ContributionGoodsReportPage";
+import { ContributionsReportPage } from "./pages/participations/ContributionsReportPage";
+import { GoodsUnitCreatePage } from "./pages/participations/GoodsUnitCreatePage";
+import { GoodsUnitDetailPage } from "./pages/participations/GoodsUnitDetailPage";
+import { GoodsUnitEditPage } from "./pages/participations/GoodsUnitEditPage";
+import { GoodsUnitsListPage } from "./pages/participations/GoodsUnitsListPage";
 import { BankAccountCreatePage } from "./pages/participations/BankAccountCreatePage";
 import { BankAccountDetailPage } from "./pages/participations/BankAccountDetailPage";
 import { BankAccountEditPage } from "./pages/participations/BankAccountEditPage";
 import { BankAccountsListPage } from "./pages/participations/BankAccountsListPage";
+import { CampaignsReportPage } from "./pages/participations/CampaignsReportPage";
 import { CampaignCreatePage } from "./pages/participations/CampaignCreatePage";
 import { CampaignDetailPage } from "./pages/participations/CampaignDetailPage";
 import { CampaignEditPage } from "./pages/participations/CampaignEditPage";
@@ -99,7 +114,6 @@ import { ParticipantCreatePage } from "./pages/participations/ParticipantCreateP
 import { ParticipantDetailPage } from "./pages/participations/ParticipantDetailPage";
 import { ParticipantEditPage } from "./pages/participations/ParticipantEditPage";
 import { ParticipantsListPage } from "./pages/participations/ParticipantsListPage";
-import { ParticipationsHomePage } from "./pages/participations/ParticipationsHomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PublicAboutPage } from "./pages/landing/PublicAboutPage";
 import { PublicAnnouncementPage } from "./pages/landing/PublicAnnouncementPage";
@@ -107,7 +121,6 @@ import { PublicCampaignPage } from "./pages/landing/PublicCampaignPage";
 import { PublicContactPage } from "./pages/landing/PublicContactPage";
 import { PublicInKindPage } from "./pages/landing/PublicInKindPage";
 import { PublicNewsPage } from "./pages/landing/PublicNewsPage";
-import { PublicParticipationsPage } from "./pages/landing/PublicParticipationsPage";
 import { PublicAccommodationPage } from "./pages/public-places/PublicAccommodationPage";
 import { PublicWalkingStationPage } from "./pages/public-places/PublicWalkingStationPage";
 import { PublicProfilePage } from "./pages/public-profile/PublicProfilePage";
@@ -277,8 +290,10 @@ import { HonoraryServiceTypeCreatePage } from "./pages/honorary-servants/Honorar
 import { HonoraryServiceTypeDetailPage } from "./pages/honorary-servants/HonoraryServiceTypeDetailPage";
 import { HonoraryServiceTypeEditPage } from "./pages/honorary-servants/HonoraryServiceTypeEditPage";
 import { HonoraryServiceTypesListPage } from "./pages/honorary-servants/HonoraryServiceTypesListPage";
+import { DataManagementPage } from "./pages/system-management/DataManagementPage";
 import { CampaignsEntry } from "./routes/CampaignsEntry";
 import { HomePage } from "./routes/HomePage";
+import { ParticipationsEntry } from "./routes/ParticipationsEntry";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { WelcomeRedirect } from "./routes/WelcomeRedirect";
 import { RequireAdmin, RequireMenuAccess } from "./routes/RequireMenuAccess";
@@ -319,7 +334,7 @@ export default function App() {
             />
             <Route
               path="/participations"
-              element={<PublicParticipationsPage />}
+              element={<ParticipationsEntry />}
             />
             <Route
               path="/participations/campaigns"
@@ -1529,10 +1544,102 @@ export default function App() {
                     element={<EvaluationDetailPage />}
                   />
                 </Route>
-                <Route element={<RequireMenuAccess path="/participations" />}>
+                <Route
+                  element={<RequireMenuAccess path="/participations/report" />}
+                >
                   <Route
-                    path="/participations"
-                    element={<ParticipationsHomePage />}
+                    path="/participations/report"
+                    element={<ContributionsReportPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/participations/goods-report" />
+                  }
+                >
+                  <Route
+                    path="/participations/goods-report"
+                    element={<ContributionGoodsReportPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/participations/campaigns-report" />
+                  }
+                >
+                  <Route
+                    path="/participations/campaigns-report"
+                    element={<CampaignsReportPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/participations/contributions/new" />
+                  }
+                >
+                  <Route
+                    path="/participations/contributions/new"
+                    element={<ContributionCreatePage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/participations/contributions" />
+                  }
+                >
+                  <Route
+                    path="/participations/contributions"
+                    element={<ContributionsListPage />}
+                  />
+                  <Route
+                    path="/participations/contributions/:id"
+                    element={<ContributionDetailPage />}
+                  />
+                  <Route
+                    path="/participations/contributions/:id/edit"
+                    element={<ContributionEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/participations/goods" />}
+                >
+                  <Route
+                    path="/participations/goods"
+                    element={<ContributionGoodsListPage />}
+                  />
+                  <Route
+                    path="/participations/goods/new"
+                    element={<ContributionGoodCreatePage />}
+                  />
+                  <Route
+                    path="/participations/goods/:id"
+                    element={<ContributionGoodDetailPage />}
+                  />
+                  <Route
+                    path="/participations/goods/:id/edit"
+                    element={<ContributionGoodEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/participations/goods-units" />
+                  }
+                >
+                  <Route
+                    path="/participations/goods-units"
+                    element={<GoodsUnitsListPage />}
+                  />
+                  <Route
+                    path="/participations/goods-units/new"
+                    element={<GoodsUnitCreatePage />}
+                  />
+                  <Route
+                    path="/participations/goods-units/:id"
+                    element={<GoodsUnitDetailPage />}
+                  />
+                  <Route
+                    path="/participations/goods-units/:id/edit"
+                    element={<GoodsUnitEditPage />}
                   />
                 </Route>
                 <Route
@@ -1653,6 +1760,16 @@ export default function App() {
                   <Route
                     path="/honorary-servants/:id/edit"
                     element={<HonoraryServantEditPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/system-management/data-management" />
+                  }
+                >
+                  <Route
+                    path="/system-management/data-management"
+                    element={<DataManagementPage />}
                   />
                 </Route>
               </Route>

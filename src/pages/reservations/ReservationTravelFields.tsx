@@ -169,6 +169,7 @@ export function ReservationTravelFields({
   datesError,
   simCardRequestCount,
   bankCardRequestCount,
+  showSimBankRequests,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -192,6 +193,7 @@ export function ReservationTravelFields({
   datesError?: string | null;
   simCardRequestCount?: number;
   bankCardRequestCount?: number;
+  showSimBankRequests?: boolean;
 }) {
   if (activeSubStep === "count") {
     return (
@@ -235,6 +237,7 @@ export function ReservationTravelFields({
         onChange={onChange}
         locked={locked}
         reservationType={type}
+        showSimBankRequests={showSimBankRequests}
         simCardRequestCount={simCardRequestCount}
         bankCardRequestCount={bankCardRequestCount}
       />
@@ -293,6 +296,7 @@ export function ReservationApplicantFields({
   onChange,
   locked,
   reservationType,
+  showSimBankRequests = false,
   simCardRequestCount = 0,
   bankCardRequestCount = 0,
 }: {
@@ -307,6 +311,7 @@ export function ReservationApplicantFields({
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
   reservationType?: ReservationType | "";
+  showSimBankRequests?: boolean;
   simCardRequestCount?: number;
   bankCardRequestCount?: number;
 }) {
@@ -352,7 +357,7 @@ export function ReservationApplicantFields({
           </span>
         }
       />
-      {perMemberServices ? (
+      {showSimBankRequests && perMemberServices ? (
         <>
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
             <FormFactTile
@@ -372,7 +377,8 @@ export function ReservationApplicantFields({
             {t("reservations.serviceRequestsFromMembersHint")}
           </p>
         </>
-      ) : (
+      ) : null}
+      {showSimBankRequests && !perMemberServices ? (
         <>
           <CheckboxField
             id="requestsSimCard"
@@ -399,7 +405,7 @@ export function ReservationApplicantFields({
             }
           />
         </>
-      )}
+      ) : null}
       <FormField
         icon={Accessibility}
         label={t("reservations.specialServices")}

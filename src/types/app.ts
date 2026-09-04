@@ -840,6 +840,30 @@ export type AccommodationManagerLink = {
   user: { id: string; username: string; fullName: string } | null;
 };
 
+export type AccommodationYearReservation = {
+  id: string;
+  code: string;
+  type: ReservationType;
+  maleCount: number;
+  femaleCount: number;
+  placedMaleCount: number;
+  placedFemaleCount: number;
+  caravanManager: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+  } | null;
+  createdBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+  };
+  originCity: (GeoName & { id: string; provinceId: string }) | null;
+  walkingRoute: { id: string; name: string } | null;
+};
+
 export type AccommodationContactPerson = {
   id: string;
   firstName: string;
@@ -1139,6 +1163,16 @@ export const reservationStationStayStatuses = {
 export type ReservationStationStayStatus =
   (typeof reservationStationStayStatuses)[keyof typeof reservationStationStayStatuses];
 
+export type ReservationRoutePlacementStay = {
+  id: string;
+  stayDate: string;
+  mealType: 'LUNCH' | 'DINNER';
+  status: ReservationStationStayStatus;
+  present: boolean;
+  maleCount: number;
+  femaleCount: number;
+};
+
 export type ReservationRoutePlacementStage = {
   stageId: string;
   stageNumber: number;
@@ -1152,22 +1186,43 @@ export type ReservationRoutePlacementStage = {
   managerName: string | null;
   managerPhone: string | null;
   address: string | null;
-  stay: {
-    id: string;
-    stayDate: string;
-    mealType: 'LUNCH' | 'DINNER';
-    status: ReservationStationStayStatus;
-    present: boolean;
-    maleCount: number;
-    femaleCount: number;
-  } | null;
+  stay: ReservationRoutePlacementStay | null;
+  stays?: ReservationRoutePlacementStay[];
+};
+
+export type ReservationRoutePlacementStation = {
+  stationId: string;
+  stageNumber: number;
+  name: string;
+  city: GeoName & { id: string; provinceId: string };
+  maleCount: number;
+  femaleCount: number;
+  occupiedMaleCount: number;
+  occupiedFemaleCount: number;
+  managerName: string | null;
+  managerPhone: string | null;
+  address: string | null;
+};
+
+export type ReservationRoutePlacementMealSlot = {
+  stay: ReservationRoutePlacementStay;
+  station: ReservationRoutePlacementStation;
+} | null;
+
+export type ReservationRoutePlacementDay = {
+  stayDate: string;
+  lunch: ReservationRoutePlacementMealSlot;
+  dinner: ReservationRoutePlacementMealSlot;
 };
 
 export type ReservationRoutePlacement = {
   walkingRoute: { id: string; name: string } | null;
   maleCount: number;
   femaleCount: number;
+  walkingStartDate?: string | null;
+  stayStartDate?: string | null;
   stages: ReservationRoutePlacementStage[];
+  days?: ReservationRoutePlacementDay[];
 };
 
 export type WalkingStationStayPerson = {
@@ -1260,17 +1315,128 @@ export type FoodSupplier = {
 
 export type Benefactor = {
   id: string;
+  code: string | null;
+  firstName: string;
+  lastName: string;
   name: string;
+  nationalId: string | null;
   phone: string | null;
   address: string | null;
   neshanAddress: string | null;
   latitude: number | null;
   longitude: number | null;
   description: string | null;
-  provinceId: string;
-  cityId: string;
-  province: GeoName & { id: string; countryId: string };
-  city: GeoName & { id: string; provinceId: string };
+  provinceId: string | null;
+  cityId: string | null;
+  province: (GeoName & { id: string; countryId: string }) | null;
+  city: (GeoName & { id: string; provinceId: string }) | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ContributionType = 'CASH' | 'IN_KIND';
+
+export type GoodsUnit = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ContributionGood = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ContributionReportNamedRow = {
+  id: string | null;
+  name: string;
+  count: number;
+  amount: number;
+  quantity?: number;
+};
+
+export type ContributionReportTimeRow = {
+  year?: number;
+  month?: number;
+  count: number;
+  amount: number;
+  cashAmount: number;
+  inKindAmount: number;
+};
+
+export type ContributionReport = {
+  year: number | null;
+  totalCount: number;
+  totalAmount: number;
+  cashCount: number;
+  cashAmount: number;
+  inKindCount: number;
+  inKindAmount: number;
+  benefactorCount: number;
+  goodsCount: number;
+  campaignCount: number;
+  onlineCount: number;
+  onlineAmount: number;
+  campaignLinkedCount: number;
+  campaignLinkedAmount: number;
+  avgAmount: number;
+  byType: { type: ContributionType; count: number; amount: number }[];
+  byYear: ContributionReportTimeRow[];
+  byMonth: ContributionReportTimeRow[];
+  byGoods: ContributionReportNamedRow[];
+  byBenefactor: ContributionReportNamedRow[];
+  byCampaign: ContributionReportNamedRow[];
+  topGoods: ContributionReportNamedRow[];
+  topBenefactors: ContributionReportNamedRow[];
+};
+
+export type ContributionGoodsReportTimeRow = {
+  year?: number;
+  month?: number;
+  count: number;
+  amount: number;
+  quantity: number;
+};
+
+export type ContributionGoodsReport = {
+  year: number | null;
+  goods: { id: string; name: string };
+  unitName: string | null;
+  totalCount: number;
+  totalAmount: number;
+  totalQuantity: number;
+  benefactorCount: number;
+  byYear: ContributionGoodsReportTimeRow[];
+  byMonth: ContributionGoodsReportTimeRow[];
+};
+
+export type Contribution = {
+  id: string;
+  type: ContributionType;
+  benefactorId: string;
+  benefactor: {
+    id: string;
+    name: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+  };
+  amount: number;
+  quantity: number | null;
+  goodsId: string | null;
+  goods: { id: string; name: string } | null;
+  unitId: string | null;
+  unit: { id: string; name: string } | null;
+  campaignId: string | null;
+  campaign: { id: string; name: string; sharePrice?: number } | null;
+  shareCount: number | null;
+  trackingCode: string | null;
+  description: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -2347,6 +2513,8 @@ export type ReservationListItem = {
   maleCount: number;
   femaleCount: number;
   totalCount: number;
+  accommodatedMaleCount?: number;
+  accommodatedFemaleCount?: number;
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -2487,6 +2655,8 @@ export type PlacementQueueItem = {
   maleCount: number;
   femaleCount: number;
   totalCount: number;
+  accommodatedMaleCount?: number;
+  accommodatedFemaleCount?: number;
   allocatedMale: number;
   allocatedFemale: number;
   partyName: string;
@@ -2685,6 +2855,16 @@ export type ReceptionKind =
   | "caravanManager"
   | "accommodationManager";
 
+export type ReceptionSearchScope = "primary" | "extended";
+
+export type ReceptionRecordType =
+  | "person"
+  | "reservation"
+  | "accommodation"
+  | "walkingStation"
+  | "benefactor"
+  | "caravan";
+
 export type ReceptionGeo = GeoName & { id: string; provinceId?: string };
 
 export type ReceptionMatch = {
@@ -2701,6 +2881,21 @@ export type ReceptionMatch = {
   roles: Pick<RoleOption, "code" | "nameKey">[];
   kinds: ReceptionKind[];
   hasHonoraryService?: boolean;
+};
+
+export type ReceptionRecord = {
+  type: ReceptionRecordType;
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  phone?: string | null;
+  nationalId?: string | null;
+  city?: ReceptionGeo | null;
+  code?: string | null;
+  year?: number;
+  reservationType?: ReservationType;
+  status?: ReservationStatus;
+  person?: ReceptionMatch;
 };
 
 export type ReceptionVisit = {
@@ -2790,8 +2985,12 @@ export type ReceptionProfile = {
 
 export type ReceptionSearchResult = {
   q: string;
+  scope?: ReceptionSearchScope;
+  page?: number;
+  pageSize?: number;
   total: number;
   matches: ReceptionMatch[];
+  records?: ReceptionRecord[];
   profile: ReceptionProfile | null;
 };
 
@@ -2987,15 +3186,59 @@ export type CryptoWallet = {
   updatedAt: string;
 };
 
-export type CampaignParticipant = {
+export type CampaignReportNamedRow = {
   id: string;
-  campaignId: string;
-  fullName: string;
-  phone: string | null;
-  shareCount: number;
-  paidAmount: number;
-  createdAt: string;
-  updatedAt: string;
+  name: string;
+  count: number;
+  amount: number;
+  purchasedShares: number;
+  progressPercent: number;
+};
+
+export type CampaignReportTimeRow = {
+  year?: number;
+  month?: number;
+  count: number;
+  targetAmount: number;
+  collectedAmount: number;
+  purchasedShares: number;
+  participantCount: number;
+};
+
+export type CampaignReportKeyedRow = {
+  key: string;
+  count: number;
+};
+
+export type CampaignReport = {
+  year: number | null;
+  totalCount: number;
+  activeCount: number;
+  inactiveCount: number;
+  targetAmount: number;
+  collectedAmount: number;
+  purchasedShares: number;
+  remainingShares: number;
+  totalShares: number;
+  participantCount: number;
+  benefactorCount: number;
+  onlineCount: number;
+  avgProgress: number;
+  completedCount: number;
+  emptyCount: number;
+  inProgressCount: number;
+  upcomingCount: number;
+  runningCount: number;
+  endedCount: number;
+  byActive: CampaignReportKeyedRow[];
+  byProgress: CampaignReportKeyedRow[];
+  byLifecycle: CampaignReportKeyedRow[];
+  byPayment: CampaignReportKeyedRow[];
+  byYear: CampaignReportTimeRow[];
+  byMonth: CampaignReportTimeRow[];
+  topByAmount: CampaignReportNamedRow[];
+  topByParticipants: CampaignReportNamedRow[];
+  topByProgress: CampaignReportNamedRow[];
 };
 
 export type ParticipationCampaign = {
