@@ -25,6 +25,7 @@ import { languageDir } from '../../i18n'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatGroupedNumber, formatGroupedQuantity, formatNumber } from '../../lib/datetime'
 import { autoDisplayQuantity } from '../../lib/nutrition-units'
+import { randomClientId } from '../../lib/random-id'
 import type {
   Food,
   Ingredient,
@@ -167,7 +168,7 @@ export function WarehouseCalculatorPage() {
     setFoodList((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id: randomClientId(),
         foodId: food.id,
         foodName: food.name,
         servings: count,

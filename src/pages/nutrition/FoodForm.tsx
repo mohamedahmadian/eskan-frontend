@@ -16,6 +16,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { getApiErrorMessage } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
 import { compatibleUnits, lineCost, type IngredientUnit } from '../../lib/nutrition-units'
+import { randomClientId } from '../../lib/random-id'
 import type { Food, Ingredient } from '../../types/app'
 
 export type FoodPayload = {
@@ -38,7 +39,7 @@ type DraftLine = {
 
 function newLine(): DraftLine {
   return {
-    key: crypto.randomUUID(),
+    key: randomClientId(),
     ingredientId: '',
     quantity: '',
     unit: '',
