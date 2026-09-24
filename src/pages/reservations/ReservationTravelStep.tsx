@@ -7,7 +7,7 @@ import { confirmToast } from '../../components/ui/confirmToast'
 import { AppForm, Button, cardClassName } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
-import type { Reservation, WalkingRoute } from '../../types/app'
+import type { ReceptionSettings, Reservation, WalkingRoute } from '../../types/app'
 import {
   ReservationTravelFields,
   travelDatesError,
@@ -51,6 +51,7 @@ export function ReservationTravelStep({
     stayStartDate: reservation.stayStartDate ?? '',
     stayEndDate: reservation.stayEndDate ?? '',
     walkingStartDate: reservation.walkingStartDate ?? '',
+    arrivalPeriod: reservation.arrivalPeriod ?? '',
     maleCount: String(counts.male),
     femaleCount: String(counts.female),
     requestedMaleCount: String(requested.male),
@@ -129,14 +130,32 @@ export function ReservationTravelStep({
         subjectNationalId: applicant.nationalId,
       }),
   })
+  const occasionSettings = useQuery({
+    queryKey: ['reception-settings', reservation.year],
+    queryFn: async () => {
+      const { data } = await api.get<ReceptionSettings>(`/reception-settings/${reservation.year}`)
+      return data
+    },
+  })
+  const imamRezaMartyrdomDate = occasionSettings.data?.imamRezaMartyrdomDate ?? null
+  const prophetDemiseDate = occasionSettings.data?.prophetDemiseDate ?? null
   const datesOverlapError = useMemo(() => {
     if (!existingReservationsQuery.data) return null
-    if (travelDatesError(values, t)) return null
+    if (travelDatesError(values, t, { imamRezaMartyrdomDate, prophetDemiseDate })) return null
     return travelDatesError(values, t, {
       others: existingReservationsQuery.data,
       excludeId: reservation.id,
+      imamRezaMartyrdomDate,
+      prophetDemiseDate,
     })
-  }, [existingReservationsQuery.data, reservation.id, t, values])
+  }, [
+    existingReservationsQuery.data,
+    imamRezaMartyrdomDate,
+    prophetDemiseDate,
+    reservation.id,
+    t,
+    values,
+  ])
 
   const submit = useMutation({
     mutationFn: async () => {
@@ -171,6 +190,8 @@ export function ReservationTravelStep({
       const dateError = travelDatesError(values, t, {
         others,
         excludeId: reservation.id,
+        imamRezaMartyrdomDate,
+        prophetDemiseDate,
       })
       if (dateError) {
         toast.error(dateError)
@@ -336,6 +357,8 @@ export function ReservationTravelStep({
         ) : null}
         <ReservationTravelFields
           values={values}
+          imamRezaMartyrdomDate={imamRezaMartyrdomDate}
+          prophetDemiseDate={prophetDemiseDate}
           onChange={(patch) =>
             setValues((current) => {
               const next = { ...current, ...patch }
@@ -367,6 +390,7 @@ export function ReservationTravelStep({
           simCardRequestCount={reservation.simCardRequestCount ?? 0}
           bankCardRequestCount={reservation.bankCardRequestCount ?? 0}
           showSimBankRequests={showSimBankRequests(reservation)}
+          year={reservation.year}
           subjectUser={
             mode === 'admin'
               ? reservation.type === 'CARAVAN' && reservation.caravanManager
@@ -412,6 +436,7 @@ function travelPayload(
     stayStartDate: values.stayStartDate || null,
     stayEndDate: values.stayEndDate || null,
     walkingStartDate: values.walkingStartDate || null,
+    arrivalPeriod: values.arrivalPeriod || null,
     requestsAccommodation: values.requestsAccommodation,
     requestsBus: values.requestsBus,
     requestsSimCard: values.requestsSimCard,

@@ -24,7 +24,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type FormEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -247,6 +246,7 @@ export function CompanionsStep({
           }}
         >
           <MemberLookupForm
+            key={editingMember?.id ?? "new"}
             reservationId={reservation.id}
             isCaravan={isCaravan}
             iraqi={Boolean(reservation.iraqiWorkflow)}
@@ -467,7 +467,10 @@ function CompanionFormModal({
 }) {
   const { t } = useTranslation();
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -555,20 +558,55 @@ function MemberLookupForm({
   onCancelEdit?: () => void;
 }) {
   const { t } = useTranslation();
-  const lookupRef = useRef<HTMLInputElement>(null);
+  const nationalIdRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
-  const [lookupNationalId, setLookupNationalId] = useState("");
-  const [nationalId, setNationalId] = useState("");
-  const [passportNumber, setPassportNumber] = useState("");
-  const [status, setStatus] = useState<"idle" | "new" | "edit">("idle");
+  const lastNameRef = useRef<HTMLInputElement>(null);
+  const lookupSeq = useRef(0);
+  const lookingRef = useRef(false);
+  const inflight = useRef<{
+    key: string;
+    seq: number;
+    promise: Promise<boolean>;
+  } | null>(null);
+  const serviceRef = useRef({ sim: false, bank: false });
+  const passportTimer = useRef<number | null>(null);
+  const [nationalId, setNationalId] = useState(() =>
+    editing && !iraqi ? (editing.user.nationalId ?? "") : "",
+  );
+  const [passportNumber, setPassportNumber] = useState(() =>
+    editing && iraqi ? (editing.user.nationalId ?? "") : "",
+  );
   const [looking, setLooking] = useState(false);
-  const [missingNationalId, setMissingNationalId] = useState<string | null>(null);
-  const [person, setPerson] = useState<Partial<ReservationPerson>>({});
-  const [gender, setGender] = useState("MALE");
-  const [birthDate, setBirthDate] = useState("");
-  const [requestsSimCard, setRequestsSimCard] = useState(false);
-  const [requestsBankCard, setRequestsBankCard] = useState(false);
-  const showForm = status === "new" || status === "edit";
+  const [missingNationalId, setMissingNationalId] = useState<string | null>(
+    null,
+  );
+  const [person, setPerson] = useState<Partial<ReservationPerson>>(() =>
+    editing
+      ? {
+          firstName: editing.user.firstName,
+          lastName: editing.user.lastName,
+          phone: editing.user.phone ?? "",
+          fullName: editing.user.fullName,
+        }
+      : {},
+  );
+  const [gender, setGender] = useState(() => {
+    if (editing?.user.gender === "MALE" || editing?.user.gender === "FEMALE") {
+      return editing.user.gender;
+    }
+    if (genderSlotOpen("MALE", maleNeed, maleHave, null)) return "MALE";
+    if (genderSlotOpen("FEMALE", femaleNeed, femaleHave, null)) return "FEMALE";
+    return "MALE";
+  });
+  const [birthDate, setBirthDate] = useState(
+    () => editing?.user.birthDate ?? "",
+  );
+  const [requestsSimCard, setRequestsSimCard] = useState(() =>
+    Boolean(editing?.requestsSimCard),
+  );
+  const [requestsBankCard, setRequestsBankCard] = useState(() =>
+    Boolean(editing?.requestsBankCard),
+  );
   function slotOpen(
     next: "MALE" | "FEMALE",
     editingMember: ReservationMember | null | undefined = editing,
@@ -583,12 +621,6 @@ function MemberLookupForm({
 
   const maleAllowed = slotOpen("MALE");
   const femaleAllowed = slotOpen("FEMALE");
-
-  function openGender() {
-    if (slotOpen("MALE", null)) return "MALE";
-    if (slotOpen("FEMALE", null)) return "FEMALE";
-    return "MALE";
-  }
 
   function slotClosedMessage(gender: "MALE" | "FEMALE") {
     return t(
@@ -605,77 +637,43 @@ function MemberLookupForm({
     return true;
   }
 
-  function resetForm() {
-    setLookupNationalId("");
-    setNationalId("");
-    setPassportNumber("");
-    setPerson({});
-    setGender(openGender());
-    setBirthDate("");
-    setRequestsSimCard(false);
-    setRequestsBankCard(false);
-    setMissingNationalId(null);
-    setStatus("idle");
-  }
-
-  useEffect(() => {
-    if (!editing) return;
-    setLookupNationalId("");
-    const identity = editing.user.nationalId ?? "";
-    setNationalId(iraqi ? "" : identity);
-    setPassportNumber(iraqi ? identity : "");
-    setPerson({
-      firstName: editing.user.firstName,
-      lastName: editing.user.lastName,
-      phone: editing.user.phone ?? "",
-      fullName: editing.user.fullName,
-    });
-    setGender(editing.user.gender ?? "MALE");
-    setBirthDate(editing.user.birthDate ?? "");
-    setRequestsSimCard(Boolean(editing.requestsSimCard));
-    setRequestsBankCard(Boolean(editing.requestsBankCard));
-    setMissingNationalId(null);
-    setStatus("edit");
-    requestAnimationFrame(() => {
-      firstNameRef.current?.focus({ preventScroll: true });
-    });
-  }, [editing, iraqi]);
-
-  useEffect(() => {
-    if (status !== "idle") return;
-    lookupRef.current?.focus({ preventScroll: true });
-  }, [status]);
-
-  async function lookup(event?: FormEvent) {
-    event?.preventDefault();
-    if (iraqi) {
-      const passport = normalizePassportNumber(lookupNationalId);
-      if (!passport) {
-        setMissingNationalId(null);
-        setNationalId("");
-        setPassportNumber("");
-        setPerson({});
-        setGender(openGender());
-        setBirthDate("");
-        setStatus("new");
-        return;
-      }
-      if (passport.length < 5) {
-        toast.error(t("reservations.passportInvalid"));
-        return;
-      }
+  async function runIdentityLookup(
+    kind: "nid" | "pass",
+    value: string,
+  ): Promise<boolean> {
+    const key = `${kind}:${value}`;
+    if (
+      inflight.current?.key === key &&
+      inflight.current.seq === lookupSeq.current
+    ) {
+      return inflight.current.promise;
+    }
+    const seq = ++lookupSeq.current;
+    const promise = (async () => {
+      lookingRef.current = true;
       setLooking(true);
+      setMissingNationalId((current) =>
+        current && current !== value ? null : current,
+      );
       try {
         const { data } = await api.post<LookupResponse>(
           "/pilgrims/identity-lookup",
-          { passportNumber: passport },
+          kind === "nid" ? { nationalId: value } : { passportNumber: value },
         );
+        if (seq !== lookupSeq.current) return false;
         if (data.found) {
-          if (blockFoundGender(data.user.gender)) return;
+          if (blockFoundGender(data.user.gender)) {
+            if (inflight.current?.key === key) inflight.current = null;
+            return false;
+          }
           await api.post(`/reservations/${reservationId}/members`, {
-            passportNumber: passport,
-            requestsSimCard: showServiceRequests ? requestsSimCard : false,
-            requestsBankCard: showServiceRequests ? requestsBankCard : false,
+            ...(kind === "nid"
+              ? { nationalId: value }
+              : { passportNumber: value }),
+            requestsSimCard: showServiceRequests ? serviceRef.current.sim : false,
+            requestsBankCard: showServiceRequests
+              ? serviceRef.current.bank
+              : false,
           });
           toast.success(
             t(
@@ -684,81 +682,106 @@ function MemberLookupForm({
                 : "reservations.memberAdded",
             ),
           );
-          resetForm();
           onAdded();
-          return;
+          return true;
         }
-        setPerson({});
-        setGender(openGender());
-        setBirthDate("");
-        setNationalId("");
-        setPassportNumber(passport);
-        setMissingNationalId(passport);
-        setStatus("new");
+        setMissingNationalId(value);
+        return false;
       } catch (error) {
+        if (inflight.current?.key === key) inflight.current = null;
+        if (seq !== lookupSeq.current) return false;
         toast.error(getApiErrorMessage(error, t("common.error")));
+        return false;
       } finally {
-        setLooking(false);
+        if (seq === lookupSeq.current) {
+          lookingRef.current = false;
+          setLooking(false);
+        }
       }
+    })();
+    inflight.current = { key, seq, promise };
+    return promise;
+  }
+
+  useEffect(() => {
+    serviceRef.current = { sim: requestsSimCard, bank: requestsBankCard };
+  }, [requestsBankCard, requestsSimCard]);
+
+  useEffect(() => {
+    return () => {
+      lookupSeq.current += 1;
+      if (passportTimer.current != null) {
+        window.clearTimeout(passportTimer.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      if (editing) firstNameRef.current?.focus({ preventScroll: true });
+      else nationalIdRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [editing]);
+
+  useEffect(() => {
+    if (editing || !missingNationalId) return;
+    const frame = requestAnimationFrame(() => {
+      lastNameRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [missingNationalId, editing]);
+
+  function cancelLookup(prefix: "nid:" | "pass:") {
+    if (!inflight.current?.key.startsWith(prefix) && !lookingRef.current) {
       return;
     }
-    const id = normalizeNationalId(lookupNationalId);
-    if (!id) {
-      setMissingNationalId(null);
-      setNationalId("");
-      setPassportNumber("");
-      setPerson({});
-      setGender(openGender());
-      setBirthDate("");
-      setStatus("new");
-      return;
-    }
+    lookupSeq.current += 1;
+    inflight.current = null;
+    lookingRef.current = false;
+    setLooking(false);
+    setMissingNationalId(null);
+  }
+
+  function changeNationalId(raw: string) {
+    const id = normalizeNationalId(raw);
+    setNationalId(isValidIranianNationalId(id) ? id : raw);
+    if (editing || iraqi) return;
     if (!isValidIranianNationalId(id)) {
-      toast.error(t("users.nationalIdInvalid"));
+      cancelLookup("nid:");
+      if (/^\d{10}$/.test(id)) toast.error(t("users.nationalIdInvalid"));
       return;
     }
-    setLooking(true);
-    try {
-      const { data } = await api.post<LookupResponse>(
-        "/pilgrims/identity-lookup",
-        { nationalId: id },
-      );
-      if (data.found) {
-        if (blockFoundGender(data.user.gender)) return;
-        await api.post(`/reservations/${reservationId}/members`, {
-          nationalId: id,
-          requestsSimCard: showServiceRequests ? requestsSimCard : false,
-          requestsBankCard: showServiceRequests ? requestsBankCard : false,
-        });
-        toast.success(
-          t(
-            isCaravan
-              ? "reservations.memberAddedCaravan"
-              : "reservations.memberAdded",
-          ),
-        );
-        resetForm();
-        onAdded();
-        return;
-      }
-      setPerson({});
-      setGender(openGender());
-      setBirthDate("");
-      setNationalId(id);
-      setPassportNumber("");
-      setMissingNationalId(id);
-      setStatus("new");
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, t("common.error")));
-    } finally {
-      setLooking(false);
+    void runIdentityLookup("nid", id);
+  }
+
+  function changePassport(raw: string) {
+    const passport = normalizePassportNumber(raw);
+    setPassportNumber(passport.length >= 5 ? passport : raw);
+    if (passportTimer.current != null) {
+      window.clearTimeout(passportTimer.current);
+      passportTimer.current = null;
     }
+    if (editing || !iraqi) return;
+    if (passport.length < 5) {
+      cancelLookup("pass:");
+      return;
+    }
+    passportTimer.current = window.setTimeout(() => {
+      passportTimer.current = null;
+      void runIdentityLookup("pass", passport);
+    }, 400);
   }
 
   const save = useMutation({
     mutationFn: async () => {
       const id = iraqi ? "" : normalizeNationalId(nationalId);
-      if (id && !isValidIranianNationalId(id)) {
+      if (!editing && !iraqi) {
+        if (!id) throw new Error(t("users.nationalIdRequired"));
+        if (!isValidIranianNationalId(id)) {
+          throw new Error(t("users.nationalIdInvalid"));
+        }
+      } else if (id && !isValidIranianNationalId(id)) {
         throw new Error(t("users.nationalIdInvalid"));
       }
       const passport = iraqi
@@ -807,13 +830,13 @@ function MemberLookupForm({
                 : "reservations.memberAdded",
             ),
       );
-      resetForm();
       onAdded();
     },
     onError: (error) =>
       toast.error(
         error instanceof Error &&
         (error.message === t("users.nationalIdInvalid") ||
+          error.message === t("users.nationalIdRequired") ||
           error.message === t("reservations.passportInvalid") ||
           error.message === t("reservations.maleSlotClosed") ||
           error.message === t("reservations.femaleSlotClosed"))
@@ -823,213 +846,196 @@ function MemberLookupForm({
   });
 
   function closeForm() {
-    if (save.isPending || looking) return;
-    resetForm();
+    if (save.isPending || lookingRef.current) return;
     onCancelEdit?.();
   }
 
+  async function submitForm() {
+    if (save.isPending || lookingRef.current) return;
+    if (passportTimer.current != null) {
+      window.clearTimeout(passportTimer.current);
+      passportTimer.current = null;
+    }
+    if (!editing) {
+      if (iraqi) {
+        const passport = normalizePassportNumber(passportNumber);
+        if (passport.length >= 5 && missingNationalId !== passport) {
+          await runIdentityLookup("pass", passport);
+          return;
+        }
+      } else {
+        const id = normalizeNationalId(nationalId);
+        if (isValidIranianNationalId(id) && missingNationalId !== id) {
+          await runIdentityLookup("nid", id);
+          return;
+        }
+      }
+    }
+    save.mutate();
+  }
+
   return (
-    <div className="space-y-4">
-      {status !== "edit" ? (
-        <article className="rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white p-4 shadow-[0_8px_20px_rgba(20,40,40,0.05)]">
-          <SectionTitle icon={UserPlus} className="mb-3">
-            {t("reservations.manualAdd")}
-          </SectionTitle>
-          <AppForm
-            autoFocusFirst={false}
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void lookup();
-            }}
+    <AppForm
+      autoFocusFirst={false}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submitForm();
+      }}
+      className="space-y-4"
+    >
+      {!editing && missingNationalId ? (
+        <NationalIdNotFoundNotice
+          nationalId={missingNationalId}
+          iraqi={iraqi}
+        />
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {iraqi ? (
+          <FormField
+            icon={BookUser}
+            label={t("users.passportNumber")}
+            htmlFor="companion-passport"
           >
-            <FormField
-              icon={iraqi ? BookUser : IdCard}
-              label={iraqi ? t("users.passportNumber") : t("users.nationalId")}
-              htmlFor="companion-nid"
-            >
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  id="companion-nid"
-                  ref={lookupRef}
-                  className={`min-w-0 flex-1 ${fieldClassName} ${iraqi ? "" : "digit-field"}`}
-                  value={lookupNationalId}
-                  onChange={(event) => setLookupNationalId(event.target.value)}
-                  inputMode={iraqi ? "text" : "numeric"}
-                />
-                <Button
-                  type="submit"
-                  className="shrink-0"
-                  disabled={looking || save.isPending}
-                >
-                  <Check className="size-4" aria-hidden />
-                  {looking
-                    ? t("reservations.looking")
-                    : t("reservations.registerPilgrim")}
-                </Button>
-              </div>
-            </FormField>
-            {!showForm && showServiceRequests ? (
-              <MemberServiceRequestFields
-                requestsSimCard={requestsSimCard}
-                requestsBankCard={requestsBankCard}
-                onSimChange={setRequestsSimCard}
-                onBankChange={setRequestsBankCard}
-              />
+            <input
+              id="companion-passport"
+              ref={nationalIdRef}
+              className={fieldClassName}
+              value={passportNumber}
+              onChange={(event) => changePassport(event.target.value)}
+              autoComplete="off"
+              required
+            />
+            {looking ? (
+              <p className="text-xs text-ink-500">{t("reservations.looking")}</p>
             ) : null}
-          </AppForm>
-        </article>
-      ) : null}
-      {showForm ? (
-        <AppForm
-          autoFocusFirst={false}
-          onSubmit={(event) => {
-            event.preventDefault();
-            save.mutate();
-          }}
-          className="space-y-4"
+          </FormField>
+        ) : (
+          <FormField
+            icon={IdCard}
+            label={t("users.nationalId")}
+            htmlFor="companion-nid"
+          >
+            <input
+              id="companion-nid"
+              ref={nationalIdRef}
+              className={`${fieldClassName} digit-field`}
+              value={nationalId}
+              onChange={(event) => changeNationalId(event.target.value)}
+              inputMode="numeric"
+              autoComplete="off"
+              required={!editing}
+            />
+            {looking ? (
+              <p className="text-xs text-ink-500">{t("reservations.looking")}</p>
+            ) : null}
+          </FormField>
+        )}
+        <FormField
+          icon={UserRound}
+          label={t("users.firstName")}
+          htmlFor="c-first"
         >
-          {status === "new" && missingNationalId ? (
-            <NationalIdNotFoundNotice
-              nationalId={missingNationalId}
-              iraqi={iraqi}
-            />
-          ) : null}
-          <div className="grid gap-3 sm:grid-cols-3">
-            {iraqi ? (
-              <FormField
-                icon={BookUser}
-                label={t("users.passportNumber")}
-                htmlFor="companion-passport"
-              >
-                <input
-                  id="companion-passport"
-                  className={fieldClassName}
-                  value={passportNumber}
-                  onChange={(event) => setPassportNumber(event.target.value)}
-                  required
-                />
-              </FormField>
-            ) : (
-              <FormField
-                icon={IdCard}
-                label={t("users.nationalId")}
-                htmlFor="companion-nid-new"
-              >
-                <input
-                  id="companion-nid-new"
-                  className={`${fieldClassName} digit-field`}
-                  value={nationalId}
-                  onChange={(event) => setNationalId(event.target.value)}
-                  inputMode="numeric"
-                />
-              </FormField>
-            )}
-            <FormField
-              icon={UserRound}
-              label={t("users.firstName")}
-              htmlFor="c-first"
-            >
-              <input
-                id="c-first"
-                ref={firstNameRef}
-                className={fieldClassName}
-                value={person.firstName ?? ""}
-                onChange={(event) =>
-                  setPerson((current) => ({
-                    ...current,
-                    firstName: event.target.value,
-                  }))
-                }
-                required
-              />
-            </FormField>
-            <FormField
-              icon={UserRound}
-              label={t("users.lastName")}
-              htmlFor="c-last"
-            >
-              <input
-                id="c-last"
-                className={fieldClassName}
-                value={person.lastName ?? ""}
-                onChange={(event) =>
-                  setPerson((current) => ({
-                    ...current,
-                    lastName: event.target.value,
-                  }))
-                }
-                required
-              />
-            </FormField>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <FormField icon={Phone} label={t("users.phone")} htmlFor="c-phone">
-              <input
-                id="c-phone"
-                className={fieldClassName}
-                value={person.phone ?? ""}
-                onChange={(event) =>
-                  setPerson((current) => ({
-                    ...current,
-                    phone: event.target.value,
-                  }))
-                }
-              />
-            </FormField>
-            <FormField icon={Users} label={t("users.gender")}>
-              <div className="space-y-1">
-                <ToggleField
-                  checked={gender !== "FEMALE"}
-                  disableOn={!maleAllowed}
-                  disableOff={!femaleAllowed}
-                  onChange={(male) => {
-                    const next = male ? "MALE" : "FEMALE";
-                    if (!slotOpen(next)) {
-                      toast.error(slotClosedMessage(next));
-                      return;
-                    }
-                    setGender(next);
-                  }}
-                  onLabel={t("userGenders.MALE")}
-                  offLabel={t("userGenders.FEMALE")}
-                />
-                {!maleAllowed ? (
-                  <p className="text-xs text-ink-500">{t("reservations.maleSlotClosed")}</p>
-                ) : null}
-                {!femaleAllowed ? (
-                  <p className="text-xs text-ink-500">{t("reservations.femaleSlotClosed")}</p>
-                ) : null}
-              </div>
-            </FormField>
-            <FormField icon={Calendar} label={t("users.birthDate")}>
-              <PersianDateField
-                value={birthDate}
-                onChange={(value) => setBirthDate(value ?? "")}
-              />
-            </FormField>
-          </div>
-          {showServiceRequests ? (
-            <MemberServiceRequestFields
-              requestsSimCard={requestsSimCard}
-              requestsBankCard={requestsBankCard}
-              onSimChange={setRequestsSimCard}
-              onBankChange={setRequestsBankCard}
-            />
-          ) : null}
-          <FormActions
-            submitLabel={
-              status === "edit"
-                ? t("reservations.saveMember")
-                : t("reservations.addMember")
+          <input
+            id="c-first"
+            ref={firstNameRef}
+            className={fieldClassName}
+            value={person.firstName ?? ""}
+            onChange={(event) =>
+              setPerson((current) => ({
+                ...current,
+                firstName: event.target.value,
+              }))
             }
-            cancelLabel={t("common.cancel")}
-            submitting={save.isPending}
-            onCancel={closeForm}
+            required
           />
-        </AppForm>
+        </FormField>
+        <FormField
+          icon={UserRound}
+          label={t("users.lastName")}
+          htmlFor="c-last"
+        >
+          <input
+            id="c-last"
+            ref={lastNameRef}
+            className={fieldClassName}
+            value={person.lastName ?? ""}
+            onChange={(event) =>
+              setPerson((current) => ({
+                ...current,
+                lastName: event.target.value,
+              }))
+            }
+            required
+          />
+        </FormField>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <FormField icon={Users} label={t("users.gender")}>
+          <div className="space-y-1">
+            <ToggleField
+              checked={gender !== "FEMALE"}
+              disableOn={!maleAllowed}
+              disableOff={!femaleAllowed}
+              onChange={(male) => {
+                const next = male ? "MALE" : "FEMALE";
+                if (!slotOpen(next)) {
+                  toast.error(slotClosedMessage(next));
+                  return;
+                }
+                setGender(next);
+              }}
+              onLabel={t("userGenders.MALE")}
+              offLabel={t("userGenders.FEMALE")}
+            />
+            {!maleAllowed ? (
+              <p className="text-xs text-ink-500">{t("reservations.maleSlotClosed")}</p>
+            ) : null}
+            {!femaleAllowed ? (
+              <p className="text-xs text-ink-500">{t("reservations.femaleSlotClosed")}</p>
+            ) : null}
+          </div>
+        </FormField>
+        <FormField icon={Calendar} label={t("users.birthDate")}>
+          <PersianDateField
+            value={birthDate}
+            onChange={(value) => setBirthDate(value ?? "")}
+          />
+        </FormField>
+        <FormField icon={Phone} label={t("users.phone")} htmlFor="c-phone">
+          <input
+            id="c-phone"
+            className={`${fieldClassName} digit-field`}
+            value={person.phone ?? ""}
+            onChange={(event) =>
+              setPerson((current) => ({
+                ...current,
+                phone: event.target.value,
+              }))
+            }
+            inputMode="tel"
+            autoComplete="tel"
+          />
+        </FormField>
+      </div>
+      {showServiceRequests ? (
+        <MemberServiceRequestFields
+          requestsSimCard={requestsSimCard}
+          requestsBankCard={requestsBankCard}
+          onSimChange={setRequestsSimCard}
+          onBankChange={setRequestsBankCard}
+        />
       ) : null}
-    </div>
+      <FormActions
+        submitLabel={
+          editing
+            ? t("reservations.saveMember")
+            : t("reservations.addMember")
+        }
+        cancelLabel={t("common.cancel")}
+        submitting={save.isPending || looking}
+        onCancel={closeForm}
+      />
+    </AppForm>
   );
 }
 

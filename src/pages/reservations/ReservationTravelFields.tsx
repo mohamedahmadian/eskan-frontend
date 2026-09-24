@@ -4,6 +4,7 @@ import {
   Bus,
   Calendar,
   CreditCard,
+  Sun,
   Footprints,
   Info,
   MapPin,
@@ -26,6 +27,7 @@ import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
 import { api, getApiErrorMessage } from "../../lib/api";
 import {
+  addDaysIso,
   currentPersianYear,
   formatGregorianDate,
   formatHijriDate,
@@ -40,11 +42,12 @@ import type {
   Paginated,
   Province,
   ReceptionSettings,
+  ReservationArrivalPeriod,
   ReservationType,
   WalkingRoute,
   WalkingRouteStage,
 } from "../../types/app";
-import { stageKey, stageTitle } from "../walking-routes/StationInfoCard";
+import { isRouteDestination, stageKey, stageTitle } from "../walking-routes/StationInfoCard";
 import { ReservationCountFields } from "./ReservationCountFields";
 import {
   createReservationParty,
@@ -70,7 +73,9 @@ function walkingStartFromStage(stage: WalkingRouteStage) {
 }
 
 function firstWalkingStage(route: WalkingRoute | undefined) {
-  return [...(route?.stages ?? [])].sort((a, b) => a.stageNumber - b.stageNumber)[0];
+  return [...(route?.stages ?? [])]
+    .filter((stage) => !isRouteDestination(stage))
+    .sort((a, b) => a.stageNumber - b.stageNumber)[0];
 }
 
 export function walkingRouteOriginError(
@@ -92,10 +97,19 @@ export function walkingRouteOriginError(
 export function travelDatesError(
   values: Pick<
     TravelValues,
-    "walkingStartDate" | "stayStartDate" | "stayEndDate" | "walkingRouteId"
+    | "walkingStartDate"
+    | "stayStartDate"
+    | "stayEndDate"
+    | "walkingRouteId"
+    | "arrivalPeriod"
   >,
   t: (key: string, options?: Record<string, string>) => string,
-  overlap?: { others: ReservationDateSpan[]; excludeId?: string },
+  overlap?: {
+    others?: ReservationDateSpan[];
+    excludeId?: string;
+    imamRezaMartyrdomDate?: string | null;
+    prophetDemiseDate?: string | null;
+  },
 ) {
   if (!values.walkingRouteId) {
     return t("reservations.walkingRouteRequired");
@@ -108,6 +122,9 @@ export function travelDatesError(
   }
   if (!values.stayEndDate) {
     return t("reservations.stayEndRequired");
+  }
+  if (!values.arrivalPeriod) {
+    return t("reservations.arrivalPeriodRequired");
   }
   if (
     values.stayStartDate &&
@@ -123,7 +140,34 @@ export function travelDatesError(
   ) {
     return t("reservations.stayRangeInvalid");
   }
-  if (overlap && RESERVATION_DATE_OVERLAP_CHECK_ENABLED) {
+  const martyrdom = overlap?.imamRezaMartyrdomDate;
+  if (
+    martyrdom &&
+    values.stayStartDate &&
+    values.stayEndDate &&
+    values.stayStartDate <= martyrdom &&
+    values.stayEndDate > martyrdom
+  ) {
+    return t("reservations.stayEndAfterMartyrdom");
+  }
+  const earliestArrival = overlap?.prophetDemiseDate
+    ? addDaysIso(overlap.prophetDemiseDate, -1)
+    : "";
+  if (
+    earliestArrival &&
+    values.stayStartDate &&
+    values.stayStartDate < earliestArrival
+  ) {
+    return t("reservations.stayStartBeforeProphet");
+  }
+  if (
+    earliestArrival &&
+    values.stayStartDate === earliestArrival &&
+    values.arrivalPeriod === "BEFORE_NOON"
+  ) {
+    return t("reservations.arrivalMustBeAfternoon");
+  }
+  if (overlap?.others && RESERVATION_DATE_OVERLAP_CHECK_ENABLED) {
     const conflict = findOverlappingReservation(
       values,
       overlap.others,
@@ -143,6 +187,7 @@ export type TravelValues = {
   stayStartDate: string;
   stayEndDate: string;
   walkingStartDate: string;
+  arrivalPeriod: ReservationArrivalPeriod | "";
   maleCount: string;
   femaleCount: string;
   requestedMaleCount: string;
@@ -168,9 +213,12 @@ export function ReservationTravelFields({
   subjectUser,
   reservationId,
   datesError,
+  imamRezaMartyrdomDate,
+  prophetDemiseDate,
   simCardRequestCount,
   bankCardRequestCount,
   showSimBankRequests,
+  year,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -192,9 +240,12 @@ export function ReservationTravelFields({
   } | null;
   reservationId?: string;
   datesError?: string | null;
+  imamRezaMartyrdomDate?: string | null;
+  prophetDemiseDate?: string | null;
   simCardRequestCount?: number;
   bankCardRequestCount?: number;
   showSimBankRequests?: boolean;
+  year?: number;
 }) {
   if (activeSubStep === "count") {
     return (
@@ -217,6 +268,7 @@ export function ReservationTravelFields({
         locked={locked}
         selectedParty={selectedParty}
         subjectUser={subjectUser}
+        year={year}
       />
     );
   }
@@ -228,6 +280,8 @@ export function ReservationTravelFields({
         locked={locked}
         countryId={countryId}
         error={datesError}
+        imamRezaMartyrdomDate={imamRezaMartyrdomDate}
+        prophetDemiseDate={prophetDemiseDate}
       />
     );
   }
@@ -254,6 +308,8 @@ export function ReservationTravelInfoFields({
   countryId,
   showOccasionHint = true,
   error,
+  imamRezaMartyrdomDate,
+  prophetDemiseDate,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -261,6 +317,8 @@ export function ReservationTravelInfoFields({
   countryId?: string;
   showOccasionHint?: boolean;
   error?: string | null;
+  imamRezaMartyrdomDate?: string | null;
+  prophetDemiseDate?: string | null;
 }) {
   const { t } = useTranslation();
   return (
@@ -275,6 +333,8 @@ export function ReservationTravelInfoFields({
           locked={locked}
           showOccasionHint={showOccasionHint}
           error={error}
+          imamRezaMartyrdomDate={imamRezaMartyrdomDate}
+          prophetDemiseDate={prophetDemiseDate}
         />
       </section>
       <section>
@@ -505,12 +565,16 @@ export function ReservationDateFields({
   locked,
   showOccasionHint = true,
   error,
+  imamRezaMartyrdomDate,
+  prophetDemiseDate,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
   locked?: boolean;
   showOccasionHint?: boolean;
   error?: string | null;
+  imamRezaMartyrdomDate?: string | null;
+  prophetDemiseDate?: string | null;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
@@ -528,10 +592,29 @@ export function ReservationDateFields({
     if (diffDays < 0) return 0;
     return diffDays + 1; // include both start and end dates
   })();
+  const earliestArrival = prophetDemiseDate ? addDaysIso(prophetDemiseDate, -1) : "";
+  const afternoonOnly = Boolean(earliestArrival) && values.stayStartDate === earliestArrival;
+  const startMinDate =
+    earliestArrival && earliestArrival > todayIso ? earliestArrival : todayIso;
+  const martyrdomError =
+    imamRezaMartyrdomDate &&
+    values.stayStartDate &&
+    values.stayEndDate &&
+    values.stayStartDate <= imamRezaMartyrdomDate &&
+    values.stayEndDate > imamRezaMartyrdomDate
+      ? t("reservations.stayEndAfterMartyrdom")
+      : null;
+  const arrivalLimitError = !values.stayStartDate
+    ? null
+    : values.stayStartDate < earliestArrival
+      ? t("reservations.stayStartBeforeProphet")
+      : afternoonOnly && values.arrivalPeriod === "BEFORE_NOON"
+        ? t("reservations.arrivalMustBeAfternoon")
+        : null;
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <DateValueField
           id="stayStartDate"
           icon={Calendar}
@@ -539,16 +622,71 @@ export function ReservationDateFields({
           value={values.stayStartDate}
           locked={locked}
           required
-          minDate={todayIso}
+          minDate={startMinDate}
           showEquivalentsBadges
           onChange={(stayStartDate) => {
             const patch: Partial<TravelValues> = { stayStartDate };
             if (stayStartDate && values.stayEndDate && values.stayEndDate < stayStartDate) {
               patch.stayEndDate = stayStartDate;
             }
+            if (
+              imamRezaMartyrdomDate &&
+              stayStartDate &&
+              stayStartDate <= imamRezaMartyrdomDate &&
+              patch.stayEndDate === undefined &&
+              values.stayEndDate > imamRezaMartyrdomDate
+            ) {
+              patch.stayEndDate = imamRezaMartyrdomDate;
+            }
+            if (
+              earliestArrival &&
+              stayStartDate === earliestArrival &&
+              values.arrivalPeriod === "BEFORE_NOON"
+            ) {
+              patch.arrivalPeriod = "AFTER_NOON";
+            }
             onChange(patch);
           }}
         />
+        <FormField
+          icon={Sun}
+          htmlFor="arrivalPeriod"
+          label={`${t("reservations.arrivalPeriod")} *`}
+        >
+          <SearchSelect
+            id="arrivalPeriod"
+            value={values.arrivalPeriod}
+            onChange={(arrivalPeriod) =>
+              onChange({
+                arrivalPeriod:
+                  arrivalPeriod === "BEFORE_NOON" || arrivalPeriod === "AFTER_NOON"
+                    ? arrivalPeriod
+                    : "",
+              })
+            }
+            options={[
+              ...(afternoonOnly
+                ? []
+                : [
+                    {
+                      value: "BEFORE_NOON",
+                      label: t("reservations.arrivalPeriodBeforeNoon"),
+                    },
+                  ]),
+              {
+                value: "AFTER_NOON",
+                label: t("reservations.arrivalPeriodAfterNoon"),
+              },
+            ]}
+            placeholder={t("reservations.arrivalPeriodPlaceholder")}
+            disabled={locked}
+            required
+          />
+          <p className="flex items-start gap-1.5 text-xs leading-5 text-ink-500">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-teal-600" aria-hidden />
+            {t("reservations.arrivalPeriodLunchHint")}
+          </p>
+        </FormField>
         <DateValueField
           id="stayEndDate"
           icon={Calendar}
@@ -557,6 +695,13 @@ export function ReservationDateFields({
           locked={locked}
           required
           minDate={values.stayStartDate || todayIso}
+          maxDate={
+            imamRezaMartyrdomDate &&
+            values.stayStartDate &&
+            values.stayStartDate <= imamRezaMartyrdomDate
+              ? imamRezaMartyrdomDate
+              : undefined
+          }
           showEquivalentsBadges
           onChange={(stayEndDate) => onChange({ stayEndDate })}
         />
@@ -569,7 +714,11 @@ export function ReservationDateFields({
           </p>
         </div>
       ) : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error || martyrdomError || arrivalLimitError ? (
+        <p className="text-sm text-red-700">
+          {error || martyrdomError || arrivalLimitError}
+        </p>
+      ) : null}
       {showOccasionHint ? <OccasionStayHint /> : null}
     </div>
   );
@@ -693,18 +842,25 @@ export function ReservationOptionalGeoFields({
       if (!coords) continue;
       path.push(coords);
       const id = stageKey(stage);
+      const destination = isRouteDestination(stage);
       const numberLabel = formatNumber(stage.stageNumber, locale);
       markers.push({
         id,
         lat: coords.lat,
         lng: coords.lng,
-        kind: stage.cityId === values.originCityId ? "current" : "station",
-        badge: numberLabel,
-        title: stageTitle(
-          stage,
-          locale,
-          `${t("walkingRoutes.stage")} ${numberLabel}`,
-        ),
+        kind: destination
+          ? "destination"
+          : stage.cityId === values.originCityId
+            ? "current"
+            : "station",
+        badge: destination ? t("walkingRoutes.destinationBadge") : numberLabel,
+        title: destination
+          ? t("walkingRoutes.mashhadDestination")
+          : stageTitle(
+              stage,
+              locale,
+              `${t("walkingRoutes.stage")} ${numberLabel}`,
+            ),
       });
     }
     if (!markers.length && path.length < 2) return null;
@@ -723,7 +879,7 @@ export function ReservationOptionalGeoFields({
     }
     const route = (routes.data ?? []).find((item) => item.id === walkingRouteId);
     const currentOnRoute = route?.stages.some(
-      (stage) => stage.cityId === values.originCityId,
+      (stage) => !isRouteDestination(stage) && stage.cityId === values.originCityId,
     );
     if (currentOnRoute) {
       onChange({ walkingRouteId });
@@ -738,7 +894,7 @@ export function ReservationOptionalGeoFields({
 
   function applyStation(stageId: string) {
     const stage = stages.find((item) => stageKey(item) === stageId);
-    if (!stage) return;
+    if (!stage || isRouteDestination(stage)) return;
     onChange(walkingStartFromStage(stage));
   }
 
@@ -852,6 +1008,7 @@ export function ReservationTravelPartyField({
   locked,
   selectedParty,
   subjectUser,
+  year,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -868,6 +1025,7 @@ export function ReservationTravelPartyField({
     cityId?: string | null;
     roles?: { code: string }[];
   } | null;
+  year?: number;
 }) {
   const { t } = useTranslation();
   const { user, refresh } = useAuth();
@@ -888,7 +1046,7 @@ export function ReservationTravelPartyField({
     }
     setCreating(true);
     try {
-      const created = await createReservationParty(type, draft);
+      const created = await createReservationParty(type, draft, year);
       onChange({
         caravanId: type === "CARAVAN" ? created.id : "",
         groupId: type === "GROUP" ? created.id : "",
@@ -901,6 +1059,9 @@ export function ReservationTravelPartyField({
             ? ["caravans", "mine", "lookup"]
             : ["groups", "mine", "lookup"],
       });
+      if (type === "CARAVAN") {
+        await queryClient.invalidateQueries({ queryKey: ["caravans", "create-quota"] });
+      }
       toast.success(
         t(type === "CARAVAN" ? "caravans.created" : "groups.created"),
       );
@@ -934,6 +1095,7 @@ export function ReservationTravelPartyField({
       onCreate={() => {
         void createParty();
       }}
+      year={year}
     />
   );
 }

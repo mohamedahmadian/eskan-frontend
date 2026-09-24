@@ -46,6 +46,7 @@ import type {
   ReceptionSettings,
   Reservation,
   ReservationPermitOptions,
+  ReservationStatus,
   ReservationType,
   WalkingRoute,
 } from '../../types/app'
@@ -110,9 +111,18 @@ const caravanCreateStepsWithoutParty: CreateStep[] = ['type', 'count', 'dates', 
 
 type MineCaravan = {
   id: string
+  name: string
   walkingRouteId?: string | null
   maleCount?: number
   femaleCount?: number
+}
+
+type OpenReservation = {
+  id: string
+  code: string
+  status: ReservationStatus
+  returnedToStatus?: ReservationStatus | null
+  createdById: string
 }
 
 async function fetchMyCaravans() {
@@ -158,9 +168,7 @@ function stayDatesFromOccasions(
     : ''
   return {
     stayStartDate,
-    stayEndDate: settings?.imamRezaMartyrdomDate
-      ? addDaysIso(settings.imamRezaMartyrdomDate, 1)
-      : '',
+    stayEndDate: settings?.imamRezaMartyrdomDate ?? '',
     walkingStartDate: stayStartDate ? addDaysIso(stayStartDate, -3) : '',
   }
 }
@@ -187,9 +195,10 @@ const emptyTravel = (): TravelValues => ({
   provinceId: '',
   originCityId: '',
   walkingRouteId: '',
-  stayStartDate: '',
-  stayEndDate: '',
-  walkingStartDate: '',
+    stayStartDate: '',
+    stayEndDate: '',
+    walkingStartDate: '',
+    arrivalPeriod: '',
   maleCount: '0',
   femaleCount: '0',
   requestedMaleCount: '0',
@@ -253,6 +262,7 @@ function valuesFromReservation(reservation: Reservation): TravelValues {
     stayStartDate: reservation.stayStartDate ?? '',
     stayEndDate: reservation.stayEndDate ?? '',
     walkingStartDate: reservation.walkingStartDate ?? '',
+    arrivalPeriod: reservation.arrivalPeriod ?? '',
     maleCount: male,
     femaleCount: female,
     requestedMaleCount: male,
@@ -358,6 +368,7 @@ export function ReservationCreatePage() {
   })
   const [submitting, setSubmitting] = useState(false)
   const [rulesModalOpen, setRulesModalOpen] = useState(false)
+  const [pickedCaravan, setPickedCaravan] = useState<{ id: string; name: string } | null>(null)
   const [draftHydrated, setDraftHydrated] = useState(!draftParam)
   const queryClient = useQueryClient()
   const deleteDraft = useDeleteOwnerDraft()
@@ -410,6 +421,56 @@ export function ReservationCreatePage() {
     forUserParam ||
     (isAdminCreate ? draftQuery.data?.createdBy?.id ?? '' : '') ||
     ''
+  const openSubjectId = isAdminCreate ? forUserId : (user?.id ?? '')
+  const openReservationQuery = useQuery({
+    queryKey: ['reservations', 'open', openSubjectId],
+    enabled: !draftParam && Boolean(openSubjectId),
+    refetchOnMount: 'always',
+    queryFn: async () => {
+      const { data } = await api.get<OpenReservation | null>('/reservations/open', {
+        params: isAdminCreate ? { userId: openSubjectId } : undefined,
+      })
+      return data
+    },
+  })
+  const openCheckPending =
+    !draftParam &&
+    Boolean(openSubjectId) &&
+    (!openReservationQuery.isSuccess || openReservationQuery.isFetching)
+  const openReservation = openCheckPending ? null : (openReservationQuery.data ?? null)
+  const openRedirectedRef = useRef(false)
+
+  useEffect(() => {
+    if (draftParam) {
+      openRedirectedRef.current = false
+      return
+    }
+    if (!openReservation || openRedirectedRef.current) return
+    openRedirectedRef.current = true
+    const subjectId = isAdminCreate ? forUserId : user?.id
+    const continueOwnDraft =
+      isOwnerCreateDraft(openReservation) && openReservation.createdById === subjectId
+    if (continueOwnDraft) {
+      navigate(
+        createWizardPath(
+          openReservation.id,
+          createBase,
+          isAdminCreate ? forUserId || undefined : undefined,
+        ),
+        { replace: true },
+      )
+      return
+    }
+    navigate(`${createBase}/${openReservation.id}`, { replace: true })
+  }, [
+    createBase,
+    draftParam,
+    forUserId,
+    isAdminCreate,
+    navigate,
+    openReservation,
+    user?.id,
+  ])
 
   useEffect(() => {
     if (!isAdminCreate) return
@@ -468,14 +529,6 @@ export function ReservationCreatePage() {
         subjectNationalId,
       }),
   })
-  const datesOverlapError = useMemo(() => {
-    if (!existingReservationsQuery.data) return null
-    if (travelDatesError(values, t)) return null
-    return travelDatesError(values, t, {
-      others: existingReservationsQuery.data,
-      excludeId: draftId || undefined,
-    })
-  }, [draftId, existingReservationsQuery.data, t, values])
 
   const settings = useQuery({
     queryKey: ['reception-settings', year],
@@ -484,6 +537,25 @@ export function ReservationCreatePage() {
       return data
     },
   })
+  const imamRezaMartyrdomDate = settings.data?.imamRezaMartyrdomDate ?? null
+  const prophetDemiseDate = settings.data?.prophetDemiseDate ?? null
+  const datesOverlapError = useMemo(() => {
+    if (!existingReservationsQuery.data) return null
+    if (travelDatesError(values, t, { imamRezaMartyrdomDate, prophetDemiseDate })) return null
+    return travelDatesError(values, t, {
+      others: existingReservationsQuery.data,
+      excludeId: draftId || undefined,
+      imamRezaMartyrdomDate,
+      prophetDemiseDate,
+    })
+  }, [
+    draftId,
+    existingReservationsQuery.data,
+    imamRezaMartyrdomDate,
+    prophetDemiseDate,
+    t,
+    values,
+  ])
 
   const availableTypes = useMemo(() => {
     if (!settings.isSuccess || !settings.data) return null
@@ -595,9 +667,12 @@ export function ReservationCreatePage() {
   ])
 
   useEffect(() => {
-    if (!draftParam || !draftHydrated || !draftQuery.isError) return
-    navigate(createBase, { replace: true })
-  }, [draftParam, draftHydrated, draftQuery.isError, createBase, navigate])
+    if (!draftParam || !draftQuery.isError) return
+    const params = new URLSearchParams(searchParams)
+    params.delete('draft')
+    const search = params.toString()
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true })
+  }, [draftParam, draftQuery.isError, location.pathname, navigate, searchParams])
 
   useEffect(() => {
     if (type !== 'CARAVAN' || !skipCaravanParty || !soleCaravan) return
@@ -728,6 +803,7 @@ export function ReservationCreatePage() {
       stayStartDate: nextValues.stayStartDate || null,
       stayEndDate: nextValues.stayEndDate || null,
       walkingStartDate: nextValues.walkingStartDate || null,
+      arrivalPeriod: nextValues.arrivalPeriod || null,
       requestsAccommodation: nextValues.requestsAccommodation,
       requestsBus: nextValues.requestsBus,
       requestsSimCard: nextValues.requestsSimCard,
@@ -911,7 +987,7 @@ export function ReservationCreatePage() {
       return null
     }
     try {
-      const created = await createReservationParty(partyKind, partyDraft)
+      const created = await createReservationParty(partyKind, partyDraft, year)
       const patched: TravelValues = {
         ...nextValues,
         caravanId: type === 'CARAVAN' ? created.id : '',
@@ -919,10 +995,16 @@ export function ReservationCreatePage() {
         ...(partyDraft.walkingRouteId ? { walkingRouteId: partyDraft.walkingRouteId } : {}),
       }
       applyParty(created, partyDraft.walkingRouteId)
+      if (type === 'CARAVAN') {
+        setPickedCaravan({ id: created.id, name: partyDraft.name.trim() })
+      }
       setPartyDraft(emptyPartyDraft(subject))
       await queryClient.invalidateQueries({
         queryKey: partyKind === 'CARAVAN' ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
       })
+      if (partyKind === 'CARAVAN') {
+        await queryClient.invalidateQueries({ queryKey: ['caravans', 'create-quota'] })
+      }
       toast.success(t(partyKind === 'CARAVAN' ? 'caravans.created' : 'groups.created'))
       await refresh()
       return patched
@@ -972,7 +1054,10 @@ export function ReservationCreatePage() {
       return true
     }
     if (step === 'dates') {
-      const dateError = travelDatesError(values, t)
+      const dateError = travelDatesError(values, t, {
+        imamRezaMartyrdomDate,
+        prophetDemiseDate,
+      })
       if (dateError) {
         toast.error(dateError)
         return false
@@ -1005,6 +1090,8 @@ export function ReservationCreatePage() {
       const dateError = travelDatesError(values, t, {
         others,
         excludeId: draftId || undefined,
+        imamRezaMartyrdomDate,
+        prophetDemiseDate,
       })
       if (dateError) {
         toast.error(dateError)
@@ -1193,10 +1280,14 @@ export function ReservationCreatePage() {
 
   async function selectPartyAndAdvance(item: {
     id: string
+    name?: string
     maleCount?: number
     femaleCount?: number
   }) {
     if (!type || (type !== 'CARAVAN' && type !== 'GROUP')) return
+    if (type === 'CARAVAN' && item.name?.trim()) {
+      setPickedCaravan({ id: item.id, name: item.name.trim() })
+    }
     const counts = countsFromParty(item)
     const nextValues: TravelValues = {
       ...values,
@@ -1220,6 +1311,18 @@ export function ReservationCreatePage() {
     }
   }
 
+  if (openCheckPending || (!draftParam && openReservation) || (draftParam && draftQuery.isError)) {
+    return (
+      <div className={userFormShellClassName}>
+        <PageHeader
+          icon={Ticket}
+          title={t('reservations.createPageTitle', { year: yearLabel })}
+        />
+        <LoadingState />
+      </div>
+    )
+  }
+
   if (draftParam && !draftHydrated) {
     return (
       <div className={userFormShellClassName}>
@@ -1228,27 +1331,6 @@ export function ReservationCreatePage() {
           title={t('reservations.createPageTitle', { year: yearLabel })} />
         <LoadingState />
         <p className="mt-3 text-center text-sm text-ink-500">{t('reservations.draftLoading')}</p>
-      </div>
-    )
-  }
-
-  if (draftParam && draftQuery.isError) {
-    if (draftHydrated) {
-      return (
-        <div className={userFormShellClassName}>
-          <PageHeader
-            icon={Ticket}
-            title={t('reservations.createPageTitle', { year: yearLabel })} />
-          <LoadingState />
-        </div>
-      )
-    }
-    return (
-      <div className={userFormShellClassName}>
-        <PageHeader
-          icon={Ticket}
-          title={t('reservations.createPageTitle', { year: yearLabel })} />
-        <p className="text-sm text-red-700">{t('reservations.notFound')}</p>
       </div>
     )
   }
@@ -1283,6 +1365,7 @@ export function ReservationCreatePage() {
     <div className={userFormShellClassName}>
       <PageHeader
         icon={Ticket}
+        stackAction
         title={t('reservations.createPageTitle', { year: yearLabel })}
         subtitle={
           subject && isAdminCreate ? (
@@ -1304,7 +1387,7 @@ export function ReservationCreatePage() {
             <Button
               type="button"
               variant="ghost"
-              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="w-full text-red-600 hover:bg-red-50 hover:text-red-700 md:w-auto"
               onClick={() =>
                 deleteDraft(draftId, () => navigate(createBase, { replace: true }))
               }
@@ -1321,6 +1404,13 @@ export function ReservationCreatePage() {
         maxReached={maxReachedStep}
         steps={steps}
         type={type}
+        caravanName={
+          type === 'CARAVAN'
+            ? [pickedCaravan, draftQuery.data?.caravan, soleCaravan].find(
+                (item) => item?.id === values.caravanId && item.name?.trim(),
+              )?.name ?? ''
+            : ''
+        }
         onSelect={(next) => {
           const target = steps.indexOf(next)
           if (target < 0 || target > maxReachedIndex || next === step || submitting) return
@@ -1431,6 +1521,7 @@ export function ReservationCreatePage() {
               void selectPartyAndAdvance(item)
             }}
             onAdvance={undefined}
+            year={year}
           />
         ) : null}
 
@@ -1453,6 +1544,8 @@ export function ReservationCreatePage() {
             onChange={patchValues}
             showOccasionHint={false}
             error={datesOverlapError}
+            imamRezaMartyrdomDate={imamRezaMartyrdomDate}
+            prophetDemiseDate={prophetDemiseDate}
             countryId={pilgrimCountryId}
           />
         ) : null}
@@ -1527,12 +1620,14 @@ function CreateStepBar({
   maxReached,
   steps,
   type,
+  caravanName,
   onSelect,
 }: {
   current: CreateStep
   maxReached: CreateStep
   steps: CreateStep[]
   type: ReservationType | ''
+  caravanName?: string
   onSelect: (step: CreateStep) => void
 }) {
   const { t, i18n } = useTranslation()
@@ -1545,7 +1640,9 @@ function CreateStepBar({
       <div className="mb-3 flex items-center justify-start">
         <span className="inline-flex items-center gap-2 rounded-2xl bg-teal-50 px-3 py-1.5 text-sm font-semibold text-teal-800">
           <MapPin className="size-4 shrink-0" aria-hidden />
-          {t('reservations.steps.travel')}
+          {caravanName
+            ? t('reservations.steps.travelWithCaravan', { name: caravanName })
+            : t('reservations.steps.travel')}
         </span>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">

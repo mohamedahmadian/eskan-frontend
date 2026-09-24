@@ -30,7 +30,7 @@ import {
   PageHeader,
   cardClassName,
   fieldClassName,
-  listShellClassName,
+  formShellClassName,
 } from '../../components/ui/Form'
 import { FormMetaChip } from '../../components/ui/FormLayout'
 import { confirmToast } from '../../components/ui/confirmToast'
@@ -135,7 +135,7 @@ export function ReservationAdminDetailPage() {
   const showFileRejectActions = admin && canRejectMidStage && !pendingReview
 
   return (
-    <div className={listShellClassName}>
+    <div className={formShellClassName}>
       <PageHeader
         icon={Ticket}
         title={`${t('reservations.wizard')} ${formatNumber(reservation.year, locale)}`}

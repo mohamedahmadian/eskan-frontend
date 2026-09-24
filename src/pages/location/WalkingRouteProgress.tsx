@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { MapOverlayMarker, MapOverlays } from '../../components/ui/OsmMapPicker'
 import { formatNumber } from '../../lib/datetime'
 import { geoName, resolveWalkingProgress, stageCoordinates } from '../../lib/geo'
+import { isRouteDestination } from '../walking-routes/StationInfoCard'
 import type { WalkingRoute, WalkingRouteStage } from '../../types/app'
 
 function escapeHtml(value: string) {
@@ -43,10 +44,15 @@ export function useWalkingRouteMap(
       if (!stage) return
       const coords = stageCoordinates(stage)
       if (!coords) return
+      const destination = isRouteDestination(stage)
       const city = geoName(stage.city, locale)
-      const title = stage.name?.trim() || city
+      const title = destination
+        ? t('walkingRoutes.mashhadDestination')
+        : stage.name?.trim() || city
       const facts = [
-        `${t('walkingRoutes.stage')} ${formatNumber(stage.stageNumber, locale)}`,
+        destination
+          ? t('walkingRoutes.mashhadDestination')
+          : `${t('walkingRoutes.stage')} ${formatNumber(stage.stageNumber, locale)}`,
         kmLabel(stage.distanceToPreviousKm, locale, unit)
           ? `${t('walkingRoutes.distanceToPreviousKm')}: ${kmLabel(stage.distanceToPreviousKm, locale, unit)}`
           : null,
@@ -62,7 +68,7 @@ export function useWalkingRouteMap(
         id: `${kind}-${stage.id ?? stage.cityId}`,
         lat: coords.lat,
         lng: coords.lng,
-        kind,
+        kind: destination ? 'destination' : kind,
         badge: escapeHtml(badge),
         title: escapeHtml(title),
         popupHtml: `<div class="eskan-route-popup-body" dir="${document.documentElement.dir}"><strong>${escapeHtml(title)}</strong><p>${facts.map((line) => escapeHtml(line)).join('</p><p>')}</p></div>`,
@@ -136,11 +142,17 @@ function StationCard({
           {stage ? (
             <>
               <p className="mt-1.5 truncate text-sm font-semibold text-ink-900">
-                {stage.name?.trim() || geoName(stage.city, locale)}
+                {isRouteDestination(stage)
+                  ? t('walkingRoutes.mashhadDestination')
+                  : stage.name?.trim() || geoName(stage.city, locale)}
               </p>
               <p className="mt-0.5 text-xs text-ink-500">
-                {t('walkingRoutes.stage')} {formatNumber(stage.stageNumber, locale)}
-                {stage.city.province ? ` · ${geoName(stage.city.province, locale)}` : ''}
+                {isRouteDestination(stage)
+                  ? t('dashboard.destinationShrine')
+                  : `${t('walkingRoutes.stage')} ${formatNumber(stage.stageNumber, locale)}`}
+                {!isRouteDestination(stage) && stage.city.province
+                  ? ` · ${geoName(stage.city.province, locale)}`
+                  : ''}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {stage.distanceToPreviousKm != null ? (

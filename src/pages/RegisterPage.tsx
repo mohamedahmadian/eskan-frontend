@@ -14,14 +14,14 @@ import { usePreferredLocale } from '../hooks/usePreferredLocale'
 import { isAppLanguage } from '../i18n'
 import { api, getApiErrorMessage } from '../lib/api'
 import { afterAuthPath, withNext } from '../lib/auth-redirect'
-import { parseDigitString, toLatinDigits } from '../lib/datetime'
+import { formatNumber, parseDigitString, toLatinDigits } from '../lib/datetime'
 import { useGeoName } from '../lib/geo'
 import {
   isLikelyEmail,
   isPhoneReady,
   preferEnglishKeyboard,
   sanitizeUsername,
-  USERNAME_STRICT_PATTERN,
+  USERNAME_ENGLISH_PATTERN,
 } from '../lib/identity'
 import { isValidIranianNationalId, normalizePassportNumber } from '../lib/national-id'
 import { type Country, userGenders, type UserGender } from '../types/app'
@@ -49,7 +49,7 @@ function splitIdentifier(value: string) {
 }
 
 export function RegisterPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const geoName = useGeoName()
@@ -63,9 +63,12 @@ export function RegisterPage() {
   )
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState(() =>
+    initial.phone ? sanitizeUsername(initial.phone) : '',
+  )
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState(initial.phone)
+  const usernameTouched = useRef(false)
   const [passportNumber, setPassportNumber] = useState(initial.passport)
   const [email, setEmail] = useState(initial.email)
   const [gender, setGender] = useState<UserGender>(userGenders.MALE)
@@ -184,6 +187,9 @@ export function RegisterPage() {
     setPhone(digits)
     setPhoneStatus('idle')
     setPhoneError('')
+    if (!usernameTouched.current) {
+      setUsername(sanitizeUsername(digits))
+    }
     if (isPhoneReady(digits, isIranian)) {
       scheduleCheck('phone', digits)
     }
@@ -235,12 +241,12 @@ export function RegisterPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!USERNAME_STRICT_PATTERN.test(username) || username.length < 3) {
+    if (!USERNAME_ENGLISH_PATTERN.test(username) || username.length < 3) {
       toast.error(t('users.usernameEnglish'))
       return
     }
     if (password.length < 8) {
-      toast.error(t('users.passwordMin'))
+      notifyShortPassword(true)
       return
     }
     if (phoneRequired) {
@@ -293,6 +299,7 @@ export function RegisterPage() {
         password: passwordValue,
         gender,
         countryId: countryId || undefined,
+        loginUrl: `${window.location.origin}/login`,
         ...(phoneDigits ? { phone: phoneDigits } : {}),
         ...(!isIranian && passportValue ? { passportNumber: passportValue } : {}),
         ...(!isIranian && emailValue ? { email: emailValue } : {}),
@@ -307,6 +314,30 @@ export function RegisterPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function notifyShortPassword(focusField = false, length = password.length) {
+    toast.custom(
+      () => (
+        <div className="w-[min(100vw-2rem,22rem)] rounded-[22px] border border-white bg-white p-4 shadow-[0_16px_40px_rgba(20,40,40,0.14)]">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+              <Lock className="size-5" aria-hidden />
+            </div>
+            <div className="min-w-0 pt-0.5">
+              <p className="text-sm font-semibold text-ink-900">{t('users.passwordMin')}</p>
+              <p className="mt-1 text-xs leading-6 text-ink-500">
+                {t('users.passwordMinHint', {
+                  count: formatNumber(length, i18n.language),
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+      { id: 'register-password-min', duration: 5200, unstyled: true },
+    )
+    if (focusField) document.getElementById('password')?.focus()
   }
 
   return (
@@ -339,39 +370,6 @@ export function RegisterPage() {
                   required
                 />
               </FormField>
-              <FormField icon={User} label={t('users.username')} htmlFor="username">
-                <input
-                  id="username"
-                  lang="en"
-                  dir="ltr"
-                  className={`${fieldClassName} latin-field`}
-                  value={username}
-                  onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
-                  onMouseEnter={(e) => preferEnglishKeyboard(e.currentTarget)}
-                  onFocus={(e) => preferEnglishKeyboard(e.currentTarget)}
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  inputMode="url"
-                  required
-                  minLength={3}
-                  pattern="[A-Za-z][A-Za-z0-9._-]*"
-                  title={t('users.usernameEnglish')}
-                />
-              </FormField>
-              <FormField icon={Lock} label={t('users.password')} htmlFor="password">
-                <input
-                  id="password"
-                  type="password"
-                  className={fieldClassName}
-                  value={password}
-                  onChange={(e) => setPassword(toLatinDigits(e.target.value))}
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                />
-              </FormField>
               <FormField icon={Phone} label={t('users.phone')} htmlFor="phone" error={phoneError}>
                 <UniqueFieldWrap
                   status={phoneStatus}
@@ -380,7 +378,7 @@ export function RegisterPage() {
                 >
                   <input
                     id="phone"
-                    className={inputClassName(Boolean(phoneError))}
+                    className={`${inputClassName(Boolean(phoneError))} digit-field`}
                     value={phone}
                     onChange={(e) => onPhoneChange(e.target.value)}
                     onBlur={() => {
@@ -396,6 +394,54 @@ export function RegisterPage() {
                     aria-invalid={Boolean(phoneError)}
                   />
                 </UniqueFieldWrap>
+              </FormField>
+              <FormField icon={UserRound} label={t('users.gender')} htmlFor="gender">
+                <ToggleField
+                  id="gender"
+                  checked={gender === userGenders.MALE}
+                  onChange={(male) => setGender(male ? userGenders.MALE : userGenders.FEMALE)}
+                  onLabel={t('userGenders.MALE')}
+                  offLabel={t('userGenders.FEMALE')}
+                />
+              </FormField>
+              <FormField icon={User} label={t('users.username')} htmlFor="username">
+                <input
+                  id="username"
+                  lang="en"
+                  dir="ltr"
+                  className={`${fieldClassName} latin-field`}
+                  value={username}
+                  onChange={(e) => {
+                    usernameTouched.current = true
+                    setUsername(sanitizeUsername(e.target.value))
+                  }}
+                  onMouseEnter={(e) => preferEnglishKeyboard(e.currentTarget)}
+                  onFocus={(e) => preferEnglishKeyboard(e.currentTarget)}
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="url"
+                  required
+                  minLength={3}
+                  pattern="[A-Za-z0-9._-]+"
+                  title={t('users.usernameEnglish')}
+                />
+              </FormField>
+              <FormField icon={Lock} label={t('users.password')} htmlFor="password">
+                <input
+                  id="password"
+                  type="password"
+                  className={fieldClassName}
+                  value={password}
+                  onChange={(e) => setPassword(toLatinDigits(e.target.value))}
+                  onBlur={(e) => {
+                    const length = toLatinDigits(e.currentTarget.value).length
+                    if (length > 0 && length < 8) notifyShortPassword(false, length)
+                  }}
+                  autoComplete="new-password"
+                  aria-invalid={password.length > 0 && password.length < 8}
+                />
               </FormField>
               {!isIranian ? (
                 <FormField
@@ -453,15 +499,6 @@ export function RegisterPage() {
                   </UniqueFieldWrap>
                 </FormField>
               ) : null}
-              <FormField icon={UserRound} label={t('users.gender')} htmlFor="gender">
-                <ToggleField
-                  id="gender"
-                  checked={gender === userGenders.MALE}
-                  onChange={(male) => setGender(male ? userGenders.MALE : userGenders.FEMALE)}
-                  onLabel={t('userGenders.MALE')}
-                  offLabel={t('userGenders.FEMALE')}
-                />
-              </FormField>
             </div>
             <FormField icon={Globe} label={t('geo.country')} htmlFor="countryId">
               <SearchSelect

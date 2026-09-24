@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CopyableDigits, useCopyDigits } from './CopyableDigits'
+import { detailsPathFromEdit, isInteractiveDblClickTarget } from './form-shortcuts'
 
 export const cardClassName =
   'rounded-[22px] border border-white bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]'
@@ -35,6 +37,7 @@ export function FormCard({
   subtitle,
   chips,
   action,
+  stackAction = false,
   children,
   className = '',
 }: {
@@ -43,17 +46,35 @@ export function FormCard({
   subtitle?: ReactNode
   chips?: ReactNode
   action?: ReactNode
+  /** `true`: action under the title on narrow screens. `'always'`: action always on its own row. */
+  stackAction?: boolean | 'always'
   children: ReactNode
   className?: string
 }) {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+
+  function onDoubleClick(event: MouseEvent<HTMLElement>) {
+    const detailsTo = detailsPathFromEdit(pathname)
+    if (!detailsTo) return
+    if (isInteractiveDblClickTarget(event.target)) return
+    if (window.getSelection()?.toString()) return
+    navigate(detailsTo)
+  }
+
   return (
-    <section className={`${cardClassName} overflow-hidden ${className}`}>
+    <section
+      data-form-card=""
+      className={`${cardClassName} overflow-hidden ${className}`}
+      onDoubleClick={onDoubleClick}
+    >
       <FormCardHeader
         icon={icon}
         title={title}
         subtitle={subtitle}
         chips={chips}
         action={action}
+        stackAction={stackAction}
       />
       {children}
     </section>
@@ -82,6 +103,7 @@ export function FormCardHeader({
   subtitle,
   chips,
   action,
+  stackAction = false,
   heading = 'h2',
   leading,
 }: {
@@ -90,20 +112,32 @@ export function FormCardHeader({
   subtitle?: ReactNode
   chips?: ReactNode
   action?: ReactNode
+  /** `true`: action under the title on narrow screens. `'always'`: action always on its own row. */
+  stackAction?: boolean | 'always'
   heading?: 'h1' | 'h2'
   leading?: ReactNode
 }) {
   const Heading = heading
+  const stackAlways = stackAction === 'always'
+  const stackNarrow = stackAction === true
   const titleClass =
     heading === 'h1'
-      ? 'text-xl font-semibold leading-snug text-ink-900 sm:text-2xl'
+      ? 'break-words text-xl font-semibold leading-snug text-ink-900 sm:text-2xl'
       : 'text-base font-semibold leading-snug text-ink-900'
   const subtitleClass =
     heading === 'h1' ? 'mt-1 text-sm leading-6 text-ink-500' : 'mt-1 text-xs leading-6 text-ink-600'
   return (
     <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
       <FormCardHeaderDecor />
-      <div className="relative flex flex-wrap items-center justify-between gap-3">
+      <div
+        className={
+          stackAlways
+            ? 'relative flex flex-col items-stretch gap-3'
+            : stackNarrow
+              ? 'relative flex flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between'
+              : 'relative flex flex-wrap items-center justify-between gap-3'
+        }
+      >
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {leading}
           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
@@ -115,7 +149,19 @@ export function FormCardHeader({
             {chips ? <div className="mt-3 flex flex-wrap gap-1.5">{chips}</div> : null}
           </div>
         </div>
-        {action ? <div className="relative z-10 shrink-0">{action}</div> : null}
+        {action ? (
+          <div
+            className={`relative z-10 ${
+              stackAlways
+                ? 'flex w-full justify-end'
+                : stackNarrow
+                  ? 'w-full md:w-auto md:shrink-0'
+                  : 'shrink-0'
+            }`}
+          >
+            {action}
+          </div>
+        ) : null}
       </div>
     </header>
   )
@@ -137,7 +183,15 @@ export function FormMetaChip({
       className={`inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-teal-100 ${
         canCopy ? 'cursor-pointer' : ''
       }`}
-      onClick={canCopy ? () => copyDigits(copyValue) : undefined}
+      onClick={
+        canCopy
+          ? (event) => {
+              event.stopPropagation()
+              if (event.target instanceof Element && event.target.closest('button')) return
+              copyDigits(copyValue)
+            }
+          : undefined
+      }
     >
       <Icon className="size-3 text-teal-600" aria-hidden />
       {copyValue ? <CopyableDigits value={copyValue} /> : label}
@@ -196,7 +250,15 @@ export function FormFactTile({
       className={`relative z-10 flex min-w-0 items-start overflow-hidden rounded-2xl border ${colors.wrap} ${
         compact ? 'gap-2 px-2.5 py-1.5' : 'gap-3 px-3 py-3'
       } ${canCopy ? 'cursor-pointer' : ''} ${className}`}
-      onClick={canCopy ? () => copyDigits(copyValue) : undefined}
+      onClick={
+        canCopy
+          ? (event) => {
+              event.stopPropagation()
+              if (event.target instanceof Element && event.target.closest('button')) return
+              copyDigits(copyValue)
+            }
+          : undefined
+      }
     >
       <span
         className={`flex shrink-0 items-center justify-center ${colors.icon} ${

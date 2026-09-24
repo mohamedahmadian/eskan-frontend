@@ -601,10 +601,10 @@ function ContactRoleCard({
             })}
             htmlFor={`contact-${role}-nid`}
           >
-            <div className="flex w-1/2 min-w-0 items-stretch gap-2">
+            <div className="flex flex-col items-stretch gap-2">
               <input
                 id={`contact-${role}-nid`}
-                className={`min-w-0 flex-1 ${fieldClassName}`}
+                className={`${fieldClassName} digit-field`}
                 value={nationalId}
                 onChange={(event) => setNationalId(event.target.value)}
                 inputMode="numeric"
@@ -612,7 +612,7 @@ function ContactRoleCard({
               />
               <Button
                 type={showDetails ? 'button' : 'submit'}
-                className="shrink-0"
+                className="self-start"
                 disabled={looking}
                 onClick={showDetails ? () => void lookup() : undefined}
               >

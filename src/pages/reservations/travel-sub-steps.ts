@@ -45,6 +45,7 @@ export function inferTravelSubMaxReached(
       if (
         !values.stayStartDate ||
         !values.stayEndDate ||
+        !values.arrivalPeriod ||
         !values.walkingRouteId ||
         !values.walkingStartDate
       )

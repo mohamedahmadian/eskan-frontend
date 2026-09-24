@@ -495,6 +495,23 @@ export function isOwnerCreateDraft(reservation: {
   return reservation.status === 'DRAFT' && !reservation.returnedToStatus
 }
 
+/** Owner may permanently delete a never-submitted draft or a cancelled file. */
+export function canOwnerHardDelete(
+  reservation: {
+    status: ReservationStatus
+    returnedToStatus?: ReservationStatus | null
+    createdBy?: { id: string } | null
+    caravanManager?: { id: string } | null
+  },
+  userId: string | null | undefined,
+) {
+  if (!userId) return false
+  const owner =
+    reservation.createdBy?.id === userId || reservation.caravanManager?.id === userId
+  if (!owner) return false
+  return isOwnerCreateDraft(reservation) || reservation.status === 'CANCELLED'
+}
+
 export function canAdjustApprovedCapacity(
   type: ReservationType,
   status: ReservationStatus,

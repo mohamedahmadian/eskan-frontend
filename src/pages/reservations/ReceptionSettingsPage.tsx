@@ -2,6 +2,7 @@ import {
   Banknote,
   BadgeCheck,
   Building2,
+  IdCard,
   Calendar,
   CalendarDays,
   CircleHelp,
@@ -135,6 +136,7 @@ const emptyDraft = (): Draft => ({
   caravanFemaleCapacity: 0,
   caravanAutoApprove: false,
   caravanAutoApproveLicenses: false,
+  caravanMaxPerNationalId: 1,
   caravanPlacementMode: 'MANUAL',
   caravanIntro: '',
   caravanRules: '',
@@ -222,6 +224,7 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     caravanFemaleCapacity: data.caravanFemaleCapacity,
     caravanAutoApprove: data.caravanAutoApprove,
     caravanAutoApproveLicenses: data.caravanAutoApproveLicenses ?? false,
+    caravanMaxPerNationalId: data.caravanMaxPerNationalId ?? 1,
     caravanPlacementMode: data.caravanPlacementMode ?? 'MANUAL',
     caravanIntro: data.caravanIntro ?? '',
     caravanRules: data.caravanRules ?? '',
@@ -602,6 +605,26 @@ export function ReceptionSettingsPage() {
                   </FormField>
                   <p className="text-sm leading-7 text-ink-500">
                     {t('receptionSettings.autoApproveLicensesHint')}
+                  </p>
+                  <FormField
+                    icon={IdCard}
+                    label={t('receptionSettings.caravanMaxPerNationalId')}
+                    htmlFor="caravanMaxPerNationalId"
+                  >
+                    <input
+                      id="caravanMaxPerNationalId"
+                      type="number"
+                      min={1}
+                      className={fieldClassName}
+                      value={draft.caravanMaxPerNationalId}
+                      onChange={(event) =>
+                        patch('caravanMaxPerNationalId', Math.max(1, Number(event.target.value) || 1))
+                      }
+                      required
+                    />
+                  </FormField>
+                  <p className="text-sm leading-7 text-ink-500">
+                    {t('receptionSettings.caravanMaxPerNationalIdHint')}
                   </p>
                 </>
               ) : null}

@@ -137,7 +137,7 @@ export function ReservationCountFields({
 
   return (
     <>
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-3 md:gap-3">
         <CountMetricTile
           id={maleId}
           icon={Mars}
@@ -215,7 +215,7 @@ function CountPairSection({
   return (
     <div className="space-y-2">
       <p className="text-sm font-semibold text-ink-800">{title}</p>
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-3 md:gap-3">
         <CountMetricTile
           id={maleId}
           icon={Mars}
@@ -342,22 +342,25 @@ function CountMetricTile({
 
   return (
     <article
-      className={`flex h-full flex-col items-center gap-1 rounded-2xl border px-2 py-2 text-center ${colors.wrap}`}
+      className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 md:h-full md:flex-col md:items-center md:gap-1 md:px-2 md:py-2 md:text-center ${colors.wrap}`}
     >
       <span
-        className={`flex size-8 items-center justify-center rounded-xl ${colors.icon}`}
+        className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${colors.icon}`}
       >
         <Icon className="size-3.5" aria-hidden />
       </span>
-      {id ? (
-        <label htmlFor={id} className="text-[11px] font-medium text-ink-500">
-          {label}
-        </label>
-      ) : (
-        <p className="text-[11px] font-medium text-ink-500">{label}</p>
-      )}
+      <div className="min-w-0 flex-1 md:flex-none">
+        {id ? (
+          <label htmlFor={id} className="text-sm font-medium text-ink-700 md:text-[11px] md:text-ink-500">
+            {label}
+          </label>
+        ) : (
+          <p className="text-sm font-medium text-ink-700 md:text-[11px] md:text-ink-500">{label}</p>
+        )}
+        <p className="text-xs text-ink-400 md:hidden">{unit}</p>
+      </div>
       {editable ? (
-        <div dir="ltr" className="flex w-full items-center gap-1">
+        <div dir="ltr" className="flex w-32 shrink-0 items-center gap-1 md:w-full md:max-w-40">
           <button
             type="button"
             data-enter-ignore=""
@@ -394,11 +397,11 @@ function CountMetricTile({
           </button>
         </div>
       ) : (
-        <p className="text-lg font-bold leading-none text-ink-900">
+        <p className="shrink-0 text-lg font-bold leading-none text-ink-900">
           {displayValue}
         </p>
       )}
-      <p className="mt-auto text-[10px] text-ink-400">{unit}</p>
+      <p className="mt-auto hidden text-[10px] text-ink-400 md:block">{unit}</p>
     </article>
   );
 }

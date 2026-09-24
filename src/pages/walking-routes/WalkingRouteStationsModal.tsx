@@ -25,6 +25,7 @@ import type { City, WalkingRoute, WalkingRouteStage } from '../../types/app'
 import {
   StationDetailsOverlay,
   StationInfoCard,
+  isRouteDestination,
   stageKey,
   stageTitle,
 } from './StationInfoCard'
@@ -83,7 +84,11 @@ export function WalkingRouteStationsModal({
   )
   const missingCityIds = useMemo(
     () =>
-      [...new Set(rawStages.filter((stage) => !stageCoordinates(stage)).map((stage) => stage.cityId))],
+      [...new Set(
+        rawStages
+          .filter((stage) => !isRouteDestination(stage) && stage.cityId && !stageCoordinates(stage))
+          .map((stage) => stage.cityId),
+      )],
     [rawStages],
   )
   const cityLookup = useQuery({
@@ -116,9 +121,13 @@ export function WalkingRouteStationsModal({
       }),
     [cityLookup.data, rawStages],
   )
+  const stationStages = useMemo(
+    () => stages.filter((stage) => !isRouteDestination(stage)),
+    [stages],
+  )
   const filtered = useMemo(
-    () => stages.filter((stage) => matchesStationQuery(stage, term, locale)),
-    [locale, stages, term],
+    () => stationStages.filter((stage) => matchesStationQuery(stage, term, locale)),
+    [locale, stationStages, term],
   )
 
   useEffect(() => {
@@ -141,7 +150,7 @@ export function WalkingRouteStationsModal({
       const goNext = rtl ? event.key === 'ArrowLeft' : event.key === 'ArrowRight'
       setWizardIndex((index) => {
         const next = index + (goNext ? 1 : -1)
-        if (next < 0 || next >= stages.length) return index
+        if (next < 0 || next >= stationStages.length) return index
         return next
       })
     }
@@ -150,7 +159,7 @@ export function WalkingRouteStationsModal({
       document.body.style.overflow = previous
       window.removeEventListener('keydown', onKey)
     }
-  }, [locale, onClose, selectedId, stages.length, tab])
+  }, [locale, onClose, selectedId, stationStages.length, tab])
 
   useEffect(() => {
     if (selectedId && !filtered.some((stage) => stageKey(stage) === selectedId)) {
@@ -159,10 +168,10 @@ export function WalkingRouteStationsModal({
   }, [filtered, selectedId])
 
   useEffect(() => {
-    if (wizardIndex >= stages.length) {
-      setWizardIndex(Math.max(0, stages.length - 1))
+    if (wizardIndex >= stationStages.length) {
+      setWizardIndex(Math.max(0, stationStages.length - 1))
     }
-  }, [stages.length, wizardIndex])
+  }, [stationStages.length, wizardIndex])
 
   useEffect(() => {
     if (tab !== 'steps') return
@@ -172,7 +181,7 @@ export function WalkingRouteStationsModal({
   }, [tab, wizardIndex])
 
   const selected = filtered.find((stage) => stageKey(stage) === selectedId) ?? null
-  const wizardStage = stages[wizardIndex] ?? null
+  const wizardStage = stationStages[wizardIndex] ?? null
   const n = (value: number) => formatNumber(value, locale)
   const km = (value: number | null | undefined) =>
     value == null ? '—' : `${formatNumber(value, locale)} ${t('walkingRoutes.km')}`
@@ -200,6 +209,18 @@ export function WalkingRouteStationsModal({
         title: stageTitle(stage, locale, fallback),
       })
     }
+    const destination = stages.find((stage) => isRouteDestination(stage))
+    const destinationCoords = destination ? stageCoordinates(destination) : null
+    if (destination && destinationCoords) {
+      markers.push({
+        id: stageKey(destination),
+        lat: destinationCoords.lat,
+        lng: destinationCoords.lng,
+        kind: 'destination',
+        badge: t('walkingRoutes.destinationBadge'),
+        title: t('walkingRoutes.mashhadDestination'),
+      })
+    }
     if (!markers.length && !path.length) return null
     return {
       markers,
@@ -220,7 +241,7 @@ export function WalkingRouteStationsModal({
   function goWizard(delta: number) {
     setWizardIndex((index) => {
       const next = index + delta
-      if (next < 0 || next >= stages.length) return index
+      if (next < 0 || next >= stationStages.length) return index
       return next
     })
   }
@@ -249,7 +270,9 @@ export function WalkingRouteStationsModal({
               </h2>
               <p className="truncate text-xs text-ink-500">
                 {route?.name}
-                {route ? ` · ${t('walkingRoutes.stageCountChip', { value: n(route.stages.length) })}` : ''}
+                {route
+                  ? ` · ${t('walkingRoutes.stageCountChip', { value: n(stationStages.length) })}`
+                  : ''}
               </p>
             </div>
           </div>
@@ -321,7 +344,7 @@ export function WalkingRouteStationsModal({
 
         <div className="relative min-h-0 flex-1">
           {tab === 'steps' ? (
-            stages.length === 0 || !wizardStage ? (
+            stationStages.length === 0 || !wizardStage ? (
               <FormEmptyHint>{t('walkingRoutes.stagesEmpty')}</FormEmptyHint>
             ) : (
               <div className="flex h-full min-h-0 flex-col gap-3">
@@ -329,11 +352,11 @@ export function WalkingRouteStationsModal({
                   <p className="mb-2 text-sm font-semibold text-ink-800">
                     {t('walkingRoutes.stepOf', {
                       current: n(wizardIndex + 1),
-                      total: n(stages.length),
+                      total: n(stationStages.length),
                     })}
                   </p>
                   <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-                    {stages.map((stage, index) => {
+                    {stationStages.map((stage, index) => {
                       const active = index === wizardIndex
                       return (
                         <button
@@ -370,7 +393,7 @@ export function WalkingRouteStationsModal({
                   <Button
                     type="button"
                     className="ms-auto"
-                    disabled={wizardIndex >= stages.length - 1}
+                    disabled={wizardIndex >= stationStages.length - 1}
                     onClick={() => goWizard(1)}
                   >
                     {t('walkingRoutes.nextStage')}
@@ -395,7 +418,11 @@ export function WalkingRouteStationsModal({
                   readOnly
                   fill
                   overlays={overlays}
-                  onMarkerClick={(id) => setSelectedId(id)}
+                  onMarkerClick={(id) => {
+                    const stage = stages.find((item) => stageKey(item) === id)
+                    if (!stage || isRouteDestination(stage)) return
+                    setSelectedId(id)
+                  }}
                 />
               </div>
             ) : (

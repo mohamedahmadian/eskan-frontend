@@ -28,7 +28,7 @@ import {
   Button,
   FormField,
   PageHeader,
-  listShellClassName,
+  formShellClassName,
 } from "../../components/ui/Form";
 import { confirmToast } from "../../components/ui/confirmToast";
 import { FormMetaChip } from "../../components/ui/FormLayout";
@@ -264,7 +264,7 @@ export function ReservationsAdminListPage() {
   );
 
   return (
-    <div className={listShellClassName}>
+    <div className={formShellClassName}>
       <PageHeader
         icon={Ticket}
         title={t("menus.reservationsAdmin")}

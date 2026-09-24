@@ -7,13 +7,17 @@ import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
 import { LoadingState, PageHeader, formShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
+import { formatNumber } from '../../lib/datetime'
 import type { Caravan, City, Country, Province } from '../../types/app'
+import { useCaravanCreateQuota } from './caravan-create-quota'
 import { CaravanForm } from './CaravanForm'
 
 export function MyCaravanCreatePage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const navigate = useNavigate()
   const { user, refresh } = useAuth()
+  const quota = useCaravanCreateQuota()
   const [countryId, setCountryId] = useState('')
   const [provinceId, setProvinceId] = useState('')
 
@@ -50,8 +54,26 @@ export function MyCaravanCreatePage() {
     },
   })
 
-  if (!countries.data || !user) {
+  if (!countries.data || !user || quota.isLoading) {
     return <LoadingState />
+  }
+
+  if (quota.data && !quota.data.allowed) {
+    return (
+      <div className={formShellClassName}>
+        <PageHeader
+          icon={Tent}
+          title={t('caravans.create')}
+          subtitle={t('myCaravans.createSubtitle')}
+        />
+        <p className="rounded-[22px] border border-teal-100 bg-white px-5 py-4 text-sm leading-7 text-ink-700 shadow-[0_8px_20px_rgba(20,40,40,0.04)]">
+          {t('caravans.maxPerNationalIdReached', {
+            max: formatNumber(quota.data.max, locale),
+            year: formatNumber(quota.data.year, locale),
+          })}
+        </p>
+      </div>
+    )
   }
 
   return (

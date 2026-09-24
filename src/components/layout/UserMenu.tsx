@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { publicProfilePath } from '../../lib/public-profile'
-import { formatRoles, isPilgrim } from '../../lib/roles'
+import { formatRoles, isAccommodationManager, isCaravanManager, isPilgrim } from '../../lib/roles'
+import { PilgrimCardModal } from '../../pages/dashboard/PilgrimCardModal'
 
 export function UserMenu() {
   const { user, logout } = useAuth()
@@ -14,8 +14,10 @@ export function UserMenu() {
   const languageLabel =
     locale === 'en' ? t('nav.language') : `${t('nav.language')} - language`
   const [open, setOpen] = useState(false)
+  const [cardOpen, setCardOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const pilgrim = isPilgrim(user)
+  const isManagerUser = isCaravanManager(user) || isAccommodationManager(user)
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -71,14 +73,17 @@ export function UserMenu() {
                 {t('nav.account')}
               </Link>
               {user?.id ? (
-                <Link
-                  to={publicProfilePath(user.id)}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
-                  onClick={() => setOpen(false)}
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
+                  onClick={() => {
+                    setOpen(false)
+                    setCardOpen(true)
+                  }}
                 >
                   <IdCard className="size-4 text-teal-600" />
-                  {t('nav.publicCard')}
-                </Link>
+                  {t(isManagerUser ? 'pilgrims.managerCardTitle' : 'pilgrims.cardTitle')}
+                </button>
               ) : null}
               <Link
                 to="/settings/password"
@@ -120,6 +125,12 @@ export function UserMenu() {
             </>
           )}
         </div>
+      ) : null}
+      {cardOpen ? (
+        <PilgrimCardModal
+          variant={isManagerUser ? 'manager' : 'pilgrim'}
+          onClose={() => setCardOpen(false)}
+        />
       ) : null}
     </div>
   )

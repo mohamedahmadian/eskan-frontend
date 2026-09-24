@@ -25,7 +25,13 @@ function historyCoordinates(item: ReservationTravelHistoryItem) {
   return null
 }
 
-export function ReservationTravelHistoryCard({ reservationId }: { reservationId: string }) {
+export function ReservationTravelHistoryCard({
+  reservationId,
+  embedded = false,
+}: {
+  reservationId: string
+  embedded?: boolean
+}) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const nameOf = useGeoName()
@@ -75,9 +81,8 @@ export function ReservationTravelHistoryCard({ reservationId }: { reservationId:
     }
   }, [items, locale, nameOf, t])
 
-  return (
-    <FormCard icon={Route} title={t('reservations.travelHistory')}>
-      <div className="space-y-3 p-5 sm:p-6">
+  const body = (
+      <div className={embedded ? 'space-y-3' : 'space-y-3 p-5 sm:p-6'}>
         {query.isLoading ? (
           <p className="text-sm text-ink-500">{t('common.loading')}</p>
         ) : items.length === 0 ? (
@@ -148,6 +153,13 @@ export function ReservationTravelHistoryCard({ reservationId }: { reservationId:
           </>
         )}
       </div>
+  )
+
+  if (embedded) return body
+
+  return (
+    <FormCard icon={Route} title={t('reservations.travelHistory')}>
+      {body}
     </FormCard>
   )
 }

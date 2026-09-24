@@ -4,6 +4,7 @@ import {
   Bus,
   CalendarCheck,
   CalendarX,
+  Sun,
   Check,
   CreditCard,
   Footprints,
@@ -11,6 +12,7 @@ import {
   HeartHandshake,
   MapPin,
   Mars,
+  Route,
   ScrollText,
   Shield,
   Smartphone,
@@ -21,7 +23,7 @@ import {
   Venus,
   type LucideIcon,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DateEquivalents, DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
@@ -131,6 +133,7 @@ export function ReservationCompleteSummary({
   const durationLabel = reservation.completedAt
     ? completionDurationLabel(reservation.createdAt, reservation.completedAt, locale, t)
     : null
+  const [panel, setPanel] = useState<'file' | 'members' | 'history'>('file')
 
   return (
     <div className="space-y-4">
@@ -185,18 +188,35 @@ export function ReservationCompleteSummary({
         </div>
       </header>
 
+      <CompleteViewTabs value={panel} onChange={setPanel} />
+
       <div className="space-y-5 p-5 sm:p-6">
-        {cancelled || audience === 'admin' ? null : !reservation.requestsAccommodation ||
-          reservation.placementStatus === 'PLACED' ||
+        {panel === 'members' ? (
+          <section>
+            <SectionTitle icon={UserRound}>
+              {cancelled
+                ? t(stepLabelKey('companions', reservation.type))
+                : t('reservations.insuranceMembers')}
+            </SectionTitle>
+            <ReservationMembersGrid
+              members={members ?? []}
+              inputId="file-members-search"
+              showInsurance
+              isCaravan={reservation.type === 'CARAVAN'}
+            />
+          </section>
+        ) : panel === 'history' ? (
+          <ReservationTravelHistoryCard reservationId={reservation.id} embedded />
+        ) : (
+        <>
+        {cancelled || audience === 'admin' || reservation.placementStatus === 'PLACED' ? null : !reservation.requestsAccommodation ||
           reservation.placementStatus === 'PARTIAL' ? (
           <div className="rounded-2xl border border-teal-100 bg-gradient-to-e from-white to-teal-50 px-4 py-3 text-sm leading-7 text-ink-700">
             <p>
               {t(
                 !reservation.requestsAccommodation
                   ? 'reservations.completedBodyNoStay'
-                  : reservation.placementStatus === 'PLACED'
-                    ? 'reservations.completedBodyPlaced'
-                    : 'reservations.completedBodyPartial',
+                  : 'reservations.completedBodyPartial',
               )}
             </p>
           </div>
@@ -273,6 +293,26 @@ export function ReservationCompleteSummary({
               extra={<DateEquivalents value={reservation.stayStartDate} />}
               empty={!reservation.stayStartDate}
               tone="teal"
+            />
+            <FactTile
+              icon={Sun}
+              label={t('reservations.arrivalPeriod')}
+              value={
+                reservation.arrivalPeriod === 'BEFORE_NOON'
+                  ? t('reservations.arrivalPeriodBeforeNoon')
+                  : reservation.arrivalPeriod === 'AFTER_NOON'
+                    ? t('reservations.arrivalPeriodAfterNoon')
+                    : empty
+              }
+              extra={
+                reservation.arrivalPeriod === 'BEFORE_NOON' ? (
+                  <p className="mt-1 text-[11px] leading-5 text-ink-500">
+                    {t('reservations.arrivalPeriodLunchHint')}
+                  </p>
+                ) : undefined
+              }
+              empty={!reservation.arrivalPeriod}
+              tone="mint"
             />
             <FactTile
               icon={CalendarX}
@@ -530,22 +570,6 @@ export function ReservationCompleteSummary({
           }
         />
 
-        {members?.length ? (
-          <section>
-            <SectionTitle icon={UserRound}>
-              {cancelled
-                ? t(stepLabelKey('companions', reservation.type))
-                : t('reservations.insuranceMembers')}
-            </SectionTitle>
-            <ReservationMembersGrid
-              members={members}
-              inputId="file-members-search"
-              showInsurance
-              isCaravan={reservation.type === 'CARAVAN'}
-            />
-          </section>
-        ) : null}
-
         {contacts?.length ? (
           <section>
             <SectionTitle icon={UserRoundCog}>{t('reservations.steps.contacts')}</SectionTitle>
@@ -574,11 +598,69 @@ export function ReservationCompleteSummary({
             </ul>
           </section>
         ) : null}
+        </>
+        )}
       </div>
 
       {footer ? <div className="border-t border-line px-5 py-4 sm:px-6">{footer}</div> : null}
     </section>
-    <ReservationTravelHistoryCard reservationId={reservation.id} />
+    </div>
+  )
+}
+
+function CompleteViewTabs({
+  value,
+  onChange,
+}: {
+  value: 'file' | 'members' | 'history'
+  onChange: (value: 'file' | 'members' | 'history') => void
+}) {
+  const { t } = useTranslation()
+  const items = [
+    { id: 'file' as const, label: t('reservations.completeTabs.file'), icon: ScrollText },
+    { id: 'members' as const, label: t('reservations.completeTabs.members'), icon: Users },
+    { id: 'history' as const, label: t('reservations.travelHistory'), icon: Route },
+  ]
+
+  return (
+    <div className="border-t border-line px-3 py-3 sm:px-4">
+      <div className="mx-auto flex w-full max-w-md items-start" role="tablist">
+        {items.map((item, index) => {
+          const active = value === item.id
+          const Icon = item.icon
+          return (
+            <div key={item.id} className="relative flex min-w-0 flex-1 flex-col items-center">
+              {index < items.length - 1 ? (
+                <span className="absolute top-[31px] start-1/2 z-0 h-0.5 w-full bg-teal-200" aria-hidden />
+              ) : null}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className="group relative z-10 flex w-full cursor-pointer flex-col items-center gap-1 focus-visible:outline-none"
+                onClick={() => onChange(item.id)}
+              >
+                <span
+                  className={`flex size-16 items-center justify-center rounded-full border-2 transition-[box-shadow,border-color,background-color] duration-200 group-focus-visible:ring-2 group-focus-visible:ring-teal-400 group-focus-visible:ring-offset-2 ${
+                    active
+                      ? 'border-teal-500 bg-teal-500 text-white shadow-[0_4px_12px_rgba(46,189,182,0.28)] ring-4 ring-teal-100'
+                      : 'border-teal-200 bg-white text-teal-700'
+                  }`}
+                >
+                  <Icon className="size-6" aria-hidden />
+                </span>
+                <span
+                  className={`px-0.5 text-center text-[11px] leading-4 ${
+                    active ? 'font-semibold text-teal-700' : 'text-ink-600'
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </button>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

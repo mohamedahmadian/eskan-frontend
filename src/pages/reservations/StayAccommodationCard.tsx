@@ -477,7 +477,9 @@ function StayMap({
         onChange={() => undefined}
         variant="always"
         readOnly
-        heightClass="h-48 sm:h-56"
+        showShrineDistance
+        zoom={14}
+        heightClass="h-80 sm:h-[28rem]"
       />
     </div>
   )
@@ -499,7 +501,9 @@ function SocialTile({
     { label: t('accommodations.eitaa'), value: eitaa },
     { label: t('accommodations.bale'), value: bale },
     { label: t('accommodations.otherSocial'), value: otherSocial },
-  ]
+  ].filter((row) => row.value?.trim())
+
+  if (!rows.length) return null
 
   return (
     <article
@@ -517,11 +521,7 @@ function SocialTile({
         {rows.map((row) => (
           <li key={row.label} className="flex items-start gap-2 text-sm">
             <span className="mt-0.5 text-[11px] font-medium text-ink-500">{row.label}:</span>
-            <span
-              className={`min-w-0 flex-1 font-semibold ${
-                row.value?.trim() ? 'text-ink-900' : 'text-ink-400'
-              }`}
-            >
+            <span className="min-w-0 flex-1 font-semibold text-ink-900">
               <StayTextOrLink value={row.value} />
             </span>
           </li>

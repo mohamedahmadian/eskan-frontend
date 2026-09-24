@@ -1,4 +1,4 @@
-import { FileText, MapPin, MapPinned, Radar } from 'lucide-react'
+import { FileText, MapPin, MapPinned } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -124,20 +124,12 @@ export function UserLocationCard() {
             ) : null}
           </>
         )}
-        <div className="flex flex-col gap-2">
-          <Link to="/my-location" className="block">
-            <Button type="button" className="w-full justify-center">
-              <MapPinned className="size-4" aria-hidden />
-              {t('location.registerNew')}
-            </Button>
-          </Link>
-          <Link to="/my-location/history" className="block">
-            <Button type="button" variant="ghost" className="w-full justify-center">
-              <Radar className="size-4" aria-hidden />
-              {t('location.openTrail')}
-            </Button>
-          </Link>
-        </div>
+        <Link to="/my-location" className="block">
+          <Button type="button" className="w-full justify-center">
+            <MapPinned className="size-4" aria-hidden />
+            {t('location.registerNew')}
+          </Button>
+        </Link>
       </div>
     </FormCard>
   )

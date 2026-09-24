@@ -17,9 +17,10 @@ import { useAuth } from '../../auth/AuthProvider'
 import { Button, FormField, fieldClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api } from '../../lib/api'
-import { formatNumber } from '../../lib/datetime'
+import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import { isCaravanManager, isPilgrim } from '../../lib/roles'
+import { isAdmin, isCaravanManager, isPilgrim } from '../../lib/roles'
+import { useCaravanCreateQuota } from '../caravans/caravan-create-quota'
 import type {
   Caravan,
   City,
@@ -48,6 +49,7 @@ export type PartyDraft = {
 
 export type SelectedParty = {
   id: string
+  name?: string
   maleCount?: number
   femaleCount?: number
 }
@@ -95,7 +97,11 @@ export function partyDraftError(
   return null
 }
 
-export async function createReservationParty(type: PartyKind, draft: PartyDraft) {
+export async function createReservationParty(
+  type: PartyKind,
+  draft: PartyDraft,
+  year?: number,
+) {
   const payload: {
     name: string
     maleCount: number
@@ -103,12 +109,14 @@ export async function createReservationParty(type: PartyKind, draft: PartyDraft)
     cityId?: string
     walkingRouteId?: string | null
     managerUserId?: string
+    year?: number
   } = {
     name: draft.name.trim(),
     maleCount: 0,
     femaleCount: 0,
     cityId: draft.cityId || undefined,
     walkingRouteId: draft.walkingRouteId || null,
+    year,
   }
   if (draft.managerUserId) {
     payload.managerUserId = draft.managerUserId
@@ -143,6 +151,7 @@ export function ReservationPartyFields({
   subjectUser,
   hideExistingParties,
   knownSelected,
+  year = currentPersianYear(),
 }: {
   type: PartyKind
   selectedId: string
@@ -169,6 +178,7 @@ export function ReservationPartyFields({
   hideExistingParties?: boolean
   /** Snapshot from reservation when the party is not in «mine» list. */
   knownSelected?: PartyItemSnapshot | null
+  year?: number
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -178,6 +188,23 @@ export function ReservationPartyFields({
   const isCaravan = type === 'CARAVAN'
   const pickManager = isCaravan && shouldPickCaravanManager(partySubject)
   const [managerChoice, setManagerChoice] = useState<CaravanManagerChoice | null>(null)
+  const admin = isAdmin(user)
+  const quotaManagerId = admin ? draft.managerUserId || undefined : undefined
+  const quota = useCaravanCreateQuota({
+    enabled: isCaravan && (!admin || Boolean(quotaManagerId)),
+    year,
+    managerUserId: quotaManagerId,
+  })
+  const createBlocked = isCaravan && Boolean(quota.data && !quota.data.allowed)
+  const quotaMessage =
+    createBlocked && quota.data ? (
+      <p className="rounded-[22px] border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm leading-7 text-ink-700">
+        {t('caravans.maxPerNationalIdReached', {
+          max: formatNumber(quota.data.max, locale),
+          year: formatNumber(quota.data.year, locale),
+        })}
+      </p>
+    ) : null
 
   const mine = useQuery({
     queryKey: isCaravan ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
@@ -230,7 +257,12 @@ export function ReservationPartyFields({
 
   function choose(item: PartyItem) {
     setCreateOpen(false)
-    onSelect({ id: item.id, maleCount: item.maleCount, femaleCount: item.femaleCount })
+    onSelect({
+      id: item.id,
+      name: item.name,
+      maleCount: item.maleCount,
+      femaleCount: item.femaleCount,
+    })
     onAdvance?.()
   }
 
@@ -289,6 +321,8 @@ export function ReservationPartyFields({
         selected || !selectedId ? null : (
           <p className="text-sm text-ink-600">{t('reservations.partySelectedReadonly')}</p>
         )
+      ) : createBlocked && !pickManager ? (
+        quotaMessage
       ) : (
         <section
           className={`rounded-[22px] border border-dashed border-teal-200 bg-gradient-to-b from-teal-50/70 to-white ${
@@ -358,7 +392,9 @@ export function ReservationPartyFields({
                 }}
               />
             ) : null}
-            {showCreateAction ? (
+            {createBlocked ? (
+              quotaMessage
+            ) : showCreateAction ? (
               <Button type="button" variant="soft" disabled={creating} onClick={onCreate}>
                 <Plus className="size-4" aria-hidden />
                 {t(isCaravan ? 'reservations.createCaravan' : 'reservations.createGroup')}

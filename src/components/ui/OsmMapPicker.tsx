@@ -1,13 +1,16 @@
-import { LocateFixed, MapPinned } from 'lucide-react'
+import { Footprints, LocateFixed, MapPinned } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { languageDir } from '../../i18n'
+import { formatNumber } from '../../lib/datetime'
 import {
   queryGeolocationPermission,
   requestBrowserGeolocation,
   type GeoErrorKind,
 } from '../../lib/geolocation'
+import { IMAM_REZA_SHRINE, distanceToShrine, formatShrineDistanceValue } from '../../lib/shrine'
 import { Button } from './Form'
 
 const pinIcon = L.divIcon({
@@ -16,6 +19,32 @@ const pinIcon = L.divIcon({
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 })
+
+const shrinePinIcon = L.divIcon({
+  className: 'eskan-shrine-pin-wrap',
+  html: '<span class="eskan-shrine-pin-dot"></span>',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+})
+
+function shrineLatLng() {
+  return L.latLng(IMAM_REZA_SHRINE.latitude, IMAM_REZA_SHRINE.longitude)
+}
+
+function fitShrineDistance(map: L.Map, here: L.LatLng, relaxed = false) {
+  const shrine = shrineLatLng()
+  const maxZoom = relaxed ? 14 : 16
+  if (here.distanceTo(shrine) < 40) {
+    map.setView(here, maxZoom, { animate: false })
+    return
+  }
+  map.fitBounds(L.latLngBounds([here, shrine]), {
+    paddingTopLeft: relaxed ? [56, 88] : [40, 56],
+    paddingBottomRight: relaxed ? [48, 48] : [28, 28],
+    maxZoom,
+    animate: false,
+  })
+}
 
 export type MapFocus = {
   lat: number
@@ -42,7 +71,7 @@ export type MapOverlayMarker = {
   id: string
   lat: number
   lng: number
-  kind: 'previous' | 'current' | 'next' | 'history' | 'station'
+  kind: 'previous' | 'current' | 'next' | 'history' | 'station' | 'destination'
   badge: string
   title: string
   popupHtml?: string
@@ -140,7 +169,10 @@ export function OsmMapPicker({
   focus = null,
   maxBounds = null,
   heightClass = 'h-72',
+  zoom = 16,
   overlays = null,
+  showShrineDistance = false,
+  pointLabel,
   fill = false,
   keepInView = null,
   onMarkerClick,
@@ -159,7 +191,12 @@ export function OsmMapPicker({
   focus?: MapFocus | null
   maxBounds?: MapBounds | null
   heightClass?: string
+  zoom?: number
   overlays?: MapOverlays | null
+  /** خط و برچسب فاصلهٔ مستقیم و زمان پیاده‌روی تا حرم مطهر. */
+  showShrineDistance?: boolean
+  /** برچسب دائمی روی نقطهٔ موقعیت، مثل برچسب حرم. با این برچسب زوم کمی عقب‌تر می‌ماند. */
+  pointLabel?: string
   fill?: boolean
   keepInView?: {
     id: string
@@ -170,7 +207,8 @@ export function OsmMapPicker({
   onGeoError?: (kind: GeoErrorKind) => void
   onGeoOutside?: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const alwaysOpen = variant === 'always'
   const [open, setOpen] = useState(alwaysOpen)
   const [locating, setLocating] = useState(false)
@@ -178,8 +216,11 @@ export function OsmMapPicker({
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
   const overlayLayerRef = useRef<L.LayerGroup | null>(null)
+  const shrineLayerRef = useRef<L.LayerGroup | null>(null)
   const overlayFitKeyRef = useRef<string>('')
   const overlaysRef = useRef(overlays)
+  const pointLabelRef = useRef(pointLabel)
+  pointLabelRef.current = pointLabel
   const onChangeRef = useRef(onChange)
   const onGeolocateRef = useRef(onGeolocate)
   const onGeoErrorRef = useRef(onGeoError)
@@ -199,6 +240,18 @@ export function OsmMapPicker({
   const canEdit = !readOnly
   const geolocateEnabled = showGeolocate || (alwaysOpen && !readOnly)
 
+  function bindPointLabel(marker: L.Marker) {
+    marker.unbindTooltip()
+    const label = pointLabelRef.current
+    if (!label) return
+    marker.bindTooltip(label, {
+      permanent: true,
+      direction: 'top',
+      offset: [0, -10],
+      className: 'eskan-shrine-tooltip',
+    })
+  }
+
   function placeMarker(map: L.Map, latlng: L.LatLng, draggable: boolean) {
     if (markerRef.current) {
       markerRef.current.setLatLng(latlng)
@@ -209,6 +262,7 @@ export function OsmMapPicker({
       return
     }
     markerRef.current = L.marker(latlng, { icon: pinIcon, draggable }).addTo(map)
+    bindPointLabel(markerRef.current)
     if (draggable) {
       markerRef.current.on('dragend', () => {
         const pos = markerRef.current?.getLatLng()
@@ -229,7 +283,7 @@ export function OsmMapPicker({
     })
     const currentOverlays = overlaysRef.current
     if (start) {
-      map.setView(start, 16)
+      map.setView(start, zoom)
     } else if (currentOverlays?.fit && overlayFitLatLngs(currentOverlays).length) {
       fitOverlayBounds(map, currentOverlays)
     } else if (maxBounds) {
@@ -264,6 +318,7 @@ export function OsmMapPicker({
       map.remove()
       mapRef.current = null
       markerRef.current = null
+      shrineLayerRef.current = null
     }
     // Map is created once per open session; lat/lng sync is handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -276,10 +331,14 @@ export function OsmMapPicker({
     if (!next) return
     const previous = markerRef.current?.getLatLng()
     placeMarker(map, next, canEdit)
-    if ((!previous || previous.distanceTo(next) > 1) && !overlays?.fit) {
-      map.setView(next, Math.max(map.getZoom(), 16))
+    if (
+      (!previous || previous.distanceTo(next) > 1) &&
+      !overlays?.fit &&
+      !showShrineDistance
+    ) {
+      map.setView(next, Math.max(map.getZoom(), zoom))
     }
-  }, [canEdit, latitude, longitude, open, overlays?.fit])
+  }, [canEdit, latitude, longitude, open, overlays?.fit, showShrineDistance, zoom])
 
   useEffect(() => {
     const map = mapRef.current
@@ -370,10 +429,57 @@ export function OsmMapPicker({
   }, [latitude, longitude, open, overlays])
 
   useEffect(() => {
+    const map = mapRef.current
+    shrineLayerRef.current?.remove()
+    shrineLayerRef.current = null
+    if (!open || !map || !showShrineDistance) return
+    const here = parseLatLng(latitude, longitude)
+    if (!here) return
+
+    const shrine = shrineLatLng()
+    const layer = L.layerGroup().addTo(map)
+    shrineLayerRef.current = layer
+    if (here.distanceTo(shrine) >= 8) {
+      L.polyline([here, shrine], {
+        color: '#2EBDB6',
+        weight: 3,
+        opacity: 0.9,
+        dashArray: '7 7',
+        lineCap: 'round',
+        interactive: false,
+      }).addTo(layer)
+    }
+    const pin = L.marker(shrine, {
+      icon: shrinePinIcon,
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 600,
+    }).addTo(layer)
+    pin.bindTooltip(t('shrine.mapLabel'), {
+      permanent: true,
+      direction: 'top',
+      offset: [0, -8],
+      className: 'eskan-shrine-tooltip',
+    })
+    if (markerRef.current) bindPointLabel(markerRef.current)
+    fitShrineDistance(map, here, Boolean(pointLabel))
+
+    return () => {
+      layer.remove()
+      if (shrineLayerRef.current === layer) shrineLayerRef.current = null
+    }
+  }, [latitude, longitude, open, pointLabel, showShrineDistance, t])
+
+  useEffect(() => {
     if (!open || !active || !mapRef.current) return
     const map = mapRef.current
     function resizeAndFit() {
       map.invalidateSize()
+      if (showShrineDistance) {
+        const here = parseLatLng(latitude, longitude)
+        if (here) fitShrineDistance(map, here, Boolean(pointLabel))
+        return
+      }
       const current = overlaysRef.current
       if (!current?.fit) return
       const here = parseLatLng(latitude, longitude)
@@ -386,7 +492,7 @@ export function OsmMapPicker({
       window.clearTimeout(first)
       window.clearTimeout(second)
     }
-  }, [active, latitude, longitude, open])
+  }, [active, latitude, longitude, open, pointLabel, showShrineDistance])
 
   useEffect(() => {
     const map = mapRef.current
@@ -477,6 +583,35 @@ export function OsmMapPicker({
 
   const showMapToggle = variant === 'collapsible'
   const showGeoButton = geolocateEnabled && open
+  const shrinePoint = showShrineDistance ? parseLatLng(latitude, longitude) : null
+  const shrineStats = shrinePoint
+    ? distanceToShrine(shrinePoint.lat, shrinePoint.lng)
+    : null
+  const shrineDistanceParts = shrineStats
+    ? formatShrineDistanceValue(shrineStats.km, locale)
+    : null
+  const shrineDistanceLabel = shrineDistanceParts
+    ? t(
+        shrineDistanceParts.unit === 'm' ? 'shrine.distanceMeters' : 'shrine.distanceKm',
+        { value: shrineDistanceParts.value },
+      )
+    : null
+  const shrineWalkLabel = shrineStats
+    ? shrineStats.walkMinutes < 1
+      ? t('shrine.walkUnderMinute')
+      : shrineStats.walkMinutes < 60
+        ? t('shrine.walkMinutes', {
+            value: formatNumber(shrineStats.walkMinutes, locale),
+          })
+        : shrineStats.walkMinutes % 60 === 0
+          ? t('shrine.walkHours', {
+              value: formatNumber(Math.floor(shrineStats.walkMinutes / 60), locale),
+            })
+          : t('shrine.walkHoursMinutes', {
+              hours: formatNumber(Math.floor(shrineStats.walkMinutes / 60), locale),
+              minutes: formatNumber(shrineStats.walkMinutes % 60, locale),
+            })
+    : null
 
   return (
     <div
@@ -513,7 +648,7 @@ export function OsmMapPicker({
       {open ? (
         <div
           dir="ltr"
-          className={`overflow-hidden rounded-2xl border border-line shadow-[0_8px_24px_rgba(20,40,40,0.06)] ${
+          className={`relative overflow-hidden rounded-2xl border border-line shadow-[0_8px_24px_rgba(20,40,40,0.06)] ${
             fill ? 'h-full' : ''
           }`}
         >
@@ -521,6 +656,26 @@ export function OsmMapPicker({
             ref={containerRef}
             className={`eskan-osm-map w-full ${fill ? 'h-full' : heightClass}`}
           />
+          {shrineDistanceLabel && shrineWalkLabel ? (
+            <div className="pointer-events-none absolute inset-x-2 top-2 z-[450] flex justify-center sm:inset-x-8">
+              <p
+                dir={languageDir(locale)}
+                className="inline-flex max-w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-semibold leading-5 text-ink-800 shadow-[0_6px_16px_rgba(20,40,40,0.12)] ring-1 ring-teal-100"
+              >
+                <MapPinned className="size-3.5 shrink-0 text-mint-500" aria-hidden />
+                <span>{t('shrine.mapLabel')}</span>
+                <span className="text-ink-300" aria-hidden>
+                  ·
+                </span>
+                <span>{shrineDistanceLabel}</span>
+                <span className="text-ink-300" aria-hidden>
+                  ·
+                </span>
+                <Footprints className="size-3.5 shrink-0 text-teal-600" aria-hidden />
+                <span>{shrineWalkLabel}</span>
+              </p>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

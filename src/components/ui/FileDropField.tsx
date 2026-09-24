@@ -106,6 +106,7 @@ export function FileDropField({
 
   return (
     <div
+      data-no-form-dblclick=""
       onDragEnter={onDragEnter}
       onDragOver={(event) => event.preventDefault()}
       onDragLeave={onDragLeave}

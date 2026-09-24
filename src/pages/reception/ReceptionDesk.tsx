@@ -30,7 +30,7 @@ import { Link, useNavigate, useNavigationType, useSearchParams } from 'react-rou
 import { toast } from 'sonner'
 import { useQuickTools } from '../../components/layout/quick-tools-context'
 import { DateText } from '../../components/ui/DateText'
-import { AppForm, Button, cardClassName, LoadingState } from '../../components/ui/Form'
+import { AppForm, Button, cardClassName, formShellClassName, LoadingState } from '../../components/ui/Form'
 import {
   FormCard,
   FormEmptyHint,
@@ -387,7 +387,7 @@ export function ReceptionDesk({
   const isModal = variant === 'modal'
 
   return (
-    <div className={isModal ? 'w-full' : 'mx-auto w-full max-w-5xl'}>
+    <div className={isModal ? 'w-full' : formShellClassName}>
       <div className={idle ? `flex flex-col justify-center ${isModal ? '' : 'min-h-[52vh]'}` : undefined}>
         <div
           className={
@@ -398,7 +398,7 @@ export function ReceptionDesk({
         >
           <section
             className={
-              isModal ? '' : `${cardClassName} mx-auto max-w-2xl p-5 sm:p-7`
+              isModal ? '' : `${cardClassName} p-5 sm:p-7`
             }
           >
             <AppForm
@@ -469,14 +469,14 @@ export function ReceptionDesk({
           </section>
         </div>
         {idle && searched && !searching && !loadingProfile && !records?.length ? (
-          <div className={`mx-auto w-full max-w-2xl ${isModal ? 'mt-2' : 'mt-4'}`}>
+          <div className={isModal ? 'mt-2' : 'mt-4'}>
             <FormEmptyHint>
               {t(searchScope === 'extended' ? 'reception.noResultsExtended' : 'reception.noResults')}
             </FormEmptyHint>
           </div>
         ) : null}
         {idle && !searched && !searching && !isModal ? (
-          <div className="mx-auto mt-4 w-full max-w-2xl">
+          <div className="mt-4">
             <FormEmptyHint>{t('reception.searchEmpty')}</FormEmptyHint>
           </div>
         ) : null}

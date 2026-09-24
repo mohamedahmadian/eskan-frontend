@@ -4,6 +4,7 @@ import {
   Bus,
   CalendarCheck,
   CalendarX,
+  Sun,
   ClipboardCheck,
   CreditCard,
   Footprints,
@@ -171,6 +172,26 @@ export function ReservationTravelSummary({
                 extra={<DateEquivalents value={reservation.stayStartDate} />}
                 empty={!reservation.stayStartDate}
                 tone="teal"
+              />
+              <FactTile
+                icon={Sun}
+                label={t('reservations.arrivalPeriod')}
+                value={
+                  reservation.arrivalPeriod === 'BEFORE_NOON'
+                    ? t('reservations.arrivalPeriodBeforeNoon')
+                    : reservation.arrivalPeriod === 'AFTER_NOON'
+                      ? t('reservations.arrivalPeriodAfterNoon')
+                      : empty
+                }
+                extra={
+                  reservation.arrivalPeriod === 'BEFORE_NOON' ? (
+                    <p className="mt-1 text-[11px] leading-5 text-ink-500">
+                      {t('reservations.arrivalPeriodLunchHint')}
+                    </p>
+                  ) : undefined
+                }
+                empty={!reservation.arrivalPeriod}
+                tone="mint"
               />
               <FactTile
                 icon={CalendarX}

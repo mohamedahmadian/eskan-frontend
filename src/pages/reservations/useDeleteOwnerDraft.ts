@@ -7,14 +7,21 @@ export function useDeleteOwnerDraft() {
   const { confirmDelete } = useConfirmDelete()
   const queryClient = useQueryClient()
 
-  return (id: string, onDeleted?: () => void) =>
+  return (id: string, onDeleted?: () => void, kind: 'draft' | 'cancelled' = 'draft') =>
     confirmDelete({
-      message: t('reservations.confirmDeleteDraft'),
-      successMessage: t('reservations.draftDeleted'),
+      message:
+        kind === 'cancelled'
+          ? t('reservations.confirmDeleteCancelled')
+          : t('reservations.confirmDeleteDraft'),
+      successMessage:
+        kind === 'cancelled'
+          ? t('reservations.cancelledDeleted')
+          : t('reservations.draftDeleted'),
       path: `/reservations/${id}`,
       queryKey: ['reservations'],
       onDeleted: () => {
         queryClient.removeQueries({ queryKey: ['reservations', id] })
+        queryClient.removeQueries({ queryKey: ['reservations', 'open'] })
         onDeleted?.()
       },
     })

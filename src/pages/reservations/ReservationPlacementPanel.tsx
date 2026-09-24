@@ -552,7 +552,8 @@ function StayMap({
         onChange={() => undefined}
         variant="always"
         readOnly
-        heightClass="h-48 sm:h-56"
+        showShrineDistance
+        heightClass="h-80 sm:h-[28rem]"
       />
     </div>
   );
@@ -642,27 +643,53 @@ export function ReservationPlacementStep({
 
   return (
     <div className="space-y-4">
-      <nav className={`grid grid-cols-2 gap-2 p-2 ${cardClassName}`}>
-        {tabs.map((item) => {
-          const Icon = item.icon;
-          const active = shownTab === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              disabled={!item.enabled}
-              onClick={() => setTab(item.id)}
-              className={`flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl px-2 py-3 text-center text-xs font-semibold leading-5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:px-3 sm:text-sm ${
-                active
-                  ? "bg-teal-500 text-white shadow-sm"
-                  : "bg-cream-50 text-ink-700 hover:bg-cream-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-cream-50"
-              }`}
-            >
-              <Icon className="size-4 shrink-0" aria-hidden />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
+      <nav className={`px-3 py-3 sm:px-4 ${cardClassName}`} role="tablist">
+        <div className="mx-auto flex w-full max-w-lg items-start">
+          {tabs.map((item, index) => {
+            const Icon = item.icon;
+            const active = shownTab === item.id;
+            return (
+              <div key={item.id} className="relative flex min-w-0 flex-1 flex-col items-center">
+                {index < tabs.length - 1 ? (
+                  <span className="absolute top-[31px] start-1/2 z-0 h-0.5 w-full bg-teal-200" aria-hidden />
+                ) : null}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  disabled={!item.enabled}
+                  onClick={() => setTab(item.id)}
+                  className={`group relative z-10 flex w-full flex-col items-center gap-1.5 focus-visible:outline-none ${
+                    item.enabled ? "cursor-pointer" : "cursor-not-allowed"
+                  }`}
+                >
+                  <span
+                    className={`flex size-16 items-center justify-center rounded-full border-2 transition-[box-shadow,border-color,background-color] duration-200 group-focus-visible:ring-2 group-focus-visible:ring-teal-400 group-focus-visible:ring-offset-2 ${
+                      !item.enabled
+                        ? "border-line bg-cream-50 text-ink-300"
+                        : active
+                          ? "border-teal-500 bg-teal-500 text-white shadow-[0_4px_12px_rgba(46,189,182,0.28)] ring-4 ring-teal-100"
+                          : "border-teal-200 bg-white text-teal-700"
+                    }`}
+                  >
+                    <Icon className="size-6" aria-hidden />
+                  </span>
+                  <span
+                    className={`px-1 text-center text-[11px] leading-4 ${
+                      !item.enabled
+                        ? "text-ink-400"
+                        : active
+                          ? "font-semibold text-teal-700"
+                          : "text-ink-600"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </nav>
       {shownTab === "mashhad" && mashhad ? (
         <ReservationPlacementPanel reservation={reservation} />

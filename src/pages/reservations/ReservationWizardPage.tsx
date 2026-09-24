@@ -6,12 +6,14 @@ import {
   RotateCcw,
   Timer,
   Ticket,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useTranslation, Trans } from "react-i18next";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../auth/AuthProvider";
 import { toast } from "sonner";
 import {
   Button,
@@ -27,12 +29,14 @@ import { api, getApiErrorMessage } from "../../lib/api";
 import { elapsedDurationParts, formatNumber } from "../../lib/datetime";
 import type { Reservation } from "../../types/app";
 import {
+  canOwnerHardDelete,
   createWizardPath,
   currentStepFromStatus,
   isOwnerCreateDraft,
   ownerCanEditStep,
   type ReservationStepCode,
 } from "./reservation-steps";
+import { useDeleteOwnerDraft } from "./useDeleteOwnerDraft";
 import { ReservationStatusBadge } from "./ReservationStatusBadge";
 import { CompanionsStep } from "./ReservationCompanionsStep";
 import { ReservationContactsStep } from "./ReservationContactsStep";
@@ -48,6 +52,7 @@ import { ReservationTitleMeta } from "./ReservationSectionHeader";
 
 export function ReservationWizardPage() {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const locale = i18n.language.split("-")[0] ?? "fa";
   const { id } = useParams();
   const queryClient = useQueryClient();
@@ -98,6 +103,7 @@ export function ReservationWizardPage() {
     <div className={listShellClassName}>
       <PageHeader
         icon={Ticket}
+        stackAction="always"
         title={`${t("reservations.wizard")} ${formatNumber(reservation.year, locale)}`}
         subtitle={
           <ReservationTitleMeta
@@ -111,8 +117,11 @@ export function ReservationWizardPage() {
           />
         }
         action={
-          reservation.status !== "COMPLETED" &&
-          reservation.status !== "CANCELLED" ? (
+          reservation.status === "CANCELLED" &&
+          canOwnerHardDelete(reservation, user?.id) ? (
+            <DeleteCancelledFileButton reservationId={reservation.id} />
+          ) : reservation.status !== "COMPLETED" &&
+            reservation.status !== "CANCELLED" ? (
             <CancelFileButton reservationId={reservation.id} />
           ) : undefined
         }
@@ -409,6 +418,29 @@ function ReviewWaitingBanner({
         </div>
       </div>
     </aside>
+  );
+}
+
+function DeleteCancelledFileButton({ reservationId }: { reservationId: string }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const deleteFile = useDeleteOwnerDraft();
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className="self-start text-red-600 hover:bg-red-50 hover:text-red-700"
+      onClick={() =>
+        deleteFile(
+          reservationId,
+          () => navigate("/my-reservations", { replace: true }),
+          "cancelled",
+        )
+      }
+    >
+      <Trash2 className="size-4" aria-hidden />
+      {t("reservations.deleteDraft")}
+    </Button>
   );
 }
 

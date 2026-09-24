@@ -60,11 +60,16 @@ function hasText(value: string | null | undefined) {
   return Boolean(value?.trim())
 }
 
+export function isRouteDestination(stage: { kind?: string | null }) {
+  return stage.kind === 'DESTINATION'
+}
+
 export function stageKey(stage: WalkingRouteStage) {
   return stage.stationId || stage.id || `${stage.cityId}-${stage.stageNumber}`
 }
 
 export function stageTitle(stage: WalkingRouteStage, locale: string, fallback: string) {
+  if (isRouteDestination(stage)) return fallback
   return stage.name?.trim() || geoName(stage.city, locale) || fallback
 }
 

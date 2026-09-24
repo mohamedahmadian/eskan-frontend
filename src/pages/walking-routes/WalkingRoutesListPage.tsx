@@ -274,7 +274,12 @@ export function WalkingRoutesListPage() {
                 <td className="px-4 py-3">
                   {formatNumber(item.distanceToMashhadKm, locale)} {t('walkingRoutes.km')}
                 </td>
-                <td className="px-4 py-3">{formatNumber(item.stages.length, locale)}</td>
+                <td className="px-4 py-3">
+                  {formatNumber(
+                    item.stages.filter((stage) => stage.kind !== 'DESTINATION').length,
+                    locale,
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/base-info/walking-routes/${item.id}`}

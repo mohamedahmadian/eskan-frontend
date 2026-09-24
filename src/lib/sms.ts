@@ -15,6 +15,7 @@ export type SmsMessage = {
 }
 
 export type SmsSettings = {
+  isActive: boolean
   endpoint: string
   senderNumber: string
   username: string

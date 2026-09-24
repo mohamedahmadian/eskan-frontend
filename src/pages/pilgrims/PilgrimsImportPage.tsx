@@ -11,7 +11,7 @@ import {
   FormField,
   PageHeader,
   cardClassName,
-  listShellClassName,
+  formShellClassName,
 } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
@@ -232,12 +232,12 @@ export function PilgrimsImportPage() {
   }
 
   return (
-    <div className={listShellClassName}>
+    <div className={formShellClassName}>
       <PageHeader
         icon={UserRound}
         title={t('pilgrims.import')} subtitle={t('pilgrims.importSubtitle')} />
 
-      <AppForm onSubmit={onSubmit} className="mx-auto flex w-full max-w-2xl flex-col gap-5">
+      <AppForm onSubmit={onSubmit} className="flex w-full flex-col gap-5">
         <FormField icon={Upload} label={t('pilgrims.importFile')} htmlFor="pilgrims-import-file">
           <FileDropField
             key={dropKey}

@@ -42,7 +42,7 @@ export function LicenseIssuerDashboard() {
   const organization = user?.issuingOrganization
 
   return (
-    <div className={`${listShellClassName} space-y-8`}>
+    <div className={`${listShellClassName} flex flex-1 flex-col gap-8`}>
       <section className={`${cardClassName} overflow-hidden`}>
         <div className="h-1.5 bg-gradient-to-e from-teal-400 to-mint-300" />
         <div className="flex items-start gap-3 px-5 py-5">

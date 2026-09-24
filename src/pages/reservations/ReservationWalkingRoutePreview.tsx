@@ -9,7 +9,12 @@ import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { stageCoordinates } from '../../lib/geo'
 import type { WalkingRoute, WalkingRouteStage } from '../../types/app'
-import { StationDetailsModal, stageKey, stageTitle } from '../walking-routes/StationInfoCard'
+import {
+  StationDetailsModal,
+  isRouteDestination,
+  stageKey,
+  stageTitle,
+} from '../walking-routes/StationInfoCard'
 
 export function ReservationWalkingRoutePreview({
   routeId,
@@ -54,14 +59,21 @@ export function ReservationWalkingRoutePreview({
       const coords = stageCoordinates(stage)
       if (!coords) continue
       path.push(coords)
+      const destination = isRouteDestination(stage)
       const numberLabel = formatNumber(stage.stageNumber, locale)
       markers.push({
         id: stageKey(stage),
         lat: coords.lat,
         lng: coords.lng,
-        kind: originCityId && stage.cityId === originCityId ? 'current' : 'station',
-        badge: numberLabel,
-        title: stageTitle(stage, locale, `${t('walkingRoutes.stage')} ${numberLabel}`),
+        kind: destination
+          ? 'destination'
+          : originCityId && stage.cityId === originCityId
+            ? 'current'
+            : 'station',
+        badge: destination ? t('walkingRoutes.destinationBadge') : numberLabel,
+        title: destination
+          ? t('walkingRoutes.mashhadDestination')
+          : stageTitle(stage, locale, `${t('walkingRoutes.stage')} ${numberLabel}`),
       })
     }
     if (!markers.length && path.length < 2) return null
@@ -77,7 +89,7 @@ export function ReservationWalkingRoutePreview({
   const canSetLocation = Boolean(locationUserId && reservationId)
 
   async function setCaravanLocation(stage: WalkingRouteStage) {
-    if (!locationUserId || !reservationId || saving) return
+    if (!locationUserId || !reservationId || saving || isRouteDestination(stage)) return
     setSaving(true)
     try {
       const coords = stageCoordinates(stage)
@@ -127,7 +139,11 @@ export function ReservationWalkingRoutePreview({
             variant="always"
             readOnly
             overlays={overlays}
-            onMarkerClick={(id) => setSelectedId(id)}
+            onMarkerClick={(id) => {
+              const stage = stages.find((item) => stageKey(item) === id)
+              if (!stage || isRouteDestination(stage)) return
+              setSelectedId(id)
+            }}
             heightClass="h-72"
           />
         </div>

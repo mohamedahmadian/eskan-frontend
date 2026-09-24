@@ -8,6 +8,7 @@ import {
   Hand,
   IdCard,
   LayoutGrid,
+  List,
   LogOut,
   Mars,
   Phone,
@@ -124,6 +125,7 @@ export function PlacementDetailPage() {
   const [headcount, setHeadcount] = useState('')
   const [accommodatedCount, setAccommodatedCount] = useState('')
   const [movingId, setMovingId] = useState<string | null>(null)
+  const [showAllAccommodations, setShowAllAccommodations] = useState(false)
 
   const detail = useQuery({
     queryKey: ['placements', 'reservation', reservationId],
@@ -154,6 +156,25 @@ export function PlacementDetailPage() {
   const partyFullyPlaced = remainingMaleNeed === 0 && remainingFemaleNeed === 0
   const showAllocateForm =
     Boolean(movingId) || (individual ? !row?.allocations.length : !partyFullyPlaced)
+  const bothGenders = Boolean(row && !individual && row.maleCount > 0 && row.femaleCount > 0)
+  const maleSettled = Boolean(
+    bothGenders && remainingMaleNeed === 0 && movingItem?.gender !== 'MALE',
+  )
+  const femaleSettled = Boolean(
+    bothGenders && remainingFemaleNeed === 0 && movingItem?.gender !== 'FEMALE',
+  )
+  const genderChoices = useMemo(() => {
+    const choices: UserGender[] = []
+    if (row && row.maleCount > 0 && !maleSettled) choices.push('MALE')
+    if (row && row.femaleCount > 0 && !femaleSettled) choices.push('FEMALE')
+    return choices
+  }, [row, maleSettled, femaleSettled])
+  const preferredGender: UserGender | '' =
+    maleSettled && !femaleSettled
+      ? 'FEMALE'
+      : femaleSettled && !maleSettled
+        ? 'MALE'
+        : soleGender
 
   function currentAccommodatedFor(nextGender: UserGender) {
     if (!row) return 0
@@ -172,14 +193,19 @@ export function PlacementDetailPage() {
       setAccommodatedCount(String(currentAccommodatedFor(nextGender)))
       return
     }
-    if (!soleGender || gender === soleGender) return
-    const total = soleGender === 'MALE' ? row.maleCount : row.femaleCount
-    const allocated = soleGender === 'MALE' ? row.allocatedMale : row.allocatedFemale
+    const next = preferredGender
+    if (!next || gender === next) return
+    if (!genderChoices.includes(next)) return
+    if (gender && genderChoices.includes(gender) && genderChoices.length > 1) return
+    const total = next === 'MALE' ? row.maleCount : row.femaleCount
+    const allocated = next === 'MALE' ? row.allocatedMale : row.allocatedFemale
     const need = Math.max(0, total - allocated)
-    setGender(soleGender)
+    setGender(next)
+    setShowAllAccommodations(false)
+    setAccommodationId('')
     setHeadcount(need > 0 ? String(need) : '')
-    setAccommodatedCount(String(currentAccommodatedFor(soleGender)))
-  }, [row, movingId, soleGender, gender])
+    setAccommodatedCount(String(currentAccommodatedFor(next)))
+  }, [row, movingId, preferredGender, gender, genderChoices])
 
   const availability = useQuery({
     queryKey: ['placements', 'availability', stayStart, stayEnd, reservationId],
@@ -193,7 +219,19 @@ export function PlacementDetailPage() {
     },
   })
 
-  const selectedGender = individual ? individualGender : gender || soleGender
+  const selectedGender: UserGender | '' = individual
+    ? individualGender
+    : gender && genderChoices.includes(gender)
+      ? gender
+      : genderChoices.includes(preferredGender as UserGender)
+        ? preferredGender
+        : ''
+
+  function accommodationMatchesGender(item: PlacementAvailability, nextGender: UserGender) {
+    const capacity = nextGender === 'MALE' ? item.maleCapacity : item.femaleCapacity
+    if (capacity <= 0) return false
+    return item.genderType === nextGender || item.genderType === 'MIXED'
+  }
   const selected = availability.data?.find((item) => item.id === accommodationId)
   const remaining =
     selectedGender === 'MALE'
@@ -234,6 +272,8 @@ export function PlacementDetailPage() {
 
   function fillHeadcountForGender(nextGender: UserGender | '') {
     setGender(nextGender)
+    setShowAllAccommodations(false)
+    setAccommodationId('')
     if (!nextGender) {
       setAccommodatedCount('')
       return
@@ -247,7 +287,8 @@ export function PlacementDetailPage() {
   function resetForm() {
     setMovingId(null)
     setAccommodationId('')
-    const nextGender = individualGender || soleGender
+    setShowAllAccommodations(false)
+    const nextGender = individualGender || preferredGender
     setGender(nextGender)
     if (individual) {
       setHeadcount('1')
@@ -357,6 +398,18 @@ export function PlacementDetailPage() {
         title={t('placements.details')}
         subtitle={<EntityNameSubtitle name={row.partyName} icon={Building2} />}
         backTo="/placements"
+        action={
+          row.allocations.length ? (
+            <ReservationPlacementSmsButton
+              title={t('placements.smsPreviewTitle')}
+              label={t('placements.sendSms')}
+              phone={
+                row.caravanManager?.phone?.trim() || row.createdBy?.phone?.trim() || ''
+              }
+              body={buildPlacementStaySmsBody(row.allocations, t)}
+            />
+          ) : null
+        }
       />
       <FormCard
         icon={Building2}
@@ -458,7 +511,11 @@ export function PlacementDetailPage() {
                         <ReservationPlacementSmsButton
                           title={t('placements.smsPreviewTitle')}
                           label={t('placements.sendSms')}
-                          phone={row.caravanManager?.phone?.trim() || ''}
+                          phone={
+                            row.caravanManager?.phone?.trim() ||
+                            row.createdBy?.phone?.trim() ||
+                            ''
+                          }
                           body={buildPlacementStaySmsBody([item], t)}
                         />
                       }
@@ -530,7 +587,7 @@ export function PlacementDetailPage() {
               {individual ? null : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
-                    icon={gender === 'FEMALE' ? Venus : gender === 'MALE' ? Mars : Users}
+                    icon={selectedGender === 'FEMALE' ? Venus : selectedGender === 'MALE' ? Mars : Users}
                     label={t('placements.gender')}
                   >
                     <SearchSelect
@@ -539,14 +596,13 @@ export function PlacementDetailPage() {
                       onChange={(next: string) =>
                         fillHeadcountForGender((next || '') as UserGender | '')
                       }
-                      options={[
-                        ...(row.maleCount > 0
-                          ? [{ value: 'MALE', label: t('userGenders.MALE') }]
-                          : []),
-                        ...(row.femaleCount > 0
-                          ? [{ value: 'FEMALE', label: t('userGenders.FEMALE') }]
-                          : []),
-                      ]}
+                      options={genderChoices.map((value) => ({
+                        value,
+                        label:
+                          value === 'FEMALE'
+                            ? t('placements.genderFemale')
+                            : t('userGenders.MALE'),
+                      }))}
                     />
                   </FormField>
                   <FormField icon={Users} label={t('placements.headcount')} htmlFor="placement-headcount">
@@ -566,21 +622,48 @@ export function PlacementDetailPage() {
                 icon={Building2}
                 label={movingId ? t('placements.toAccommodation') : t('placements.accommodation')}
               >
-                <SearchSelect
-                  value={accommodationId}
-                  placeholder={t('placements.selectAccommodation')}
-                  onChange={setAccommodationId}
-                  options={(availability.data ?? [])
-                    .filter((item) => item.id !== movingItem?.accommodationId)
-                    .map((item) => ({
-                      value: item.id,
-                      label: t('placements.optionRemaining', {
-                        name: item.name,
-                        male: n(item.remainingMale),
-                        female: n(item.remainingFemale),
-                      }),
-                    }))}
-                />
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <SearchSelect
+                      value={accommodationId}
+                      placeholder={t('placements.selectAccommodation')}
+                      onChange={setAccommodationId}
+                      options={(availability.data ?? [])
+                        .filter((item) => item.id !== movingItem?.accommodationId)
+                        .filter((item) => {
+                          if (showAllAccommodations || !selectedGender) return true
+                          return accommodationMatchesGender(item, selectedGender)
+                        })
+                        .map((item) => ({
+                          value: item.id,
+                          label: t('placements.optionRemaining', {
+                            name: item.name,
+                            male: n(item.remainingMale),
+                            female: n(item.remainingFemale),
+                          }),
+                        }))}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant={showAllAccommodations ? 'soft' : 'ghost'}
+                    className="shrink-0"
+                    aria-pressed={showAllAccommodations}
+                    onClick={() => {
+                      const next = !showAllAccommodations
+                      if (!next && accommodationId && selectedGender) {
+                        const picked = availability.data?.find((item) => item.id === accommodationId)
+                        if (picked && !accommodationMatchesGender(picked, selectedGender)) {
+                          setAccommodationId('')
+                        }
+                      }
+                      setShowAllAccommodations(next)
+                    }}
+                  >
+                    <List className="size-4" aria-hidden />
+                    {t('placements.showAllAccommodations')}
+                  </Button>
+                </div>
               </FormField>
               {selected && selectedGender ? (
                 <div className="grid gap-2 sm:grid-cols-3">

@@ -216,6 +216,19 @@ export function SearchSelect({
 
   useEffect(() => {
     if (!open) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      setOpen(false)
+      triggerRef.current?.focus({ preventScroll: true })
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node
       if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return

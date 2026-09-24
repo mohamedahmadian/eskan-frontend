@@ -3,14 +3,23 @@ import {
   useEffect,
   useRef,
   type ButtonHTMLAttributes,
-  type KeyboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type FormHTMLAttributes,
   type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { CopyableDigits } from './CopyableDigits'
 import { cardClassName, FormCardHeader } from './FormLayout'
+import {
+  detailsPathFromEdit,
+  formOwnsShortcut,
+  isInteractiveDblClickTarget,
+  isShortcutExcludedText,
+  revertShortcutChar,
+  shortcutBlockedByOverlay,
+} from './form-shortcuts'
 import { useNavigationHistory } from '../../lib/navigation-history'
 
 export { cardClassName }
@@ -24,9 +33,11 @@ const variants = {
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:opacity-60',
 }
 
-export const formShellClassName = 'mx-auto w-full max-w-2xl'
-export const userFormShellClassName = 'mx-auto w-full max-w-3xl'
-export const listShellClassName = 'mx-auto w-full min-w-0 max-w-6xl'
+const pageShellClassName = 'mx-auto w-full min-w-0 wide:max-w-6xl'
+export const listShellClassName = pageShellClassName
+/** Full content width on ordinary monitors; standard 72rem cap on wide screens. */
+export const formShellClassName = pageShellClassName
+export const userFormShellClassName = pageShellClassName
 
 export function Button({
   variant = 'primary',
@@ -195,6 +206,7 @@ export function PageHeader({
   action,
   backTo,
   icon,
+  stackAction = false,
   className = 'mb-6',
 }: {
   title: string
@@ -203,6 +215,8 @@ export function PageHeader({
   icon: LucideIcon
   /** مسیر بازگشت اگر تاریخچه خالی باشد. `false` آیکون را مخفی می‌کند. */
   backTo?: string | false
+  /** `true`: action under the title on narrow screens. `'always'`: action always on its own row. */
+  stackAction?: boolean | 'always'
   className?: string
 }) {
   const { t } = useTranslation()
@@ -229,6 +243,7 @@ export function PageHeader({
         title={title}
         subtitle={subtitle}
         action={action}
+        stackAction={stackAction}
         leading={backButton}
       />
     </section>
@@ -335,7 +350,9 @@ function shouldDelayFormEnter(form: HTMLFormElement) {
   return Boolean(document.querySelector('[data-quick-tools]'))
 }
 
-export function handleFormEnter(event: KeyboardEvent<HTMLFormElement>) {
+const FORM_KEY_DOUBLE_MS = 500
+
+export function handleFormEnter(event: ReactKeyboardEvent<HTMLFormElement>) {
   if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
   const target = event.target as HTMLElement | null
   if (!target) return
@@ -365,6 +382,7 @@ export function handleFormEnter(event: KeyboardEvent<HTMLFormElement>) {
 
 export function AppForm({
   onKeyDown,
+  onDoubleClick,
   onSubmit,
   children,
   autoFocusFirst,
@@ -375,7 +393,9 @@ export function AppForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null)
   const location = useLocation()
+  const navigate = useNavigate()
   const shouldFocus = autoFocusFirst ?? isCreateFormPath(location.pathname)
+  const shortcutsEnabled = props['data-enter-immediate'] == null
 
   useEffect(() => {
     if (!shouldFocus) return
@@ -384,6 +404,70 @@ export function AppForm({
     const frame = requestAnimationFrame(() => focusFirstFormField(form))
     return () => cancelAnimationFrame(frame)
   }, [shouldFocus, location.pathname])
+
+  useEffect(() => {
+    const form = formRef.current
+    if (!form || !shortcutsEnabled) return
+
+    let lastS = 0
+
+    function onKey(event: KeyboardEvent) {
+      if (event.repeat || event.isComposing || event.defaultPrevented) return
+      if (!formOwnsShortcut(form, event.target)) return
+
+      if (event.key === 'Escape') {
+        if (event.ctrlKey || event.metaKey || event.altKey) return
+        if (shortcutBlockedByOverlay(event.target)) return
+        const cancel = form.querySelector<HTMLButtonElement>('[data-form-cancel]')
+        if (!cancel || cancel.disabled) return
+        event.preventDefault()
+        cancel.click()
+        return
+      }
+
+      if (event.code !== 'KeyS') {
+        if (event.key !== 'Shift') lastS = 0
+        return
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+      if (isShortcutExcludedText(event.target) || shortcutBlockedByOverlay(event.target)) return
+
+      const now = Date.now()
+      if (now - lastS > FORM_KEY_DOUBLE_MS) {
+        lastS = now
+        return
+      }
+      lastS = 0
+      event.preventDefault()
+      const field =
+        event.target instanceof Element
+          ? event.target.closest('input, textarea')
+          : null
+      if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+        revertShortcutChar(field)
+        window.setTimeout(() => {
+          if (form.isConnected) submitIfValid(form)
+        }, 0)
+        return
+      }
+      submitIfValid(form)
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [shortcutsEnabled, location.pathname])
+
+  function handleDoubleClick(event: ReactMouseEvent<HTMLFormElement>) {
+    onDoubleClick?.(event)
+    if (event.defaultPrevented) return
+    const detailsTo = detailsPathFromEdit(location.pathname)
+    if (!detailsTo) return
+    if (isInteractiveDblClickTarget(event.target)) return
+    if (window.getSelection()?.toString()) return
+    event.preventDefault()
+    event.stopPropagation()
+    navigate(detailsTo)
+  }
 
   return (
     <form
@@ -398,6 +482,7 @@ export function AppForm({
         if (event.defaultPrevented) return
         handleFormEnter(event)
       }}
+      onDoubleClick={handleDoubleClick}
     >
       {children}
     </form>
@@ -448,8 +533,37 @@ export function DetailActions({
   extra?: ReactNode
   className?: string
 }) {
+  const actionsRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const actions = actionsRef.current
+    const card =
+      actions?.closest<HTMLElement>('[data-form-card]') ??
+      actions?.closest<HTMLElement>('section, article')
+    if (!card) return
+
+    function onClick(event: MouseEvent) {
+      if (event.defaultPrevented) return
+      if (!(event.target instanceof Element)) return
+      if (event.target.closest('a, button, input, textarea, select, label, form, [data-list-table], [data-no-form-nav]')) {
+        return
+      }
+      navigate(editTo)
+    }
+
+    card.addEventListener('click', onClick)
+    const previousCursor = card.style.cursor
+    card.style.cursor = 'pointer'
+    return () => {
+      card.removeEventListener('click', onClick)
+      card.style.cursor = previousCursor
+    }
+  }, [editTo, navigate])
+
   return (
     <div
+      ref={actionsRef}
       className={`flex flex-wrap items-center gap-3 ${extra ? 'justify-between' : ''} ${className}`}
     >
       <div className="flex flex-wrap gap-3">

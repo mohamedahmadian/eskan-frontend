@@ -637,6 +637,34 @@ export type ManagedUser = {
   caravans?: ManagedCaravan[];
 };
 
+export type PublicProfileCurrentVisit = {
+  year: number;
+  file: {
+    code: string;
+    type: ReservationType;
+    status: ReservationStatus;
+  } | null;
+  caravanName: string | null;
+  caravan: {
+    name: string;
+    managerName: string | null;
+    managerPhone: string | null;
+  } | null;
+  travel: {
+    originCity: (GeoName & { id: string }) | null;
+    departureDate: string | null;
+    arrivalDate: string | null;
+  } | null;
+  stay: {
+    name: string;
+    address: string | null;
+    phone: string | null;
+    managerName: string | null;
+    managerPhone: string | null;
+    mapUrl: string | null;
+  } | null;
+};
+
 export type PublicProfilePilgrimage = {
   id: string;
   year: number;
@@ -679,6 +707,7 @@ export type PublicProfile = {
   caravans: ManagedCaravan[];
   accommodations: PublicProfileAccommodation[];
   pilgrimages: PublicProfilePilgrimage[];
+  currentVisit?: PublicProfileCurrentVisit | null;
 };
 
 export type PublicAccommodation = {
@@ -1069,9 +1098,12 @@ export const emptyStationAmenities: StationAmenities = {
   areaSqm: null,
 };
 
+export type WalkingRouteStageKind = 'STATION' | 'DESTINATION'
+
 export type WalkingRouteStage = StationAmenities & {
   id?: string;
-  stationId: string;
+  kind?: WalkingRouteStageKind;
+  stationId: string | null;
   cityId: string;
   city: GeoName & {
     id: string;
@@ -2142,6 +2174,14 @@ export const reservationTypes = {
 export type ReservationType =
   (typeof reservationTypes)[keyof typeof reservationTypes];
 
+export const reservationArrivalPeriods = {
+  BEFORE_NOON: "BEFORE_NOON",
+  AFTER_NOON: "AFTER_NOON",
+} as const;
+
+export type ReservationArrivalPeriod =
+  (typeof reservationArrivalPeriods)[keyof typeof reservationArrivalPeriods];
+
 export const placementModes = {
   MANUAL: "MANUAL",
   SYSTEM: "SYSTEM",
@@ -2501,6 +2541,7 @@ export type ReservationListItem = {
   stayStartDate: string | null;
   stayEndDate: string | null;
   walkingStartDate: string | null;
+  arrivalPeriod: ReservationArrivalPeriod | null;
   requestsAccommodation: boolean;
   requestsBus: boolean;
   requestsSimCard: boolean;
@@ -2534,6 +2575,7 @@ export type ReservationListItem = {
     id: string;
     name: string;
     managerUserId: string | null;
+    manager?: ReservationPerson | null;
     maleCount?: number;
     femaleCount?: number;
     totalCount?: number;
@@ -2742,6 +2784,7 @@ export type ReceptionSettings = {
   caravanFemaleCapacity: number;
   caravanAutoApprove: boolean;
   caravanAutoApproveLicenses: boolean;
+  caravanMaxPerNationalId: number;
   caravanPlacementMode: PlacementMode;
   caravanIntro: string;
   caravanRules: string;
@@ -2848,6 +2891,7 @@ export type UserHomeCaravanManager = {
 export type UserHomeDashboard = {
   pilgrim: UserHomePilgrim | null;
   caravanManager: UserHomeCaravanManager | null;
+  hasCurrentYearFile?: boolean;
 };
 
 export type ReceptionKind =

@@ -3,6 +3,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Fence,
+  Flag,
   Globe2,
   Hash,
   MapPin,
@@ -109,10 +110,12 @@ export function WalkingRouteForm({
     initial?.originCountries.map((country) => country.id) ?? [],
   )
   const [stages, setStages] = useState<StageDraft[]>(
-    initial?.stages.length
-      ? initial.stages.map((stage) => ({
+    initial?.stages.some((stage) => stage.kind !== 'DESTINATION' && stage.stationId)
+      ? initial.stages
+          .filter((stage) => stage.kind !== 'DESTINATION' && stage.stationId)
+          .map((stage) => ({
           key: stage.id ?? newStageKey(),
-          walkingStationId: stage.stationId,
+          walkingStationId: stage.stationId ?? '',
           distanceToNextKm: stage.distanceToNextKm != null ? String(stage.distanceToNextKm) : '',
           distanceToPreviousKm:
             stage.distanceToPreviousKm != null ? String(stage.distanceToPreviousKm) : '',
@@ -204,7 +207,7 @@ export function WalkingRouteForm({
     return [
       { value: '', label: t('walkingRoutes.selectStation') },
       ...stations
-        .filter((item) => !taken.has(item.id))
+        .filter((item) => item.city.nameFa !== 'مشهد' && !taken.has(item.id))
         .map((item) => ({
           value: item.id,
           label: `${item.name} — ${geoName(item.city)}`,
@@ -490,6 +493,14 @@ export function WalkingRouteForm({
                   </article>
                 )
               })}
+              <article className="space-y-2 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/80 to-white p-4">
+                <FormSectionTitle icon={Flag} className="mb-0">
+                  {t('walkingRoutes.mashhadDestination')}
+                </FormSectionTitle>
+                <p className="text-sm leading-7 text-ink-700">
+                  {t('walkingRoutes.mashhadDestinationHint')}
+                </p>
+              </article>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"

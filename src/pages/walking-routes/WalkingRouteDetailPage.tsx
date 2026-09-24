@@ -2,6 +2,7 @@ import {
   AlignLeft,
   ArrowUpDown,
   Fence,
+  Flag,
   Globe2,
   MapPin,
   MapPinned,
@@ -37,6 +38,7 @@ import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
 import { stageCoordinates, useGeoName } from '../../lib/geo'
+import { isRouteDestination } from './StationInfoCard'
 import type { WalkingRoute } from '../../types/app'
 import { StationNearbyPlaces } from './StationNearbyPlaces'
 import { WalkingRouteStationsModal } from './WalkingRouteStationsModal'
@@ -104,7 +106,9 @@ export function WalkingRouteDetailPage() {
             />
             <FormMetaChip
               icon={Milestone}
-              label={t('walkingRoutes.stageCountChip', { value: n(item.stages.length) })}
+              label={t('walkingRoutes.stageCountChip', {
+                value: n(item.stages.filter((stage) => !isRouteDestination(stage)).length),
+              })}
             />
           </>
         }
@@ -179,6 +183,39 @@ export function WalkingRouteDetailPage() {
             {item.stages.length ? (
               <div className="space-y-3">
                 {item.stages.map((stage) => {
+                  if (isRouteDestination(stage)) {
+                    const coords = stageCoordinates(stage)
+                    return (
+                      <article
+                        key={stage.id ?? 'destination'}
+                        className="space-y-3 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/70 to-white p-4"
+                      >
+                        <FormSectionTitle icon={Flag} className="mb-0">
+                          {t('walkingRoutes.mashhadDestination')}
+                        </FormSectionTitle>
+                        <p className="text-sm leading-7 text-ink-700">
+                          {t('walkingRoutes.mashhadDestinationHint')}
+                        </p>
+                        <FormFactTile
+                          icon={MapPin}
+                          label={t('dashboard.destinationShrine')}
+                          value={name(stage.city)}
+                          tone="teal"
+                        />
+                        {coords ? (
+                          <OsmMapPicker
+                            latitude={String(coords.lat)}
+                            longitude={String(coords.lng)}
+                            onChange={() => undefined}
+                            active={tab === 'stages'}
+                            variant="always"
+                            readOnly
+                            heightClass="h-64"
+                          />
+                        ) : null}
+                      </article>
+                    )
+                  }
                   const title = hasText(stage.name)
                     ? stage.name
                     : `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`

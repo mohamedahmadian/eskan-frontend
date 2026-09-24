@@ -11,11 +11,45 @@ import type {
   Reservation,
   ReservationRoutePlacementStage,
   ReservationStayAccommodation,
+  UserGender,
 } from '../../types/app'
 
 type Translate = (key: string, opts?: Record<string, string>) => string
 
 const emptyValue = '—'
+
+function coordPair(value: string) {
+  const match = value.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/)
+  if (!match) return null
+  return { lat: match[1], lng: match[2] }
+}
+
+export function toNeshanMapLink(raw: string | null | undefined) {
+  const value = raw?.trim() ?? ''
+  if (!value) return ''
+  if (/^https?:\/\//i.test(value)) return value
+
+  const query = value.match(/^neshan:\/\/\?(.+)$/i)?.[1]
+  if (query) {
+    const params = new URLSearchParams(query)
+    const origin = params.get('origin')?.trim() ?? ''
+    const destination = params.get('destination')?.trim() ?? ''
+    const vehicle = params.get('vehicle')?.trim() ?? ''
+    if (coordPair(origin) && coordPair(destination)) {
+      const link = `https://nshn.ir/?origin=${origin}&destination=${destination}`
+      return vehicle ? `${link}&vehicle=${vehicle}` : link
+    }
+    const point =
+      coordPair(destination) ||
+      coordPair(params.get('ll')?.trim() ?? '') ||
+      coordPair(`${params.get('lat') ?? ''},${params.get('lng') ?? ''}`)
+    if (point) return `https://nshn.ir/?lat=${point.lat}&lng=${point.lng}`
+  }
+
+  const pair = coordPair(value)
+  if (pair) return `https://nshn.ir/?lat=${pair.lat}&lng=${pair.lng}`
+  return value
+}
 
 function stayManagerName(accommodation: ReservationStayAccommodation | undefined, year: number) {
   const managers = accommodation?.managers ?? []
@@ -82,24 +116,48 @@ export function buildRoutePlacementSmsBody(stages: ReservationRoutePlacementStag
     .join('\n\n')
 }
 
+function placementSmsGenderTitle(gender: UserGender, t: Translate) {
+  return gender === 'FEMALE' ? t('placements.smsStayFemale') : t('placements.smsStayMale')
+}
+
+function placementPlaceBlock(place: ReservationStayAccommodation, t: Translate) {
+  const lines = [
+    t('placements.smsPlaceName', { name: place.name?.trim() || emptyValue }),
+    t('placements.smsPlaceAddress', { address: place.address?.trim() || emptyValue }),
+    t('placements.smsPlacePhone', { phone: place.phone?.trim() || emptyValue }),
+  ]
+  const neshan = toNeshanMapLink(place.neshanAddress)
+  if (neshan) lines.push(t('placements.smsPlaceNeshan', { neshan }))
+  return lines.join('\n')
+}
+
 export function buildPlacementStaySmsBody(
-  allocations: { accommodation: ReservationStayAccommodation }[],
+  allocations: { gender?: UserGender; accommodation: ReservationStayAccommodation }[],
   t: Translate,
 ) {
+  const sections: string[] = []
+  for (const gender of ['MALE', 'FEMALE'] as const) {
+    const seen = new Set<string>()
+    const blocks: string[] = []
+    for (const item of allocations) {
+      if (item.gender !== gender) continue
+      const place = item.accommodation
+      if (!place?.id || seen.has(place.id)) continue
+      seen.add(place.id)
+      blocks.push(placementPlaceBlock(place, t))
+    }
+    if (!blocks.length) continue
+    sections.push(`${placementSmsGenderTitle(gender, t)}\n${blocks.join('\n\n')}`)
+  }
+  if (sections.length) return sections.join('\n\n')
+
   const seen = new Set<string>()
   const blocks: string[] = []
   for (const item of allocations) {
     const place = item.accommodation
     if (!place?.id || seen.has(place.id)) continue
     seen.add(place.id)
-    const lines = [
-      t('placements.smsPlaceName', { name: place.name?.trim() || emptyValue }),
-      t('placements.smsPlaceAddress', { address: place.address?.trim() || emptyValue }),
-      t('placements.smsPlacePhone', { phone: place.phone?.trim() || emptyValue }),
-    ]
-    const neshan = place.neshanAddress?.trim()
-    if (neshan) lines.push(t('placements.smsPlaceNeshan', { neshan }))
-    blocks.push(lines.join('\n'))
+    blocks.push(placementPlaceBlock(place, t))
   }
   return blocks.join('\n\n')
 }

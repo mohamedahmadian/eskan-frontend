@@ -12,6 +12,7 @@ import {
 } from '../../components/ui/ListControls'
 import { DateEquivalents, DateText, YearEquivalents } from '../../components/ui/DateText'
 import { SearchSelect } from '../../components/ui/SearchSelect'
+import { useAuth } from '../../auth/AuthProvider'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
@@ -24,6 +25,7 @@ import {
 } from '../../types/app'
 import { HeadcountPills } from './HeadcountPills'
 import {
+  canOwnerHardDelete,
   createWizardPath,
   isOwnerCreateDraft,
   listHeadcount,
@@ -42,6 +44,7 @@ const typeOrder: ReservationType[] = [
 
 export function MyReservationsListPage() {
   const { t, i18n } = useTranslation()
+  const { user } = useAuth()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const n = (value: number) => formatNumber(value, locale)
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } =
@@ -260,7 +263,14 @@ export function MyReservationsListPage() {
                             : `/my-reservations/${row.id}`
                         }
                         onDelete={
-                          isOwnerCreateDraft(row) ? () => deleteDraft(row.id) : undefined
+                          canOwnerHardDelete(row, user?.id)
+                            ? () =>
+                                deleteDraft(
+                                  row.id,
+                                  undefined,
+                                  row.status === 'CANCELLED' ? 'cancelled' : 'draft',
+                                )
+                            : undefined
                         }
                       />
                     </div>

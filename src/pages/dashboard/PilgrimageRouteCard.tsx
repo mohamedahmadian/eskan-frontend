@@ -1,7 +1,10 @@
 import {
   ArrowRight,
+  Building2,
+  CalendarDays,
   Check,
   CircleCheck,
+  DoorOpen,
   Eye,
   EyeOff,
   Flag,
@@ -9,10 +12,16 @@ import {
   ListOrdered,
   LocateFixed,
   Map as MapIcon,
+  MapPin,
   MapPinned,
   Navigation,
+  Phone,
   Radar,
   Route,
+  ScrollText,
+  Tent,
+  UserRound,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -22,21 +31,27 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DateText } from '../../components/ui/DateText'
 import { Button } from '../../components/ui/Form'
-import { FormCard, FormEmptyHint } from '../../components/ui/FormLayout'
+import { FormCard, FormEmptyHint, FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
 import { OsmMapPicker, type MapOverlayMarker, type MapOverlays } from '../../components/ui/OsmMapPicker'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
-import { resolveWalkingProgress, stageCoordinates } from '../../lib/geo'
+import { resolveWalkingProgress, stageCoordinates, useGeoName } from '../../lib/geo'
 import type {
   City,
   ManagedUser,
+  Reservation,
+  ReservationListItem,
   ReservationRoutePlacement,
+  ReservationStayAccommodation,
   ReservationTravelHistoryList,
   WalkingRoute,
   WalkingRouteStage,
 } from '../../types/app'
+import { ReservationCodeBadge } from '../reservations/ReservationCodeBadge'
+import { MashhadDestinationPanel } from './MashhadDestinationPanel'
 import {
   StationInfoCard,
+  isRouteDestination,
   stageKey,
   stageTitle,
 } from '../walking-routes/StationInfoCard'
@@ -74,6 +89,175 @@ const statTone = {
     icon: 'bg-ink-700 text-white',
     value: 'text-ink-800',
   },
+}
+
+function LatestFileBrief({ file }: { file: ReservationListItem }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const geoName = useGeoName()
+  const TypeIcon = file.type === 'CARAVAN' ? Tent : file.type === 'GROUP' ? Users : UserRound
+  const partyName = file.caravan?.name ?? file.group?.name ?? null
+  const manager =
+    file.type === 'GROUP'
+      ? file.group?.manager ?? file.caravanManager
+      : file.caravanManager
+  const managerLabel =
+    file.type === 'GROUP' ? t('roles.groupManager') : t('reservations.caravanManager')
+  const empty = '—'
+  const origin = file.originCity ? geoName(file.originCity) : ''
+
+  return (
+    <section
+      aria-label={t('dashboard.latestFile')}
+      className="overflow-hidden rounded-2xl bg-white ring-1 ring-teal-100"
+    >
+      <div className="flex flex-wrap items-center gap-3 border-b border-teal-100/80 bg-gradient-to-e from-teal-50 via-white to-mint-50 px-4 py-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
+          <ScrollText className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-ink-500">{t('dashboard.latestFile')}</p>
+          <ReservationCodeBadge code={file.code} size="sm" />
+        </div>
+        {partyName ? (
+          <p className="min-w-0 max-w-full text-sm font-semibold leading-6 text-ink-900 sm:ms-auto sm:max-w-[16rem] sm:text-end">
+            {partyName}
+          </p>
+        ) : null}
+      </div>
+      <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+        <FormFactTile
+          icon={TypeIcon}
+          label={t('dashboard.latestFileKind')}
+          value={t(`reservations.types.${file.type}`)}
+          tone="teal"
+        />
+        <FormFactTile
+          icon={CalendarDays}
+          label={t('dashboard.latestFileYear')}
+          value={formatNumber(file.year, locale)}
+          tone="mint"
+        />
+        <FormFactTile
+          icon={MapPin}
+          label={t('reservations.originCity')}
+          value={origin || empty}
+          empty={!origin}
+          tone="ink"
+        />
+        <FormFactTile
+          icon={Flag}
+          label={t('dashboard.latestFileArrival')}
+          value={file.stayStartDate ? <DateText value={file.stayStartDate} /> : empty}
+          empty={!file.stayStartDate}
+          tone="teal"
+        />
+        <FormFactTile
+          icon={DoorOpen}
+          label={t('dashboard.latestFileDeparture')}
+          value={file.stayEndDate ? <DateText value={file.stayEndDate} /> : empty}
+          empty={!file.stayEndDate}
+          tone="mint"
+        />
+        {manager ? (
+          <FormFactTile icon={UserRound} label={managerLabel} value={manager.fullName} tone="ink" />
+        ) : null}
+      </div>
+      <StayGlance reservationId={file.id} />
+    </section>
+  )
+}
+
+function stayManager(accommodation: ReservationStayAccommodation | undefined, year: number) {
+  const managers = accommodation?.managers ?? []
+  if (!managers.length) return null
+  const ranked = [...managers].sort((a, b) => {
+    if (a.year === year && b.year !== year) return -1
+    if (b.year === year && a.year !== year) return 1
+    return Number(b.isPrimary) - Number(a.isPrimary)
+  })
+  const user = ranked[0]?.user
+  const name = user?.fullName?.trim() || ''
+  const phone = user?.phone?.trim() || ''
+  if (!name && !phone) return null
+  return { name, phone }
+}
+
+function StayGlance({ reservationId }: { reservationId: string }) {
+  const { t } = useTranslation()
+  const query = useQuery({
+    queryKey: ['reservations', reservationId],
+    queryFn: async () => {
+      const { data } = await api.get<Reservation>(`/reservations/${reservationId}`)
+      return data
+    },
+  })
+  const rows = useMemo(() => {
+    const year = query.data?.year ?? 0
+    const allocations = [...(query.data?.allocations ?? [])].sort((a, b) => {
+      if (a.gender === b.gender) return 0
+      return a.gender === 'MALE' ? -1 : 1
+    })
+    return allocations.map((item) => {
+      const manager = stayManager(item.accommodation, year)
+      const phone = item.accommodation.phone?.trim() || manager?.phone || ''
+      return {
+        id: item.id,
+        gender: item.gender,
+        name: item.accommodation.name,
+        manager: manager?.name || '',
+        phone,
+        address: item.accommodation.address?.trim() || item.accommodation.neshanAddress?.trim() || '',
+      }
+    })
+  }, [query.data])
+
+  if (!rows.length) return null
+  const showGender = rows.some((row) => row.gender === 'MALE') && rows.some((row) => row.gender === 'FEMALE')
+  const empty = '—'
+
+  return (
+    <div className="space-y-3 border-t border-teal-100/80 px-3 py-3 sm:px-4">
+      <FormSectionTitle icon={Building2} className="mb-0">
+        {t('dashboard.accommodationAssigned')}
+      </FormSectionTitle>
+      {rows.map((row) => (
+        <div key={row.id} className="grid gap-2 sm:grid-cols-2">
+          <FormFactTile
+            icon={Building2}
+            label={t('accommodations.name')}
+            value={
+              showGender
+                ? `${t(row.gender === 'MALE' ? 'dashboard.stayRowMale' : 'dashboard.stayRowFemale')} · ${row.name || empty}`
+                : row.name || empty
+            }
+            empty={!row.name}
+            tone="teal"
+          />
+          <FormFactTile
+            icon={UserRound}
+            label={t('accommodations.managerName')}
+            value={row.manager || empty}
+            empty={!row.manager}
+            tone="mint"
+          />
+          <FormFactTile
+            icon={Phone}
+            label={t('accommodations.phone')}
+            copyValue={row.phone || null}
+            tone="ink"
+          />
+          <FormFactTile
+            icon={MapPin}
+            label={t('accommodations.address')}
+            value={row.address || empty}
+            empty={!row.address}
+            tone="teal"
+          />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function CompactStat({
@@ -133,7 +317,11 @@ function useHydratedStages(route: WalkingRoute | undefined) {
   )
   const missingCityIds = useMemo(
     () =>
-      [...new Set(rawStages.filter((stage) => !stageCoordinates(stage)).map((stage) => stage.cityId))],
+      [...new Set(
+        rawStages
+          .filter((stage) => stage.cityId && !isRouteDestination(stage) && !stageCoordinates(stage))
+          .map((stage) => stage.cityId),
+      )],
     [rawStages],
   )
   const cityLookup = useQuery({
@@ -171,9 +359,11 @@ function useHydratedStages(route: WalkingRoute | undefined) {
 export function PilgrimageRouteCard({
   routeId,
   reservationId,
+  file,
 }: {
   routeId: string
   reservationId: string
+  file?: ReservationListItem | null
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -241,8 +431,11 @@ export function PilgrimageRouteCard({
     stages[0] ??
     null
   const n = (value: number) => formatNumber(value, locale)
-  const stationTotal = stages.length
-  const stationPassed = currentIndex < 0 ? 0 : currentIndex
+  const destinationIndex = stages.findIndex((stage) => isRouteDestination(stage))
+  const stationTotal = stages.filter((stage) => !isRouteDestination(stage)).length
+  const stationPassed = stages.filter(
+    (stage, index) => !isRouteDestination(stage) && currentIndex >= 0 && index < currentIndex,
+  ).length
   const stationRemaining = Math.max(0, stationTotal - stationPassed)
   const distanceTotal = routeDistanceKm(routeQuery.data, stages)
   const distanceRemaining = remainingDistanceKm(stages, currentIndex, distanceTotal)
@@ -251,6 +444,7 @@ export function PilgrimageRouteCard({
   const currentLocationName = useMemo(() => {
     const current = currentIndex >= 0 ? stages[currentIndex] : null
     if (current) {
+      if (isRouteDestination(current)) return t('walkingRoutes.mashhadName')
       return stageTitle(
         current,
         locale,
@@ -282,7 +476,11 @@ export function PilgrimageRouteCard({
     setCurrentIndex(progress.index)
   }, [accountQuery.data, locationKey, stages])
 
-  const atLastStation = stationTotal > 0 && currentIndex === stationTotal - 1
+  const arrivedInMashhad = destinationIndex >= 0 && currentIndex === destinationIndex
+  const atLastStation =
+    destinationIndex >= 0
+      ? arrivedInMashhad
+      : stationTotal > 0 && currentIndex === stationTotal - 1
   const hasPassedStations = currentIndex > 0 && !atLastStation
   const hidePassedStations = hasPassedStations && !showPassedStations
   const visibleStages = useMemo(
@@ -339,15 +537,22 @@ export function PilgrimageRouteCard({
       if (!coords) return
       path.push(coords)
       const id = stageKey(stage)
+      const destination = isRouteDestination(stage)
       const numberLabel = formatNumber(stage.stageNumber, locale)
       const fallback = `${t('walkingRoutes.stage')} ${numberLabel}`
       markers.push({
         id,
         lat: coords.lat,
         lng: coords.lng,
-        kind: index < currentIndex ? 'previous' : index === currentIndex ? 'current' : 'station',
-        badge: numberLabel,
-        title: stageTitle(stage, locale, fallback),
+        kind: destination
+          ? 'destination'
+          : index < currentIndex
+            ? 'previous'
+            : index === currentIndex
+              ? 'current'
+              : 'station',
+        badge: destination ? t('walkingRoutes.destinationBadge') : numberLabel,
+        title: destination ? t('walkingRoutes.mashhadDestination') : stageTitle(stage, locale, fallback),
       })
       if (index >= remainingStart) fitPoints.push(coords)
     })
@@ -366,6 +571,7 @@ export function PilgrimageRouteCard({
   }
 
   function hereAction(stage: WalkingRouteStage) {
+    if (isRouteDestination(stage)) return null
     const fallbackName = (item: WalkingRouteStage) =>
       stageTitle(item, locale, `${t('walkingRoutes.stage')} ${formatNumber(item.stageNumber, locale)}`)
     const current = currentIndex >= 0 ? stages[currentIndex] : null
@@ -393,8 +599,61 @@ export function PilgrimageRouteCard({
     )
   }
 
+  function arrivedInMashhadAction(stage: WalkingRouteStage) {
+    const atDestination = currentIndex >= 0 && currentIndex === destinationIndex
+    const label = savingHere
+      ? t('dashboard.iAmHereSaving')
+      : atDestination
+        ? t('dashboard.arrivedInMashhadCurrent')
+        : t('dashboard.arrivedInMashhad')
+    return (
+      <div className="flex justify-center">
+        <Button
+          type="button"
+          variant="soft"
+          className={atDestination || savingHere ? undefined : 'arrived-mashhad-glow'}
+          disabled={savingHere}
+          onClick={() => void saveArrivedInMashhad(stage)}
+        >
+          <LocateFixed className="size-4" aria-hidden />
+          {label}
+        </Button>
+      </div>
+    )
+  }
+
+  async function saveArrivedInMashhad(stage: WalkingRouteStage) {
+    if (savingHere || !isRouteDestination(stage)) return
+    setSavingHere(true)
+    try {
+      const coords = stageCoordinates(stage)
+      await api.patch('/account/location', {
+        provinceId: stage.city.provinceId || null,
+        cityId: stage.cityId || null,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
+        notes: accountQuery.data?.locationNotes ?? null,
+        reservationId,
+        walkingStationId: null,
+        source: 'MANUAL',
+      })
+      const index = stages.findIndex((item) => stageKey(item) === stageKey(stage))
+      if (index >= 0) setCurrentIndex(index)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['account'] }),
+        queryClient.invalidateQueries({ queryKey: ['account', 'location-history'] }),
+        queryClient.invalidateQueries({ queryKey: ['reservations', reservationId, 'travel-history'] }),
+      ])
+      toast.success(t('location.saved'))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+    } finally {
+      setSavingHere(false)
+    }
+  }
+
   async function saveHereAtStation(stage: WalkingRouteStage) {
-    if (savingHere) return
+    if (savingHere || isRouteDestination(stage) || !stage.cityId) return
     setSavingHere(true)
     try {
       const coords = stageCoordinates(stage)
@@ -428,18 +687,19 @@ export function PilgrimageRouteCard({
       icon={Route}
       title={t('dashboard.pilgrimageRouteTitle')}
       subtitle={routeQuery.data?.name}
+      stackAction
       action={
-        <div className="flex flex-col items-end gap-1.5">
-          <Link to="/my-location/history">
-            <Button type="button" variant="ghost">
-              <Radar className="size-4" aria-hidden />
-              {t('location.openTrail')}
+        <div className="flex w-full flex-col items-stretch gap-1.5 sm:items-end">
+          <Link to="/my-location/history" className="self-end">
+            <Button type="button" variant="ghost" className="max-w-full">
+              <Radar className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{t('location.openTrail')}</span>
             </Button>
           </Link>
           {currentLocationName ? (
-            <span className="inline-flex max-w-[16rem] items-center gap-1.5 rounded-full bg-gradient-to-e from-mint-50 to-white px-2.5 py-1 text-teal-800 shadow-[0_6px_14px_rgba(46,189,182,0.18)] ring-1 ring-teal-100">
-              <MapPinned className="size-3.5 shrink-0 text-teal-600" aria-hidden />
-              <span className="min-w-0 truncate text-[11px] font-medium">
+            <span className="inline-flex w-full max-w-full items-start gap-1.5 self-end rounded-2xl bg-gradient-to-e from-mint-50 to-white px-2.5 py-1.5 text-teal-800 shadow-[0_6px_14px_rgba(46,189,182,0.18)] ring-1 ring-teal-100 sm:w-auto sm:max-w-xs sm:items-center sm:rounded-full sm:py-1">
+              <MapPinned className="mt-0.5 size-3.5 shrink-0 text-teal-600 sm:mt-0" aria-hidden />
+              <span className="min-w-0 text-[11px] font-medium leading-5 sm:truncate">
                 {t('dashboard.currentLocation')}:{' '}
                 <span className="text-sm font-bold">{currentLocationName}</span>
               </span>
@@ -449,7 +709,12 @@ export function PilgrimageRouteCard({
       }
     >
       <div className="space-y-4 p-5 sm:p-6">
-        {stationTotal > 0 ? (
+        {file ? (
+          <div className="pb-3">
+            <LatestFileBrief file={file} />
+          </div>
+        ) : null}
+        {stationTotal > 0 && !arrivedInMashhad ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <CompactStat
               icon={MapPinned}
@@ -552,13 +817,16 @@ export function PilgrimageRouteCard({
               </div>
             ) : null}
             <div ref={stepsTrackRef} dir="ltr" className="overflow-x-auto pb-1">
-              <ol className="flex min-w-min items-start px-1 py-2">
+              <ol className="flex min-w-min items-start px-2 py-3">
                 {visibleStages.map(({ stage, index }, visibleIndex) => {
-                  const title = stageTitle(
-                    stage,
-                    locale,
-                    `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`,
-                  )
+                  const destination = isRouteDestination(stage)
+                  const title = destination
+                    ? t('walkingRoutes.mashhadDestination')
+                    : stageTitle(
+                        stage,
+                        locale,
+                        `${t('walkingRoutes.stage')} ${n(stage.stageNumber)}`,
+                      )
                   const passed = currentIndex >= 0 && index < currentIndex
                   const current = index === currentIndex
                   const previewed = preview != null && stageKey(stage) === stageKey(preview)
@@ -600,10 +868,10 @@ export function PilgrimageRouteCard({
                                 ? 'size-12 text-sm sm:size-14 sm:text-base'
                                 : 'size-8 text-[11px] sm:size-9'
                             } ${
-                              passed
-                                ? `bg-gradient-to-b from-[#34d399] to-[#16a34a] text-white shadow-[0_8px_16px_rgba(22,163,74,0.28)] ring-2 ${previewed ? 'ring-[#166534] ring-offset-2' : 'ring-[#bbf7d0]'}`
-                                : current
-                                  ? `bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.32)] ring-2 ${previewed ? 'ring-teal-700 ring-offset-2' : 'ring-teal-100'}`
+                              current
+                                ? 'station-current-glow bg-teal-500 text-white'
+                                : passed
+                                  ? `bg-gradient-to-b from-[#34d399] to-[#16a34a] text-white shadow-[0_8px_16px_rgba(22,163,74,0.28)] ring-2 ${previewed ? 'ring-[#166534] ring-offset-2' : 'ring-[#bbf7d0]'}`
                                   : `bg-white text-teal-800 ring-2 hover:ring-teal-300 ${previewed ? 'ring-teal-500 ring-offset-2' : 'ring-teal-100'}`
                             }`}
                           >
@@ -616,7 +884,9 @@ export function PilgrimageRouteCard({
                                 aria-hidden
                               />
                             ) : null}
-                            <span className="relative">{n(stage.stageNumber)}</span>
+                            <span className="relative">
+                              {destination ? <Flag className={enlarge ? 'size-5' : 'size-3.5'} aria-hidden /> : n(stage.stageNumber)}
+                            </span>
                           </span>
                           <span
                             className={`mt-1.5 line-clamp-2 text-center font-medium leading-tight ${
@@ -666,7 +936,14 @@ export function PilgrimageRouteCard({
         ) : (
           <FormEmptyHint>{t('walkingRoutes.stationsNoMap')}</FormEmptyHint>
         )}
-        {preview && stages.length > 0 && !routeQuery.isLoading && !routeQuery.isError ? (
+        {preview && isRouteDestination(preview) && !routeQuery.isLoading && !routeQuery.isError ? (
+          <div className="pt-3">
+            <MashhadDestinationPanel
+              reservationId={reservationId}
+              arrivalAction={arrivedInMashhadAction(preview)}
+            />
+          </div>
+        ) : preview && stages.length > 0 && !routeQuery.isLoading && !routeQuery.isError ? (
           <StationInfoCard
             stage={preview}
             locale={locale}

@@ -12,7 +12,6 @@ import {
   PageHeader,
   cardClassName,
   formShellClassName,
-  listShellClassName,
 } from '../../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
@@ -243,7 +242,7 @@ export function CaravanImportPage() {
   }
 
   return (
-    <div className={listShellClassName}>
+    <div className={formShellClassName}>
       <PageHeader
         icon={Tent}
         title={t('caravans.import')} subtitle={t('caravans.importSubtitle')} />

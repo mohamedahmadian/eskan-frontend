@@ -13,12 +13,17 @@ import {
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
+import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Caravan, Paginated } from '../../types/app'
+import { useCaravanCreateQuota } from './caravan-create-quota'
 
 export function MyCaravansListPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const nameOf = useGeoName()
+  const quota = useCaravanCreateQuota()
+  const canCreate = quota.data?.allowed !== false
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const query = useQuery({
@@ -40,14 +45,24 @@ export function MyCaravansListPage() {
         title={t('menus.myCaravans')}
         subtitle={t('myCaravans.subtitle')}
         action={
-          <Link to="/my-caravans/new">
-            <Button>
-              <Plus className="size-4" />
-              {t('caravans.create')}
-            </Button>
-          </Link>
+          canCreate ? (
+            <Link to="/my-caravans/new">
+              <Button>
+                <Plus className="size-4" />
+                {t('caravans.create')}
+              </Button>
+            </Link>
+          ) : null
         }
       />
+      {quota.data && !quota.data.allowed ? (
+        <p className="rounded-[22px] border border-teal-100 bg-white px-4 py-3 text-sm leading-7 text-ink-700 shadow-[0_8px_20px_rgba(20,40,40,0.04)]">
+          {t('caravans.maxPerNationalIdReached', {
+            max: formatNumber(quota.data.max, locale),
+            year: formatNumber(quota.data.year, locale),
+          })}
+        </p>
+      ) : null}
       <SearchBar
         term={term}
         onTermChange={setTerm}

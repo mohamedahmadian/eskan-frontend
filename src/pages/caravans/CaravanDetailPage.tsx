@@ -23,7 +23,7 @@ import {
   Venus,
   type LucideIcon,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -36,7 +36,7 @@ import {
   DetailActions,
   PageHeader,
   cardClassName,
-  formShellClassName,
+  listShellClassName,
 } from '../../components/ui/Form'
 import { FormCardHeaderDecor } from '../../components/ui/FormLayout'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
@@ -47,6 +47,7 @@ import { useGeoName } from '../../lib/geo'
 import { isAdmin } from '../../lib/roles'
 import type { Caravan } from '../../types/app'
 import { caravanContactRoles, type CaravanContactRole } from './caravanContacts'
+import { CaravanTabNav, type CaravanTab } from './CaravanTabs'
 import { CaravanYearAlert } from './CaravanYearAlert'
 
 type Tone = 'teal' | 'mint' | 'ink'
@@ -85,6 +86,7 @@ export function CaravanDetailPage() {
   const { confirmDelete } = useConfirmDelete()
   const fromMine = useLocation().pathname.startsWith('/my-caravans')
   const listPath = fromMine ? '/my-caravans' : '/caravans'
+  const [tab, setTab] = useState<CaravanTab>('basic')
   const query = useQuery({
     queryKey: ['caravan', id],
     enabled: Boolean(id),
@@ -111,7 +113,7 @@ export function CaravanDetailPage() {
     ).length ?? 0
 
   return (
-    <div className={formShellClassName}>
+    <div className={listShellClassName}>
       <PageHeader
         icon={Tent}
         title={t('caravans.details')}
@@ -157,6 +159,10 @@ export function CaravanDetailPage() {
         </header>
 
         <div className="space-y-6 p-5 sm:p-6">
+          <CaravanTabNav tab={tab} onChange={setTab} />
+
+          {tab === 'basic' ? (
+          <>
           <section>
             <SectionTitle icon={Users}>{t('caravans.sectionCounts')}</SectionTitle>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -255,7 +261,10 @@ export function CaravanDetailPage() {
               <EmptyHint>{t('caravans.managerEmpty')}</EmptyHint>
             )}
           </section>
+          </>
+          ) : null}
 
+          {tab === 'years' ? (
           <section>
             <SectionTitle icon={Calendar}>{t('caravans.sectionYears')}</SectionTitle>
             {caravan.years?.length ? (
@@ -298,7 +307,9 @@ export function CaravanDetailPage() {
               <EmptyHint>{t('caravans.noActivityYears')}</EmptyHint>
             )}
           </section>
+          ) : null}
 
+          {tab === 'contacts' ? (
           <section>
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
               <SectionTitle icon={UserCog} className="mb-0">
@@ -357,7 +368,9 @@ export function CaravanDetailPage() {
               })}
             </div>
           </section>
+          ) : null}
 
+          {tab === 'license' ? (
           <section>
             <SectionTitle icon={BadgeCheck}>{t('caravans.sectionLicense')}</SectionTitle>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
@@ -394,7 +407,9 @@ export function CaravanDetailPage() {
               />
             </div>
           </section>
+          ) : null}
 
+          {tab === 'extra' ? (
           <section>
             <SectionTitle icon={Building2}>{t('caravans.sectionOffice')}</SectionTitle>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
@@ -439,7 +454,9 @@ export function CaravanDetailPage() {
               ) : null}
             </div>
           </section>
+          ) : null}
 
+          {tab === 'social' ? (
           <section>
             <SectionTitle icon={Share2}>{t('caravans.sectionSocial')}</SectionTitle>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
@@ -473,6 +490,7 @@ export function CaravanDetailPage() {
               />
             </div>
           </section>
+          ) : null}
         </div>
 
         <div className="border-t border-line px-5 py-4 sm:px-6">
