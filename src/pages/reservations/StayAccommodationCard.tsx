@@ -96,6 +96,7 @@ export function StayAccommodationCard({
   stackedIndex,
   stackedTotal,
   headerAction,
+  footerAside,
   chips,
   note,
   highlighted,
@@ -110,6 +111,7 @@ export function StayAccommodationCard({
   stackedIndex?: number
   stackedTotal?: number
   headerAction?: ReactNode
+  footerAside?: ReactNode
   chips?: ReactNode
   note?: string | null
   highlighted?: boolean
@@ -233,18 +235,21 @@ export function StayAccommodationCard({
           empty={!manager?.phone}
           tone={tone === 'teal' ? 'mint' : 'teal'}
         />
-        {canOpenDetails ? (
-          <div className="sm:col-span-2">
-            <Button
-              type="button"
-              variant="soft"
-              onClick={() => setDetailsOpen(true)}
-              aria-haspopup="dialog"
-              aria-expanded={detailsOpen}
-            >
-              <Eye className="size-4" aria-hidden />
-              {t('placements.viewStayDetails')}
-            </Button>
+        {canOpenDetails || footerAside ? (
+          <div className="flex items-center gap-2 sm:col-span-2">
+            {canOpenDetails ? (
+              <Button
+                type="button"
+                variant="soft"
+                onClick={() => setDetailsOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={detailsOpen}
+              >
+                <Eye className="size-4" aria-hidden />
+                {t('placements.viewStayDetails')}
+              </Button>
+            ) : null}
+            {footerAside ? <div className="ms-auto">{footerAside}</div> : null}
           </div>
         ) : null}
       </div>

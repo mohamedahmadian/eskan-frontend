@@ -82,14 +82,38 @@ export function buildRoutePlacementSmsBody(stages: ReservationRoutePlacementStag
     .join('\n\n')
 }
 
+export function buildPlacementStaySmsBody(
+  allocations: { accommodation: ReservationStayAccommodation }[],
+  t: Translate,
+) {
+  const seen = new Set<string>()
+  const blocks: string[] = []
+  for (const item of allocations) {
+    const place = item.accommodation
+    if (!place?.id || seen.has(place.id)) continue
+    seen.add(place.id)
+    const lines = [
+      t('placements.smsPlaceName', { name: place.name?.trim() || emptyValue }),
+      t('placements.smsPlaceAddress', { address: place.address?.trim() || emptyValue }),
+      t('placements.smsPlacePhone', { phone: place.phone?.trim() || emptyValue }),
+    ]
+    const neshan = place.neshanAddress?.trim()
+    if (neshan) lines.push(t('placements.smsPlaceNeshan', { neshan }))
+    blocks.push(lines.join('\n'))
+  }
+  return blocks.join('\n\n')
+}
+
 export function ReservationPlacementSmsButton({
   title,
   phone,
   body,
+  label,
 }: {
   title: string
   phone: string
   body: string
+  label?: string
 }) {
   const { t } = useTranslation()
   const sms = useSendSms()
@@ -131,7 +155,7 @@ export function ReservationPlacementSmsButton({
     <div className="flex flex-wrap items-center gap-2">
       <Button type="button" variant="soft" onClick={openSms}>
         <MessageSquare className="size-4" aria-hidden />
-        {t('reservations.sendSms')}
+        {label ?? t('reservations.sendSms')}
       </Button>
       {open ? (
         <SmsPreviewModal

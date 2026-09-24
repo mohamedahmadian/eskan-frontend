@@ -55,6 +55,10 @@ import {
   type UserGender,
 } from '../../types/app'
 import { ReservationCodeBadge } from '../reservations/ReservationCodeBadge'
+import {
+  ReservationPlacementSmsButton,
+  buildPlacementStaySmsBody,
+} from '../reservations/ReservationPlacementSms'
 import { StayAccommodationCard } from '../reservations/StayAccommodationCard'
 
 const sourceIcon: Record<AllocationSource, LucideIcon> = {
@@ -450,6 +454,14 @@ export function PlacementDetailPage() {
                       formatCount={n}
                       highlighted={item.id === movingId}
                       note={item.overrideNote}
+                      footerAside={
+                        <ReservationPlacementSmsButton
+                          title={t('placements.smsPreviewTitle')}
+                          label={t('placements.sendSms')}
+                          phone={row.caravanManager?.phone?.trim() || ''}
+                          body={buildPlacementStaySmsBody([item], t)}
+                        />
+                      }
                       chips={
                         <>
                           <FormMetaChip
