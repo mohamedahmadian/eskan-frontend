@@ -135,6 +135,7 @@ export function PersianDateField({
   minDate,
   maxDate,
   showHijri,
+  required,
 }: {
   id?: string
   value?: string
@@ -142,6 +143,7 @@ export function PersianDateField({
   minDate?: string
   maxDate?: string
   showHijri?: boolean
+  required?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -155,7 +157,7 @@ export function PersianDateField({
   const max = maxDate ? fromIsoDateOnly(maxDate)?.convert(pickerCalendar) : undefined
 
   return (
-    <div className="w-full space-y-1.5">
+    <div className="relative w-full space-y-1.5">
       <DatePicker
         value={selected}
         minDate={min}
@@ -232,6 +234,16 @@ export function PersianDateField({
           onChange(toIsoDateOnly(date))
         }}
       />
+      {required ? (
+        <input
+          tabIndex={-1}
+          aria-hidden
+          className="pointer-events-none absolute size-px opacity-0"
+          value={value ?? ''}
+          onChange={() => undefined}
+          required
+        />
+      ) : null}
       {showHijri ? <DateEquivalents value={value} /> : null}
     </div>
   )
