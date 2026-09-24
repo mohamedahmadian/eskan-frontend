@@ -216,7 +216,7 @@ export function SearchSelect({
 
   useEffect(() => {
     if (!open) return
-    function onKey(event: KeyboardEvent) {
+    function onKey(event: globalThis.KeyboardEvent) {
       if (event.key !== 'Escape') return
       event.preventDefault()
       event.stopPropagation()

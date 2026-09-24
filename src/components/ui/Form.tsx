@@ -386,16 +386,18 @@ export function AppForm({
   onSubmit,
   children,
   autoFocusFirst,
+  'data-enter-immediate': enterImmediate,
   ...props
 }: FormHTMLAttributes<HTMLFormElement> & {
   /** Focus the first field on mount. Defaults to true on `/…/new` create routes. */
   autoFocusFirst?: boolean
+  'data-enter-immediate'?: string
 }) {
   const formRef = useRef<HTMLFormElement>(null)
   const location = useLocation()
   const navigate = useNavigate()
   const shouldFocus = autoFocusFirst ?? isCreateFormPath(location.pathname)
-  const shortcutsEnabled = props['data-enter-immediate'] == null
+  const shortcutsEnabled = enterImmediate == null
 
   useEffect(() => {
     if (!shouldFocus) return
@@ -408,17 +410,18 @@ export function AppForm({
   useEffect(() => {
     const form = formRef.current
     if (!form || !shortcutsEnabled) return
+    const activeForm = form
 
     let lastS = 0
 
     function onKey(event: KeyboardEvent) {
       if (event.repeat || event.isComposing || event.defaultPrevented) return
-      if (!formOwnsShortcut(form, event.target)) return
+      if (!formOwnsShortcut(activeForm, event.target)) return
 
       if (event.key === 'Escape') {
         if (event.ctrlKey || event.metaKey || event.altKey) return
         if (shortcutBlockedByOverlay(event.target)) return
-        const cancel = form.querySelector<HTMLButtonElement>('[data-form-cancel]')
+        const cancel = activeForm.querySelector<HTMLButtonElement>('[data-form-cancel]')
         if (!cancel || cancel.disabled) return
         event.preventDefault()
         cancel.click()
@@ -446,11 +449,11 @@ export function AppForm({
       if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
         revertShortcutChar(field)
         window.setTimeout(() => {
-          if (form.isConnected) submitIfValid(form)
+          if (activeForm.isConnected) submitIfValid(activeForm)
         }, 0)
         return
       }
-      submitIfValid(form)
+      submitIfValid(activeForm)
     }
 
     window.addEventListener('keydown', onKey)
@@ -473,6 +476,7 @@ export function AppForm({
     <form
       {...props}
       ref={formRef}
+      data-enter-immediate={enterImmediate}
       onSubmit={(event) => {
         event.preventDefault()
         onSubmit?.(event)
