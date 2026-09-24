@@ -29,7 +29,6 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useNavigationType, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuickTools } from '../../components/layout/quick-tools-context'
-import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { DateText } from '../../components/ui/DateText'
 import { AppForm, Button, cardClassName, LoadingState } from '../../components/ui/Form'
 import {
