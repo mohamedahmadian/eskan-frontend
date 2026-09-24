@@ -2,12 +2,14 @@ import {
   Building2,
   CalendarRange,
   ExternalLink,
+  Eye,
   Footprints,
   History,
   IdCard,
   HandHeart,
   MapPin,
   Mars,
+  Navigation,
   Phone,
   Plus,
   Search,
@@ -27,6 +29,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useNavigationType, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuickTools } from '../../components/layout/quick-tools-context'
+import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { DateText } from '../../components/ui/DateText'
 import { AppForm, Button, cardClassName, LoadingState } from '../../components/ui/Form'
 import {
@@ -50,6 +53,7 @@ import type {
   ReceptionSearchResult,
   ReceptionSearchScope,
   ReceptionVisit,
+  ReceptionVisitStay,
 } from '../../types/app'
 import { ReceptionKindChips } from './ReceptionKindChips'
 import { ReceptionMatchModal } from './ReceptionMatchModal'
@@ -58,6 +62,11 @@ import {
   ReservationStatusBadge,
   ReservationTypeBadge,
 } from '../reservations/ReservationStatusBadge'
+import {
+  StayAccommodationDetailsModal,
+  StayTextOrLink,
+  stayManager,
+} from '../reservations/StayAccommodationCard'
 import {
   isReservationCodeQuery,
   normalizeReservationCode,
@@ -780,6 +789,116 @@ function PersonPhoto({ photoId, name }: { photoId: string | null; name: string }
   )
 }
 
+function VisitStays({
+  stays,
+  year,
+  locale,
+}: {
+  stays: ReceptionVisitStay[]
+  year: number
+  locale: string
+}) {
+  const { t } = useTranslation()
+  const [openId, setOpenId] = useState<string | null>(null)
+  const open = stays.find((item) => item.id === openId) ?? null
+  const rows: Array<ReceptionVisitStay | null> = stays.length ? stays : [null]
+
+  return (
+    <>
+      <div className="mt-2 space-y-1.5">
+        {rows.map((stay) => (
+          <div
+            key={stay?.id ?? 'empty'}
+            className="relative z-[2] flex items-center gap-2 rounded-2xl border border-teal-100 bg-teal-50/60 p-2"
+          >
+            <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+              {stay ? (
+                <VisitStayFields stay={stay} />
+              ) : (
+                <FormFactTile
+                  compact
+                  icon={Building2}
+                  label={t('reception.stay')}
+                  value="—"
+                  empty
+                  tone="teal"
+                />
+              )}
+            </div>
+            {stay ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="shrink-0"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setOpenId(stay.id)
+                }}
+              >
+                <Eye className="size-4" aria-hidden />
+                {t('reception.stayDetails')}
+              </Button>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {open ? (
+        <StayAccommodationDetailsModal
+          place={open.accommodation}
+          name={open.accommodation.name}
+          tone={open.gender === 'FEMALE' ? 'mint' : 'teal'}
+          manager={stayManager(open.accommodation, year)}
+          locale={locale}
+          onClose={() => setOpenId(null)}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function VisitStayFields({ stay }: { stay: ReceptionVisitStay }) {
+  const { t } = useTranslation()
+  const place = stay.accommodation
+  const neshan = place.neshanAddress?.trim() ?? ''
+  return (
+    <>
+      <FormFactTile
+        compact
+        icon={Building2}
+        label={t('accommodations.name')}
+        value={place.name}
+        tone="teal"
+      />
+      <FormFactTile
+        compact
+        icon={MapPin}
+        label={t('accommodations.address')}
+        value={place.address?.trim() || '—'}
+        empty={!place.address?.trim()}
+        tone="mint"
+      />
+      <FormFactTile
+        compact
+        icon={Phone}
+        label={t('accommodations.phone')}
+        copyValue={place.phone}
+        empty={!place.phone?.trim()}
+        tone="teal"
+      />
+      {neshan ? (
+        <FormFactTile
+          compact
+          icon={Navigation}
+          label={t('accommodations.neshanAddress')}
+          value={<StayTextOrLink value={neshan} />}
+          tone="mint"
+        />
+      ) : null}
+    </>
+  )
+}
+
 function VisitList({
   visits,
   emptyText,
@@ -995,6 +1114,7 @@ function VisitList({
                 ) : null}
               </div>
             ) : null}
+            <VisitStays stays={visit.stays ?? []} year={visit.year} locale={locale} />
           </li>
         )
       })}

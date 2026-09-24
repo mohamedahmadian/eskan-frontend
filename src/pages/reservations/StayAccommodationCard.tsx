@@ -40,7 +40,7 @@ const genderTone: Record<UserGender, StayTone> = {
   FEMALE: 'mint',
 }
 
-function stayManager(
+export function stayManager(
   accommodation: ReservationStayAccommodation | undefined,
   year: number,
 ) {
@@ -316,7 +316,7 @@ function StayHeaderIdentity({
   )
 }
 
-function StayAccommodationDetailsModal({
+export function StayAccommodationDetailsModal({
   place,
   name,
   tone,

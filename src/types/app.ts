@@ -2920,6 +2920,13 @@ export type ReceptionVisit = {
   groupId: string | null;
   caravanManagerName: string | null;
   caravanManagerPhone: string | null;
+  stays: ReceptionVisitStay[];
+};
+
+export type ReceptionVisitStay = {
+  id: string;
+  gender: UserGender;
+  accommodation: ReservationStayAccommodation;
 };
 
 export type ReceptionCaravanSummary = {
