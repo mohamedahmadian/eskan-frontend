@@ -1,3 +1,4 @@
+import { MapPin } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -87,7 +88,9 @@ export function PlaceCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('places.create')} subtitle={t('places.createSubtitle')} />
+      <PageHeader
+        icon={MapPin}
+        title={t('places.create')} subtitle={t('places.createSubtitle')} />
       <PlaceForm
         initial={initial}
         provinces={provinces.data}

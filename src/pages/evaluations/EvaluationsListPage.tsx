@@ -1,4 +1,4 @@
-import { Filter } from 'lucide-react'
+import { Filter, ClipboardList } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -84,6 +84,7 @@ export function EvaluationsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={ClipboardList}
         title={t('menus.evaluationsList')}
         subtitle={t('evaluations.list.subtitle')}
         action={

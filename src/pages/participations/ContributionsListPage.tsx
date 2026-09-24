@@ -1,4 +1,4 @@
-import { Filter, Plus } from 'lucide-react'
+import { Filter, Plus, HeartHandshake } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -136,6 +136,7 @@ export function ContributionsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={HeartHandshake}
         title={t('menus.contributions')}
         subtitle={t('contributions.subtitle')}
         action={

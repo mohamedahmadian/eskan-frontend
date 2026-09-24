@@ -1,4 +1,4 @@
-import { CalendarDays, Filter, Milestone, Route, Tent, UserRound } from 'lucide-react'
+import { CalendarDays, Filter, Milestone, Route, Tent, UserRound, Footprints } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
@@ -58,7 +58,9 @@ export function StationReservationHistoryPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('stationHistory.title')} subtitle={t('stationHistory.subtitle')} />
+      <PageHeader
+        icon={Footprints}
+        title={t('stationHistory.title')} subtitle={t('stationHistory.subtitle')} />
       <SearchBar
         inputId="station-history-search"
         term={term}

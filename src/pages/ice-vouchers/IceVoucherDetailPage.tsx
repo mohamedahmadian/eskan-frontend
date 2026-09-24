@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Check, Download, MessageSquare, X } from 'lucide-react'
+import { Check, Download, MessageSquare, X,
+Snowflake,
+} from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -95,7 +97,9 @@ export function IceVoucherDetailPage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t('iceVouchers.details')} subtitle={t('iceVouchers.detailsSubtitle')} />
+      <PageHeader
+        icon={Snowflake}
+        title={t('iceVouchers.details')} subtitle={t('iceVouchers.detailsSubtitle')} />
       <IceVoucherCard ref={cardRef} voucher={item} qrUrl={qrUrl} />
       {item.status === 'PENDING' ? (
         <div className="mt-6 flex flex-wrap gap-3">

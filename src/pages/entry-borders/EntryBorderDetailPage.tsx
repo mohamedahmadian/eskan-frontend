@@ -44,6 +44,7 @@ export function EntryBorderDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Fence}
         title={t('entryBorders.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Fence} />}
       />

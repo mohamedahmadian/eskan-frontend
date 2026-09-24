@@ -33,6 +33,7 @@ export function HonoraryServantEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('honoraryServants.edit')}
         subtitle={<EntityNameSubtitle name={query.data.user.fullName} icon={HandHeart} />}
       />

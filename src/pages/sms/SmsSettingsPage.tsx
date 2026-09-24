@@ -1,4 +1,4 @@
-import { Hash, KeyRound, Link2, UserRound } from 'lucide-react'
+import { Hash, KeyRound, Link2, UserRound, Settings } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -64,7 +64,9 @@ export function SmsSettingsPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('sms.settingsTitle')} subtitle={t('sms.settingsSubtitle')} />
+      <PageHeader
+        icon={Settings}
+        title={t('sms.settingsTitle')} subtitle={t('sms.settingsSubtitle')} />
       <AppForm
         onSubmit={onSubmit}
         className={`space-y-4 p-6 ${cardClassName}`}

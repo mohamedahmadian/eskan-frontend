@@ -1,3 +1,4 @@
+import { Tent } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -53,7 +54,9 @@ export function CaravanCreatePage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t('caravans.create')} subtitle={t('caravans.createSubtitle')} />
+      <PageHeader
+        icon={Tent}
+        title={t('caravans.create')} subtitle={t('caravans.createSubtitle')} />
       <CaravanForm
         initialCountryId={selectedCountryId}
         initialProvinceId={provinceId}

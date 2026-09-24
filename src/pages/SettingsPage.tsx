@@ -1,4 +1,4 @@
-import { Globe } from 'lucide-react'
+import { Globe, Settings } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -37,7 +37,9 @@ export function SettingsPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
+      <PageHeader
+        icon={Settings}
+        title={t('settings.title')} subtitle={t('settings.subtitle')} />
       <FormCard icon={Globe} title={t('settings.title')} subtitle={t('settings.subtitle')}>
         <AppForm onSubmit={onSubmit} className={formCardBodyClassName}>
           <FormField icon={Globe} label={t('settings.locale')} htmlFor="locale">

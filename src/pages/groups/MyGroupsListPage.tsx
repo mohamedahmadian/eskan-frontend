@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -38,6 +38,7 @@ export function MyGroupsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Users}
         title={t('menus.myGroups')}
         subtitle={t('myGroups.subtitle')}
         action={

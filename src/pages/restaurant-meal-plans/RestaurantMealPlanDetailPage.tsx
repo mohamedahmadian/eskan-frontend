@@ -54,6 +54,7 @@ export function RestaurantMealPlanDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={CalendarRange}
         title={t('restaurantMealPlans.details')}
         subtitle={<EntityNameSubtitle name={item.food.name} icon={CalendarRange} />}
       />

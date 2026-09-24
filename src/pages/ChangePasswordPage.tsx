@@ -48,7 +48,9 @@ export function ChangePasswordPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('auth.changePassword')} subtitle={t('auth.changePasswordSubtitle')} />
+      <PageHeader
+        icon={KeyRound}
+        title={t('auth.changePassword')} subtitle={t('auth.changePasswordSubtitle')} />
       <FormCard
         icon={KeyRound}
         title={t('auth.changePassword')}

@@ -78,7 +78,9 @@ export function MyEvaluationsPage() {
   if (!evaluatorTypes.length) {
     return (
       <div className={formShellClassName}>
-        <PageHeader title={t('menus.myEvaluations')} subtitle={t('evaluations.mine.subtitle')} />
+        <PageHeader
+          icon={ClipboardList}
+          title={t('menus.myEvaluations')} subtitle={t('evaluations.mine.subtitle')} />
         <p className="rounded-2xl border border-line bg-white p-6 text-sm text-ink-600">
           {t('evaluations.mine.noRole')}
         </p>
@@ -125,7 +127,9 @@ export function MyEvaluationsPage() {
 
   return (
     <div className={`${listShellClassName} space-y-6`}>
-      <PageHeader title={t('menus.myEvaluations')} subtitle={t('evaluations.mine.subtitle')} />
+      <PageHeader
+        icon={ClipboardList}
+        title={t('menus.myEvaluations')} subtitle={t('evaluations.mine.subtitle')} />
 
       <FormCard
         icon={Plus}

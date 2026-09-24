@@ -1,4 +1,4 @@
-import { Send } from 'lucide-react'
+import { Send, Building } from 'lucide-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -96,6 +96,7 @@ function UnitLiaisonsListPage({
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Building}
         title={t(menuKey)}
         subtitle={t(`${i18nKey}.subtitle`)}
         action={

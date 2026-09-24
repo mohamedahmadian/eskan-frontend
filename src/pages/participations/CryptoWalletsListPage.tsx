@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Wallet } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -48,6 +48,7 @@ export function CryptoWalletsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Wallet}
         title={t('menus.cryptoWallets')}
         subtitle={t('cryptoWallets.subtitle')}
         action={

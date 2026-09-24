@@ -168,6 +168,7 @@ export function OrgUnitLiaisonsPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Building}
         title={t('orgUnits.manageLiaisons')}
         subtitle={<EntityNameSubtitle name={unit.data.name} icon={Building} />}
         backTo={`/headquarters/units/${unit.data.id}`}

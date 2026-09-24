@@ -40,6 +40,7 @@ export function HeadquartersAnnouncementDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('headquartersAnnouncements.details')}
         subtitle={<EntityNameSubtitle name={item.title} icon={Megaphone} />}
       />

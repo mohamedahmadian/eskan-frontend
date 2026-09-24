@@ -1,3 +1,4 @@
+import { Phone } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -29,6 +30,7 @@ export function HeadquartersPhoneCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Phone}
         title={t('headquartersPhones.create')}
         subtitle={t('headquartersPhones.createSubtitle')}
       />

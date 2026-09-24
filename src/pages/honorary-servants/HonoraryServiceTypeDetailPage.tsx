@@ -36,6 +36,7 @@ export function HonoraryServiceTypeDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HeartHandshake}
         title={t('honoraryServiceTypes.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={HeartHandshake} />}
       />

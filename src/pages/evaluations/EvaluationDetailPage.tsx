@@ -108,6 +108,7 @@ export function EvaluationDetailPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <PageHeader
+            icon={ClipboardList}
             className="mb-0"
             title={t('evaluations.details')}
             subtitle={<EntityNameSubtitle name={title} icon={ClipboardList} />}

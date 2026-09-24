@@ -10,6 +10,7 @@ import {
   Tent,
   Trash2,
   UserRound,
+  Ticket,
 } from "lucide-react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -265,6 +266,7 @@ export function ReservationsAdminListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Ticket}
         title={t("menus.reservationsAdmin")}
         subtitle={t("reservations.adminSubtitle")}
         className="mb-3 sm:gap-2"

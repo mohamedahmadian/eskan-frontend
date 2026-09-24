@@ -37,6 +37,7 @@ export function GoodsUnitDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Scale}
         title={t('goodsUnits.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Scale} />}
       />

@@ -1,3 +1,4 @@
+import { PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -28,7 +29,9 @@ export function MyLoanDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('accommodationLoans.details')} subtitle={t('myLoans.detailsSubtitle')} />
+      <PageHeader
+        icon={PackageOpen}
+        title={t('accommodationLoans.details')} subtitle={t('myLoans.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('suppliers.name')} value={item.supplierItem.supplier.name} />

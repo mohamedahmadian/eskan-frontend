@@ -70,6 +70,7 @@ export function PlaceEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('places.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Landmark} />}
       />

@@ -49,6 +49,7 @@ export function HeadquartersInfoListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('menus.headquartersInfo')}
         subtitle={t('headquartersInfo.subtitle')}
         action={

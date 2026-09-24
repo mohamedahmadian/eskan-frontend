@@ -1,4 +1,4 @@
-import { Filter, Plus } from 'lucide-react'
+import { Filter, Plus, DoorOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -105,6 +105,7 @@ export function EntryBordersListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={DoorOpen}
         title={t('menus.entryBorders')}
         subtitle={t('entryBorders.subtitle')}
         action={

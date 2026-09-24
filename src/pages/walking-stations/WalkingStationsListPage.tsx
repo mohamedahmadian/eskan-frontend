@@ -1,4 +1,4 @@
-import { Filter, Mars, Plus, Venus } from 'lucide-react'
+import { Filter, Mars, Plus, Venus, Footprints } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -88,6 +88,7 @@ export function WalkingStationsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Footprints}
         title={t('menus.walkingStations')}
         subtitle={t('walkingStations.subtitle')}
         action={

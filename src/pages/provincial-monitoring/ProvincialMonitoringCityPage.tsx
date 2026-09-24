@@ -76,6 +76,7 @@ export function ProvincialMonitoringCityPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={MapPin}
         title={t('provincialMonitoring.cityDetails')}
         subtitle={<EntityNameSubtitle name={geoName(data.city, locale)} icon={MapPin} />}
         backTo={`/provincial-monitoring/provinces/${data.city.province.id}?${yearQuery(year)}`}

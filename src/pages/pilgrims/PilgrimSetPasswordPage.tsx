@@ -89,6 +89,7 @@ export function PilgrimSetPasswordPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={UserRound}
         title={t('pilgrims.setPassword')}
         subtitle={<EntityNameSubtitle name={pilgrim.fullName} icon={UserRound} />}
       />

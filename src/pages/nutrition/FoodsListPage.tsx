@@ -48,6 +48,7 @@ export function FoodsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={UtensilsCrossed}
         title={t('menus.foodManagement')}
         subtitle={t('foods.subtitle')}
         action={

@@ -28,6 +28,7 @@ export function BankAccountEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('bankAccounts.edit')}
         subtitle={<EntityNameSubtitle name={item.data.bankName} icon={Landmark} />}
       />

@@ -112,6 +112,7 @@ export function ProvincialMonitoringMapPage() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={ChartColumn}
         title={t('menus.provincialMonitoring')}
         subtitle={t('provincialMonitoring.subtitle')}
       />

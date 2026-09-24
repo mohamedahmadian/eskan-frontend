@@ -150,6 +150,7 @@ export function WalkingStationDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Milestone}
         title={t('walkingStations.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Milestone} />}
       />

@@ -1,3 +1,4 @@
+import { PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -53,7 +54,9 @@ export function ItemQuotaVoucherEditPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('itemQuotaVouchers.edit')} subtitle={t('itemQuotaVouchers.editSubtitle')} />
+      <PageHeader
+        icon={PackageOpen}
+        title={t('itemQuotaVouchers.edit')} subtitle={t('itemQuotaVouchers.editSubtitle')} />
       <ItemQuotaVoucherForm
         quota={quota.data}
         managers={managers.data}

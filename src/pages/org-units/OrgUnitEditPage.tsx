@@ -33,6 +33,7 @@ export function OrgUnitEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Building}
         title={t('orgUnits.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Building} />}
       />

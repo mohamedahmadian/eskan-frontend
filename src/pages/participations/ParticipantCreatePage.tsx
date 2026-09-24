@@ -1,3 +1,4 @@
+import { HeartHandshake } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -28,6 +29,7 @@ export function ParticipantCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HeartHandshake}
         title={t('campaignParticipants.create')}
         subtitle={t('campaignParticipants.createSubtitle')}
       />

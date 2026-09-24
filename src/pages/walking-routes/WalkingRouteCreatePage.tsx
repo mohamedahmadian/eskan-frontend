@@ -1,3 +1,4 @@
+import { Route } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -35,7 +36,9 @@ export function WalkingRouteCreatePage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t('walkingRoutes.create')} subtitle={t('walkingRoutes.createSubtitle')} />
+      <PageHeader
+        icon={Route}
+        title={t('walkingRoutes.create')} subtitle={t('walkingRoutes.createSubtitle')} />
       <WalkingRouteForm
         countries={countries.data}
         entryBorders={entryBorders.data}

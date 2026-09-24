@@ -71,6 +71,7 @@ export function HeadquartersAnnouncementsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('menus.headquartersAnnouncements')}
         subtitle={t('headquartersAnnouncements.subtitle')}
         action={

@@ -15,6 +15,7 @@ import {
   Shield,
   Trash2,
   Users,
+  Settings,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -490,7 +491,9 @@ export function ReceptionSettingsPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('menus.receptionSettings')} subtitle={t('receptionSettings.subtitle')} />
+      <PageHeader
+        icon={Settings}
+        title={t('menus.receptionSettings')} subtitle={t('receptionSettings.subtitle')} />
       <AppForm
         onSubmit={submit}
         onInvalid={(event) => {

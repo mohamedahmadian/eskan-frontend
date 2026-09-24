@@ -1,4 +1,4 @@
-import { CalendarDays, Plus } from 'lucide-react'
+import { CalendarDays, Plus, Package } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
@@ -66,6 +66,7 @@ export function SupplierItemsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Package}
         title={t('supplierItems.title')}
         subtitle={supplier.data?.name ?? t('supplierItems.subtitle')}
         action={

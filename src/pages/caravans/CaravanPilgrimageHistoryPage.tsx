@@ -129,6 +129,7 @@ export function CaravanPilgrimageHistoryPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Tent}
         title={t('caravanPilgrimageHistory.title')}
         subtitle={<EntityNameSubtitle name={caravan.name} icon={Tent} />}
       />

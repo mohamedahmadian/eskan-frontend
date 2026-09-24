@@ -50,6 +50,7 @@ export function BenefactorEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('benefactors.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={HandHeart} />}
       />

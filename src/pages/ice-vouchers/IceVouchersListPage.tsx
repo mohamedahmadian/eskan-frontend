@@ -1,4 +1,4 @@
-import { Banknote, CalendarDays, Filter, MessageSquare, Plus } from 'lucide-react'
+import { Banknote, CalendarDays, Filter, MessageSquare, Plus, Snowflake } from 'lucide-react'
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -120,6 +120,7 @@ export function IceVouchersListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Snowflake}
         title={t('menus.iceVouchers')}
         subtitle={t('iceVouchers.subtitle')}
         action={

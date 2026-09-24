@@ -244,7 +244,9 @@ export function CaravanImportPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('caravans.import')} subtitle={t('caravans.importSubtitle')} />
+      <PageHeader
+        icon={Tent}
+        title={t('caravans.import')} subtitle={t('caravans.importSubtitle')} />
 
       <div className={formShellClassName}>
         <FormCard

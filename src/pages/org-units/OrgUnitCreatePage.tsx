@@ -1,3 +1,4 @@
+import { Building } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,7 +12,9 @@ export function OrgUnitCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('orgUnits.create')} subtitle={t('orgUnits.createSubtitle')} />
+      <PageHeader
+        icon={Building}
+        title={t('orgUnits.create')} subtitle={t('orgUnits.createSubtitle')} />
       <OrgUnitForm
         onSubmit={async (payload) => {
           await api.post('/org-units', payload)

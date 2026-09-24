@@ -1,4 +1,4 @@
-import { CalendarDays, Coins, Snowflake } from 'lucide-react'
+import { CalendarDays, Coins, Snowflake, Settings } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -74,7 +74,9 @@ export function LogisticsSettingsPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('menus.logisticsSettings')} subtitle={t('logisticsSettings.subtitle')} />
+      <PageHeader
+        icon={Settings}
+        title={t('menus.logisticsSettings')} subtitle={t('logisticsSettings.subtitle')} />
       <FormCard
         icon={Snowflake}
         title={t('logisticsSettings.iceSection')}

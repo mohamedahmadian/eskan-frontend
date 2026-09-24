@@ -1,4 +1,4 @@
-import { Plus, Upload } from 'lucide-react'
+import { Plus, Upload, Tent } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -38,6 +38,7 @@ export function CaravansListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Tent}
         title={t('menus.caravansList')}
         subtitle={t('caravans.subtitle')}
         action={

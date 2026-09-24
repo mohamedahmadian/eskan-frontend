@@ -1,4 +1,4 @@
-import { Download, Trash2 } from 'lucide-react'
+import { Download, Trash2, Snowflake } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -37,7 +37,9 @@ export function MyIceVoucherDetailPage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t('iceVouchers.details')} subtitle={t('myIceVouchers.detailsSubtitle')} />
+      <PageHeader
+        icon={Snowflake}
+        title={t('iceVouchers.details')} subtitle={t('myIceVouchers.detailsSubtitle')} />
       <IceVoucherCard ref={cardRef} voucher={item} qrUrl={qrUrl} />
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {item.status === 'PENDING' ? (

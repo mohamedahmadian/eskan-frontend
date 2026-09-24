@@ -4,6 +4,7 @@ import {
   HandCoins,
   HandHeart,
   Package,
+  ChartColumn,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -119,6 +120,7 @@ export function ContributionGoodsReportPage() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={ChartColumn}
         title={t('menus.contributionsGoodsReport')}
         subtitle={goodsName ?? t('contributionGoodsReports.subtitle')}
       />

@@ -1,4 +1,4 @@
-import { FileText, Phone } from 'lucide-react'
+import { FileText, Phone, MessageSquare } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -61,7 +61,9 @@ export function SmsSendPage() {
 
   return (
     <div className={`${formShellClassName} space-y-8`}>
-      <PageHeader title={t('sms.sendTitle')} subtitle={t('sms.sendSubtitle')} />
+      <PageHeader
+        icon={MessageSquare}
+        title={t('sms.sendTitle')} subtitle={t('sms.sendSubtitle')} />
 
       <FormCard
         icon={Phone}

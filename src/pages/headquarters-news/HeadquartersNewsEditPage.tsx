@@ -33,6 +33,7 @@ export function HeadquartersNewsEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Newspaper}
         title={t('headquartersNews.edit')}
         subtitle={<EntityNameSubtitle name={query.data.title} icon={Newspaper} />}
       />

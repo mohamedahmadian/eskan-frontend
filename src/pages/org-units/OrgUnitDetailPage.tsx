@@ -80,6 +80,7 @@ export function OrgUnitDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Building}
         title={t('orgUnits.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Building} />}
       />

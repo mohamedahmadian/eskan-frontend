@@ -1,4 +1,4 @@
-import { CalendarDays, Filter, HeartHandshake } from 'lucide-react'
+import { CalendarDays, Filter, HeartHandshake, Languages } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
@@ -66,7 +66,9 @@ export function TranslatorReservationsListPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('menus.translatorReservations')} />
+      <PageHeader
+        icon={Languages}
+        title={t('menus.translatorReservations')} />
       <SearchBar
         inputId="translator-reservations-search"
         term={term}

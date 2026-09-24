@@ -77,7 +77,9 @@ export function PilgrimCardPage() {
 
   return (
     <div className={`${userFormShellClassName} pilgrim-card-page`}>
-      <PageHeader title={t('pilgrims.card')} subtitle={t('pilgrims.cardSubtitle')} />
+      <PageHeader
+        icon={IdCard}
+        title={t('pilgrims.card')} subtitle={t('pilgrims.cardSubtitle')} />
 
       <div className={`mb-4 flex flex-wrap gap-2 p-3 print:hidden ${cardClassName}`}>
         <button

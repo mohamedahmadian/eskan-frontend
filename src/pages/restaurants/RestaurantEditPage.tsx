@@ -28,6 +28,7 @@ export function RestaurantEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={CookingPot}
         title={t('restaurants.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={CookingPot} />}
       />

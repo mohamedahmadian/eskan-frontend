@@ -64,6 +64,7 @@ export function SupportRequestDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('supportRequests.details')}
         subtitle={<EntityNameSubtitle name={item.subject} icon={HandHeart} />}
       />

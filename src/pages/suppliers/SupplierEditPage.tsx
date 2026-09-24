@@ -1,3 +1,4 @@
+import { Truck } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -26,7 +27,9 @@ export function SupplierEditPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('suppliers.edit')} subtitle={t('suppliers.editSubtitle')} />
+      <PageHeader
+        icon={Truck}
+        title={t('suppliers.edit')} subtitle={t('suppliers.editSubtitle')} />
       <SupplierForm
         initial={item.data}
         onSubmit={async (payload) => {

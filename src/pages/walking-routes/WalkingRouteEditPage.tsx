@@ -45,6 +45,7 @@ export function WalkingRouteEditPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Route}
         title={t('walkingRoutes.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Route} />}
       />

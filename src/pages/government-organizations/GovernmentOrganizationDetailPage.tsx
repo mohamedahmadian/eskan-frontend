@@ -46,6 +46,7 @@ export function GovernmentOrganizationDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Building}
         title={t('governmentOrganizations.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Building} />}
       />

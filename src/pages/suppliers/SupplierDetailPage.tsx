@@ -13,7 +13,9 @@ import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import type { Supplier } from '../../types/app'
 import { DetailRow } from '../geo/GeoShared'
-import { Package } from 'lucide-react'
+import { Package,
+  Truck,
+} from 'lucide-react'
 
 export function SupplierDetailPage() {
   const { t, i18n } = useTranslation()
@@ -37,7 +39,9 @@ export function SupplierDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('suppliers.details')} subtitle={t('suppliers.detailsSubtitle')} />
+      <PageHeader
+        icon={Truck}
+        title={t('suppliers.details')} subtitle={t('suppliers.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('suppliers.name')} value={item.name} />

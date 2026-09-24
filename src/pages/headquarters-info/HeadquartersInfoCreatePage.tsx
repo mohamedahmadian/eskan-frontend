@@ -1,3 +1,4 @@
+import { Landmark } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -38,6 +39,7 @@ export function HeadquartersInfoCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('headquartersInfo.create')}
         subtitle={t('headquartersInfo.createSubtitle')}
       />

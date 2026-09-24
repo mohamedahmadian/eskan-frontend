@@ -1,3 +1,4 @@
+import { Scale } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,7 +12,9 @@ export function GoodsUnitCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('goodsUnits.create')} subtitle={t('goodsUnits.createSubtitle')} />
+      <PageHeader
+        icon={Scale}
+        title={t('goodsUnits.create')} subtitle={t('goodsUnits.createSubtitle')} />
       <GoodsUnitForm
         onSubmit={async (payload) => {
           await api.post('/goods-units', payload)

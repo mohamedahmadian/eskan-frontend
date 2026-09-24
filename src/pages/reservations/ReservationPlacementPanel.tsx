@@ -33,6 +33,7 @@ import {
   formCardBodyClassName,
 } from "../../components/ui/FormLayout";
 import { formatNumber } from "../../lib/datetime";
+import { isAdmin, isPilgrim } from "../../lib/roles";
 import type {
   Reservation,
   ReservationAllocationSummary,
@@ -120,6 +121,7 @@ export function ReservationPlacementPanel({
   const manageTo = hasMenuAccess("/placements", user?.modules ?? [])
     ? `/placements/${reservation.id}`
     : null;
+  const showPlacementSms = !isPilgrim(user) || isAdmin(user) || Boolean(manageTo);
 
   const maleAllocations = allocations.filter((item) => item.gender === "MALE");
   const femaleAllocations = allocations.filter(
@@ -145,11 +147,13 @@ export function ReservationPlacementPanel({
       icon={LayoutGrid}
       title={t("reservations.placementPanelTitle")}
       action={
-        <ReservationPlacementSmsButton
-          title={t("reservations.smsPreviewTitle")}
-          phone={reservationSmsPhone(reservation)}
-          body={buildMashhadPlacementSmsBody(reservation, locale, t)}
-        />
+        showPlacementSms ? (
+          <ReservationPlacementSmsButton
+            title={t("reservations.smsPreviewTitle")}
+            phone={reservationSmsPhone(reservation)}
+            body={buildMashhadPlacementSmsBody(reservation, locale, t)}
+          />
+        ) : undefined
       }
       chips={
         <span
@@ -188,24 +192,23 @@ export function ReservationPlacementPanel({
                 </Link>
               ) : null}
             </div>
-            <div
-              className={`flex items-start gap-3 rounded-2xl border px-4 py-3.5 shadow-[0_8px_20px_rgba(20,40,40,0.05)] ${
-                partial
-                  ? "border-mint-100 bg-gradient-to-e from-mint-50 via-white to-teal-50/40"
-                  : "border-teal-100 bg-gradient-to-e from-teal-50 via-white to-mint-50/40"
-              }`}
-            >
-              <span
-                className={`mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl text-white ${
-                  partial
-                    ? "bg-mint-500 shadow-[0_8px_16px_rgba(63,214,190),0.24)]"
-                    : "bg-teal-500 shadow-[0_8px_16px_rgba(46,189,182,0.28)]"
-                }`}
-              >
-                <Info className="size-4" aria-hidden />
-              </span>
-              <p className="pt-1.5 text-sm leading-7 text-ink-700">{hint}</p>
-            </div>
+            {partial ? (
+              <div className="flex items-start gap-3 rounded-2xl border border-mint-100 bg-gradient-to-e from-mint-50 via-white to-teal-50/40 px-4 py-3.5 shadow-[0_8px_20px_rgba(20,40,40,0.05)]">
+                <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl bg-mint-500 text-white shadow-[0_8px_16px_rgba(63,214,190,0.24)]">
+                  <Info className="size-4" aria-hidden />
+                </span>
+                <p className="pt-1.5 text-sm leading-7 text-ink-700">{hint}</p>
+              </div>
+            ) : (
+              <div className="rounded-[22px] border border-teal-200 bg-gradient-to-b from-teal-50 via-white to-mint-50 px-5 py-6 text-center shadow-[0_12px_28px_rgba(46,189,182,0.14)]">
+                <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
+                  <Hourglass className="size-5" aria-hidden />
+                </span>
+                <p className="mx-auto mt-3 max-w-xl text-base font-bold leading-8 text-ink-900">
+                  {hint}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -226,29 +229,35 @@ export function ReservationPlacementPanel({
             manageTo={manageTo}
           />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            <GenderStayColumn
-              gender="MALE"
-              title={t("reservations.placementStayMale")}
-              needed={counts.male}
-              accommodated={reservation.accommodatedMaleCount ?? 0}
-              allocations={maleAllocations}
-              year={reservation.year}
-              locale={locale}
-              formatCount={n}
-              manageTo={manageTo}
-            />
-            <GenderStayColumn
-              gender="FEMALE"
-              title={t("reservations.placementStayFemale")}
-              needed={counts.female}
-              accommodated={reservation.accommodatedFemaleCount ?? 0}
-              allocations={femaleAllocations}
-              year={reservation.year}
-              locale={locale}
-              formatCount={n}
-              manageTo={manageTo}
-            />
+          <div
+            className={`grid gap-4 ${counts.male > 0 && counts.female > 0 ? "xl:grid-cols-2" : ""}`}
+          >
+            {counts.male > 0 ? (
+              <GenderStayColumn
+                gender="MALE"
+                title={t("reservations.placementStayMale")}
+                needed={counts.male}
+                accommodated={reservation.accommodatedMaleCount ?? 0}
+                allocations={maleAllocations}
+                year={reservation.year}
+                locale={locale}
+                formatCount={n}
+                manageTo={manageTo}
+              />
+            ) : null}
+            {counts.female > 0 ? (
+              <GenderStayColumn
+                gender="FEMALE"
+                title={t("reservations.placementStayFemale")}
+                needed={counts.female}
+                accommodated={reservation.accommodatedFemaleCount ?? 0}
+                allocations={femaleAllocations}
+                year={reservation.year}
+                locale={locale}
+                formatCount={n}
+                manageTo={manageTo}
+              />
+            ) : null}
           </div>
         )}
       </div>
@@ -421,80 +430,92 @@ function StayCard({
         </div>
       </header>
 
-      <div className="grid gap-2 p-4 sm:grid-cols-2 sm:gap-3 sm:p-5">
-        <FormFactTile
-          icon={Building2}
-          label={t("accommodations.name")}
-          value={place?.name || ""}
-          empty={!place?.name}
-          tone={tone}
-          className="sm:col-span-2"
-        />
-        <FormFactTile
-          icon={MapPin}
-          label={t("accommodations.address")}
-          value={<TextOrLink value={place?.address} />}
-          empty={!place?.address?.trim()}
-          tone={tone === "teal" ? "mint" : "teal"}
-          className="sm:col-span-2"
-        />
-        <FormFactTile
-          icon={Navigation}
-          label={t("accommodations.neshanAddress")}
-          value={<TextOrLink value={place?.neshanAddress} />}
-          empty={!place?.neshanAddress?.trim()}
-          tone={tone}
-          className="sm:col-span-2"
-        />
-        <FormFactTile
-          icon={Route}
-          label={t("reservations.placementDistanceToShrine")}
-          value={distance}
-          empty={!distance}
-          tone={tone === "teal" ? "mint" : "teal"}
-        />
-        <FormFactTile
-          icon={UserRoundCog}
-          label={t("reservations.placementManager")}
-          value={manager?.name || ""}
-          empty={!manager?.name}
-          tone={tone}
-        />
-        <FormFactTile
-          icon={Smartphone}
-          label={t("reservations.placementManagerPhone")}
-          value={
-            manager?.phone ? (
-              <CopyableDigits value={manager.phone} empty="" />
-            ) : (
-              ""
-            )
-          }
-          empty={!manager?.phone}
-          tone={tone === "teal" ? "mint" : "teal"}
-        />
-        <FormFactTile
-          icon={Phone}
-          label={t("reservations.placementPhone")}
-          value={
-            place?.phone ? <CopyableDigits value={place.phone} empty="" /> : ""
-          }
-          empty={!place?.phone}
-          tone={tone}
-        />
-        <SocialTile
-          eitaa={place?.eitaa}
-          bale={place?.bale}
-          otherSocial={place?.otherSocial}
-          tone={tone}
-        />
-      </div>
+      {place?.name?.trim() ||
+      place?.address?.trim() ||
+      place?.neshanAddress?.trim() ||
+      distance ||
+      manager?.name ||
+      manager?.phone ||
+      place?.phone?.trim() ||
+      place?.eitaa?.trim() ||
+      place?.bale?.trim() ||
+      place?.otherSocial?.trim() ? (
+        <div className="grid gap-2 p-4 sm:grid-cols-2 sm:gap-3 sm:p-5">
+          {place?.name?.trim() ? (
+            <FormFactTile
+              icon={Building2}
+              label={t("accommodations.name")}
+              value={place.name}
+              tone={tone}
+              className="sm:col-span-2"
+            />
+          ) : null}
+          {place?.address?.trim() ? (
+            <FormFactTile
+              icon={MapPin}
+              label={t("accommodations.address")}
+              value={<TextOrLink value={place.address} />}
+              tone={tone === "teal" ? "mint" : "teal"}
+              className="sm:col-span-2"
+            />
+          ) : null}
+          {place?.neshanAddress?.trim() ? (
+            <FormFactTile
+              icon={Navigation}
+              label={t("accommodations.neshanAddress")}
+              value={<TextOrLink value={place.neshanAddress} />}
+              tone={tone}
+              className="sm:col-span-2"
+            />
+          ) : null}
+          {distance ? (
+            <FormFactTile
+              icon={Route}
+              label={t("reservations.placementDistanceToShrine")}
+              value={distance}
+              tone={tone === "teal" ? "mint" : "teal"}
+            />
+          ) : null}
+          {manager?.name ? (
+            <FormFactTile
+              icon={UserRoundCog}
+              label={t("reservations.placementManager")}
+              value={manager.name}
+              tone={tone}
+            />
+          ) : null}
+          {manager?.phone ? (
+            <FormFactTile
+              icon={Smartphone}
+              label={t("reservations.placementManagerPhone")}
+              value={<CopyableDigits value={manager.phone} empty="" />}
+              tone={tone === "teal" ? "mint" : "teal"}
+            />
+          ) : null}
+          {place?.phone?.trim() ? (
+            <FormFactTile
+              icon={Phone}
+              label={t("reservations.placementPhone")}
+              value={<CopyableDigits value={place.phone} empty="" />}
+              tone={tone}
+            />
+          ) : null}
+          <SocialTile
+            eitaa={place?.eitaa}
+            bale={place?.bale}
+            otherSocial={place?.otherSocial}
+            tone={tone}
+          />
+        </div>
+      ) : null}
 
-      <StayMap
-        latitude={hasPoint ? String(lat) : ""}
-        longitude={hasPoint ? String(lng) : ""}
-        pendingLabel={t("reservations.placementMapPending")}
-      />
+      {hasPoint ? (
+        <StayMap
+          latitude={String(lat)}
+          longitude={String(lng)}
+          pendingLabel={t("reservations.placementMapPending")}
+        />
+      ) : null}
     </article>
   );
 }
@@ -553,7 +574,9 @@ function SocialTile({
     { label: t("accommodations.eitaa"), value: eitaa },
     { label: t("accommodations.bale"), value: bale },
     { label: t("accommodations.otherSocial"), value: otherSocial },
-  ];
+  ].filter((row) => row.value?.trim());
+
+  if (!rows.length) return null;
 
   return (
     <article
@@ -573,11 +596,7 @@ function SocialTile({
             <span className="mt-0.5 text-[11px] font-medium text-ink-500">
               {row.label}:
             </span>
-            <span
-              className={`min-w-0 flex-1 font-semibold ${
-                row.value?.trim() ? "text-ink-900" : "text-ink-400"
-              }`}
-            >
+            <span className="min-w-0 flex-1 font-semibold text-ink-900">
               <TextOrLink value={row.value} />
             </span>
           </li>

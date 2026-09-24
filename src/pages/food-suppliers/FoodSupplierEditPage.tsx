@@ -1,3 +1,4 @@
+import { Store } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -48,7 +49,9 @@ export function FoodSupplierEditPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('foodSuppliers.edit')} subtitle={t('foodSuppliers.editSubtitle')} />
+      <PageHeader
+        icon={Store}
+        title={t('foodSuppliers.edit')} subtitle={t('foodSuppliers.editSubtitle')} />
       <FoodSupplierForm
         initial={item.data}
         provinces={provinces.data}

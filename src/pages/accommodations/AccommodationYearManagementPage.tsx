@@ -663,6 +663,7 @@ export function AccommodationYearManagementPage() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={Building2}
         title={t('menus.accommodationYearManagement')}
         subtitle={t('accommodationYearManagement.subtitle')}
       />

@@ -43,6 +43,7 @@ export function EvaluationQuestionEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={FileText}
         title={t('evaluations.questions.edit')}
         subtitle={<EntityNameSubtitle name={query.data.title} icon={FileText} />}
       />

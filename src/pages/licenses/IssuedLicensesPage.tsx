@@ -1,4 +1,4 @@
-import { Ban, CalendarDays, CheckCircle2, Filter, Plus, Tent, UserRound } from 'lucide-react'
+import { Ban, CalendarDays, CheckCircle2, Filter, Plus, Tent, UserRound, FileBadge2 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -146,6 +146,7 @@ export function IssuedLicensesPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={FileBadge2}
         title={t('menus.issuedLicenses')}
         subtitle={t('licenses.issuedSubtitle')}
         action={

@@ -1,4 +1,4 @@
-import { Banknote, CalendarDays, Coins, ScrollText, Snowflake, Wallet, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarDays, Coins, ScrollText, Snowflake, Wallet, type LucideIcon, ChartColumn } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -74,7 +74,9 @@ export function IceVoucherReportPage() {
 
   return (
     <div className={`${listShellClassName} space-y-6`}>
-      <PageHeader title={t('menus.iceVoucherReport')} subtitle={t('iceVoucherReports.subtitle')} />
+      <PageHeader
+        icon={ChartColumn}
+        title={t('menus.iceVoucherReport')} subtitle={t('iceVoucherReports.subtitle')} />
 
       <article className={`${cardClassName} p-4 sm:p-5`}>
         <div className="max-w-xs">

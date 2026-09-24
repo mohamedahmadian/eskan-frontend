@@ -1,3 +1,4 @@
+import { HandHeart } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -15,6 +16,7 @@ export function HonoraryApplyPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('honoraryServants.create')}
         subtitle={t('honoraryServants.applySubtitle')}
         backTo="/honorary-history"

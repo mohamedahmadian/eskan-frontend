@@ -1,4 +1,4 @@
-import { ListOrdered, Map as MapIcon, Trash2 } from 'lucide-react'
+import { ListOrdered, Map as MapIcon, Trash2, History } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -110,6 +110,7 @@ export function LocationHistoryPage({
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={History}
         title={t(titleKey)}
         subtitle={t('location.historySubtitle')}
         action={

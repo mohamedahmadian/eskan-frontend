@@ -75,6 +75,7 @@ export function PilgrimSendSmsPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={UserRound}
         title={t('pilgrims.sendSms')}
         subtitle={<EntityNameSubtitle name={pilgrim.fullName} icon={UserRound} />}
       />

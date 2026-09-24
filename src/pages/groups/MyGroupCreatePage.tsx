@@ -1,3 +1,4 @@
+import { Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -55,7 +56,9 @@ export function MyGroupCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('groups.create')} subtitle={t('myGroups.createSubtitle')} />
+      <PageHeader
+        icon={Users}
+        title={t('groups.create')} subtitle={t('myGroups.createSubtitle')} />
       <GroupForm
         initialCountryId={selectedCountryId}
         initialProvinceId={provinceId}

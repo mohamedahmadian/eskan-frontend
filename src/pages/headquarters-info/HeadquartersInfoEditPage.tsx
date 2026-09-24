@@ -35,6 +35,7 @@ export function HeadquartersInfoEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('headquartersInfo.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Landmark} />}
       />

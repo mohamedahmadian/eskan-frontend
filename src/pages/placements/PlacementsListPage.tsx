@@ -1,4 +1,4 @@
-import { CalendarDays, Download, Filter, LayoutGrid, LogOut, Sparkles } from 'lucide-react'
+import { CalendarDays, Download, Filter, LayoutGrid, LogOut, Sparkles, Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -140,6 +140,7 @@ export function PlacementsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Building2}
         title={t('menus.placement')}
         subtitle={t('placements.subtitle')}
       />

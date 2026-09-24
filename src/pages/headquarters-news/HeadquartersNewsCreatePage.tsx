@@ -1,3 +1,4 @@
+import { Newspaper } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,7 +12,9 @@ export function HeadquartersNewsCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('headquartersNews.create')} subtitle={t('headquartersNews.createSubtitle')} />
+      <PageHeader
+        icon={Newspaper}
+        title={t('headquartersNews.create')} subtitle={t('headquartersNews.createSubtitle')} />
       <HeadquartersNewsForm
         onSubmit={async (payload) => {
           const { data } = await api.post<{ id: string }>('/headquarters-news', payload)

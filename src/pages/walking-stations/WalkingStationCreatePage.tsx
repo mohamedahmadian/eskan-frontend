@@ -1,3 +1,4 @@
+import { Footprints } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -88,7 +89,9 @@ export function WalkingStationCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('walkingStations.create')} subtitle={t('walkingStations.createSubtitle')} />
+      <PageHeader
+        icon={Footprints}
+        title={t('walkingStations.create')} subtitle={t('walkingStations.createSubtitle')} />
       <WalkingStationForm
         initial={initial}
         provinces={provinces.data}

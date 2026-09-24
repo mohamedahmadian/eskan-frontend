@@ -35,6 +35,7 @@ export function PlaceTypeEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Tags}
         title={t('placeTypes.edit')}
         subtitle={<EntityNameSubtitle name={name(query.data)} icon={Tags} />}
       />

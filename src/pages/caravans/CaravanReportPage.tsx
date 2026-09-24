@@ -3,6 +3,7 @@ import {
   Tent,
   UserRoundCog,
   Users,
+  ChartColumn,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -244,6 +245,7 @@ export function CaravanReportPage() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={ChartColumn}
         title={t('menus.caravanReport')}
         subtitle={t('caravans.reportSubtitle')}
       />

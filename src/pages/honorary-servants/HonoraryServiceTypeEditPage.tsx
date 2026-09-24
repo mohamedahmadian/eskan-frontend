@@ -33,6 +33,7 @@ export function HonoraryServiceTypeEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HeartHandshake}
         title={t('honoraryServiceTypes.edit')}
         subtitle={<EntityNameSubtitle name={query.data.name} icon={HeartHandshake} />}
       />

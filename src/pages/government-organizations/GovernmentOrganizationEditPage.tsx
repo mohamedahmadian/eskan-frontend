@@ -35,6 +35,7 @@ export function GovernmentOrganizationEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Building}
         title={t('governmentOrganizations.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Building} />}
       />

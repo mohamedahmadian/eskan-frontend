@@ -7,6 +7,7 @@ import {
   Route,
   Tent,
   Users,
+  ChartColumn,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -175,6 +176,7 @@ export function NationalMonitoringPage() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={ChartColumn}
         title={t('menus.nationalMonitoring')}
         subtitle={t('nationalMonitoring.subtitle')}
       />

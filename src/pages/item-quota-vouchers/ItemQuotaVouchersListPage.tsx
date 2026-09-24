@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
@@ -62,6 +62,7 @@ export function ItemQuotaVouchersListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={PackageOpen}
         title={t('itemQuotaVouchers.title')}
         subtitle={
           quota.data

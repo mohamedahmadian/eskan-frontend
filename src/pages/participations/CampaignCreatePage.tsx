@@ -1,3 +1,4 @@
+import { Megaphone } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -32,6 +33,7 @@ export function CampaignCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('participationCampaigns.create')}
         subtitle={t('participationCampaigns.createSubtitle')}
       />

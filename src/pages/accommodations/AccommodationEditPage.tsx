@@ -77,6 +77,7 @@ export function AccommodationEditPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Building2}
         title={t('accommodations.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Building2} />}
       />

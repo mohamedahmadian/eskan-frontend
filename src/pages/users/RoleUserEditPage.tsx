@@ -47,6 +47,7 @@ export function RoleUserEditPage({ scope }: { scope: RoleUserScope }) {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={UserRound}
         title={t(`${keys}.edit`)}
         subtitle={<EntityNameSubtitle name={userQuery.data.fullName} icon={UserRound} />}
       />

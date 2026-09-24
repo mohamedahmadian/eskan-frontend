@@ -1,4 +1,4 @@
-import { Upload } from 'lucide-react'
+import { Upload, UserRound } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -233,7 +233,9 @@ export function PilgrimsImportPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('pilgrims.import')} subtitle={t('pilgrims.importSubtitle')} />
+      <PageHeader
+        icon={UserRound}
+        title={t('pilgrims.import')} subtitle={t('pilgrims.importSubtitle')} />
 
       <AppForm onSubmit={onSubmit} className="mx-auto flex w-full max-w-2xl flex-col gap-5">
         <FormField icon={Upload} label={t('pilgrims.importFile')} htmlFor="pilgrims-import-file">

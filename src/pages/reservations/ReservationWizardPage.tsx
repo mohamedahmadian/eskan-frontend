@@ -1,13 +1,13 @@
 import {
-  ArrowRight,
   Ban,
   CalendarClock,
   Hash,
   Hourglass,
   RotateCcw,
   Timer,
+  Ticket,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useTranslation, Trans } from "react-i18next";
@@ -31,7 +31,6 @@ import {
   currentStepFromStatus,
   isOwnerCreateDraft,
   ownerCanEditStep,
-  ownerFlowSteps,
   type ReservationStepCode,
 } from "./reservation-steps";
 import { ReservationStatusBadge } from "./ReservationStatusBadge";
@@ -98,6 +97,7 @@ export function ReservationWizardPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Ticket}
         title={`${t("reservations.wizard")} ${formatNumber(reservation.year, locale)}`}
         subtitle={
           <ReservationTitleMeta
@@ -175,7 +175,6 @@ export function ReservationWizardPage() {
           <ReservationStepReadonly
             reservation={reservation}
             step={viewedStep}
-            onBack={() => setViewedStep(currentStep)}
           />
         ) : (
           <ActiveStep
@@ -185,20 +184,6 @@ export function ReservationWizardPage() {
               queryClient.invalidateQueries({ queryKey: ["reservations", id] })
             }
             onGoToStep={setViewedStep}
-            footer={
-              viewedStep &&
-              viewedStep !== currentStep &&
-              !ownerFlowSteps(reservation.type, reservation).includes(viewedStep) ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setViewedStep(currentStep)}
-                >
-                  <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />
-                  {t("reservations.backToCurrentStep")}
-                </Button>
-              ) : null
-            }
           />
         )}
       </ReservationWizardShell>
@@ -211,51 +196,50 @@ function ActiveStep({
   onChanged,
   onGoToStep,
   step,
-  footer,
 }: {
   reservation: Reservation;
   onChanged: () => void;
   onGoToStep?: (step: ReservationStepCode) => void;
   step?: ReservationStepCode;
-  footer?: ReactNode;
 }) {
   const active = step ?? currentStepFromStatus(reservation.status, reservation.type, reservation);
-  const body =
-    active === "travel" ? (
-      <ReservationTravelStep reservation={reservation} onChanged={onChanged} />
-    ) : active === "review" ? (
-      <ReviewStep reservation={reservation} onChanged={onChanged} />
-    ) : active === "companions" ? (
+  if (active === "travel") {
+    return <ReservationTravelStep reservation={reservation} onChanged={onChanged} />;
+  }
+  if (active === "review") {
+    return <ReviewStep reservation={reservation} onChanged={onChanged} />;
+  }
+  if (active === "companions") {
+    return (
       <CompanionsStep
         reservation={reservation}
         onChanged={onChanged}
         onGoToStep={onGoToStep}
       />
-    ) : active === "contacts" ? (
+    );
+  }
+  if (active === "contacts") {
+    return (
       <ReservationContactsStep
         reservation={reservation}
         onChanged={onChanged}
         onGoToStep={onGoToStep}
       />
-    ) : active === "insurance" ? (
+    );
+  }
+  if (active === "insurance") {
+    return (
       <InsuranceStep
         reservation={reservation}
         onChanged={onChanged}
         onGoToStep={onGoToStep}
       />
-    ) : active === "placement" ? (
-      <ReservationPlacementStep reservation={reservation} />
-    ) : (
-      <ReservationCompleteSummary reservation={reservation} />
     );
-
-  if (!footer) return body;
-  return (
-    <div>
-      {body}
-      <div className="mt-3">{footer}</div>
-    </div>
-  );
+  }
+  if (active === "placement") {
+    return <ReservationPlacementStep reservation={reservation} />;
+  }
+  return <ReservationCompleteSummary reservation={reservation} />;
 }
 
 function ReviewStep({

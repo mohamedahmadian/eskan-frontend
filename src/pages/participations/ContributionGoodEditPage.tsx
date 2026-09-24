@@ -28,6 +28,7 @@ export function ContributionGoodEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Package}
         title={t('contributionGoods.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Package} />}
       />

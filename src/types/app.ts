@@ -2918,6 +2918,8 @@ export type ReceptionVisit = {
   partyKind: "caravan" | "group" | null;
   caravanId: string | null;
   groupId: string | null;
+  caravanManagerName: string | null;
+  caravanManagerPhone: string | null;
 };
 
 export type ReceptionCaravanSummary = {

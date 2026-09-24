@@ -88,6 +88,7 @@ export function GroupDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={UsersRound}
         title={t('groups.details')}
         subtitle={<EntityNameSubtitle name={group.name} icon={UsersRound} />}
       />

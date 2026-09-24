@@ -37,6 +37,7 @@ export function HeadquartersPhoneEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Phone}
         title={t('headquartersPhones.edit')}
         subtitle={
           <EntityNameSubtitle name={localizeDigits(item.data.phone, locale)} icon={Phone} />

@@ -44,6 +44,7 @@ export function RestaurantMealPlanEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={CalendarRange}
         title={t('restaurantMealPlans.edit')}
         subtitle={<EntityNameSubtitle name={item.data.food.name} icon={CalendarRange} />}
       />

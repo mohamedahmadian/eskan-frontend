@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Button, cardClassName } from '../../components/ui/Form'
-import { FormEmptyHint } from '../../components/ui/FormLayout'
+import { FormEmptyHint, FormMetaChip } from '../../components/ui/FormLayout'
 import { PaginationBar } from '../../components/ui/ListControls'
 import { languageDir } from '../../i18n'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
@@ -397,26 +397,28 @@ export function ReceptionMatchModal({
                           {t(`reception.recordType.${item.type}`)}
                         </span>
                       ) : null}
-                      <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-600">
+                      <span className="flex flex-wrap items-center gap-1.5">
                         {item.type === 'accommodation' && item.subtitle ? (
-                          <span className="truncate">{t(`accommodationTypes.${item.subtitle}`)}</span>
+                          <span className="truncate text-xs text-ink-600">
+                            {t(`accommodationTypes.${item.subtitle}`)}
+                          </span>
                         ) : item.subtitle ? (
-                          <span className="truncate">{item.subtitle}</span>
+                          <span className="truncate text-xs text-ink-600">{item.subtitle}</span>
                         ) : null}
                         {item.phone ? (
-                          <span className="inline-flex items-center gap-1">
-                            <Phone className="size-3.5 shrink-0" aria-hidden />
-                            {localizeDigits(item.phone, locale)}
-                          </span>
+                          <FormMetaChip
+                            icon={Phone}
+                            label={localizeDigits(item.phone, locale)}
+                          />
                         ) : null}
                         {item.nationalId ? (
-                          <span className="inline-flex items-center gap-1">
-                            <IdCard className="size-3.5 shrink-0" aria-hidden />
-                            {localizeDigits(item.nationalId, locale)}
-                          </span>
+                          <FormMetaChip
+                            icon={IdCard}
+                            label={localizeDigits(item.nationalId, locale)}
+                          />
                         ) : null}
                         {item.city ? (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 text-xs text-ink-600">
                             <MapPin className="size-3.5 shrink-0" aria-hidden />
                             {nameOf(item.city)}
                           </span>

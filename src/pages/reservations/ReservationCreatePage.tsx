@@ -15,6 +15,7 @@ import {
   Footprints,
   MapPin,
   Trash2,
+  Ticket,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
@@ -1222,7 +1223,9 @@ export function ReservationCreatePage() {
   if (draftParam && !draftHydrated) {
     return (
       <div className={userFormShellClassName}>
-        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+        <PageHeader
+          icon={Ticket}
+          title={t('reservations.createPageTitle', { year: yearLabel })} />
         <LoadingState />
         <p className="mt-3 text-center text-sm text-ink-500">{t('reservations.draftLoading')}</p>
       </div>
@@ -1233,14 +1236,18 @@ export function ReservationCreatePage() {
     if (draftHydrated) {
       return (
         <div className={userFormShellClassName}>
-          <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+          <PageHeader
+            icon={Ticket}
+            title={t('reservations.createPageTitle', { year: yearLabel })} />
           <LoadingState />
         </div>
       )
     }
     return (
       <div className={userFormShellClassName}>
-        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+        <PageHeader
+          icon={Ticket}
+          title={t('reservations.createPageTitle', { year: yearLabel })} />
         <p className="text-sm text-red-700">{t('reservations.notFound')}</p>
       </div>
     )
@@ -1249,7 +1256,9 @@ export function ReservationCreatePage() {
   if (isAdminCreate && forUserId && forUserQuery.isLoading) {
     return (
       <div className={userFormShellClassName}>
-        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+        <PageHeader
+          icon={Ticket}
+          title={t('reservations.createPageTitle', { year: yearLabel })} />
         <LoadingState />
       </div>
     )
@@ -1258,7 +1267,9 @@ export function ReservationCreatePage() {
   if (isAdminCreate && forUserId && forUserQuery.isError) {
     return (
       <div className={userFormShellClassName}>
-        <PageHeader title={t('reservations.createPageTitle', { year: yearLabel })} />
+        <PageHeader
+          icon={Ticket}
+          title={t('reservations.createPageTitle', { year: yearLabel })} />
         <p className="text-sm text-red-700">{t('reservations.pickApplicantNotFound')}</p>
       </div>
     )
@@ -1271,6 +1282,7 @@ export function ReservationCreatePage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Ticket}
         title={t('reservations.createPageTitle', { year: yearLabel })}
         subtitle={
           subject && isAdminCreate ? (

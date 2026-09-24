@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react'
+import { LogOut, Building2 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -60,6 +60,7 @@ export function PlacementVacatePage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Building2}
         title={t('placements.vacate')}
         subtitle={t('placements.vacateSubtitle')}
         backTo="/placements"

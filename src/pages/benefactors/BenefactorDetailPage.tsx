@@ -41,6 +41,7 @@ export function BenefactorDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('benefactors.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={HandHeart} />}
       />

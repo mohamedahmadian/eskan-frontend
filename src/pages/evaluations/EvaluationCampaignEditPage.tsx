@@ -43,6 +43,7 @@ export function EvaluationCampaignEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={CalendarRange}
         title={t('evaluations.campaigns.edit')}
         subtitle={<EntityNameSubtitle name={query.data.title} icon={CalendarRange} />}
       />

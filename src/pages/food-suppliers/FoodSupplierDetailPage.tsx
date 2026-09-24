@@ -1,3 +1,4 @@
+import { Store } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { localizeDigits } from '../../lib/datetime'
@@ -32,7 +33,9 @@ export function FoodSupplierDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('foodSuppliers.details')} subtitle={t('foodSuppliers.detailsSubtitle')} />
+      <PageHeader
+        icon={Store}
+        title={t('foodSuppliers.details')} subtitle={t('foodSuppliers.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('foodSuppliers.name')} value={item.name} />

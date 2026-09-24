@@ -1,4 +1,4 @@
-import { Fence, Globe2, MapPin, MapPinned, Milestone, Plus } from 'lucide-react'
+import { Fence, Globe2, MapPin, MapPinned, Milestone, Plus, Route } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -120,6 +120,7 @@ export function WalkingRoutesListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Route}
         title={t('menus.walkingRoutes')}
         subtitle={t('walkingRoutes.subtitle')}
         action={

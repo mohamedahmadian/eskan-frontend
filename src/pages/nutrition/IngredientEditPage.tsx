@@ -34,6 +34,7 @@ export function IngredientEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Wheat}
         title={t('ingredients.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Wheat} />}
       />

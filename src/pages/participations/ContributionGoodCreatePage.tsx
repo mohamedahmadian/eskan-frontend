@@ -1,3 +1,4 @@
+import { Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,7 +12,9 @@ export function ContributionGoodCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('contributionGoods.create')} subtitle={t('contributionGoods.createSubtitle')} />
+      <PageHeader
+        icon={Package}
+        title={t('contributionGoods.create')} subtitle={t('contributionGoods.createSubtitle')} />
       <ContributionGoodForm
         onSubmit={async (payload) => {
           await api.post('/contribution-goods', payload)

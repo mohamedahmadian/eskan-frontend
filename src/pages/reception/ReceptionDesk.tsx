@@ -6,7 +6,6 @@ import {
   History,
   IdCard,
   HandHeart,
-  Mail,
   MapPin,
   Mars,
   Phone,
@@ -14,9 +13,7 @@ import {
   Search,
   Tent,
   UserRound,
-  Users,
   Venus,
-  X,
 } from 'lucide-react'
 import {
   useCallback,
@@ -26,7 +23,6 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useNavigationType, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -153,14 +149,12 @@ export function ReceptionDesk({
   const extendedRecordsRef = useRef<ReceptionRecord[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
   const [profile, setProfile] = useState<ReceptionProfile | null>(cached?.profile ?? null)
-  const [moreOpen, setMoreOpen] = useState(false)
   const [loadingProfile, setLoadingProfile] = useState(false)
 
   useEffect(() => {
     if (!tools) return
     return tools.registerFocus(() => {
       setPickerOpen(false)
-      setMoreOpen(false)
       const el = searchRef.current
       if (!el) return
       el.focus()
@@ -218,7 +212,6 @@ export function ReceptionDesk({
     try {
       const { data } = await api.get<ReceptionProfile>(`/reception/people/${id}`)
       setProfile(data)
-      setMoreOpen(false)
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
@@ -505,22 +498,22 @@ export function ReceptionDesk({
         />
       ) : null}
 
-      {moreOpen && profile ? (
-        <MoreDetailsModal
-          person={profile.person}
-          onClose={() => setMoreOpen(false)}
-        />
-      ) : null}
-
       {searching || loadingProfile ? (
         <LoadingState variant="inline" />
       ) : profile ? (
         <div key={profile.person.id} className="mt-2 animate-page-fade-in space-y-4">
           <FormCard
             icon={UserRound}
-            title={profile.person.fullName}
+            title={
+              <Link
+                to={personPath(profile.person)}
+                className="cursor-pointer rounded-md hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+              >
+                {profile.person.fullName}
+              </Link>
+            }
             action={
-              <div className="flex max-w-[min(100%,24rem)] items-stretch gap-1.5">
+              <div className="flex max-w-[min(100%,40rem)] items-stretch gap-1.5">
                 <OpenUserPanelButton
                   userId={profile.person.id}
                   status={profile.person.status}
@@ -534,7 +527,7 @@ export function ReceptionDesk({
                       `/reservations/new?forUser=${encodeURIComponent(profile.person.id)}`,
                     )
                   }
-                  className="min-w-0 flex-1 whitespace-normal text-center !px-2 !py-1.5 !text-xs leading-4"
+                  className="min-w-[13rem] flex-[1.45] whitespace-normal text-center !px-3.5 !py-1.5 !text-xs leading-4"
                 >
                   <Plus className="size-3.5 shrink-0" aria-hidden />
                   {t('reception.createVisitYear', {
@@ -599,9 +592,6 @@ export function ReceptionDesk({
                 </div>
               </div>
               <div className="flex flex-wrap justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => setMoreOpen(true)}>
-                  {t('reception.moreDetails')}
-                </Button>
                 <Link
                   to={personPath(profile.person)}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-line bg-white px-[0.9rem] py-2.5 text-sm font-medium text-ink-700 transition hover:bg-cream-100"
@@ -641,7 +631,6 @@ export function ReceptionDesk({
               subtitle={t('reception.caravanSubtitle')}
             >
               <div className="space-y-3 p-4 sm:p-5">
-                <FormSectionTitle icon={Tent}>{t('reception.currentCaravans')}</FormSectionTitle>
                 {profile.caravanManager.caravans.length === 0 ? (
                   <FormEmptyHint>{t('reception.noCaravans')}</FormEmptyHint>
                 ) : (
@@ -649,11 +638,14 @@ export function ReceptionDesk({
                     {profile.caravanManager.caravans.map((caravan) => (
                       <li
                         key={caravan.id}
-                        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-3 py-2 last:border-b-0"
+                        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-3 py-2.5 last:border-b-0"
                       >
-                        <p className="min-w-0 flex-1 text-sm font-semibold text-ink-900">
+                        <Link
+                          to={`/caravans/${caravan.id}`}
+                          className="w-full cursor-pointer text-base font-bold leading-6 text-ink-900 hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+                        >
                           {caravan.name}
-                        </p>
+                        </Link>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                             caravan.isActive
@@ -737,22 +729,25 @@ export function ReceptionDesk({
             </FormCard>
           ) : null}
 
-          <FormCard
-            icon={UserRound}
-            title={t('reception.pilgrimSection')}
-            subtitle={t('reception.pilgrimSubtitle')}
-          >
-            <div className="space-y-3 p-4 sm:p-5">
-              <FormSectionTitle icon={History}>{t('reception.visitHistory')}</FormSectionTitle>
-              <VisitList
-                visits={profile.pilgrim?.visits ?? []}
-                emptyText={t('reception.noVisits')}
-                highlightCode={
-                  isReservationCodeQuery(term) ? normalizeReservationCode(term) : ''
-                }
-              />
-            </div>
-          </FormCard>
+          {(profile.pilgrim?.visits.length ?? 0) > 0 ? (
+            <FormCard
+              icon={UserRound}
+              title={t('reception.pilgrimSection')}
+              subtitle={t('reception.pilgrimSubtitle')}
+            >
+              <div className="space-y-3 p-4 sm:p-5">
+                <FormSectionTitle icon={History}>{t('reception.visitHistory')}</FormSectionTitle>
+                <VisitList
+                  visits={profile.pilgrim?.visits ?? []}
+                  emptyText={t('reception.noVisits')}
+                  showParty
+                  highlightCode={
+                    isReservationCodeQuery(term) ? normalizeReservationCode(term) : ''
+                  }
+                />
+              </div>
+            </FormCard>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -789,11 +784,13 @@ function VisitList({
   visits,
   emptyText,
   showApprovedCounts = false,
+  showParty = false,
   highlightCode = '',
 }: {
   visits: ReceptionVisit[]
   emptyText: string
   showApprovedCounts?: boolean
+  showParty?: boolean
   highlightCode?: string
 }) {
   const { t, i18n } = useTranslation()
@@ -807,106 +804,105 @@ function VisitList({
       {visits.map((visit) => {
         const originName = visit.originCity ? nameOf(visit.originCity) : ''
         const routeName = visit.walkingRoute?.name?.trim() ?? ''
+        const caravanName = visit.partyKind === 'caravan' ? visit.partyName?.trim() ?? '' : ''
+        const managerName = visit.caravanManagerName?.trim() ?? ''
+        const managerPhone = visit.caravanManagerPhone?.trim() ?? ''
+        const hasParty = showParty && Boolean(caravanName || managerName || managerPhone)
         const hasMeta =
           Boolean(visit.stayStartDate) ||
           Boolean(visit.stayEndDate) ||
           Boolean(visit.walkingStartDate) ||
           Boolean(originName) ||
-          Boolean(routeName)
+          Boolean(routeName) ||
+          hasParty
+        const highlighted = Boolean(highlightCode && visit.code === highlightCode)
         return (
           <li
             key={visit.id}
-            className={`px-4 py-2.5 ${
-              highlightCode && visit.code === highlightCode
+            className={`relative px-4 py-2.5 ${
+              highlighted
                 ? 'bg-teal-50'
-                : ''
-            }`}
+                : showApprovedCounts
+                  ? 'hover:bg-teal-50/70'
+                  : ''
+            } ${showApprovedCounts ? 'cursor-pointer' : ''}`}
           >
+            {showApprovedCounts ? (
+              <Link
+                to={`/reservations/${visit.id}`}
+                aria-label={t('reception.openReservation')}
+                className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-300"
+              />
+            ) : null}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
               <ReservationCodeBadge
                 code={visit.code}
                 size="lg"
-                highlighted={Boolean(highlightCode && visit.code === highlightCode)}
+                highlighted={highlighted}
               />
               <p className="text-sm font-medium text-ink-500">
                 {formatNumber(visit.year, locale)}
               </p>
               <ReservationTypeBadge type={visit.type} />
               <ReservationStatusBadge status={visit.status} />
-              <span className="min-w-0 flex-1 text-sm text-ink-600">
-                {visit.partyName ?? '—'}
-              </span>
-              {showApprovedCounts && routeName ? (
-                <span className="inline-flex min-w-0 max-w-56 items-center gap-1 text-xs text-ink-600">
-                  <Footprints className="size-3.5 shrink-0 text-mint-600" aria-hidden />
-                  <span className="truncate">{routeName}</span>
+              {showApprovedCounts ? null : (
+                <span className="min-w-0 flex-1 text-sm text-ink-600">
+                  {visit.partyName ?? '—'}
                 </span>
-              ) : null}
+              )}
               {showApprovedCounts ? (
-                <span className="grid grid-cols-[auto_auto_auto] items-center gap-x-3 gap-y-3 text-xs font-medium text-ink-800">
-                  <span className="font-normal text-ink-500">
-                    {t('reception.approvedLabel')}
+                <div className="ms-auto flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <span className="inline-flex items-center gap-1 text-sm font-bold text-teal-700">
+                    {t('reception.openReservation')}
+                    <ExternalLink className="size-3.5" aria-hidden />
                   </span>
-                  <HeadcountCell
-                    gender="male"
-                    count={visit.maleCount ?? 0}
-                    locale={locale}
-                  />
-                  <HeadcountCell
-                    gender="female"
-                    count={visit.femaleCount}
-                    locale={locale}
-                  />
-                  <span className="font-normal text-ink-500">
-                    {t('reception.requestedLabel')}
+                  <span className="grid grid-cols-[auto_auto_auto] items-center gap-x-3 gap-y-3 text-xs font-medium text-ink-800">
+                    <span className="font-normal text-ink-500">
+                      {t('reception.approvedLabel')}
+                    </span>
+                    <HeadcountCell
+                      gender="male"
+                      count={visit.maleCount ?? 0}
+                      locale={locale}
+                    />
+                    <HeadcountCell
+                      gender="female"
+                      count={visit.femaleCount}
+                      locale={locale}
+                    />
+                    <span className="font-normal text-ink-500">
+                      {t('reception.requestedLabel')}
+                    </span>
+                    <HeadcountCell
+                      gender="male"
+                      count={visit.requestedMaleCount ?? 0}
+                      locale={locale}
+                    />
+                    <HeadcountCell
+                      gender="female"
+                      count={visit.requestedFemaleCount ?? 0}
+                      locale={locale}
+                    />
                   </span>
-                  <HeadcountCell
-                    gender="male"
-                    count={visit.requestedMaleCount ?? 0}
-                    locale={locale}
-                  />
-                  <HeadcountCell
-                    gender="female"
-                    count={visit.requestedFemaleCount ?? 0}
-                    locale={locale}
-                  />
-                </span>
+                </div>
               ) : (
                 <span className="text-xs text-ink-500">
                   {t('reception.peopleCount', { count: formatNumber(visit.totalCount, locale) })}
                 </span>
               )}
-              <Link
-                to={`/reservations/${visit.id}`}
-                className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:text-teal-800"
-              >
-                {t('reception.openReservation')}
-                <ExternalLink className="size-3.5" aria-hidden />
-              </Link>
+              {showApprovedCounts ? null : (
+                <Link
+                  to={`/reservations/${visit.id}`}
+                  className="inline-flex items-center gap-1 text-sm font-bold text-teal-700 hover:text-teal-800"
+                >
+                  {t('reception.openReservation')}
+                  <ExternalLink className="size-3.5" aria-hidden />
+                </Link>
+              )}
             </div>
             {hasMeta ? (
               <div className="mt-2 space-y-1.5">
                 <div className="grid gap-1.5 sm:grid-cols-3">
-                  <FormFactTile
-                    compact
-                    icon={CalendarRange}
-                    label={t('reservations.stayStartDate')}
-                    value={
-                      visit.stayStartDate ? <DateText value={visit.stayStartDate} /> : '—'
-                    }
-                    empty={!visit.stayStartDate}
-                    tone="teal"
-                  />
-                  <FormFactTile
-                    compact
-                    icon={CalendarRange}
-                    label={t('reservations.stayEndDateShort')}
-                    value={
-                      visit.stayEndDate ? <DateText value={visit.stayEndDate} /> : '—'
-                    }
-                    empty={!visit.stayEndDate}
-                    tone="mint"
-                  />
                   <FormFactTile
                     compact
                     icon={CalendarRange}
@@ -921,8 +917,28 @@ function VisitList({
                     empty={!visit.walkingStartDate}
                     tone="ink"
                   />
+                  <FormFactTile
+                    compact
+                    icon={CalendarRange}
+                    label={t('reservations.stayStartDate')}
+                    value={
+                      visit.stayStartDate ? <DateText value={visit.stayStartDate} /> : '—'
+                    }
+                    empty={!visit.stayStartDate}
+                    tone="teal"
+                  />
+                  <FormFactTile
+                    compact
+                    icon={CalendarRange}
+                    label={t('reception.stayEndDate')}
+                    value={
+                      visit.stayEndDate ? <DateText value={visit.stayEndDate} /> : '—'
+                    }
+                    empty={!visit.stayEndDate}
+                    tone="mint"
+                  />
                 </div>
-                {originName || routeName ? (
+                {originName || routeName || hasParty ? (
                   <div className="grid gap-1.5 sm:grid-cols-3">
                     {originName ? (
                       <FormFactTile
@@ -939,6 +955,39 @@ function VisitList({
                         icon={Footprints}
                         label={t('reservations.walkingRoute')}
                         value={routeName}
+                        tone="mint"
+                      />
+                    ) : null}
+                    {hasParty && caravanName ? (
+                      <Link
+                        to={`/reservations/${visit.id}`}
+                        className="block cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+                      >
+                        <FormFactTile
+                          compact
+                          icon={Tent}
+                          label={t('reservations.caravan')}
+                          value={caravanName}
+                          tone="ink"
+                          className="transition hover:ring-2 hover:ring-teal-200"
+                        />
+                      </Link>
+                    ) : null}
+                    {hasParty && managerName ? (
+                      <FormFactTile
+                        compact
+                        icon={UserRound}
+                        label={t('reservations.caravanManager')}
+                        value={managerName}
+                        tone="teal"
+                      />
+                    ) : null}
+                    {hasParty && managerPhone ? (
+                      <FormFactTile
+                        compact
+                        icon={Phone}
+                        label={t('reception.caravanManagerPhone')}
+                        copyValue={managerPhone}
                         tone="mint"
                       />
                     ) : null}
@@ -1074,123 +1123,5 @@ function MiniStat({ label, value }: { label: string; value: ReactNode }) {
       <p className="text-[11px] text-ink-500">{label}</p>
       <p className="mt-0.5 text-sm font-semibold text-ink-900">{value}</p>
     </div>
-  )
-}
-
-function MoreDetailsModal({
-  person,
-  onClose,
-}: {
-  person: ReceptionPerson
-  onClose: () => void
-}) {
-  const { t } = useTranslation()
-  const nameOf = useGeoName()
-  const empty = '—'
-
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4"
-      data-nested-dialog
-    >
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reception-more-title"
-        className={`relative z-10 flex max-h-[min(90vh,36rem)] w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
-          <h2 id="reception-more-title" className="text-base font-semibold text-ink-900">
-            {t('reception.moreTitle')}
-          </h2>
-          <Button type="button" variant="ghost" onClick={onClose} aria-label={t('common.cancel')}>
-            <X className="size-4" aria-hidden />
-          </Button>
-        </div>
-        <div className="grid gap-2 overflow-y-auto p-5 sm:grid-cols-2 sm:gap-3">
-          <FormFactTile icon={UserRound} label={t('users.firstName')} value={person.firstName} />
-          <FormFactTile
-            icon={UserRound}
-            label={t('users.lastName')}
-            value={person.lastName}
-            tone="mint"
-          />
-          <FormFactTile
-            icon={CalendarRange}
-            label={t('users.birthDate')}
-            value={person.birthDate ? <DateText value={person.birthDate} /> : empty}
-            empty={!person.birthDate}
-            tone="ink"
-          />
-          <FormFactTile
-            icon={Mail}
-            label={t('users.email')}
-            value={person.email ?? empty}
-            empty={!person.email}
-          />
-          <FormFactTile
-            icon={MapPin}
-            label={t('geo.province')}
-            value={nameOf(person.province)}
-            empty={!person.province}
-            tone="mint"
-          />
-          <FormFactTile
-            icon={MapPin}
-            label={t('geo.country')}
-            value={nameOf(person.country)}
-            empty={!person.country}
-            tone="ink"
-          />
-          <FormFactTile
-            icon={MapPin}
-            label={t('users.address')}
-            value={person.address ?? empty}
-            empty={!person.address}
-            className="sm:col-span-2"
-          />
-          <FormFactTile
-            icon={Users}
-            label={t('users.notes')}
-            value={person.notes ?? empty}
-            empty={!person.notes}
-            tone="ink"
-            className="sm:col-span-2"
-          />
-        </div>
-        <div className="border-t border-line px-5 py-4">
-          <Link
-            to={personPath(person)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-teal-700 hover:text-teal-800"
-          >
-            <ExternalLink className="size-4" aria-hidden />
-            {t('reception.openPerson')}
-          </Link>
-        </div>
-      </div>
-    </div>,
-    document.body,
   )
 }

@@ -68,6 +68,7 @@ export function HonoraryServantDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('honoraryServants.details')}
         subtitle={<EntityNameSubtitle name={item.user.fullName} icon={HandHeart} />}
         backTo={selfView ? '/honorary-history' : undefined}

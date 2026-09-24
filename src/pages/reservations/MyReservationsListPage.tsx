@@ -1,4 +1,4 @@
-import { CalendarDays, Filter, Plus } from 'lucide-react'
+import { CalendarDays, Filter, Plus, Ticket } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -74,6 +74,7 @@ export function MyReservationsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Ticket}
         title={t('menus.myReservations')}
         action={
           <Link to="/my-reservations/new">

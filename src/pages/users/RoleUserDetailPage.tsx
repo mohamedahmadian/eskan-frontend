@@ -176,6 +176,7 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
         />
       ) : null}
       <PageHeader
+        icon={UserRound}
         title={t(`${keys}.details`)}
         subtitle={<EntityNameSubtitle name={user.fullName} icon={UserRound} />}
       />

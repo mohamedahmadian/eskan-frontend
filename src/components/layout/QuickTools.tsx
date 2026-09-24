@@ -690,9 +690,7 @@ function ReceptionSearchModal({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="quick-tools-search-title"
         className={`relative z-10 flex w-full flex-col overflow-hidden ${cardClassName} ${
-          expanded
-            ? 'max-h-[min(88vh,44rem)] max-w-4xl'
-            : 'max-w-lg'
+          expanded ? 'max-h-[min(92vh,100%)] w-[75vw] max-w-[75vw]' : 'max-w-lg'
         }`}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-2.5">

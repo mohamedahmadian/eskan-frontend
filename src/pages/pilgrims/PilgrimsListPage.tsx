@@ -11,6 +11,7 @@ import {
   Plus,
   Upload,
   Venus,
+  UserRound,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -192,6 +193,7 @@ export function PilgrimsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={UserRound}
         title={t("menus.pilgrimsList")}
         subtitle={t("pilgrims.subtitle")}
         action={

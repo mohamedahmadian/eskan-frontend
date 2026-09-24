@@ -1,4 +1,4 @@
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ChartColumn } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -42,6 +42,7 @@ export function ReservationStatsPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={ChartColumn}
         title={t("menus.reservationsReport")}
         subtitle={t("reservations.statsSubtitle")}
         className="mb-3 sm:gap-2"

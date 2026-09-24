@@ -111,6 +111,7 @@ export function EvaluationSubmitPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={ClipboardList}
         title={t('menus.evaluationSubmit')}
         subtitle={t('evaluations.submit.subtitle')}
       />

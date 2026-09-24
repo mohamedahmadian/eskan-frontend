@@ -113,6 +113,7 @@ export function CaravanDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Tent}
         title={t('caravans.details')}
         subtitle={<EntityNameSubtitle name={caravan.name} icon={Tent} />}
       />

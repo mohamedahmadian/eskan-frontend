@@ -1,4 +1,4 @@
-import { CalendarDays, CookingPot, Plus, Sunrise, Truck, Wheat } from 'lucide-react'
+import { CalendarDays, CookingPot, Plus, Sunrise, Truck, Wheat, Store } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -69,6 +69,7 @@ export function RestaurantMealPlansListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Store}
         title={t('menus.restaurantMealPlan')}
         subtitle={selectedRestaurant?.name ?? t('restaurantMealPlans.subtitle')}
         action={

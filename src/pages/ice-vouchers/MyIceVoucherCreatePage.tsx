@@ -1,3 +1,4 @@
+import { Snowflake } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -32,7 +33,9 @@ export function IceVoucherCreatePage({
   if (!accommodations.data.length) {
     return (
       <div className={formShellClassName}>
-        <PageHeader title={t('iceVouchers.create')} subtitle={t('iceVouchers.createSubtitle')} />
+        <PageHeader
+          icon={Snowflake}
+          title={t('iceVouchers.create')} subtitle={t('iceVouchers.createSubtitle')} />
         <p className={`${cardClassName} px-5 py-4 text-sm text-ink-500`}>
           {t('iceVouchers.noAccommodation')}
         </p>
@@ -42,7 +45,9 @@ export function IceVoucherCreatePage({
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('iceVouchers.create')} subtitle={t('iceVouchers.createSubtitle')} />
+      <PageHeader
+        icon={Snowflake}
+        title={t('iceVouchers.create')} subtitle={t('iceVouchers.createSubtitle')} />
       <IceVoucherRequestForm
         accommodations={accommodations.data}
         onSubmit={async (payload) => {
@@ -84,7 +89,9 @@ export function IceVoucherEditPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('iceVouchers.edit')} subtitle={t('iceVouchers.editSubtitle')} />
+      <PageHeader
+        icon={Snowflake}
+        title={t('iceVouchers.edit')} subtitle={t('iceVouchers.editSubtitle')} />
       <IceVoucherRequestForm
         accommodations={accommodations.data}
         initial={item.data}

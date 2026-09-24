@@ -48,6 +48,7 @@ export function HeadquartersNewsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Newspaper}
         title={t('menus.headquartersNews')}
         subtitle={t('headquartersNews.subtitle')}
         action={

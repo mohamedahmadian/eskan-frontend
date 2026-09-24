@@ -1,3 +1,4 @@
+import { HandHeart } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,6 +13,7 @@ export function HonoraryServantCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('honoraryServants.create')}
         subtitle={t('honoraryServants.createSubtitle')}
       />

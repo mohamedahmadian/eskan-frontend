@@ -65,7 +65,9 @@ function PilgrimCampaignDetail() {
   if (!item) {
     return (
       <div className={formShellClassName}>
-        <PageHeader title={t('participationCampaigns.details')} />
+        <PageHeader
+          icon={Megaphone}
+          title={t('participationCampaigns.details')} />
         <FormEmptyHint>{t('landing.participations.notFound')}</FormEmptyHint>
       </div>
     )
@@ -74,6 +76,7 @@ function PilgrimCampaignDetail() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('participationCampaigns.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Megaphone} />}
       />
@@ -216,6 +219,7 @@ function AdminCampaignDetail() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('participationCampaigns.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Megaphone} />}
       />

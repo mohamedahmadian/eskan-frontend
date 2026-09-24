@@ -1,3 +1,4 @@
+import { DoorOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -51,6 +52,7 @@ export function EntryBorderCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={DoorOpen}
         title={t('entryBorders.create')}
         subtitle={t('entryBorders.createSubtitle')}
       />

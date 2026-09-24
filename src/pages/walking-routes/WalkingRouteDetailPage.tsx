@@ -82,6 +82,7 @@ export function WalkingRouteDetailPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Route}
         title={t('walkingRoutes.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Route} />}
       />

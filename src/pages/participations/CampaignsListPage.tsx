@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Megaphone } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -48,6 +48,7 @@ function PilgrimCampaignsBrowse() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={Megaphone}
         title={t('menus.participationCampaigns')}
         subtitle={t('participations.subtitle')}
       />
@@ -100,6 +101,7 @@ function AdminCampaignsList() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('menus.participationCampaigns')}
         subtitle={t('participationCampaigns.subtitle')}
         action={

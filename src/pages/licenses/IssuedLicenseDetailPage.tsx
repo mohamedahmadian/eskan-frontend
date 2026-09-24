@@ -130,6 +130,7 @@ export function IssuedLicenseDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={FileBadge2}
         title={t('licenses.details')}
         subtitle={<EntityNameSubtitle name={item.caravan.name} icon={FileBadge2} />}
       />

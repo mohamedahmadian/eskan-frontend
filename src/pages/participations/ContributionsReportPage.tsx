@@ -6,6 +6,7 @@ import {
   Megaphone,
   Package,
   Trophy,
+  ChartColumn,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -186,6 +187,7 @@ export function ContributionsReportPage() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={ChartColumn}
         title={t('menus.contributionsReport')}
         subtitle={t('contributionReports.subtitle')}
       />

@@ -29,6 +29,7 @@ export function ParticipantEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandCoins}
         title={t('campaignParticipants.edit')}
         subtitle={<EntityNameSubtitle name={item.data.benefactor.name} icon={HandCoins} />}
       />

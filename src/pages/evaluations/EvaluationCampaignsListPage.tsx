@@ -1,4 +1,4 @@
-import { Filter, Plus } from 'lucide-react'
+import { Filter, Plus, Megaphone } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -49,6 +49,7 @@ export function EvaluationCampaignsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('menus.evaluationCampaigns')}
         subtitle={t('evaluations.campaigns.subtitle')}
         action={

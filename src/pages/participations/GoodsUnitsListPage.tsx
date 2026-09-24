@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Scale } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -49,6 +49,7 @@ export function GoodsUnitsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Scale}
         title={t('menus.goodsUnits')}
         subtitle={t('goodsUnits.subtitle')}
         action={

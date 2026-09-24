@@ -72,6 +72,7 @@ export function CaravanEditPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Tent}
         title={t('caravans.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Tent} />}
       />

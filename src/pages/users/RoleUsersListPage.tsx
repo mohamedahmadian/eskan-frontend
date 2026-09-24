@@ -1,4 +1,4 @@
-import { Filter, Plus, Shield, Tent } from 'lucide-react'
+import { Filter, Plus, Shield, Tent, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -204,6 +204,7 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Users}
         title={t(scope.listTitleKey)}
         subtitle={t(`${keys}.subtitle`)}
         action={

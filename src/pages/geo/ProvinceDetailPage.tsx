@@ -1,4 +1,4 @@
-import { HandHeart } from 'lucide-react'
+import { HandHeart, Map } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -38,7 +38,9 @@ export function ProvinceDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('provinces.details')} subtitle={t('provinces.detailsSubtitle')} />
+      <PageHeader
+        icon={Map}
+        title={t('provinces.details')} subtitle={t('provinces.detailsSubtitle')} />
       <div className="space-y-4">
         <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
           <dl className="grid gap-3 text-sm">

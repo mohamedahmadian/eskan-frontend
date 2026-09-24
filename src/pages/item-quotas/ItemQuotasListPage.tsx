@@ -1,4 +1,4 @@
-import { CalendarDays, Filter, Plus, Ticket } from 'lucide-react'
+import { CalendarDays, Filter, Plus, Ticket, Package } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -65,6 +65,7 @@ export function ItemQuotasListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Package}
         title={t('menus.itemQuotas')}
         subtitle={t('itemQuotas.subtitle')}
         action={

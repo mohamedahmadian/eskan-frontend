@@ -1,4 +1,4 @@
-import { HeartHandshake, Plus } from 'lucide-react'
+import { HeartHandshake, Plus, HandHeart } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -36,6 +36,7 @@ export function HonoraryServiceTypesListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('menus.honoraryServiceTypes')}
         subtitle={t('honoraryServiceTypes.subtitle')}
         action={

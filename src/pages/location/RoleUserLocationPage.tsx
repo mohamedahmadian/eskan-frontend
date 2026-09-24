@@ -36,6 +36,7 @@ export function RoleUserLocationPage({ scope }: { scope: RoleUserScope }) {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={UserRound}
         title={t('location.register')}
         subtitle={<EntityNameSubtitle name={query.data.fullName} icon={UserRound} />}
         action={

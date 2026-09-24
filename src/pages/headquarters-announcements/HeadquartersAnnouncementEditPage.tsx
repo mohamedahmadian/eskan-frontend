@@ -35,6 +35,7 @@ export function HeadquartersAnnouncementEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('headquartersAnnouncements.edit')}
         subtitle={<EntityNameSubtitle name={query.data.title} icon={Megaphone} />}
       />

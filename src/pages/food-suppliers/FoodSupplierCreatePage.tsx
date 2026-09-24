@@ -1,3 +1,4 @@
+import { Store } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -40,7 +41,9 @@ export function FoodSupplierCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('foodSuppliers.create')} subtitle={t('foodSuppliers.createSubtitle')} />
+      <PageHeader
+        icon={Store}
+        title={t('foodSuppliers.create')} subtitle={t('foodSuppliers.createSubtitle')} />
       <FoodSupplierForm
         initialProvinceId={provinceId}
         initialCityId={initialCityId}

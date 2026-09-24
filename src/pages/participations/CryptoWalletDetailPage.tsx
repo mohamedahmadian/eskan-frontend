@@ -37,6 +37,7 @@ export function CryptoWalletDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Wallet}
         title={t('cryptoWallets.details')}
         subtitle={<EntityNameSubtitle name={item.label} icon={Wallet} />}
       />

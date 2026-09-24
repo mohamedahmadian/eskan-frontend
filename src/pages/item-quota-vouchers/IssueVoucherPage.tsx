@@ -1,3 +1,4 @@
+import { PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -49,7 +50,9 @@ export function IssueVoucherPage({
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t(titleKey)} subtitle={t(subtitleKey)} />
+      <PageHeader
+        icon={PackageOpen}
+        title={t(titleKey)} subtitle={t(subtitleKey)} />
       <ItemQuotaVoucherForm
         quotas={quotas.data}
         managers={managers.data}

@@ -141,6 +141,45 @@ export function RestaurantMealPlanDistributePage() {
     },
   })
 
+  useLayoutEffect(() => {
+    if (!publishing) return
+    const node = listRef.current
+    const planDate = query.data?.mealPlan.planDate
+    if (!node || !planDate) {
+      setPublishing(false)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        await document.fonts?.ready
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        })
+        if (cancelled || !node.isConnected) return
+        const dataUrl = await toPng(node, {
+          pixelRatio: 2,
+          backgroundColor: '#ffffff',
+          cacheBust: true,
+          style: { insetInlineStart: '0', left: '0', top: '0' },
+        })
+        if (cancelled) return
+        const link = document.createElement('a')
+        link.href = dataUrl
+        link.download = `distribution-list-${planDate}.png`
+        link.click()
+        toast.success(t('restaurantMealPlans.listPublished'))
+      } catch {
+        if (!cancelled) toast.error(t('restaurantMealPlans.publishListFailed'))
+      } finally {
+        if (!cancelled) setPublishing(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [publishing, query.data?.mealPlan.planDate, t])
+
   const data = query.data
   if (!data) {
     return <LoadingState />
@@ -243,47 +282,10 @@ export function RestaurantMealPlanDistributePage() {
     setPublishing(true)
   }
 
-  useLayoutEffect(() => {
-    if (!publishing) return
-    const node = listRef.current
-    if (!node) {
-      setPublishing(false)
-      return
-    }
-    let cancelled = false
-    void (async () => {
-      try {
-        await document.fonts?.ready
-        await new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-        })
-        if (cancelled || !node.isConnected) return
-        const dataUrl = await toPng(node, {
-          pixelRatio: 2,
-          backgroundColor: '#ffffff',
-          cacheBust: true,
-          style: { insetInlineStart: '0', left: '0', top: '0' },
-        })
-        if (cancelled) return
-        const link = document.createElement('a')
-        link.href = dataUrl
-        link.download = `distribution-list-${item.planDate}.png`
-        link.click()
-        toast.success(t('restaurantMealPlans.listPublished'))
-      } catch {
-        if (!cancelled) toast.error(t('restaurantMealPlans.publishListFailed'))
-      } finally {
-        if (!cancelled) setPublishing(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [publishing, item.planDate, t])
-
   return (
     <div className={`${userFormShellClassName} space-y-6`}>
       <PageHeader
+        icon={CookingPot}
         title={t('restaurantMealPlans.distribute')}
         subtitle={<EntityNameSubtitle name={item.restaurant.name} icon={CookingPot} />}
       />

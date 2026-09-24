@@ -1,3 +1,4 @@
+import { UtensilsCrossed } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -24,7 +25,9 @@ export function FoodCreatePage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t('foods.create')} subtitle={t('foods.createSubtitle')} />
+      <PageHeader
+        icon={UtensilsCrossed}
+        title={t('foods.create')} subtitle={t('foods.createSubtitle')} />
       <FoodForm
         ingredients={ingredients.data}
         onSubmit={async (payload) => {

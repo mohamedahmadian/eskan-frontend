@@ -1,3 +1,4 @@
+import { Landmark } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,6 +13,7 @@ export function GovernmentOrganizationCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('governmentOrganizations.create')}
         subtitle={t('governmentOrganizations.createSubtitle')}
       />

@@ -1,4 +1,4 @@
-import { Filter, Plus } from 'lucide-react'
+import { Filter, Plus, HandHeart } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { localizeDigits } from '../../lib/datetime'
@@ -83,6 +83,7 @@ export function BenefactorsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('menus.benefactors')}
         subtitle={t('benefactors.subtitle')}
         action={

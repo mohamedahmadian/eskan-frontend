@@ -42,6 +42,7 @@ export function CampaignEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('participationCampaigns.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Megaphone} />}
       />

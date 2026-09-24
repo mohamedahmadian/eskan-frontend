@@ -1,3 +1,4 @@
+import { Package } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -24,7 +25,9 @@ export function ItemQuotaCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('itemQuotas.create')} subtitle={t('itemQuotas.createSubtitle')} />
+      <PageHeader
+        icon={Package}
+        title={t('itemQuotas.create')} subtitle={t('itemQuotas.createSubtitle')} />
       <ItemQuotaForm
         suppliers={suppliers.data}
         onSubmit={async (payload) => {

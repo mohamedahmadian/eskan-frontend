@@ -660,6 +660,7 @@ export function CaravanYearManagementPage() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={Tent}
         title={t('menus.caravanYearManagement')}
         subtitle={t('caravanYearManagement.subtitle')}
       />

@@ -1,4 +1,4 @@
-import { History, Plus } from 'lucide-react'
+import { History, Plus, Tent } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -36,6 +36,7 @@ export function MyCaravansListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Tent}
         title={t('menus.myCaravans')}
         subtitle={t('myCaravans.subtitle')}
         action={

@@ -37,6 +37,7 @@ export function BankAccountDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('bankAccounts.details')}
         subtitle={<EntityNameSubtitle name={item.bankName} icon={Landmark} />}
       />

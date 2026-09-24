@@ -1,3 +1,4 @@
+import { Wallet } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,7 +12,9 @@ export function CryptoWalletCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('cryptoWallets.create')} subtitle={t('cryptoWallets.createSubtitle')} />
+      <PageHeader
+        icon={Wallet}
+        title={t('cryptoWallets.create')} subtitle={t('cryptoWallets.createSubtitle')} />
       <CryptoWalletForm
         onSubmit={async (payload) => {
           await api.post('/crypto-wallets', payload)

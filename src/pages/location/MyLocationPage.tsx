@@ -1,4 +1,4 @@
-import { History } from 'lucide-react'
+import { History, MapPin } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -40,6 +40,7 @@ export function MyLocationPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={MapPin}
         title={t('menus.myLocation')}
         backTo="/"
         action={

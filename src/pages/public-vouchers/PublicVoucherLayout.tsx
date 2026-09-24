@@ -1,3 +1,4 @@
+import { Ticket } from 'lucide-react'
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppLogo } from '../../components/brand/AppLogo'
@@ -21,7 +22,9 @@ export function PublicVoucherLayout({
           <AppLogo className="h-8 w-auto object-contain" />
           <p className="text-xs font-medium text-teal-700">{t('app.name')}</p>
         </div>
-        <PageHeader title={title} subtitle={subtitle} backTo={false} />
+        <PageHeader
+          icon={Ticket}
+          title={title} subtitle={subtitle} backTo={false} />
         {children}
       </div>
     </div>

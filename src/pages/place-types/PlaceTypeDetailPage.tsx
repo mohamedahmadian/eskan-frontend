@@ -43,6 +43,7 @@ export function PlaceTypeDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Tags}
         title={t('placeTypes.details')}
         subtitle={<EntityNameSubtitle name={name(item)} icon={Tags} />}
       />

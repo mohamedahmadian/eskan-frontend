@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Landmark } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { localizeDigits } from '../../lib/datetime'
@@ -53,6 +53,7 @@ export function GovernmentOrganizationsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('menus.governmentOrganizations')}
         subtitle={t('governmentOrganizations.subtitle')}
         action={

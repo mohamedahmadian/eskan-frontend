@@ -1,3 +1,4 @@
+import { Wallet } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,7 +12,9 @@ export function BankAccountCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('bankAccounts.create')} subtitle={t('bankAccounts.createSubtitle')} />
+      <PageHeader
+        icon={Wallet}
+        title={t('bankAccounts.create')} subtitle={t('bankAccounts.createSubtitle')} />
       <BankAccountForm
         onSubmit={async (payload) => {
           await api.post('/bank-accounts', payload)

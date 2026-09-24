@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react'
+import { Download, PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -34,7 +34,9 @@ export function MyVoucherDetailPage() {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t('itemQuotaVouchers.details')} subtitle={t('myVouchers.detailsSubtitle')} />
+      <PageHeader
+        icon={PackageOpen}
+        title={t('itemQuotaVouchers.details')} subtitle={t('myVouchers.detailsSubtitle')} />
       <VoucherCard ref={cardRef} voucher={item} qrUrl={qrUrl} />
       <div className="mt-6">
         <Button type="button" variant="ghost" onClick={() => void downloadCard()} disabled={downloading || sharing || !qrUrl}>

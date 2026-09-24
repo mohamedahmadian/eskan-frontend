@@ -42,6 +42,7 @@ export function HeadquartersPhoneDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Phone}
         title={t('headquartersPhones.details')}
         subtitle={<EntityNameSubtitle name={phoneLabel} icon={Phone} />}
       />

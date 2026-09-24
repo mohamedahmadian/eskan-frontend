@@ -1,3 +1,4 @@
+import { Truck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,7 +12,9 @@ export function SupplierCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('suppliers.create')} subtitle={t('suppliers.createSubtitle')} />
+      <PageHeader
+        icon={Truck}
+        title={t('suppliers.create')} subtitle={t('suppliers.createSubtitle')} />
       <SupplierForm
         onSubmit={async (payload) => {
           await api.post('/suppliers', payload)

@@ -1,4 +1,4 @@
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
@@ -53,7 +53,9 @@ export function MyVouchersListPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('menus.myVouchers')} subtitle={t('myVouchers.subtitle')} />
+      <PageHeader
+        icon={PackageOpen}
+        title={t('menus.myVouchers')} subtitle={t('myVouchers.subtitle')} />
       <SearchBar
         inputId="my-voucher-search"
         term={term}

@@ -71,6 +71,7 @@ export function RestaurantMealPlanItemsPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Wheat}
         title={t('restaurantMealPlans.foodItems')}
         subtitle={<EntityNameSubtitle name={item.food.name} icon={Wheat} />}
       />

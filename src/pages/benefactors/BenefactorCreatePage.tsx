@@ -1,3 +1,4 @@
+import { HandHeart } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -48,7 +49,9 @@ export function BenefactorCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('benefactors.create')} subtitle={t('benefactors.createSubtitle')} />
+      <PageHeader
+        icon={HandHeart}
+        title={t('benefactors.create')} subtitle={t('benefactors.createSubtitle')} />
       <BenefactorForm
         initial={
           provinceId || initialCityId

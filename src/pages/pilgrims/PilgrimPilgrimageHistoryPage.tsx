@@ -133,6 +133,7 @@ export function PilgrimPilgrimageHistoryPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={UserRound}
         title={t('pilgrims.details')}
         subtitle={<EntityNameSubtitle name={pilgrim.fullName} icon={UserRound} />}
       />

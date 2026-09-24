@@ -1,4 +1,4 @@
-import { Filter, Plus, Wheat } from 'lucide-react'
+import { Filter, Plus, Wheat, UtensilsCrossed } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -53,6 +53,7 @@ export function IngredientsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={UtensilsCrossed}
         title={t('menus.ingredientManagement')}
         subtitle={t('ingredients.subtitle')}
         action={

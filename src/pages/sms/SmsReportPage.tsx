@@ -1,3 +1,4 @@
+import { ChartColumn } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { localizeDigits } from '../../lib/datetime'
@@ -28,7 +29,9 @@ export function SmsReportPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('menus.smsReport')} subtitle={t('sms.reportSubtitle')} />
+      <PageHeader
+        icon={ChartColumn}
+        title={t('menus.smsReport')} subtitle={t('sms.reportSubtitle')} />
       <SearchBar
         inputId="sms-report-search"
         term={term}

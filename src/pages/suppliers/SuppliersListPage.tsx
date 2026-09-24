@@ -1,4 +1,4 @@
-import { Filter, Package, Plus } from 'lucide-react'
+import { Filter, Package, Plus, Truck } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { localizeDigits } from '../../lib/datetime'
@@ -51,6 +51,7 @@ export function SuppliersListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Truck}
         title={t('menus.suppliers')}
         subtitle={t('suppliers.subtitle')}
         action={

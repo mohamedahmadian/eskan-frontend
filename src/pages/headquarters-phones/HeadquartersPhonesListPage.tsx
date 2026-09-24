@@ -62,6 +62,7 @@ export function HeadquartersPhonesListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('headquartersPhones.title')}
         subtitle={
           headquarters.data ? (

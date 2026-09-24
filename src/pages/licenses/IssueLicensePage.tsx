@@ -136,7 +136,9 @@ export function IssueLicensePage() {
 
   return (
     <div className={`${formShellClassName} space-y-4`}>
-      <PageHeader title={t('menus.issueLicense')} subtitle={t('licenses.issueSubtitle')} />
+      <PageHeader
+        icon={FileBadge2}
+        title={t('menus.issueLicense')} subtitle={t('licenses.issueSubtitle')} />
 
       <FormCard icon={Search} title={t('licenses.lookup')} subtitle={t('licenses.issueSubtitle')}>
         <AppForm onSubmit={onLookup} className={formCardBodyClassName}>

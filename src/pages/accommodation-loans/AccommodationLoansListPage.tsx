@@ -1,4 +1,4 @@
-import { CalendarDays, Filter, Plus, Undo2 } from 'lucide-react'
+import { CalendarDays, Filter, Plus, Undo2, PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -82,6 +82,7 @@ export function AccommodationLoansListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={PackageOpen}
         title={t('menus.loanManagement')}
         subtitle={t('accommodationLoans.subtitle')}
         action={

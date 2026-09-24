@@ -7,6 +7,7 @@ import {
   Hash,
   Landmark,
   Package,
+  ChartColumn,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -170,6 +171,7 @@ export function SupportRequestReportPage() {
   return (
     <div className={`${listShellClassName} space-y-6`}>
       <PageHeader
+        icon={ChartColumn}
         title={t('menus.supportRequestReport')}
         subtitle={t('supportRequestReports.subtitle')}
       />

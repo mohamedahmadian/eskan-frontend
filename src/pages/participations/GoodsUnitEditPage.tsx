@@ -28,6 +28,7 @@ export function GoodsUnitEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Scale}
         title={t('goodsUnits.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Scale} />}
       />

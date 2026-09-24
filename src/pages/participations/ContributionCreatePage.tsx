@@ -1,3 +1,4 @@
+import { HeartHandshake } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -13,7 +14,9 @@ export function ContributionCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('contributions.create')} subtitle={t('contributions.createSubtitle')} />
+      <PageHeader
+        icon={HeartHandshake}
+        title={t('contributions.create')} subtitle={t('contributions.createSubtitle')} />
       <ContributionForm
         onSubmit={async (payload) => {
           await api.post('/contributions', payload)

@@ -84,6 +84,7 @@ export function HonoraryServantsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('menus.honoraryServants')}
         subtitle={t('honoraryServants.subtitle')}
         action={

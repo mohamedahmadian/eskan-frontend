@@ -186,23 +186,36 @@ export function ReservationCompleteSummary({
       </header>
 
       <div className="space-y-5 p-5 sm:p-6">
-        {cancelled || audience === 'admin' ? null : (
+        {cancelled || audience === 'admin' ? null : !reservation.requestsAccommodation ||
+          reservation.placementStatus === 'PLACED' ||
+          reservation.placementStatus === 'PARTIAL' ? (
           <div className="rounded-2xl border border-teal-100 bg-gradient-to-e from-white to-teal-50 px-4 py-3 text-sm leading-7 text-ink-700">
-            {!reservation.requestsAccommodation ? (
-              <p>{t('reservations.completedBodyNoStay')}</p>
-            ) : reservation.placementStatus === 'PLACED' ? (
-              <p>{t('reservations.completedBodyPlaced')}</p>
-            ) : reservation.placementStatus === 'PARTIAL' ? (
-              <p>{t('reservations.completedBodyPartial')}</p>
-            ) : (
-              <>
-                <p>{t('reservations.completedBodyPending')}</p>
-                <p>
-                  {t('reservations.completedTrackingCode')}{' '}
-                  <CopyableDigits value={reservation.code} />
-                </p>
-              </>
-            )}
+            <p>
+              {t(
+                !reservation.requestsAccommodation
+                  ? 'reservations.completedBodyNoStay'
+                  : reservation.placementStatus === 'PLACED'
+                    ? 'reservations.completedBodyPlaced'
+                    : 'reservations.completedBodyPartial',
+              )}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-[22px] border border-teal-100 bg-gradient-to-b from-teal-50 via-white to-mint-50 px-5 py-7 text-center shadow-[0_12px_28px_rgba(46,189,182,0.1)]">
+            <p className="text-base font-semibold leading-8 text-ink-900">
+              {t('reservations.completedBodyPending')}
+            </p>
+            <p className="mt-4 text-xs font-medium text-ink-500">
+              {t('reservations.completedTrackingCode')}
+            </p>
+            <div className="mt-2">
+              <span className="inline-flex items-center justify-center rounded-full bg-teal-500 px-4 py-1.5 text-base font-bold tracking-wide text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
+                <CopyableDigits
+                  value={reservation.code}
+                  className="!text-white hover:!text-white"
+                />
+              </span>
+            </div>
           </div>
         )}
         <section>

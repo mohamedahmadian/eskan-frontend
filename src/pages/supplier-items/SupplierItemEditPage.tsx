@@ -1,3 +1,4 @@
+import { Package } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -26,7 +27,9 @@ export function SupplierItemEditPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('supplierItems.edit')} subtitle={t('supplierItems.editSubtitle')} />
+      <PageHeader
+        icon={Package}
+        title={t('supplierItems.edit')} subtitle={t('supplierItems.editSubtitle')} />
       <SupplierItemForm
         supplier={item.data.supplier}
         initial={item.data}

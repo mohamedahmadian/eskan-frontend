@@ -37,6 +37,7 @@ export function MyAccommodationsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Building2}
         title={t('menus.myAccommodations')}
         subtitle={t('myAccommodations.subtitle')}
         action={

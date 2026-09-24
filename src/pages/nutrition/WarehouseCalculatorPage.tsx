@@ -225,7 +225,9 @@ export function WarehouseCalculatorPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('menus.warehouseCalculator')} subtitle={t('warehouseCalculator.subtitle')} />
+      <PageHeader
+        icon={Calculator}
+        title={t('menus.warehouseCalculator')} subtitle={t('warehouseCalculator.subtitle')} />
       <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-2">
         <FormCard

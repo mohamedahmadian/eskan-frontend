@@ -29,6 +29,7 @@ export function ContributionEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandCoins}
         title={t('contributions.edit')}
         subtitle={<EntityNameSubtitle name={item.data.benefactor.name} icon={HandCoins} />}
       />

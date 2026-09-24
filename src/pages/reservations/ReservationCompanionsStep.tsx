@@ -78,6 +78,17 @@ function countMatch(have: number, need: number): CountMatch {
   return have === need ? "ok" : "mismatch";
 }
 
+function genderSlotOpen(
+  gender: "MALE" | "FEMALE",
+  need: number,
+  have: number,
+  editing?: ReservationMember | null,
+) {
+  if (editing?.user.gender === gender) return true;
+  if (need <= 0) return false;
+  return have < need;
+}
+
 const toneClass: Record<Tone, { wrap: string; icon: string }> = {
   teal: {
     wrap: "border-teal-100 bg-gradient-to-b from-teal-50 to-white",
@@ -127,26 +138,13 @@ export function CompanionsStep({
   const [editingMember, setEditingMember] = useState<ReservationMember | null>(
     null,
   );
-  const [showCountIssue, setShowCountIssue] = useState(false);
-  const [countIssueTick, setCountIssueTick] = useState(0);
-  const countIssueRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (countsOk) setShowCountIssue(false);
-  }, [countsOk]);
-
-  useEffect(() => {
-    if (!showCountIssue) return;
-    countIssueRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-  }, [showCountIssue, countIssueTick]);
-
-  function revealCountIssue() {
-    setShowCountIssue(true);
-    setCountIssueTick((tick) => tick + 1);
-  }
+  const maleOpen = genderSlotOpen("MALE", reservation.maleCount, males, null);
+  const femaleOpen = genderSlotOpen(
+    "FEMALE",
+    reservation.femaleCount,
+    females,
+    null,
+  );
 
   const complete = useMutation({
     mutationFn: async () => {
@@ -193,30 +191,13 @@ export function CompanionsStep({
             ? "reservations.companionsStepHintCaravan"
             : "reservations.companionsStepHint",
       )}
-      countAlert={
-        showCountIssue ? (
-          <div ref={countIssueRef}>
-            <CompanionsCountIssue
-              isCaravan={isCaravan}
-              males={males}
-              females={females}
-              totalHave={members.length}
-              maleNeed={reservation.maleCount}
-              femaleNeed={reservation.femaleCount}
-              totalNeed={reservation.totalCount}
-            />
-          </div>
-        ) : null
-      }
       footer={
         showNav && nextStep ? (
           <ReservationStepNav
             nextPending={complete.isPending}
+            nextDisabled={!countsOk}
             onNext={() => {
-              if (!countsOk) {
-                revealCountIssue();
-                return;
-              }
+              if (!countsOk) return;
               complete.mutate();
             }}
           />
@@ -228,8 +209,15 @@ export function CompanionsStep({
         members={members}
         isCaravan={isCaravan}
         showServiceRequests={showSimBankRequests(reservation)}
+        maleNeed={reservation.maleCount}
+        femaleNeed={reservation.femaleCount}
         onChanged={onChanged}
+        addBlocked={!maleOpen && !femaleOpen}
         onAddNew={() => {
+          if (!maleOpen && !femaleOpen) {
+            toast.error(t("reservations.memberSlotsClosed"));
+            return;
+          }
           setEditingMember(null);
           setPanel("new");
         }}
@@ -263,6 +251,10 @@ export function CompanionsStep({
             isCaravan={isCaravan}
             iraqi={Boolean(reservation.iraqiWorkflow)}
             showServiceRequests={showSimBankRequests(reservation)}
+            maleNeed={reservation.maleCount}
+            femaleNeed={reservation.femaleCount}
+            maleHave={males}
+            femaleHave={females}
             editing={editingMember}
             onAdded={() => {
               setEditingMember(null);
@@ -348,7 +340,12 @@ export function ReservationCompanionsSummary({
         ) : null
       }
     >
-      <MembersList members={members} isCaravan={reservation.type === "CARAVAN"} />
+      <MembersList
+        members={members}
+        isCaravan={reservation.type === "CARAVAN"}
+        maleNeed={reservation.maleCount}
+        femaleNeed={reservation.femaleCount}
+      />
     </CompanionsFrame>
   );
 }
@@ -362,7 +359,6 @@ function CompanionsFrame({
   locale,
   hint,
   readonly,
-  countAlert,
   footer,
   children,
 }: {
@@ -374,12 +370,19 @@ function CompanionsFrame({
   locale: string;
   hint?: string;
   readonly?: boolean;
-  countAlert?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
   const n = (value: number) => formatNumber(value, locale);
+  const showMaleTile = !(males === 0 && reservation.maleCount === 0);
+  const showFemaleTile = !(females === 0 && reservation.femaleCount === 0);
+  const metricCols =
+    showMaleTile && showFemaleTile
+      ? "grid-cols-3"
+      : showMaleTile || showFemaleTile
+        ? "grid-cols-2"
+        : "grid-cols-1";
 
   return (
     <section className={`${cardClassName} overflow-hidden`}>
@@ -403,27 +406,31 @@ function CompanionsFrame({
       />
       <div className="space-y-5 p-5 sm:p-6">
         <section>
-          <div className="grid grid-cols-3 gap-2">
-            <MetricTile
-              icon={Mars}
-              label={t("reservations.male")}
-              value={t("reservations.countProgress", {
-                have: n(males),
-                need: n(reservation.maleCount),
-              })}
-              tone="teal"
-              match={countMatch(males, reservation.maleCount)}
-            />
-            <MetricTile
-              icon={Venus}
-              label={t("reservations.female")}
-              value={t("reservations.countProgress", {
-                have: n(females),
-                need: n(reservation.femaleCount),
-              })}
-              tone="mint"
-              match={countMatch(females, reservation.femaleCount)}
-            />
+          <div className={`grid gap-2 ${metricCols}`}>
+            {showMaleTile ? (
+              <MetricTile
+                icon={Mars}
+                label={t("reservations.male")}
+                value={t("reservations.countProgress", {
+                  have: n(males),
+                  need: n(reservation.maleCount),
+                })}
+                tone="teal"
+                match={countMatch(males, reservation.maleCount)}
+              />
+            ) : null}
+            {showFemaleTile ? (
+              <MetricTile
+                icon={Venus}
+                label={t("reservations.female")}
+                value={t("reservations.countProgress", {
+                  have: n(females),
+                  need: n(reservation.femaleCount),
+                })}
+                tone="mint"
+                match={countMatch(females, reservation.femaleCount)}
+              />
+            ) : null}
             <MetricTile
               icon={Users}
               label={t("reservations.registeredShort")}
@@ -435,7 +442,6 @@ function CompanionsFrame({
               match={countMatch(members.length, reservation.totalCount)}
             />
           </div>
-          {countAlert}
         </section>
         {children}
       </div>
@@ -528,6 +534,10 @@ function MemberLookupForm({
   isCaravan = false,
   iraqi = false,
   showServiceRequests = false,
+  maleNeed,
+  femaleNeed,
+  maleHave,
+  femaleHave,
   onAdded,
   editing,
   onCancelEdit,
@@ -536,6 +546,10 @@ function MemberLookupForm({
   isCaravan?: boolean;
   iraqi?: boolean;
   showServiceRequests?: boolean;
+  maleNeed: number;
+  femaleNeed: number;
+  maleHave: number;
+  femaleHave: number;
   onAdded: () => void;
   editing?: ReservationMember | null;
   onCancelEdit?: () => void;
@@ -555,13 +569,48 @@ function MemberLookupForm({
   const [requestsSimCard, setRequestsSimCard] = useState(false);
   const [requestsBankCard, setRequestsBankCard] = useState(false);
   const showForm = status === "new" || status === "edit";
+  function slotOpen(
+    next: "MALE" | "FEMALE",
+    editingMember: ReservationMember | null | undefined = editing,
+  ) {
+    return genderSlotOpen(
+      next,
+      next === "MALE" ? maleNeed : femaleNeed,
+      next === "MALE" ? maleHave : femaleHave,
+      editingMember,
+    );
+  }
+
+  const maleAllowed = slotOpen("MALE");
+  const femaleAllowed = slotOpen("FEMALE");
+
+  function openGender() {
+    if (slotOpen("MALE", null)) return "MALE";
+    if (slotOpen("FEMALE", null)) return "FEMALE";
+    return "MALE";
+  }
+
+  function slotClosedMessage(gender: "MALE" | "FEMALE") {
+    return t(
+      gender === "MALE"
+        ? "reservations.maleSlotClosed"
+        : "reservations.femaleSlotClosed",
+    );
+  }
+
+  function blockFoundGender(gender: string | null | undefined) {
+    if (gender !== "MALE" && gender !== "FEMALE") return false;
+    if (slotOpen(gender, null)) return false;
+    toast.error(slotClosedMessage(gender));
+    return true;
+  }
 
   function resetForm() {
     setLookupNationalId("");
     setNationalId("");
     setPassportNumber("");
     setPerson({});
-    setGender("MALE");
+    setGender(openGender());
     setBirthDate("");
     setRequestsSimCard(false);
     setRequestsBankCard(false);
@@ -606,7 +655,7 @@ function MemberLookupForm({
         setNationalId("");
         setPassportNumber("");
         setPerson({});
-        setGender("MALE");
+        setGender(openGender());
         setBirthDate("");
         setStatus("new");
         return;
@@ -622,6 +671,7 @@ function MemberLookupForm({
           { passportNumber: passport },
         );
         if (data.found) {
+          if (blockFoundGender(data.user.gender)) return;
           await api.post(`/reservations/${reservationId}/members`, {
             passportNumber: passport,
             requestsSimCard: showServiceRequests ? requestsSimCard : false,
@@ -639,7 +689,7 @@ function MemberLookupForm({
           return;
         }
         setPerson({});
-        setGender("MALE");
+        setGender(openGender());
         setBirthDate("");
         setNationalId("");
         setPassportNumber(passport);
@@ -658,7 +708,7 @@ function MemberLookupForm({
       setNationalId("");
       setPassportNumber("");
       setPerson({});
-      setGender("MALE");
+      setGender(openGender());
       setBirthDate("");
       setStatus("new");
       return;
@@ -674,6 +724,7 @@ function MemberLookupForm({
         { nationalId: id },
       );
       if (data.found) {
+        if (blockFoundGender(data.user.gender)) return;
         await api.post(`/reservations/${reservationId}/members`, {
           nationalId: id,
           requestsSimCard: showServiceRequests ? requestsSimCard : false,
@@ -691,7 +742,7 @@ function MemberLookupForm({
         return;
       }
       setPerson({});
-      setGender("MALE");
+      setGender(openGender());
       setBirthDate("");
       setNationalId(id);
       setPassportNumber("");
@@ -718,12 +769,16 @@ function MemberLookupForm({
           throw new Error(t("reservations.passportInvalid"));
         }
       }
+      const nextGender = gender === "FEMALE" ? "FEMALE" : "MALE";
+      if (!slotOpen(nextGender)) {
+        throw new Error(slotClosedMessage(nextGender));
+      }
       const payload = {
         nationalId: id || null,
         passportNumber: passport || null,
         firstName: person.firstName,
         lastName: person.lastName,
-        gender: gender === "FEMALE" ? "FEMALE" : "MALE",
+        gender: nextGender,
         phone: person.phone || null,
         birthDate: birthDate || null,
         requestsSimCard: showServiceRequests ? requestsSimCard : false,
@@ -759,7 +814,9 @@ function MemberLookupForm({
       toast.error(
         error instanceof Error &&
         (error.message === t("users.nationalIdInvalid") ||
-          error.message === t("reservations.passportInvalid"))
+          error.message === t("reservations.passportInvalid") ||
+          error.message === t("reservations.maleSlotClosed") ||
+          error.message === t("reservations.femaleSlotClosed"))
           ? error.message
           : getApiErrorMessage(error, t("common.error")),
       ),
@@ -921,12 +978,29 @@ function MemberLookupForm({
               />
             </FormField>
             <FormField icon={Users} label={t("users.gender")}>
-              <ToggleField
-                checked={gender !== "FEMALE"}
-                onChange={(male) => setGender(male ? "MALE" : "FEMALE")}
-                onLabel={t("userGenders.MALE")}
-                offLabel={t("userGenders.FEMALE")}
-              />
+              <div className="space-y-1">
+                <ToggleField
+                  checked={gender !== "FEMALE"}
+                  disableOn={!maleAllowed}
+                  disableOff={!femaleAllowed}
+                  onChange={(male) => {
+                    const next = male ? "MALE" : "FEMALE";
+                    if (!slotOpen(next)) {
+                      toast.error(slotClosedMessage(next));
+                      return;
+                    }
+                    setGender(next);
+                  }}
+                  onLabel={t("userGenders.MALE")}
+                  offLabel={t("userGenders.FEMALE")}
+                />
+                {!maleAllowed ? (
+                  <p className="text-xs text-ink-500">{t("reservations.maleSlotClosed")}</p>
+                ) : null}
+                {!femaleAllowed ? (
+                  <p className="text-xs text-ink-500">{t("reservations.femaleSlotClosed")}</p>
+                ) : null}
+              </div>
             </FormField>
             <FormField icon={Calendar} label={t("users.birthDate")}>
               <PersianDateField
@@ -1045,9 +1119,12 @@ function MembersList({
   members,
   isCaravan = false,
   showServiceRequests = false,
+  maleNeed,
+  femaleNeed,
   onChanged,
   onEdit,
   onAddNew,
+  addBlocked = false,
   onImportExcel,
   onImportPrevious,
 }: {
@@ -1055,9 +1132,12 @@ function MembersList({
   members: ReservationMember[];
   isCaravan?: boolean;
   showServiceRequests?: boolean;
+  maleNeed?: number;
+  femaleNeed?: number;
   onChanged?: () => void;
   onEdit?: (member: ReservationMember) => void;
   onAddNew?: () => void;
+  addBlocked?: boolean;
   onImportExcel?: () => void;
   onImportPrevious?: () => void;
 }) {
@@ -1111,31 +1191,52 @@ function MembersList({
         </SectionTitle>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {onAddNew ? (
-            <Button type="button" onClick={onAddNew}>
+            <Button
+              type="button"
+              disabled={addBlocked}
+              title={addBlocked ? t("reservations.memberSlotsClosed") : undefined}
+              onClick={onAddNew}
+            >
               <UserPlus className="size-4" aria-hidden />
               {t("reservations.newMember")}
             </Button>
           ) : null}
           {onImportExcel ? (
-            <Button type="button" variant="soft" onClick={onImportExcel}>
+            <Button
+              type="button"
+              variant="soft"
+              disabled={addBlocked}
+              title={addBlocked ? t("reservations.memberSlotsClosed") : undefined}
+              onClick={onImportExcel}
+            >
               <FileSpreadsheet className="size-4" aria-hidden />
               {t("reservations.companionTabs.excel")}
             </Button>
           ) : null}
           {onImportPrevious ? (
-            <Button type="button" variant="soft" onClick={onImportPrevious}>
+            <Button
+              type="button"
+              variant="soft"
+              disabled={addBlocked}
+              title={addBlocked ? t("reservations.memberSlotsClosed") : undefined}
+              onClick={onImportPrevious}
+            >
               <History className="size-4" aria-hidden />
               {t("reservations.companionTabs.previousCaravan")}
             </Button>
           ) : null}
-          <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-800">
-            <Mars className="size-3" aria-hidden />
-            {n(males)} {t("reservations.male")}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-mint-50 px-2 py-0.5 text-[11px] font-semibold text-mint-600">
-            <Venus className="size-3" aria-hidden />
-            {n(females)} {t("reservations.female")}
-          </span>
+          {maleNeed === 0 && males === 0 ? null : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-800">
+              <Mars className="size-3" aria-hidden />
+              {n(males)} {t("reservations.male")}
+            </span>
+          )}
+          {females === 0 && femaleNeed === 0 ? null : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-mint-50 px-2 py-0.5 text-[11px] font-semibold text-mint-600">
+              <Venus className="size-3" aria-hidden />
+              {n(females)} {t("reservations.female")}
+            </span>
+          )}
         </div>
       </div>
       <ReservationMembersGrid
@@ -1250,95 +1351,5 @@ function MetricTile({
         <AlertCircle className="size-4 shrink-0 text-red-500" aria-hidden />
       )}
     </article>
-  );
-}
-
-function CompanionsCountIssue({
-  isCaravan = false,
-  males,
-  females,
-  totalHave,
-  maleNeed,
-  femaleNeed,
-  totalNeed,
-}: {
-  isCaravan?: boolean;
-  males: number;
-  females: number;
-  totalHave: number;
-  maleNeed: number;
-  femaleNeed: number;
-  totalNeed: number;
-}) {
-  const { t, i18n } = useTranslation();
-  const locale = i18n.language.split("-")[0] ?? "fa";
-  const n = (value: number) => formatNumber(value, locale);
-  const maleOk = males === maleNeed;
-  const femaleOk = females === femaleNeed;
-  const totalOk = totalHave === totalNeed;
-  const lines: string[] = [];
-
-  if (!totalOk && maleOk && femaleOk) {
-    lines.push(
-      t("reservations.companionsCountIssueTotal", {
-        need: n(totalNeed),
-        have: n(totalHave),
-      }),
-    );
-  } else if (!maleOk && !femaleOk && !totalOk) {
-    lines.push(
-      t("reservations.companionsCountIssueTotal", {
-        need: n(totalNeed),
-        have: n(totalHave),
-      }),
-    );
-  } else {
-    if (!maleOk) {
-      lines.push(
-        t("reservations.companionsCountIssueMale", {
-          need: n(maleNeed),
-          have: n(males),
-        }),
-      );
-    }
-    if (!femaleOk) {
-      lines.push(
-        t("reservations.companionsCountIssueFemale", {
-          need: n(femaleNeed),
-          have: n(females),
-        }),
-      );
-    }
-  }
-
-  return (
-    <aside
-      className="relative mt-3 overflow-hidden rounded-[22px] border-2 border-red-200 bg-gradient-to-b from-red-50 via-white to-white p-4 shadow-[0_12px_28px_rgba(185,28,28,0.14)]"
-      role="alert"
-    >
-      <div
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-e from-red-400 via-red-500 to-red-400"
-        aria-hidden
-      />
-      <div className="flex items-start gap-3 pt-1">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-red-500 text-white shadow-[0_8px_16px_rgba(185,28,28,0.28)]">
-          <AlertCircle className="size-5" aria-hidden />
-        </span>
-        <div className="min-w-0 space-y-1 pt-1">
-          <p className="text-sm font-bold text-red-800">
-            {t(
-              isCaravan
-                ? "reservations.companionsCountIssueTitleCaravan"
-                : "reservations.companionsCountIssueTitle",
-            )}
-          </p>
-          {lines.map((line) => (
-            <p key={line} className="text-sm leading-7 text-ink-800">
-              {line}
-            </p>
-          ))}
-        </div>
-      </div>
-    </aside>
   );
 }

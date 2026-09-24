@@ -1,3 +1,4 @@
+import { Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -30,7 +31,9 @@ export function RoleUserCreatePage({ scope }: { scope: RoleUserScope }) {
 
   return (
     <div className={userFormShellClassName}>
-      <PageHeader title={t(`${keys}.create`)} subtitle={t(`${keys}.createSubtitle`)} />
+      <PageHeader
+        icon={Users}
+        title={t(`${keys}.create`)} subtitle={t(`${keys}.createSubtitle`)} />
       <UserForm
         initial={lockedIds.length ? { locale: 'fa', roleIds: lockedIds } : undefined}
         roles={roles.data}

@@ -51,6 +51,7 @@ export function ContributionDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandCoins}
         title={t('contributions.details')}
         subtitle={<EntityNameSubtitle name={item.benefactor.name} icon={HandCoins} />}
       />

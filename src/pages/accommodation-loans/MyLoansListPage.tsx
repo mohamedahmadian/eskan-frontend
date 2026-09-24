@@ -1,4 +1,4 @@
-import { CalendarDays, Filter } from 'lucide-react'
+import { CalendarDays, Filter, PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
@@ -56,7 +56,9 @@ export function MyLoansListPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('menus.myLoans')} subtitle={t('myLoans.subtitle')} />
+      <PageHeader
+        icon={PackageOpen}
+        title={t('menus.myLoans')} subtitle={t('myLoans.subtitle')} />
       <SearchBar
         inputId="my-loan-search"
         term={term}

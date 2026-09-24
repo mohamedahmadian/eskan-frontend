@@ -70,6 +70,7 @@ export function GroupEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={UsersRound}
         title={t('groups.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={UsersRound} />}
       />

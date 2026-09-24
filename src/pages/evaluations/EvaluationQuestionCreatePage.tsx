@@ -1,3 +1,4 @@
+import { ClipboardList } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -22,6 +23,7 @@ export function EvaluationQuestionCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={ClipboardList}
         title={t('evaluations.questions.create')}
         subtitle={t('evaluations.questions.createSubtitle')}
       />

@@ -52,6 +52,7 @@ import type {
   ReservationListItem,
 } from "../../types/app";
 import { AppLogo } from "../brand/AppLogo";
+import { FormCardHeaderDecor } from "../ui/FormLayout";
 import { PageTransition } from "../ui/PageTransition";
 import { AdminFooter } from "./AdminFooter";
 import { ImpersonationBanner } from "./ImpersonationBanner";
@@ -677,65 +678,77 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
             />
           ) : null}
           <aside
-            className={`fixed inset-y-0 start-0 z-40 flex h-svh w-[280px] flex-col border-e border-line bg-white transition lg:static lg:h-full lg:translate-x-0 ${
+            className={`fixed inset-y-0 start-0 z-40 flex h-svh w-[280px] flex-col overflow-hidden border-e border-teal-100 bg-gradient-to-b from-white via-teal-50/70 to-cream-50 shadow-[8px_0_28px_rgba(46,189,182,0.08)] transition lg:relative lg:h-full lg:translate-x-0 ${
               open
                 ? "translate-x-0"
                 : "ltr:-translate-x-full rtl:translate-x-full lg:ltr:translate-x-0 lg:rtl:translate-x-0"
             }`}
           >
-            <div className="flex items-center gap-3 px-5 py-5">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <NavLink
-                  to="/"
-                  onClick={() => setOpen(false)}
-                  className="shrink-0"
-                >
-                  <AppLogo
-                    src={brandLogoSrc}
-                    decorative
-                    className={
-                      brandLogoSrc
-                        ? "h-10 w-10 shrink-0 rounded-2xl bg-white object-cover shadow-[0_8px_18px_rgba(20,40,40,0.16)] ring-1 ring-teal-100"
-                        : "h-10 w-auto max-w-10 shrink-0 object-contain"
-                    }
-                  />
-                </NavLink>
-                <div className="min-w-0">
+            <div
+              className="pointer-events-none absolute -start-16 top-24 size-44 rounded-full bg-teal-200/25 blur-2xl"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute -end-20 bottom-32 size-48 rounded-full bg-mint-100/70 blur-2xl"
+              aria-hidden
+            />
+
+            <div className="relative overflow-hidden border-b border-teal-100/80 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5">
+              <FormCardHeaderDecor />
+              <div className="relative flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <NavLink
                     to="/"
                     onClick={() => setOpen(false)}
-                    className="block truncate font-semibold text-ink-900"
+                    className="shrink-0"
                   >
-                    {brandTitle}
+                    <AppLogo
+                      src={brandLogoSrc}
+                      decorative
+                      className={
+                        brandLogoSrc
+                          ? "h-10 w-10 shrink-0 rounded-2xl bg-white object-cover shadow-[0_8px_18px_rgba(20,40,40,0.16)] ring-1 ring-teal-100"
+                          : "h-10 w-auto max-w-10 shrink-0 object-contain"
+                      }
+                    />
                   </NavLink>
-                  {brandWebsite ? (
-                    <a
-                      href={toExternalHref(brandWebsite, "website")}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-0.5 block truncate text-xs text-ink-400 hover:text-teal-700"
-                      dir="ltr"
-                      title={displayExternalUrl(brandWebsite)}
+                  <div className="min-w-0">
+                    <NavLink
+                      to="/"
+                      onClick={() => setOpen(false)}
+                      className="block truncate font-semibold text-ink-900"
                     >
-                      {displayExternalUrl(brandWebsite)}
-                    </a>
-                  ) : null}
+                      {brandTitle}
+                    </NavLink>
+                    {brandWebsite ? (
+                      <a
+                        href={toExternalHref(brandWebsite, "website")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-0.5 block truncate text-xs text-ink-400 hover:text-teal-700"
+                        dir="ltr"
+                        title={displayExternalUrl(brandWebsite)}
+                      >
+                        {displayExternalUrl(brandWebsite)}
+                      </a>
+                    ) : null}
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  className="rounded-lg p-2 text-ink-500 lg:hidden"
+                  onClick={() => setOpen(false)}
+                  aria-label={t("nav.closeMenu")}
+                >
+                  <X className="size-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                className="rounded-lg p-2 text-ink-500 lg:hidden"
-                onClick={() => setOpen(false)}
-                aria-label={t("nav.closeMenu")}
-              >
-                <X className="size-5" />
-              </button>
             </div>
 
             {pilgrim ? null : (
-              <div className="px-4 pb-3">
+              <div className="relative px-4 pb-3 pt-3">
                 <label className="relative block">
-                  <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" />
+                  <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-teal-500" />
                   <input
                     ref={menuSearchRef}
                     value={query}
@@ -755,12 +768,12 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                         : undefined
                     }
                     aria-describedby={menuSearchHintId}
-                    className="w-full rounded-2xl border border-line bg-cream-50 py-2.5 ps-10 pe-3 text-sm placeholder:text-ink-400"
+                    className="w-full rounded-2xl border border-teal-100 bg-white/90 py-2.5 ps-10 pe-3 text-sm shadow-[0_6px_16px_rgba(46,189,182,0.08)] placeholder:text-ink-400"
                   />
                 </label>
                 <p
                   id={menuSearchHintId}
-                  className="mt-2 px-1 text-[9px] leading-tight text-ink-300"
+                  className="mt-2 px-1 text-[9px] leading-tight text-ink-400"
                 >
                   {t("nav.searchMenuHint")}
                 </p>
@@ -770,17 +783,52 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
             <nav
               ref={navRef}
               id={menuSearchListId}
-              className="flex-1 space-y-5 overflow-y-auto [overflow-anchor:none] px-3 pb-3"
+              className="sidebar-nav relative flex-1 space-y-3 overflow-y-auto [overflow-anchor:none] px-2.5 pb-3"
               onScroll={(event) => writeSidebarNavScroll(event.currentTarget.scrollTop)}
             >
-              {modules.map((mod) => {
+              {modules.map((mod, index) => {
                 const { ungrouped, sections } = splitMenus(mod);
+                const ModuleIcon = getNavIcon(mod.icon);
+                const moduleActive = mod.menus.some((item) =>
+                  isSidebarMenuActive(location.pathname, item.path, allMenuPaths),
+                );
+                const mintTone = index % 2 === 1;
                 return (
-                  <div key={mod.code}>
-                    <p className="mb-1 px-3 text-[11px] font-medium text-ink-400">
-                      {t(mod.nameKey)}
-                    </p>
-                    <div className="space-y-1">
+                  <section
+                    key={mod.code}
+                    className={`overflow-hidden rounded-2xl border shadow-[0_8px_20px_rgba(46,189,182,0.08)] ${
+                      moduleActive
+                        ? "border-teal-200 bg-gradient-to-b from-teal-50 to-white shadow-[0_12px_26px_rgba(46,189,182,0.16)]"
+                        : mintTone
+                          ? "border-mint-100/90 bg-gradient-to-b from-mint-50/70 to-white"
+                          : "border-teal-100/90 bg-gradient-to-b from-white to-teal-50/40"
+                    }`}
+                  >
+                    <header
+                      className={`flex items-center gap-2.5 border-b px-3 py-2.5 ${
+                        mintTone
+                          ? "border-mint-100/80 bg-gradient-to-e from-mint-50 via-white to-teal-50/50"
+                          : "border-teal-100/80 bg-gradient-to-e from-teal-50 via-white to-mint-50/50"
+                      }`}
+                    >
+                      <span
+                        className={`flex size-7 shrink-0 items-center justify-center rounded-xl text-white ${
+                          mintTone
+                            ? "bg-mint-500 shadow-[0_6px_14px_rgba(63,214,190,0.32)]"
+                            : "bg-teal-500 shadow-[0_6px_14px_rgba(46,189,182,0.32)]"
+                        }`}
+                      >
+                        <ModuleIcon className="size-3.5" aria-hidden />
+                      </span>
+                      <p
+                        className={`min-w-0 truncate text-[11px] font-semibold ${
+                          mintTone ? "text-mint-800" : "text-teal-800"
+                        }`}
+                      >
+                        {t(mod.nameKey)}
+                      </p>
+                    </header>
+                    <div className="space-y-1 p-1.5">
                       {ungrouped.map((item) => (
                         <SidebarMenuLink
                           key={item.code}
@@ -794,40 +842,43 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                           }}
                         />
                       ))}
-                    </div>
-                    {sections.map((section) => {
-                      const SectionIcon = section.icon;
-                      return (
-                        <div key={section.titleKey} className="mt-3">
-                          <p className="mb-1 flex items-center gap-1.5 px-3 text-[11px] font-medium text-teal-700">
-                            {SectionIcon ? (
-                              <SectionIcon className="size-3.5" aria-hidden />
-                            ) : null}
-                            {t(section.titleKey)}
-                          </p>
-                          <div className="ms-3 space-y-1 border-s border-teal-100 ps-2">
-                            {section.items.map((item) => (
-                              <SidebarMenuLink
-                                key={item.code}
-                                item={item}
-                                allMenuPaths={allMenuPaths}
-                                highlighted={highlightedMenu?.code === item.code}
-                                onHighlight={() => highlightMenu(item.code)}
-                                onNavigate={() => {
-                                  rememberSidebarScroll();
-                                  setOpen(false);
-                                }}
-                              />
-                            ))}
+                      {sections.map((section) => {
+                        const SectionIcon = section.icon;
+                        return (
+                          <div
+                            key={section.titleKey}
+                            className="mt-1 rounded-xl bg-teal-50/80 p-1.5"
+                          >
+                            <p className="mb-1 flex items-center gap-1.5 px-2 pt-0.5 text-[11px] font-medium text-teal-700">
+                              {SectionIcon ? (
+                                <SectionIcon className="size-3.5" aria-hidden />
+                              ) : null}
+                              {t(section.titleKey)}
+                            </p>
+                            <div className="space-y-1">
+                              {section.items.map((item) => (
+                                <SidebarMenuLink
+                                  key={item.code}
+                                  item={item}
+                                  allMenuPaths={allMenuPaths}
+                                  highlighted={highlightedMenu?.code === item.code}
+                                  onHighlight={() => highlightMenu(item.code)}
+                                  onNavigate={() => {
+                                    rememberSidebarScroll();
+                                    setOpen(false);
+                                  }}
+                                />
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  </section>
                 );
               })}
             </nav>
-            <div className="shrink-0 border-t border-line px-3 py-3">
+            <div className="relative shrink-0 border-t border-teal-100/80 bg-gradient-to-e from-white via-teal-50/40 to-white px-3 py-3">
               <button
                 type="button"
                 className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
@@ -899,11 +950,6 @@ function SidebarMenuLink({
   const { pathname } = useLocation();
   const Icon = getNavIcon(item.icon);
   const isActive = isSidebarMenuActive(pathname, item.path, allMenuPaths);
-  const iconClass = isActive
-    ? "text-white"
-    : highlighted
-      ? "text-teal-600"
-      : "text-ink-400";
   return (
     <Link
       id={sidebarMenuItemId(item.code)}
@@ -911,16 +957,26 @@ function SidebarMenuLink({
       onClick={onNavigate}
       onMouseEnter={onHighlight}
       aria-current={isActive ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${
+      className={`group relative flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm transition ${
         isActive
-          ? `bg-teal-500 text-white shadow-sm${highlighted ? " ring-2 ring-inset ring-white/70" : ""}`
+          ? `bg-teal-500 bg-[linear-gradient(to_inline-end,var(--color-teal-500),var(--color-mint-500))] text-white shadow-[0_8px_16px_rgba(46,189,182,0.32)]${highlighted ? " ring-2 ring-inset ring-white/70" : ""}`
           : highlighted
             ? "bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-200"
-            : "text-ink-700 hover:bg-cream-50"
+            : "text-ink-700 hover:bg-teal-50 hover:text-teal-800"
       }`}
     >
-      <Icon className={`size-4 ${iconClass}`} aria-hidden />
-      {item.label ?? t(item.nameKey)}
+      <span
+        className={`flex size-8 shrink-0 items-center justify-center rounded-xl transition ${
+          isActive
+            ? "bg-white/20 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.25)]"
+            : highlighted
+              ? "bg-teal-100 text-teal-700"
+              : "bg-teal-50 text-teal-600 group-hover:bg-white group-hover:text-teal-700 group-hover:shadow-[0_4px_10px_rgba(46,189,182,0.16)]"
+        }`}
+      >
+        <Icon className="size-3.5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1 truncate">{item.label ?? t(item.nameKey)}</span>
     </Link>
   );
 }

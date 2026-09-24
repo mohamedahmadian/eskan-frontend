@@ -48,6 +48,7 @@ export function OrgUnitsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Building}
         title={t('menus.orgUnits')}
         subtitle={t('orgUnits.subtitle')}
         action={

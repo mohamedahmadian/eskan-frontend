@@ -1,4 +1,4 @@
-import { MapPin, Mars, Milestone, Venus } from 'lucide-react'
+import { MapPin, Mars, Milestone, Venus, Footprints } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { PageHeader, listShellClassName } from '../../components/ui/Form'
@@ -41,7 +41,9 @@ export function MyWalkingStationsListPage() {
 
   return (
     <div className={listShellClassName}>
-      <PageHeader title={t('menus.myWalkingStations')} subtitle={t('myWalkingStations.subtitle')} />
+      <PageHeader
+        icon={Footprints}
+        title={t('menus.myWalkingStations')} subtitle={t('myWalkingStations.subtitle')} />
       <SearchBar
         inputId="my-station-search"
         term={term}

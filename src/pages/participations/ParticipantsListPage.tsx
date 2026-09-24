@@ -72,6 +72,7 @@ export function ParticipantsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Users}
         title={t('campaignParticipants.title')}
         subtitle={<EntityNameSubtitle name={campaign.data.name} icon={Users} />}
         action={

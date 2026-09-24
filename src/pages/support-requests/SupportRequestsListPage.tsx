@@ -129,6 +129,7 @@ export function SupportRequestsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('menus.supportRequests')}
         subtitle={t('supportRequests.subtitle')}
         action={

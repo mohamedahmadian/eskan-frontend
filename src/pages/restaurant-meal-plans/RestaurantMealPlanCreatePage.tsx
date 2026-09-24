@@ -1,3 +1,4 @@
+import { Store } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -38,6 +39,7 @@ export function RestaurantMealPlanCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Store}
         title={t('restaurantMealPlans.create')}
         subtitle={t('restaurantMealPlans.createSubtitle')}
       />

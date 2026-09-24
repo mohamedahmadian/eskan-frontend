@@ -1,4 +1,4 @@
-import { Filter, Plus, Tags } from 'lucide-react'
+import { Filter, Plus, Tags, MapPin } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -93,6 +93,7 @@ export function PlacesListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={MapPin}
         title={t('menus.places')}
         subtitle={t('places.subtitle')}
         action={

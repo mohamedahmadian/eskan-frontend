@@ -1,3 +1,4 @@
+import { PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -40,6 +41,7 @@ export function AccommodationLoanCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={PackageOpen}
         title={t('accommodationLoans.create')}
         subtitle={t('accommodationLoans.createSubtitle')}
       />

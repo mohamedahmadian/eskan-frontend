@@ -41,6 +41,7 @@ export function SupportRequestEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandHeart}
         title={t('supportRequests.edit')}
         subtitle={<EntityNameSubtitle name={item.data.subject} icon={HandHeart} />}
       />

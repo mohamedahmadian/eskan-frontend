@@ -6,6 +6,7 @@ import {
   Store,
   UserRound,
   Warehouse,
+  ChartColumn,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -145,7 +146,9 @@ export function ItemQuotaVoucherReportPage() {
 
   return (
     <div className={`${listShellClassName} space-y-6`}>
-      <PageHeader title={t('menus.voucherReport')} subtitle={t('voucherReports.subtitle')} />
+      <PageHeader
+        icon={ChartColumn}
+        title={t('menus.voucherReport')} subtitle={t('voucherReports.subtitle')} />
 
       <article className={`${cardClassName} p-4 sm:p-5`}>
         <div className="max-w-xs">

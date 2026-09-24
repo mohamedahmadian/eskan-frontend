@@ -1,4 +1,4 @@
-import { HandHeart, Landmark, UtensilsCrossed } from 'lucide-react'
+import { HandHeart, Landmark, UtensilsCrossed, MapPin } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -38,7 +38,9 @@ export function CityDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('cities.details')} subtitle={t('cities.detailsSubtitle')} />
+      <PageHeader
+        icon={MapPin}
+        title={t('cities.details')} subtitle={t('cities.detailsSubtitle')} />
       <div className="space-y-4">
         <article className={`p-6 ${cardClassName}`}>
           <dl className="grid gap-3 text-sm">

@@ -1,3 +1,4 @@
+import { Building2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -56,6 +57,7 @@ export function MyAccommodationCreatePage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Building2}
         title={t('accommodations.create')}
         subtitle={t('myAccommodations.createSubtitle')}
       />

@@ -1,3 +1,4 @@
+import { MapPin } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,7 +12,9 @@ export function PlaceTypeCreatePage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('placeTypes.create')} subtitle={t('placeTypes.createSubtitle')} />
+      <PageHeader
+        icon={MapPin}
+        title={t('placeTypes.create')} subtitle={t('placeTypes.createSubtitle')} />
       <PlaceTypeForm
         onSubmit={async (payload) => {
           await api.post('/place-types', payload)

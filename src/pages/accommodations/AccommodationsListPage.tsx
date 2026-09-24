@@ -11,6 +11,7 @@ import {
   UserRound,
   Users,
   Venus,
+  Building2,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -191,6 +192,7 @@ export function AccommodationsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Building2}
         title={t('menus.accommodations')}
         subtitle={t('accommodations.subtitle')}
         action={

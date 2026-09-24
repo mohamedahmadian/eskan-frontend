@@ -40,6 +40,7 @@ export function EvaluationQuestionDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={FileText}
         title={t('evaluations.questions.details')}
         subtitle={<EntityNameSubtitle name={item.title} icon={FileText} />}
       />

@@ -51,6 +51,7 @@ export function PlaceDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Landmark}
         title={t('places.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Landmark} />}
       />

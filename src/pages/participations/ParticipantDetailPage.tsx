@@ -52,6 +52,7 @@ export function ParticipantDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={HandCoins}
         title={t('campaignParticipants.details')}
         subtitle={<EntityNameSubtitle name={item.benefactor.name} icon={HandCoins} />}
       />

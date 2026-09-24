@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   ClipboardCheck,
   CreditCard,
   Footprints,
@@ -15,8 +14,9 @@ import {
   UserRound,
   Users,
   X,
+  Ticket,
 } from 'lucide-react'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'react-router-dom'
@@ -46,7 +46,6 @@ import type { Reservation, ReservationPerson, ReservationStatus } from '../../ty
 import {
   currentStepFromStatus,
   isInsuranceAccepted,
-  ownerFlowSteps,
   validRewindStatuses,
   applicantSectionKey,
   type ReservationStepCode,
@@ -138,6 +137,7 @@ export function ReservationAdminDetailPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
+        icon={Ticket}
         title={`${t('reservations.wizard')} ${formatNumber(reservation.year, locale)}`}
         subtitle={
           <ReservationTitleMeta
@@ -237,16 +237,6 @@ export function ReservationAdminDetailPage() {
               setToolPanel(null)
               setHonoraryModal(true)
             }}
-            footer={
-              viewedStep &&
-              viewedStep !== currentStep &&
-              !ownerFlowSteps(reservation.type, reservation).includes(viewedStep) ? (
-                <Button type="button" variant="ghost" onClick={() => setViewedStep(currentStep)}>
-                  <ArrowRight className="size-4 ltr:rotate-180" aria-hidden />
-                  {t('reservations.backToCurrentStep')}
-                </Button>
-              ) : null
-            }
           />
         )}
       </ReservationWizardShell>
@@ -431,12 +421,15 @@ function ApplicantCard({ reservation }: { reservation: Reservation }) {
   )
 }
 
+function caravanPermitSettled(reservation: Reservation) {
+  return reservation.permitStatus === 'APPROVED' || reservation.permitStatus === 'REJECTED'
+}
+
 function AdminEditableStep({
   reservation,
   step,
   onChanged,
   onGoToStep,
-  footer,
   canAssignHonorary,
   onAssignHonorary,
 }: {
@@ -444,89 +437,65 @@ function AdminEditableStep({
   step: ReservationStepCode
   onChanged: () => void
   onGoToStep?: (step: ReservationStepCode) => void
-  footer?: ReactNode
   canAssignHonorary?: boolean
   onAssignHonorary?: () => void
 }) {
-  const { t } = useTranslation()
-  const back = footer ? <div className="mt-3">{footer}</div> : null
-
   if (step === 'travel') {
-    return (
-      <div>
-        <ReservationTravelStep reservation={reservation} onChanged={onChanged} mode="admin" />
-        {back}
-      </div>
-    )
+    return <ReservationTravelStep reservation={reservation} onChanged={onChanged} mode="admin" />
   }
   if (step === 'review') {
+    const showDecision =
+      reservation.status === 'PENDING_MANAGEMENT_REVIEW' &&
+      (reservation.type !== 'CARAVAN' || caravanPermitSettled(reservation))
     return (
       <div className="space-y-4">
-        <ReservationTravelSummary
-          reservation={reservation}
-          variant="review"
-          audience="admin"
-          hint={t('reservations.reviewDecisionHint')}
-          footer={
-            <>
-              <ReviewDecisionForm reservation={reservation} onChanged={onChanged} />
-              {footer}
-            </>
-          }
-        />
+        <ReservationTravelSummary reservation={reservation} variant="review" audience="admin" />
         {reservation.type === 'CARAVAN' ? (
           <ReservationPermitPanel reservation={reservation} mode="admin" onChanged={onChanged} />
+        ) : null}
+        {showDecision ? (
+          <ReviewDecisionCard reservation={reservation} onChanged={onChanged} />
         ) : null}
       </div>
     )
   }
   if (step === 'companions') {
     return (
-      <div>
-        <CompanionsStep
-          reservation={reservation}
-          onChanged={onChanged}
-          onGoToStep={onGoToStep}
-          mode="admin"
-        />
-        {back}
-      </div>
+      <CompanionsStep
+        reservation={reservation}
+        onChanged={onChanged}
+        onGoToStep={onGoToStep}
+        mode="admin"
+      />
     )
   }
   if (step === 'contacts') {
     return (
-      <div>
-        <ReservationContactsStep
-          reservation={reservation}
-          onChanged={onChanged}
-          onGoToStep={onGoToStep}
-          mode="admin"
-        />
-        {back}
-      </div>
+      <ReservationContactsStep
+        reservation={reservation}
+        onChanged={onChanged}
+        onGoToStep={onGoToStep}
+        mode="admin"
+      />
     )
   }
   if (step === 'insurance') {
     return (
-      <div>
-        <InsuranceStep
-          reservation={reservation}
-          onChanged={onChanged}
-          onGoToStep={onGoToStep}
-          mode="admin"
-        />
-        {back}
-      </div>
+      <InsuranceStep
+        reservation={reservation}
+        onChanged={onChanged}
+        onGoToStep={onGoToStep}
+        mode="admin"
+      />
     )
   }
   if (step === 'placement') {
-    return <ReservationPlacementStep reservation={reservation} footer={footer} />
+    return <ReservationPlacementStep reservation={reservation} />
   }
   return (
     <ReservationCompleteSummary
       reservation={reservation}
       audience="admin"
-      footer={footer}
       canAssignHonorary={canAssignHonorary}
       onAssignHonorary={onAssignHonorary}
       onHonoraryChanged={onChanged}
@@ -534,7 +503,7 @@ function AdminEditableStep({
   )
 }
 
-function ReviewDecisionForm({
+function ReviewDecisionCard({
   reservation,
   onChanged,
 }: {
@@ -543,15 +512,17 @@ function ReviewDecisionForm({
 }) {
   const { t } = useTranslation()
   const [decisionNote, setDecisionNote] = useState('')
-  const pendingReview = reservation.status === 'PENDING_MANAGEMENT_REVIEW'
-
-  if (!pendingReview) return null
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm font-semibold text-ink-800">
-        <ClipboardCheck className="size-4 text-teal-700" aria-hidden />
-        {t('reservations.reviewDecision')}
+    <section className={`${cardClassName} space-y-3 p-4`}>
+      <div className="flex items-start gap-2">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+          <ClipboardCheck className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink-900">{t('reservations.reviewDecision')}</p>
+          <p className="text-xs leading-5 text-ink-500">{t('reservations.reviewDecisionHint')}</p>
+        </div>
       </div>
       <FormField icon={StickyNote} label={t('reservations.reviewNotes')} htmlFor="decision-note">
         <textarea
@@ -570,7 +541,7 @@ function ReviewDecisionForm({
         stacked
         initialNote={decisionNote.trim()}
       />
-    </div>
+    </section>
   )
 }
 

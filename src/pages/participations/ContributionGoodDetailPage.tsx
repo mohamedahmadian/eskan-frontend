@@ -37,6 +37,7 @@ export function ContributionGoodDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Package}
         title={t('contributionGoods.details')}
         subtitle={<EntityNameSubtitle name={item.name} icon={Package} />}
       />

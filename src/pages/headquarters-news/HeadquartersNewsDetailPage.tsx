@@ -46,6 +46,7 @@ export function HeadquartersNewsDetailPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Newspaper}
         title={t('headquartersNews.details')}
         subtitle={<EntityNameSubtitle name={item.title} icon={Newspaper} />}
       />

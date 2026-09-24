@@ -1,4 +1,4 @@
-import { CalendarDays, Milestone, type LucideIcon } from 'lucide-react'
+import { CalendarDays, Milestone, type LucideIcon, ChartColumn } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -126,7 +126,9 @@ export function StationReportPage() {
 
   return (
     <div className={`${listShellClassName} space-y-6`}>
-      <PageHeader title={t('stationReport.title')} subtitle={t('stationReport.subtitle')} />
+      <PageHeader
+        icon={ChartColumn}
+        title={t('stationReport.title')} subtitle={t('stationReport.subtitle')} />
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField icon={Milestone} label={t('stationReport.station')} htmlFor="report-station">
           <SearchSelect

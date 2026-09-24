@@ -52,6 +52,7 @@ export function FoodEditPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={UtensilsCrossed}
         title={t('foods.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={UtensilsCrossed} />}
       />

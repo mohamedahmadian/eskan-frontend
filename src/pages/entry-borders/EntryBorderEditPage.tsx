@@ -63,6 +63,7 @@ export function EntryBorderEditPage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Fence}
         title={t('entryBorders.edit')}
         subtitle={<EntityNameSubtitle name={item.data.name} icon={Fence} />}
       />

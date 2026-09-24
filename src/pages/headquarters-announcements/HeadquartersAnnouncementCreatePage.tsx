@@ -1,3 +1,4 @@
+import { Megaphone } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,6 +13,7 @@ export function HeadquartersAnnouncementCreatePage() {
   return (
     <div className={formShellClassName}>
       <PageHeader
+        icon={Megaphone}
         title={t('headquartersAnnouncements.create')}
         subtitle={t('headquartersAnnouncements.createSubtitle')}
       />

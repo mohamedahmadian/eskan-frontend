@@ -1,3 +1,4 @@
+import { PackageOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -47,7 +48,9 @@ export function AccommodationLoanEditPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('accommodationLoans.edit')} subtitle={t('accommodationLoans.editSubtitle')} />
+      <PageHeader
+        icon={PackageOpen}
+        title={t('accommodationLoans.edit')} subtitle={t('accommodationLoans.editSubtitle')} />
       <AccommodationLoanForm
         initial={item.data}
         items={items.data}

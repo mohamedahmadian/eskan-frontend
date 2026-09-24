@@ -63,6 +63,52 @@ const sourceIcon: Record<AllocationSource, LucideIcon> = {
   HYBRID: Combine,
 }
 
+function PilgrimCountPanel({
+  title,
+  icon: Icon,
+  tone,
+  totalLabel,
+  total,
+  allocatedLabel,
+  allocated,
+  remainingLabel,
+  remaining,
+}: {
+  title: string
+  icon: LucideIcon
+  tone: 'teal' | 'mint'
+  totalLabel: string
+  total: string
+  allocatedLabel: string
+  allocated: string
+  remainingLabel: string
+  remaining: string
+}) {
+  const shell =
+    tone === 'teal'
+      ? 'border-teal-200 bg-teal-50/80'
+      : 'border-mint-200 bg-mint-50/80'
+  const badge = tone === 'teal' ? 'bg-teal-500' : 'bg-mint-500'
+  const titleColor = tone === 'teal' ? 'text-teal-800' : 'text-mint-800'
+  return (
+    <section className={`rounded-2xl border p-3 sm:p-4 ${shell}`}>
+      <div className={`mb-3 flex items-center gap-2 text-sm font-semibold ${titleColor}`}>
+        <span
+          className={`flex size-7 items-center justify-center rounded-lg text-white shadow-sm ${badge}`}
+        >
+          <Icon className="size-3.5" aria-hidden />
+        </span>
+        {title}
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <FormFactTile compact icon={Users} label={totalLabel} value={total} tone={tone} />
+        <FormFactTile compact icon={UserCheck} label={allocatedLabel} value={allocated} tone={tone} />
+        <FormFactTile compact icon={Users} label={remainingLabel} value={remaining} tone={tone} />
+      </div>
+    </section>
+  )
+}
+
 export function PlacementDetailPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -90,6 +136,12 @@ export function PlacementDetailPage() {
   const individual = row?.type === reservationTypes.INDIVIDUAL
   const individualGender: UserGender | '' =
     individual && row ? (row.maleCount >= 1 ? 'MALE' : 'FEMALE') : ''
+  const soleGender: UserGender | '' =
+    !individual && row && row.maleCount > 0 && row.femaleCount <= 0
+      ? 'MALE'
+      : !individual && row && row.femaleCount > 0 && row.maleCount <= 0
+        ? 'FEMALE'
+        : ''
   const stayStart = row?.stayStartDate ?? ''
   const stayEnd = row?.stayEndDate ?? ''
   const movingItem = row?.allocations.find((item) => item.id === movingId) ?? null
@@ -109,12 +161,21 @@ export function PlacementDetailPage() {
 
   useEffect(() => {
     if (!row || movingId) return
-    if (row.type !== reservationTypes.INDIVIDUAL) return
-    const nextGender = row.maleCount >= 1 ? 'MALE' : 'FEMALE'
-    setGender(nextGender)
-    setHeadcount('1')
-    setAccommodatedCount(String(currentAccommodatedFor(nextGender)))
-  }, [row, movingId])
+    if (row.type === reservationTypes.INDIVIDUAL) {
+      const nextGender = row.maleCount >= 1 ? 'MALE' : 'FEMALE'
+      setGender(nextGender)
+      setHeadcount('1')
+      setAccommodatedCount(String(currentAccommodatedFor(nextGender)))
+      return
+    }
+    if (!soleGender || gender === soleGender) return
+    const total = soleGender === 'MALE' ? row.maleCount : row.femaleCount
+    const allocated = soleGender === 'MALE' ? row.allocatedMale : row.allocatedFemale
+    const need = Math.max(0, total - allocated)
+    setGender(soleGender)
+    setHeadcount(need > 0 ? String(need) : '')
+    setAccommodatedCount(String(currentAccommodatedFor(soleGender)))
+  }, [row, movingId, soleGender, gender])
 
   const availability = useQuery({
     queryKey: ['placements', 'availability', stayStart, stayEnd, reservationId],
@@ -128,7 +189,7 @@ export function PlacementDetailPage() {
     },
   })
 
-  const selectedGender = individual ? individualGender : gender
+  const selectedGender = individual ? individualGender : gender || soleGender
   const selected = availability.data?.find((item) => item.id === accommodationId)
   const remaining =
     selectedGender === 'MALE'
@@ -182,11 +243,19 @@ export function PlacementDetailPage() {
   function resetForm() {
     setMovingId(null)
     setAccommodationId('')
-    setGender(individualGender || '')
-    setHeadcount(individual ? '1' : '')
-    setAccommodatedCount(
-      individualGender ? String(currentAccommodatedFor(individualGender)) : '',
-    )
+    const nextGender = individualGender || soleGender
+    setGender(nextGender)
+    if (individual) {
+      setHeadcount('1')
+    } else if (nextGender && row) {
+      const total = nextGender === 'MALE' ? row.maleCount : row.femaleCount
+      const allocated = nextGender === 'MALE' ? row.allocatedMale : row.allocatedFemale
+      const need = Math.max(0, total - allocated)
+      setHeadcount(need > 0 ? String(need) : '')
+    } else {
+      setHeadcount('')
+    }
+    setAccommodatedCount(nextGender ? String(currentAccommodatedFor(nextGender)) : '')
   }
 
   const allocate = useMutation({
@@ -280,6 +349,7 @@ export function PlacementDetailPage() {
   return (
     <div className={userFormShellClassName}>
       <PageHeader
+        icon={Building2}
         title={t('placements.details')}
         subtitle={<EntityNameSubtitle name={row.partyName} icon={Building2} />}
         backTo="/placements"
@@ -289,91 +359,71 @@ export function PlacementDetailPage() {
         title={row.partyName}
         subtitle={<ReservationCodeBadge code={row.code} size="lg" />}
         chips={
-          row.caravanManager ? (
-            <>
-              <FormMetaChip
-                icon={UserRound}
-                label={`${t('reservations.caravanManager')} · ${row.caravanManager.fullName}`}
-              />
-              {row.caravanManager.nationalId ? (
-                <FormMetaChip icon={IdCard} copyValue={row.caravanManager.nationalId} />
-              ) : null}
-              {row.caravanManager.phone ? (
-                <FormMetaChip icon={Phone} copyValue={row.caravanManager.phone} />
-              ) : null}
-            </>
-          ) : undefined
-        }
-      >
-        <div className="space-y-6 p-5 sm:p-6">
-          <FormSectionTitle icon={Users}>
-            {individual ? t('placements.countAndStay') : t('reservations.createSteps.count')}
-          </FormSectionTitle>
-          <div className={`grid gap-2 sm:gap-3 ${individual ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
-            {individual ? (
-              <FormFactTile
-                compact
-                icon={row.maleCount >= 1 ? Mars : Venus}
-                label={t('placements.headcount')}
-                value={n(row.maleCount >= 1 ? row.maleCount : row.femaleCount)}
-                tone={row.maleCount >= 1 ? 'teal' : 'mint'}
-              />
-            ) : (
-              <>
-                {row.maleCount >= 1 ? (
-                  <>
-                    <FormFactTile
-                      compact
-                      icon={UserCheck}
-                      label={t('placements.allocatedMale')}
-                      value={n(row.allocatedMale)}
-                      tone="teal"
-                    />
-                    <FormFactTile
-                      compact
-                      icon={Users}
-                      label={t('placements.remainingMaleNeed')}
-                      value={n(Math.max(0, row.maleCount - row.allocatedMale))}
-                      tone="teal"
-                    />
-                  </>
-                ) : null}
-                {row.femaleCount >= 1 ? (
-                  <>
-                    <FormFactTile
-                      compact
-                      icon={UserCheck}
-                      label={t('placements.allocatedFemale')}
-                      value={n(row.allocatedFemale)}
-                      tone="mint"
-                    />
-                    <FormFactTile
-                      compact
-                      icon={Users}
-                      label={t('placements.remainingFemaleNeed')}
-                      value={n(Math.max(0, row.femaleCount - row.allocatedFemale))}
-                      tone="mint"
-                    />
-                  </>
-                ) : null}
-              </>
-            )}
-            <FormFactTile
-              compact
+          <>
+            <FormMetaChip
               icon={CalendarRange}
-              label={t('placements.stay')}
-              value={
+              label={
                 row.stayStartDate && row.stayEndDate ? (
                   <>
-                    <DateText value={row.stayStartDate} /> — <DateText value={row.stayEndDate} />
+                    {t('placements.stay')}
+                    {' · '}
+                    <DateText value={row.stayStartDate} />
+                    {' — '}
+                    <DateText value={row.stayEndDate} />
                   </>
                 ) : (
                   t('placements.needStayDates')
                 )
               }
-              tone="ink"
-              className={individual ? '' : 'sm:col-span-2'}
             />
+            {row.caravanManager ? (
+              <>
+                <FormMetaChip
+                  icon={UserRound}
+                  label={`${t('reservations.caravanManager')} · ${row.caravanManager.fullName}`}
+                />
+                {row.caravanManager.nationalId ? (
+                  <FormMetaChip icon={IdCard} copyValue={row.caravanManager.nationalId} />
+                ) : null}
+                {row.caravanManager.phone ? (
+                  <FormMetaChip icon={Phone} copyValue={row.caravanManager.phone} />
+                ) : null}
+              </>
+            ) : null}
+          </>
+        }
+      >
+        <div className="space-y-6 p-5 sm:p-6">
+          <FormSectionTitle icon={Users}>{t('reservations.createSteps.count')}</FormSectionTitle>
+          <div
+            className={`grid gap-3 ${row.maleCount > 0 && row.femaleCount > 0 ? 'lg:grid-cols-2' : ''}`}
+          >
+            {row.maleCount > 0 ? (
+              <PilgrimCountPanel
+                title={t('placements.menGroup')}
+                icon={Mars}
+                tone="teal"
+                totalLabel={t('placements.maleCount')}
+                total={n(row.maleCount)}
+                allocatedLabel={t('placements.assignedCapacity')}
+                allocated={n(row.allocatedMale)}
+                remainingLabel={t('placements.remaining')}
+                remaining={n(Math.max(0, row.maleCount - row.allocatedMale))}
+              />
+            ) : null}
+            {row.femaleCount > 0 ? (
+              <PilgrimCountPanel
+                title={t('placements.womenGroup')}
+                icon={Venus}
+                tone="mint"
+                totalLabel={t('placements.femaleCount')}
+                total={n(row.femaleCount)}
+                allocatedLabel={t('placements.assignedCapacity')}
+                allocated={n(row.allocatedFemale)}
+                remainingLabel={t('placements.remaining')}
+                remaining={n(Math.max(0, row.femaleCount - row.allocatedFemale))}
+              />
+            ) : null}
           </div>
 
           {row.allocations.length ? (
@@ -472,14 +522,18 @@ export function PlacementDetailPage() {
                     label={t('placements.gender')}
                   >
                     <SearchSelect
-                      value={gender}
+                      value={selectedGender}
                       placeholder={t('placements.gender')}
                       onChange={(next: string) =>
                         fillHeadcountForGender((next || '') as UserGender | '')
                       }
                       options={[
-                        { value: 'MALE', label: t('userGenders.MALE') },
-                        { value: 'FEMALE', label: t('userGenders.FEMALE') },
+                        ...(row.maleCount > 0
+                          ? [{ value: 'MALE', label: t('userGenders.MALE') }]
+                          : []),
+                        ...(row.femaleCount > 0
+                          ? [{ value: 'FEMALE', label: t('userGenders.FEMALE') }]
+                          : []),
                       ]}
                     />
                   </FormField>

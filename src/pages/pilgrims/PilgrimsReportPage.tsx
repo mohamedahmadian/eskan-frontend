@@ -8,6 +8,7 @@ import {
   Users,
   Venus,
   X,
+  ChartColumn,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -356,7 +357,9 @@ export function PilgrimsReportPage() {
 
   return (
     <div className={`${listShellClassName} space-y-6`}>
-      <PageHeader title={t('menus.pilgrimsReport')} subtitle={t('pilgrimReports.subtitle')} />
+      <PageHeader
+        icon={ChartColumn}
+        title={t('menus.pilgrimsReport')} subtitle={t('pilgrimReports.subtitle')} />
 
       <article className={`${cardClassName} p-4 sm:p-5`}>
         <div className="max-w-xs">

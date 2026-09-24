@@ -1,3 +1,4 @@
+import { Package } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -33,7 +34,9 @@ export function ItemQuotaEditPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('itemQuotas.edit')} subtitle={t('itemQuotas.editSubtitle')} />
+      <PageHeader
+        icon={Package}
+        title={t('itemQuotas.edit')} subtitle={t('itemQuotas.editSubtitle')} />
       <ItemQuotaForm
         initial={item.data}
         suppliers={suppliers.data}

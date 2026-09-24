@@ -1,4 +1,4 @@
-import { Ticket } from 'lucide-react'
+import { Ticket, Package } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -37,7 +37,9 @@ export function ItemQuotaDetailPage() {
 
   return (
     <div className={formShellClassName}>
-      <PageHeader title={t('itemQuotas.details')} subtitle={t('itemQuotas.detailsSubtitle')} />
+      <PageHeader
+        icon={Package}
+        title={t('itemQuotas.details')} subtitle={t('itemQuotas.detailsSubtitle')} />
       <article className="rounded-2xl border border-line bg-white p-6 shadow-sm">
         <dl className="grid gap-3 text-sm">
           <DetailRow label={t('itemQuotas.year')} value={formatNumber(item.year, locale)} />
