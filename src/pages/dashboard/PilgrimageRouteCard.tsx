@@ -305,7 +305,9 @@ export function PilgrimageRouteCard({
     if (!el) return
 
     function measure() {
-      setRemainingFitsTrack(enlargedStepsTrackWidth(visibleStages.length) <= el.clientWidth + 1)
+      const node = stepsTrackRef.current
+      if (!node) return
+      setRemainingFitsTrack(enlargedStepsTrackWidth(visibleStages.length) <= node.clientWidth + 1)
     }
 
     measure()

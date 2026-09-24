@@ -468,7 +468,10 @@ export function ReservationRoutePlacementPanel({
                             <PersianDateField
                               value={date}
                               onChange={(next) =>
-                                setDates((current) => ({ ...current, [stage.stationId]: next }))
+                                setDates((current) => ({
+                                  ...current,
+                                  [stage.stationId]: next ?? '',
+                                }))
                               }
                             />
                           </div>

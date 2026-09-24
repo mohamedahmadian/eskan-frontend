@@ -523,7 +523,7 @@ function IndividualInsuranceBody({
           </p>
         )}
         {awaitingApproval || member.insurancePaidMethod === 'BANK_RECEIPT' ? (
-          <InsuranceReceiptDetails member={member} locale={locale} className="mt-4" />
+          <InsuranceReceiptDetails member={member} className="mt-4" />
         ) : null}
         {mode === 'admin' && awaitingApproval ? (
           <AdminInsuranceReview
@@ -853,7 +853,7 @@ function GroupInsuranceBody({
                         locale={locale}
                       />
                       {item.insuranceStatus === 'PAID' ? (
-                        <InsuranceReceiptDetails member={item} locale={locale} compact className="mt-2" />
+                        <InsuranceReceiptDetails member={item} compact className="mt-2" />
                       ) : null}
                       {item.insuranceStatus === 'REJECTED' ? (
                         <p className="mt-1 text-xs text-red-700">
@@ -927,7 +927,7 @@ function GroupInsuranceBody({
                   />
                 </div>
                 {item.insuranceStatus === 'PAID' ? (
-                  <InsuranceReceiptDetails member={item} locale={locale} compact className="mt-2" />
+                  <InsuranceReceiptDetails member={item} compact className="mt-2" />
                 ) : null}
                 {mode === 'admin' && item.insuranceStatus === 'PAID' ? (
                   <AdminInsuranceReview
@@ -1426,7 +1426,7 @@ function InsuranceReceiptForm({
           <PersianDateField
             id="insuranceReceiptDate"
             value={receiptDate}
-            onChange={onReceiptDateChange}
+            onChange={(isoDate) => onReceiptDateChange(isoDate ?? '')}
             required
           />
         </FormField>
@@ -1441,12 +1441,10 @@ function InsuranceReceiptForm({
 
 function InsuranceReceiptDetails({
   member,
-  locale,
   compact,
   className = '',
 }: {
   member: ReservationMember
-  locale: string
   compact?: boolean
   className?: string
 }) {

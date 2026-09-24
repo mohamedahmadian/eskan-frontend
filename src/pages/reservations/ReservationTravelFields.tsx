@@ -36,6 +36,7 @@ import { stageCoordinates, useGeoName } from "../../lib/geo";
 import type {
   City,
   Country,
+  GeoName,
   Paginated,
   Province,
   ReceptionSettings,
@@ -76,7 +77,7 @@ export function walkingRouteOriginError(
   route: WalkingRoute | null | undefined,
   pilgrimCountryId: string | null | undefined,
   t: (key: string, options?: Record<string, string>) => string,
-  nameOf: (item: { nameFa: string; nameEn?: string | null }) => string,
+  nameOf: (item?: GeoName | null) => string,
 ): string | null {
   if (!route?.originCountries?.length || !pilgrimCountryId) return null;
   if (route.originCountries.some((country) => country.id === pilgrimCountryId)) {

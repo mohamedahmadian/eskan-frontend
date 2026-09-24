@@ -57,6 +57,7 @@ export function BenefactorCreatePage() {
           provinceId || initialCityId
             ? {
                 id: '',
+                code: null,
                 firstName: '',
                 lastName: '',
                 name: '',

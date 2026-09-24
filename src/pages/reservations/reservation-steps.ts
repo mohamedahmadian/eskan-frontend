@@ -320,7 +320,7 @@ export function progressPercent(
       (source?.features?.mashhadPlacement ??
         Boolean(source?.requestsAccommodation && !source?.internationalWorkflow)) &&
       Boolean(source?.requestsAccommodation)
-    if (!mashhadOn || source.placementStatus === 'PLACED') {
+    if (!mashhadOn || source?.placementStatus === 'PLACED') {
       return 100
     }
   }

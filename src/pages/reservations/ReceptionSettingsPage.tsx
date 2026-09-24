@@ -65,6 +65,7 @@ type Draft = Omit<
   | 'year'
   | 'exists'
   | 'insurancePlans'
+  | 'insuranceBankAccount'
   | 'mashhadPlacementCountries'
   | 'routePlacementCountries'
   | 'companionsCountries'
