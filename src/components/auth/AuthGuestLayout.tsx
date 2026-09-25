@@ -38,7 +38,6 @@ export function AuthGuestLayout({
             />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-ink-900 sm:text-base">{brandTitle}</p>
-              <p className="text-[11px] leading-5 text-ink-500 sm:text-xs">{t('app.tagline')}</p>
               {brandName && brandName !== brandTitle ? (
                 <p className="truncate text-[11px] text-ink-400 sm:text-xs">{brandName}</p>
               ) : null}

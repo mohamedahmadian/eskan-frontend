@@ -911,6 +911,18 @@ export function getPageMeta(pathname: string): {
   if (pathname.startsWith("/users")) {
     return { titleKey: "menus.usersList", subtitleKey: "users.subtitle" };
   }
+  if (pathname.startsWith("/accommodation-introduction")) {
+    return {
+      titleKey: "menus.introduceAccommodation",
+      subtitleKey: "accommodationIntroduce.subtitle",
+    };
+  }
+  if (pathname.startsWith("/caravan-registration")) {
+    return {
+      titleKey: "menus.caravanRegister",
+      subtitleKey: "caravanRegister.subtitle",
+    };
+  }
   if (pathname.startsWith("/caravan-year-management")) {
     return {
       titleKey: "menus.caravanYearManagement",

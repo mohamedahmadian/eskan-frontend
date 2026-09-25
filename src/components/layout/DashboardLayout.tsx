@@ -28,18 +28,15 @@ import { useAuth } from "../../auth/AuthProvider";
 import { api, getImageUrl } from "../../lib/api";
 import { getNavIcon } from "../../lib/icons";
 import { formatNumber } from "../../lib/datetime";
-import { displayExternalUrl, toExternalHref } from "../../lib/social-links";
 import { isSidebarMenuActive } from "../../lib/nav-path";
 import { useHeadquartersSummary } from "../../hooks/useHeadquartersSummary";
 import { PageBreadcrumb } from "./PageBreadcrumb";
 import { HeaderToday } from "./HeaderToday";
 import {
   canAccessMyAccommodations,
-  canAccessMyCaravans,
   canAccessMyEvaluations,
   canAccessMyGroups,
   canAccessMyReservations,
-  hasNoRoles,
   isAccommodationManager,
   isAdmin,
   isCaravanManager,
@@ -281,6 +278,10 @@ function withAccommodationsDirectoryMenu(mod: NavModule): NavModule {
     (item) => item.path === "/accommodations" || item.code === "accommodation.list",
   );
   if (hasList) return mod;
+  const shouldBrowse = mod.menus.some(
+    (item) => item.code !== "accommodation.introduce",
+  );
+  if (!shouldBrowse) return mod;
   const extra: SidebarNavMenu = {
     code: "accommodation.list",
     nameKey: "menus.accommodations",
@@ -450,51 +451,14 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   const mainRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const menuSearchRef = useRef<HTMLInputElement>(null);
-  const menuSearchHintId = "sidebar-menu-search-hint";
   const menuSearchListId = "sidebar-menu-list";
   const brandingQuery = useHeadquartersSummary();
   const branding = brandingQuery.data;
   const pilgrim = isPilgrim(user);
-  const brandTitle = pilgrim
-    ? t("nav.pilgrimPanel")
-    : hasNoRoles(user)
-      ? t("nav.account")
-      : branding?.title?.trim() || branding?.name?.trim() || t("nav.panel");
-  const brandWebsite = branding?.website?.trim() || "";
+  const displayName = user?.fullName?.trim() || user?.username || "";
   const brandLogoSrc = branding?.logoId
     ? getImageUrl(branding.logoId)
     : undefined;
-
-  const focusMenuSearch = useCallback(() => {
-    setOpen(true);
-    const input = menuSearchRef.current;
-    if (!input) return;
-    input.focus();
-    input.select();
-  }, []);
-
-  useEffect(() => {
-    if (pilgrim) return;
-    const DOUBLE_CTRL_MS = 500;
-    let lastAt = 0;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.repeat || event.isComposing) return;
-      if (event.key !== "Control") {
-        lastAt = 0;
-        return;
-      }
-      const now = Date.now();
-      if (now - lastAt >= DOUBLE_CTRL_MS) {
-        lastAt = now;
-        return;
-      }
-      event.preventDefault();
-      lastAt = 0;
-      focusMenuSearch();
-    }
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [focusMenuSearch, pilgrim]);
 
   useEffect(() => {
     mainRef.current?.scrollTo(0, 0);
@@ -547,7 +511,6 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   }, [locale, mineNavQuery.data?.items, showPilgrimageYears, t]);
 
   const navModules = useMemo(() => {
-    const showMyCaravans = canAccessMyCaravans(user);
     const showMyGroups = canAccessMyGroups(user);
     const showMyReservations = canAccessMyReservations(user);
     const showMyAccommodations = canAccessMyAccommodations(user);
@@ -561,7 +524,6 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
             item.code !== "base-info.red-crescents" &&
             item.nameKey !== "menus.medicalCenters" &&
             item.nameKey !== "menus.redCrescents" &&
-            (item.code !== "caravans.mine" || showMyCaravans) &&
             (item.code !== "groups.mine" || showMyGroups) &&
             (item.code !== "reservations.mine" || showMyReservations) &&
             (item.code !== "reservations.create" || showMyReservations) &&
@@ -712,25 +674,35 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                       }
                     />
                   </NavLink>
-                  <div className="min-w-0">
-                    <NavLink
-                      to="/"
-                      onClick={() => setOpen(false)}
-                      className="block truncate font-semibold text-ink-900"
+                  <div className="min-w-0 pt-0.5">
+                    <p
+                      className="truncate text-[15px] font-semibold leading-5 text-ink-900"
+                      title={displayName}
                     >
-                      {brandTitle}
-                    </NavLink>
-                    {brandWebsite ? (
-                      <a
-                        href={toExternalHref(brandWebsite, "website")}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-0.5 block truncate text-xs text-ink-400 hover:text-teal-700"
-                        dir="ltr"
-                        title={displayExternalUrl(brandWebsite)}
-                      >
-                        {displayExternalUrl(brandWebsite)}
-                      </a>
+                      {displayName}
+                    </p>
+                    {user?.roles?.length ? (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {user.roles.map((role, index) => {
+                          const mint = index % 2 === 1;
+                          return (
+                            <span
+                              key={role.code}
+                              className={`inline-flex min-w-0 max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ring-1 ${
+                                mint
+                                  ? "bg-mint-50 text-mint-800 ring-mint-200/80"
+                                  : "bg-white/90 text-teal-800 ring-teal-200/90 shadow-[0_2px_8px_rgba(46,189,182,0.12)]"
+                              }`}
+                            >
+                              <span
+                                className={`size-1.5 shrink-0 rounded-full ${mint ? "bg-mint-500" : "bg-teal-500"}`}
+                                aria-hidden
+                              />
+                              <span className="min-w-0 truncate">{t(role.nameKey)}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
                     ) : null}
                   </div>
                 </div>
@@ -767,16 +739,9 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                         ? sidebarMenuItemId(highlightedMenu.code)
                         : undefined
                     }
-                    aria-describedby={menuSearchHintId}
                     className="w-full rounded-2xl border border-teal-100 bg-white/90 py-2.5 ps-10 pe-3 text-sm shadow-[0_6px_16px_rgba(46,189,182,0.08)] placeholder:text-ink-400"
                   />
                 </label>
-                <p
-                  id={menuSearchHintId}
-                  className="mt-2 px-1 text-[9px] leading-tight text-ink-400"
-                >
-                  {t("nav.searchMenuHint")}
-                </p>
               </div>
             )}
 

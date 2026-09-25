@@ -15,12 +15,21 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button, FormField, fieldClassName, inputClassName } from '../../components/ui/Form'
+import {
+  AppForm,
+  Button,
+  FormActions,
+  FormField,
+  fieldClassName,
+  inputClassName,
+} from '../../components/ui/Form'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
+import { cardClassName } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { parseDigitString } from '../../lib/datetime'
 import {
@@ -86,11 +95,14 @@ export function CaravanContactsPanel({
   activeRole,
   onActiveRoleChange,
   onDraftChange,
+  newPersonInModal = false,
 }: {
   drafts: Record<CaravanContactRole, CaravanContactDraft>
   activeRole: CaravanContactRole
   onActiveRoleChange: (role: CaravanContactRole) => void
   onDraftChange: (role: CaravanContactRole, draft: CaravanContactDraft) => void
+  /** When the national id is unknown, collect the person in a modal. */
+  newPersonInModal?: boolean
 }) {
   const { t } = useTranslation()
   const draft = drafts[activeRole]
@@ -156,7 +168,9 @@ export function CaravanContactsPanel({
         nationalId,
         status: 'new',
       })
-      toast.message(t('caravans.contactNotFound'))
+      if (!newPersonInModal) {
+        toast.message(t('caravans.contactNotFound'))
+      }
     } catch (error) {
       onDraftChange(activeRole, {
         ...emptyContactDraft(),
@@ -189,7 +203,7 @@ export function CaravanContactsPanel({
             <RoleIcon className="size-5" aria-hidden />
           </span>
           <p className="text-base font-semibold text-ink-900">{roleLabel}</p>
-          {!complete ? (
+          {!complete && !(newPersonInModal && draft.status === 'new') ? (
             <p className="max-w-sm text-sm text-ink-600">
               {t('caravans.contactSelectHint', { role: roleLabel })}
             </p>
@@ -257,7 +271,7 @@ export function CaravanContactsPanel({
           <p className="text-center text-sm text-ink-500">{t('caravans.contactLooking')}</p>
         ) : null}
 
-        {draft.status === 'new' && !complete ? (
+        {draft.status === 'new' && !complete && !newPersonInModal ? (
           <div className="space-y-4" data-enter-ignore>
             <p className="rounded-2xl border border-gold-200 bg-gold-50/70 px-3 py-2 text-center text-xs text-ink-700">
               {t('caravans.contactNewHint')}
@@ -336,6 +350,16 @@ export function CaravanContactsPanel({
               </Button>
             </div>
           </div>
+        ) : null}
+
+        {newPersonInModal && draft.status === 'new' && !complete ? (
+          <ContactPersonModal
+            roleLabel={roleLabel}
+            draft={draft}
+            onChange={(next) => onDraftChange(activeRole, next)}
+            onSave={saveNewContact}
+            onClose={clearContact}
+          />
         ) : null}
       </div>
 
@@ -502,5 +526,124 @@ function FactChip({
         </p>
       </div>
     </div>
+  )
+}
+
+function ContactPersonModal({
+  roleLabel,
+  draft,
+  onChange,
+  onSave,
+  onClose,
+}: {
+  roleLabel: string
+  draft: CaravanContactDraft
+  onChange: (draft: CaravanContactDraft) => void
+  onSave: () => void
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previous
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-ink-900/30"
+        aria-label={t('caravans.cancel')}
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contact-person-title"
+        className={`relative z-10 max-h-[min(92vh,44rem)] w-full max-w-lg overflow-y-auto p-6 ${cardClassName}`}
+      >
+        <h2 id="contact-person-title" className="text-lg font-semibold text-ink-900">
+          {t('caravanRegister.contactModalTitle', { role: roleLabel })}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-ink-600">
+          {t('caravanRegister.contactModalHint')}
+        </p>
+        <AppForm
+          autoFocusFirst
+          className="mt-4 space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            onSave()
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField icon={UserRound} label={t('users.firstName')} htmlFor="contact-modal-firstName">
+              <input
+                id="contact-modal-firstName"
+                className={inputClassName()}
+                value={draft.firstName}
+                required
+                onChange={(e) => onChange({ ...draft, firstName: e.target.value })}
+              />
+            </FormField>
+            <FormField icon={UserRound} label={t('users.lastName')} htmlFor="contact-modal-lastName">
+              <input
+                id="contact-modal-lastName"
+                className={inputClassName()}
+                value={draft.lastName}
+                required
+                onChange={(e) => onChange({ ...draft, lastName: e.target.value })}
+              />
+            </FormField>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField icon={IdCard} label={t('users.nationalId')} htmlFor="contact-modal-nationalId">
+              <input
+                id="contact-modal-nationalId"
+                className={`${inputClassName()} digit-field`}
+                value={draft.nationalId}
+                dir="ltr"
+                readOnly
+              />
+            </FormField>
+            <FormField icon={Phone} label={t('users.phone')} htmlFor="contact-modal-phone">
+              <input
+                id="contact-modal-phone"
+                className={`${inputClassName()} digit-field`}
+                value={draft.phone}
+                dir="ltr"
+                inputMode="tel"
+                required
+                onChange={(e) => onChange({ ...draft, phone: e.target.value })}
+              />
+            </FormField>
+          </div>
+          <FormField icon={Calendar} label={t('pilgrims.birthDate')} htmlFor="contact-modal-birthDate">
+            <PersianDateField
+              id="contact-modal-birthDate"
+              value={draft.birthDate || undefined}
+              onChange={(iso) => onChange({ ...draft, birthDate: iso ?? '' })}
+            />
+          </FormField>
+          <FormActions
+            submitLabel={t('caravans.contactSave')}
+            cancelLabel={t('caravans.cancel')}
+            onCancel={onClose}
+          />
+        </AppForm>
+      </div>
+    </div>,
+    document.body,
   )
 }

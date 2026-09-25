@@ -12,6 +12,7 @@ import { CaravanDetailPage } from "./pages/caravans/CaravanDetailPage";
 import { CaravanEditPage } from "./pages/caravans/CaravanEditPage";
 import { CaravanImportPage } from "./pages/caravans/CaravanImportPage";
 import { CaravanPilgrimageHistoryPage } from "./pages/caravans/CaravanPilgrimageHistoryPage";
+import { CaravanRegisterWizardPage } from "./pages/caravans/CaravanRegisterWizardPage";
 import { CaravanReportPage } from "./pages/caravans/CaravanReportPage";
 import { CaravanYearManagementPage } from "./pages/caravans/CaravanYearManagementPage";
 import { CaravansListPage } from "./pages/caravans/CaravansListPage";
@@ -157,6 +158,7 @@ import { PlacementsListPage } from "./pages/placements/PlacementsListPage";
 import { PlacementDetailPage } from "./pages/placements/PlacementDetailPage";
 import { PlacementVacatePage } from "./pages/placements/PlacementVacatePage";
 import { AccommodationsListPage } from "./pages/accommodations/AccommodationsListPage";
+import { AccommodationIntroduceWizardPage } from "./pages/accommodations/AccommodationIntroduceWizardPage";
 import { MyAccommodationCreatePage } from "./pages/accommodations/MyAccommodationCreatePage";
 import { MyAccommodationsListPage } from "./pages/accommodations/MyAccommodationsListPage";
 import { AccommodationManagerCreatePage } from "./pages/accommodation-managers/AccommodationManagerCreatePage";
@@ -466,6 +468,14 @@ export default function App() {
                   <Route
                     path="/caravan-report"
                     element={<CaravanReportPage />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/caravan-registration" />}
+                >
+                  <Route
+                    path="/caravan-registration"
+                    element={<CaravanRegisterWizardPage />}
                   />
                 </Route>
                 <Route element={<RequireMenuAccess path="/my-caravans" />}>
@@ -1091,6 +1101,16 @@ export default function App() {
                   <Route
                     path="/station-reservation-history"
                     element={<StationReservationHistoryPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/accommodation-introduction" />
+                  }
+                >
+                  <Route
+                    path="/accommodation-introduction"
+                    element={<AccommodationIntroduceWizardPage />}
                   />
                 </Route>
                 <Route element={<RequireMenuAccess path="/my-accommodations" />}>
