@@ -40,6 +40,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { confirmToast } from '../../components/ui/confirmToast'
 import {
   FormCard,
+  FormEmptyHint,
   FormFactTile,
   FormMetaChip,
   FormSectionTitle,
@@ -66,6 +67,63 @@ const sourceIcon: Record<AllocationSource, LucideIcon> = {
   SYSTEM: Sparkles,
   MANUAL: Hand,
   HYBRID: Combine,
+}
+
+function PlacementGenderTabs({
+  value,
+  onChange,
+  maleLabel,
+  femaleLabel,
+}: {
+  value: UserGender
+  onChange: (value: UserGender) => void
+  maleLabel: string
+  femaleLabel: string
+}) {
+  const items = [
+    {
+      id: 'MALE' as const,
+      label: maleLabel,
+      icon: Mars,
+      activeClass: 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]',
+      idleIcon: 'text-teal-600',
+    },
+    {
+      id: 'FEMALE' as const,
+      label: femaleLabel,
+      icon: Venus,
+      activeClass: 'bg-mint-500 text-white shadow-[0_8px_16px_rgba(63,214,190,0.28)]',
+      idleIcon: 'text-mint-600',
+    },
+  ]
+  return (
+    <nav
+      className="flex flex-wrap items-center justify-center gap-2 border-b border-line bg-cream-50/60 px-4 py-3 sm:px-5"
+      role="tablist"
+    >
+      {items.map((item) => {
+        const active = value === item.id
+        const Icon = item.icon
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            id={`placement-tab-${item.id}`}
+            aria-selected={active}
+            aria-controls="placement-gender-panel"
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 ${
+              active ? item.activeClass : 'bg-white text-ink-700 ring-1 ring-line hover:bg-cream-50'
+            }`}
+            onClick={() => onChange(item.id)}
+          >
+            <Icon className={`size-3.5 ${active ? 'text-white' : item.idleIcon}`} aria-hidden />
+            {item.label}
+          </button>
+        )
+      })}
+    </nav>
+  )
 }
 
 function PilgrimCountPanel({
@@ -126,6 +184,7 @@ export function PlacementDetailPage() {
   const [accommodatedCount, setAccommodatedCount] = useState('')
   const [movingId, setMovingId] = useState<string | null>(null)
   const [showAllAccommodations, setShowAllAccommodations] = useState(false)
+  const [genderTab, setGenderTab] = useState<UserGender | null>(null)
 
   const detail = useQuery({
     queryKey: ['placements', 'reservation', reservationId],
@@ -154,9 +213,17 @@ export function PlacementDetailPage() {
   const remainingMaleNeed = row ? Math.max(0, row.maleCount - row.allocatedMale) : 0
   const remainingFemaleNeed = row ? Math.max(0, row.femaleCount - row.allocatedFemale) : 0
   const partyFullyPlaced = remainingMaleNeed === 0 && remainingFemaleNeed === 0
-  const showAllocateForm =
-    Boolean(movingId) || (individual ? !row?.allocations.length : !partyFullyPlaced)
   const bothGenders = Boolean(row && !individual && row.maleCount > 0 && row.femaleCount > 0)
+  const shownTab: UserGender =
+    genderTab ??
+    (remainingMaleNeed === 0 && remainingFemaleNeed > 0 ? 'FEMALE' : 'MALE')
+  const showAllocateForm = movingId
+    ? !bothGenders || movingItem?.gender === shownTab
+    : individual
+      ? !row?.allocations.length
+      : bothGenders
+        ? (shownTab === 'MALE' ? remainingMaleNeed : remainingFemaleNeed) > 0
+        : !partyFullyPlaced
   const maleSettled = Boolean(
     bothGenders && remainingMaleNeed === 0 && movingItem?.gender !== 'MALE',
   )
@@ -186,6 +253,11 @@ export function PlacementDetailPage() {
 
   useEffect(() => {
     if (!row || movingId) return
+    if (bothGenders) {
+      if (gender === shownTab) return
+      fillHeadcountForGender(shownTab)
+      return
+    }
     if (row.type === reservationTypes.INDIVIDUAL) {
       const nextGender = row.maleCount >= 1 ? 'MALE' : 'FEMALE'
       setGender(nextGender)
@@ -205,7 +277,7 @@ export function PlacementDetailPage() {
     setAccommodationId('')
     setHeadcount(need > 0 ? String(need) : '')
     setAccommodatedCount(String(currentAccommodatedFor(next)))
-  }, [row, movingId, preferredGender, gender, genderChoices])
+  }, [row, movingId, bothGenders, shownTab, preferredGender, gender, genderChoices])
 
   const availability = useQuery({
     queryKey: ['placements', 'availability', stayStart, stayEnd, reservationId],
@@ -219,13 +291,15 @@ export function PlacementDetailPage() {
     },
   })
 
-  const selectedGender: UserGender | '' = individual
-    ? individualGender
-    : gender && genderChoices.includes(gender)
-      ? gender
-      : genderChoices.includes(preferredGender as UserGender)
-        ? preferredGender
-        : ''
+  const selectedGender: UserGender | '' = bothGenders
+    ? shownTab
+    : individual
+      ? individualGender
+      : gender && genderChoices.includes(gender)
+        ? gender
+        : genderChoices.includes(preferredGender as UserGender)
+          ? preferredGender
+          : ''
 
   function accommodationMatchesGender(item: PlacementAvailability, nextGender: UserGender) {
     const capacity = nextGender === 'MALE' ? item.maleCapacity : item.femaleCapacity
@@ -282,6 +356,17 @@ export function PlacementDetailPage() {
     if (individual) return
     const remaining = remainingNeed(nextGender)
     setHeadcount(remaining > 0 ? String(remaining) : '')
+  }
+
+  function selectGenderTab(next: UserGender) {
+    const keepMove = Boolean(movingItem && movingItem.gender === next)
+    if (movingItem && !keepMove) {
+      setMovingId(null)
+      setAccommodationId('')
+      setShowAllAccommodations(false)
+    }
+    setGenderTab(next)
+    if (!keepMove) fillHeadcountForGender(next)
   }
 
   function resetForm() {
@@ -450,12 +535,23 @@ export function PlacementDetailPage() {
           </>
         }
       >
-        <div className="space-y-6 p-5 sm:p-6">
+        {bothGenders ? (
+          <PlacementGenderTabs
+            value={shownTab}
+            onChange={selectGenderTab}
+            maleLabel={t('placements.tabMale')}
+            femaleLabel={t('placements.tabFemale')}
+          />
+        ) : null}
+        <div
+          id="placement-gender-panel"
+          role={bothGenders ? 'tabpanel' : undefined}
+          aria-labelledby={bothGenders ? `placement-tab-${shownTab}` : undefined}
+          className="space-y-6 p-5 sm:p-6"
+        >
           <FormSectionTitle icon={Users}>{t('reservations.createSteps.count')}</FormSectionTitle>
-          <div
-            className={`grid gap-3 ${row.maleCount > 0 && row.femaleCount > 0 ? 'lg:grid-cols-2' : ''}`}
-          >
-            {row.maleCount > 0 ? (
+          <div className="grid gap-3">
+            {row.maleCount > 0 && (!bothGenders || shownTab === 'MALE') ? (
               <PilgrimCountPanel
                 title={t('placements.menGroup')}
                 icon={Mars}
@@ -468,7 +564,7 @@ export function PlacementDetailPage() {
                 remaining={n(Math.max(0, row.maleCount - row.allocatedMale))}
               />
             ) : null}
-            {row.femaleCount > 0 ? (
+            {row.femaleCount > 0 && (!bothGenders || shownTab === 'FEMALE') ? (
               <PilgrimCountPanel
                 title={t('placements.womenGroup')}
                 icon={Venus}
@@ -483,11 +579,12 @@ export function PlacementDetailPage() {
             ) : null}
           </div>
 
-          {row.allocations.length ? (
+          {bothGenders || row.allocations.length ? (
             <>
               <FormSectionTitle icon={Building2}>{t('placements.stayLocation')}</FormSectionTitle>
+              {row.allocations.some((item) => !bothGenders || item.gender === shownTab) ? (
               <div className="space-y-4">
-                {row.allocations.map((item) => {
+                {row.allocations.filter((item) => !bothGenders || item.gender === shownTab).map((item) => {
                   const SourceIcon = sourceIcon[item.source]
                   const stayTitle =
                     individual
@@ -507,6 +604,13 @@ export function PlacementDetailPage() {
                       formatCount={n}
                       highlighted={item.id === movingId}
                       note={item.overrideNote}
+                      oppositePlaces={
+                        bothGenders
+                          ? row.allocations
+                              .filter((other) => other.gender !== item.gender)
+                              .map((other) => other.accommodation)
+                          : undefined
+                      }
                       footerAside={
                         <ReservationPlacementSmsButton
                           title={t('placements.smsPreviewTitle')}
@@ -541,6 +645,7 @@ export function PlacementDetailPage() {
                             type="button"
                             variant="soft"
                             onClick={() => {
+                              setGenderTab(item.gender)
                               setMovingId(item.id)
                               setAccommodationId('')
                               setGender(item.gender)
@@ -561,13 +666,14 @@ export function PlacementDetailPage() {
                   )
                 })}
               </div>
+              ) : (
+                <FormEmptyHint>{t('placements.emptyAllocations')}</FormEmptyHint>
+              )}
             </>
           ) : null}
-        </div>
-      </FormCard>
 
-      {showAllocateForm ? (
-        <div className="mt-6">
+          {showAllocateForm ? (
+            <div>
           <FormCard
             icon={LayoutGrid}
             title={movingId ? t('placements.move') : t('placements.allocateManual')}
@@ -584,7 +690,19 @@ export function PlacementDetailPage() {
                   </p>
                 </FormField>
               ) : null}
-              {individual ? null : (
+              {individual ? null : bothGenders ? (
+                <FormField icon={Users} label={t('placements.headcount')} htmlFor="placement-headcount">
+                  <input
+                    id="placement-headcount"
+                    type="number"
+                    min={1}
+                    className={fieldClassName}
+                    value={headcount}
+                    onChange={(event) => setHeadcount(event.target.value)}
+                    required
+                  />
+                </FormField>
+              ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     icon={selectedGender === 'FEMALE' ? Venus : selectedGender === 'MALE' ? Mars : Users}
@@ -746,8 +864,10 @@ export function PlacementDetailPage() {
               </div>
             </AppForm>
           </FormCard>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </FormCard>
     </div>
   )
 }

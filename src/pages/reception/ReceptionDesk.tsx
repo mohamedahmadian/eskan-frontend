@@ -791,11 +791,9 @@ function PersonPhoto({ photoId, name }: { photoId: string | null; name: string }
 function VisitStays({
   stays,
   year,
-  locale,
 }: {
   stays: ReceptionVisitStay[]
   year: number
-  locale: string
 }) {
   const { t } = useTranslation()
   const [openId, setOpenId] = useState<string | null>(null)
@@ -848,7 +846,6 @@ function VisitStays({
           name={open.accommodation.name}
           tone={open.gender === 'FEMALE' ? 'mint' : 'teal'}
           manager={stayManager(open.accommodation, year)}
-          locale={locale}
           onClose={() => setOpenId(null)}
         />
       ) : null}
@@ -1113,7 +1110,7 @@ function VisitList({
                 ) : null}
               </div>
             ) : null}
-            <VisitStays stays={visit.stays ?? []} year={visit.year} locale={locale} />
+            <VisitStays stays={visit.stays ?? []} year={visit.year} />
           </li>
         )
       })}

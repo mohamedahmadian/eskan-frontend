@@ -869,6 +869,25 @@ export type AccommodationManagerLink = {
   user: { id: string; username: string; fullName: string } | null;
 };
 
+export type AccommodationCaravanPlacement = {
+  id: string;
+  name: string;
+  city: (GeoName & { id: string; provinceId: string }) | null;
+  manager: { id: string; fullName: string } | null;
+  placedMaleCount: number;
+  placedFemaleCount: number;
+};
+
+export type CaravanManagerStayPlacement = {
+  id: string;
+  name: string;
+  address: string | null;
+  city: (GeoName & { id: string; provinceId: string }) | null;
+  caravans: { id: string; name: string }[];
+  placedMaleCount: number;
+  placedFemaleCount: number;
+};
+
 export type AccommodationYearReservation = {
   id: string;
   code: string;
@@ -2701,6 +2720,7 @@ export type PlacementQueueItem = {
   accommodatedFemaleCount?: number;
   allocatedMale: number;
   allocatedFemale: number;
+  stays: { id: string; name: string; genders: UserGender[] }[];
   partyName: string;
   caravan: { id: string; name: string } | null;
   group: { id: string; name: string } | null;

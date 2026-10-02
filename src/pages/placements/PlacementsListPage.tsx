@@ -1,11 +1,11 @@
 import { CalendarDays, Download, Filter, LayoutGrid, LogOut, Sparkles, Building2 } from 'lucide-react'
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DateText } from '../../components/ui/DateText'
-import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
+import { Button, FormField, PageHeader, fullWidthShellClassName } from '../../components/ui/Form'
 import { FormMetaChip } from '../../components/ui/FormLayout'
 import {
   FilterPair,
@@ -15,7 +15,6 @@ import {
   TableCard,
 } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
-import { confirmToast } from '../../components/ui/confirmToast'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api, getApiErrorMessage } from '../../lib/api'
@@ -29,6 +28,7 @@ import {
   type PlacementQueueItem,
   type PlacementStatus,
   type ReservationType,
+  type UserGender,
 } from '../../types/app'
 import { HeadcountPills } from '../reservations/HeadcountPills'
 import { ReservationCodeBadge } from '../reservations/ReservationCodeBadge'
@@ -46,10 +46,35 @@ const statusOrder: PlacementStatus[] = [
   placementStatuses.PLACED,
 ]
 
+function PlacementStays({ stays }: { stays: PlacementQueueItem['stays'] }) {
+  const { t } = useTranslation()
+  if (!stays?.length) return <span className="text-ink-400">—</span>
+  const genderSet = new Set<UserGender>(stays.flatMap((stay) => stay.genders))
+  const showGender = stays.length > 1 && genderSet.size > 1
+  return (
+    <div className="flex flex-col items-start gap-1">
+      {stays.map((stay) => (
+        <FormMetaChip
+          key={stay.id}
+          icon={Building2}
+          label={
+            showGender
+              ? `${stay.name} (${stay.genders
+                  .map((gender) =>
+                    t(gender === 'FEMALE' ? 'placements.womenGroup' : 'placements.menGroup'),
+                  )
+                  .join('، ')})`
+              : stay.name
+          }
+        />
+      ))}
+    </div>
+  )
+}
+
 export function PlacementsListPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
-  const queryClient = useQueryClient()
   const n = (value: number) => formatNumber(value, locale)
   const [exporting, setExporting] = useState(false)
   const { q, page, term, setTerm, setPage, searchParams, setParams } = useListParams()
@@ -111,34 +136,12 @@ export function PlacementsListPage() {
     }
   }
 
-  function allocateSystem() {
-    confirmToast({
-      title: t('placements.confirmAllocateSystem'),
-      confirmLabel: t('common.yes'),
-      cancelLabel: t('common.cancel'),
-      onConfirm: async () => {
-        try {
-          const { data } = await api.post<{ created: number }>('/placements/allocate-system', {
-            ...(q ? { q } : {}),
-            ...(year ? { year: Number(year) } : {}),
-            ...(type ? { type } : {}),
-            ...(placementStatus ? { placementStatus } : {}),
-          })
-          toast.success(t('placements.allocatedSystem', { count: n(data.created) }))
-          void queryClient.invalidateQueries({ queryKey: ['placements'] })
-        } catch (error) {
-          toast.error(getApiErrorMessage(error, t('common.error')))
-        }
-      },
-    })
-  }
-
   const items = query.data?.items ?? []
   const total = query.data?.total ?? 0
   const pageSize = query.data?.pageSize ?? 10
 
   return (
-    <div className={listShellClassName}>
+    <div className={fullWidthShellClassName}>
       <PageHeader
         icon={Building2}
         title={t('menus.placement')}
@@ -247,6 +250,7 @@ export function PlacementsListPage() {
               />
               <SortableTh column="totalCount" label={t('placements.headcount')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="px-4 py-3 text-start font-medium">{t('placements.allocated')}</th>
+              <th className="min-w-[12rem] px-4 py-3 text-start font-medium">{t('placements.accommodation')}</th>
               <SortableTh column="stayStartDate" label={t('placements.stay')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <SortableTh
                 column="placementStatus"
@@ -299,6 +303,9 @@ export function PlacementsListPage() {
                     showTotal={false}
                   />
                 </td>
+                <td className="min-w-[12rem] px-4 py-3">
+                  <PlacementStays stays={row.stays} />
+                </td>
                 <td className="px-4 py-3">
                   {row.stayStartDate || row.stayEndDate ? (
                     <div className="inline-flex items-center gap-1.5 whitespace-nowrap" dir="ltr">
@@ -334,15 +341,12 @@ export function PlacementsListPage() {
         onPageChange={setPage}
         startExtra={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="soft"
-              onClick={allocateSystem}
-              disabled={placementMode === placementModes.MANUAL}
-            >
-              <Sparkles className="size-4" aria-hidden />
-              {t('placements.allocateSystem')}
-            </Button>
+            <Link to={`/placements/system?year=${encodeURIComponent(year)}`}>
+              <Button type="button" variant="soft">
+                <Sparkles className="size-4" aria-hidden />
+                {t('placements.allocateSystem')}
+              </Button>
+            </Link>
             <Link to="/placements/vacate">
               <Button type="button" variant="ghost">
                 <LogOut className="size-4" aria-hidden />

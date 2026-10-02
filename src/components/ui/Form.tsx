@@ -35,6 +35,8 @@ const variants = {
 
 const pageShellClassName = 'mx-auto w-full min-w-0 wide:max-w-6xl'
 export const listShellClassName = pageShellClassName
+/** Content width with no wide-screen cap. */
+export const fullWidthShellClassName = 'w-full min-w-0'
 /** Full content width on ordinary monitors; standard 72rem cap on wide screens. */
 export const formShellClassName = pageShellClassName
 export const userFormShellClassName = pageShellClassName

@@ -8,17 +8,23 @@ import {
   TableCard,
   EntityRowActions,
   SortableTh,
+  ActionsTh,
+  actionsColClassName,
 } from '../../components/ui/ListControls'
-import { Button, PageHeader, listShellClassName } from '../../components/ui/Form'
+import { Button, PageHeader, fullWidthShellClassName } from '../../components/ui/Form'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
+import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Caravan, Paginated } from '../../types/app'
+import { CaravanGenderCount } from './CaravanGenderCounts'
 
 export function CaravansListPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const n = (value: number) => formatNumber(value, locale)
   const nameOf = useGeoName()
   const { confirmDelete } = useConfirmDelete()
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
@@ -36,7 +42,7 @@ export function CaravansListPage() {
   const rows = query.data?.items ?? []
 
   return (
-    <div className={listShellClassName}>
+    <div className={fullWidthShellClassName}>
       <PageHeader
         icon={Tent}
         title={t('menus.caravansList')}
@@ -108,7 +114,21 @@ export function CaravansListPage() {
                 sortDir={sortDir}
                 onSort={onSort}
               />
-              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+              <SortableTh
+                column="maleCount"
+                label={t('caravans.countMale')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTh
+                column="femaleCount"
+                label={t('caravans.countFemale')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <ActionsTh />
             </tr>
           </thead>
           <tbody>
@@ -122,6 +142,22 @@ export function CaravansListPage() {
                   {caravan.isActive ? t('geo.active') : t('geo.inactive')}
                 </td>
                 <td className="px-4 py-3">
+                  <CaravanGenderCount
+                    kind="male"
+                    value={caravan.maleCount}
+                    label={t('caravans.countMale')}
+                    format={n}
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <CaravanGenderCount
+                    kind="female"
+                    value={caravan.femaleCount}
+                    label={t('caravans.countFemale')}
+                    format={n}
+                  />
+                </td>
+                <td className={actionsColClassName}>
                   <EntityRowActions
                     viewTo={`/caravans/${caravan.id}`}
                     editTo={`/caravans/${caravan.id}/edit`}

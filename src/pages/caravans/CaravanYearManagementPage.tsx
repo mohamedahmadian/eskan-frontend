@@ -1,11 +1,11 @@
 import {
   ArrowLeftRight,
+  Ban,
   CalendarDays,
   Check,
   CircleOff,
   Plus,
   Tent,
-  Trash2,
   UserRound,
 } from 'lucide-react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -22,13 +22,15 @@ import {
   PageHeader,
   ToggleField,
   cardClassName,
-  listShellClassName,
+  fullWidthShellClassName,
 } from '../../components/ui/Form'
 import {
+  ActionsTh,
   PaginationBar,
   SearchBar,
   SortableTh,
   TableCard,
+  actionsColClassName,
 } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
@@ -48,6 +50,7 @@ import type {
   Paginated,
 } from '../../types/app'
 import { yearManagerLabel } from './CaravanYearAlert'
+import { CaravanGenderCount, caravanHeadcount } from './CaravanGenderCounts'
 
 type YearTab = 'manage' | 'transfer'
 type YearActivityFilter = 'all' | 'active' | 'inactive'
@@ -148,7 +151,7 @@ function YearStatsCards({
                   onDeactivateAllActive()
                 }}
               >
-                <Trash2 className="size-4" aria-hidden />
+                <Ban className="size-4" aria-hidden />
                 {t('caravanYearManagement.deactivateAllActive', {
                   year: yearLabel,
                 })}
@@ -656,9 +659,12 @@ export function CaravanYearManagementPage() {
   }
 
   const unassigned = t('caravans.unassignedManager')
+  const formatCount = (value: number) => formatNumber(value, locale)
+  const maleLabel = t('caravans.countMale')
+  const femaleLabel = t('caravans.countFemale')
 
   return (
-    <div className={`${listShellClassName} space-y-6`}>
+    <div className={`${fullWidthShellClassName} space-y-6`}>
       <PageHeader
         icon={Tent}
         title={t('menus.caravanYearManagement')}
@@ -728,12 +734,24 @@ export function CaravanYearManagementPage() {
               empty={manageEmptyText()}
             >
               <div className={manageListQuery.isFetching ? 'opacity-70 transition-opacity' : ''}>
-              <table className="min-w-full text-sm">
+              <table className="w-full text-sm">
+                <colgroup>
+                  <col className="w-12" />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col className="w-0" />
+                </colgroup>
                 <thead className="border-b border-line bg-cream-50 text-ink-600">
                   <tr>
                     <th className="w-12 px-3 py-3 text-start font-medium">
                       <span className="sr-only">
-                        {t('caravanYearManagement.yearStatus')}
+                        {t('caravanYearManagement.yearStatus', {
+                          year: formatNumber(manageYear, locale),
+                        })}
                       </span>
                     </th>
                     <SortableTh
@@ -751,12 +769,28 @@ export function CaravanYearManagementPage() {
                       onSort={onSort}
                     />
                     <th className="px-4 py-3 text-start font-medium">
-                      {t('caravanYearManagement.yearStatus')}
+                      {t('caravanYearManagement.yearStatus', {
+                        year: formatNumber(manageYear, locale),
+                      })}
                     </th>
                     <th className="px-4 py-3 text-start font-medium">
                       {t('caravans.manager')}
                     </th>
-                    <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+                    <SortableTh
+                      column="maleCount"
+                      label={maleLabel}
+                      sortBy={sortBy}
+                      sortDir={sortDir}
+                      onSort={onSort}
+                    />
+                    <SortableTh
+                      column="femaleCount"
+                      label={femaleLabel}
+                      sortBy={sortBy}
+                      sortDir={sortDir}
+                      onSort={onSort}
+                    />
+                    <ActionsTh />
                   </tr>
                 </thead>
                 <tbody>
@@ -807,6 +841,22 @@ export function CaravanYearManagementPage() {
                             : '—'}
                         </td>
                         <td className="px-4 py-3">
+                          <CaravanGenderCount
+                            kind="male"
+                            value={caravanHeadcount(item, manageYear).male}
+                            label={maleLabel}
+                            format={formatCount}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <CaravanGenderCount
+                            kind="female"
+                            value={caravanHeadcount(item, manageYear).female}
+                            label={femaleLabel}
+                            format={formatCount}
+                          />
+                        </td>
+                        <td className={actionsColClassName}>
                           {item.activeInYear ? (
                             <Button
                               type="button"
@@ -815,7 +865,7 @@ export function CaravanYearManagementPage() {
                               disabled={busy}
                               onClick={() => confirmRemove(item)}
                             >
-                              <Trash2 className="size-4" aria-hidden />
+                              <Ban className="size-4" aria-hidden />
                               {t('caravanYearManagement.removeFromYear', {
                                 year: formatNumber(manageYear, locale),
                               })}
@@ -985,6 +1035,20 @@ export function CaravanYearManagementPage() {
                     <th className="px-4 py-3 text-start font-medium">
                       {t('caravans.manager')}
                     </th>
+                    <SortableTh
+                      column="maleCount"
+                      label={maleLabel}
+                      sortBy={sortBy}
+                      sortDir={sortDir}
+                      onSort={onSort}
+                    />
+                    <SortableTh
+                      column="femaleCount"
+                      label={femaleLabel}
+                      sortBy={sortBy}
+                      sortDir={sortDir}
+                      onSort={onSort}
+                    />
                   </tr>
                 </thead>
                 <tbody>
@@ -1003,6 +1067,22 @@ export function CaravanYearManagementPage() {
                       <td className="px-4 py-3">{item.city ? nameOf(item.city) : '—'}</td>
                       <td className="px-4 py-3">
                         {yearManagerLabel(item, sourceYear, unassigned)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <CaravanGenderCount
+                          kind="male"
+                          value={caravanHeadcount(item, sourceYear).male}
+                          label={maleLabel}
+                          format={formatCount}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <CaravanGenderCount
+                          kind="female"
+                          value={caravanHeadcount(item, sourceYear).female}
+                          label={femaleLabel}
+                          format={formatCount}
+                        />
                       </td>
                     </tr>
                   ))}

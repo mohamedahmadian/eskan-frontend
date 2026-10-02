@@ -157,6 +157,7 @@ import { AccommodationReportPage } from "./pages/accommodations/AccommodationRep
 import { PlacementsListPage } from "./pages/placements/PlacementsListPage";
 import { PlacementDetailPage } from "./pages/placements/PlacementDetailPage";
 import { PlacementVacatePage } from "./pages/placements/PlacementVacatePage";
+import { PlacementSystemPage } from "./pages/placements/PlacementSystemPage";
 import { AccommodationsListPage } from "./pages/accommodations/AccommodationsListPage";
 import { AccommodationIntroduceWizardPage } from "./pages/accommodations/AccommodationIntroduceWizardPage";
 import { MyAccommodationCreatePage } from "./pages/accommodations/MyAccommodationCreatePage";
@@ -1160,6 +1161,10 @@ export default function App() {
                 </Route>
                 <Route element={<RequireMenuAccess path="/placements" />}>
                   <Route path="/placements" element={<PlacementsListPage />} />
+                  <Route
+                    path="/placements/system"
+                    element={<PlacementSystemPage />}
+                  />
                   <Route
                     path="/placements/vacate"
                     element={<PlacementVacatePage />}

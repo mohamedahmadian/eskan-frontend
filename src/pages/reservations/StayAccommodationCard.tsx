@@ -26,7 +26,8 @@ import {
   FormCardHeaderDecor,
   FormFactTile,
 } from '../../components/ui/FormLayout'
-import { formatNumber } from '../../lib/datetime'
+import { haversineKm } from '../../lib/geo'
+import { distanceToShrine, formatShrineDistanceValue } from '../../lib/shrine'
 import type {
   ReservationAllocationSummary,
   ReservationStayAccommodation,
@@ -85,6 +86,56 @@ export function StayTextOrLink({ value }: { value: string | null | undefined }) 
   return <span className="break-words">{text}</span>
 }
 
+function placePoint(place: { latitude?: number | null; longitude?: number | null } | null | undefined) {
+  const lat = place?.latitude
+  const lng = place?.longitude
+  if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  return { lat, lng }
+}
+
+function formatDistanceKm(
+  km: number,
+  locale: string,
+  t: (key: string, options?: Record<string, string>) => string,
+) {
+  if (!Number.isFinite(km) || km < 0) return ''
+  const parts = formatShrineDistanceValue(km, locale)
+  return t(parts.unit === 'm' ? 'shrine.distanceMeters' : 'shrine.distanceKm', {
+    value: parts.value,
+  })
+}
+
+function shrineDistanceKm(place: ReservationStayAccommodation) {
+  if (place.distanceToShrineKm != null && Number.isFinite(place.distanceToShrineKm)) {
+    return place.distanceToShrineKm
+  }
+  const here = placePoint(place)
+  if (!here) return null
+  return distanceToShrine(here.lat, here.lng).km
+}
+
+function oppositeStayDistance(
+  place: ReservationStayAccommodation,
+  others: ReservationStayAccommodation[],
+) {
+  const here = placePoint(place)
+  if (!here) return null
+  let best: { km: number; name: string } | null = null
+  let distinct = 0
+  const seen = new Set<string>()
+  for (const other of others) {
+    if (seen.has(other.id)) continue
+    seen.add(other.id)
+    const there = placePoint(other)
+    if (!there) continue
+    distinct += 1
+    const km = haversineKm(here.lat, here.lng, there.lat, there.lng)
+    if (!best || km < best.km) best = { km, name: other.name }
+  }
+  if (!best) return null
+  return { ...best, several: distinct > 1 }
+}
+
 export function StayAccommodationCard({
   title,
   gender,
@@ -100,6 +151,7 @@ export function StayAccommodationCard({
   chips,
   note,
   highlighted,
+  oppositePlaces,
 }: {
   title: string
   gender: UserGender
@@ -115,6 +167,7 @@ export function StayAccommodationCard({
   chips?: ReactNode
   note?: string | null
   highlighted?: boolean
+  oppositePlaces?: ReservationStayAccommodation[]
 }) {
   const { t } = useTranslation()
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -134,6 +187,17 @@ export function StayAccommodationCard({
         : null
   const manager = stayManager(place, year)
   const canOpenDetails = Boolean(assigned && place)
+  const shrineKm = place ? shrineDistanceKm(place) : null
+  const shrineDistance = shrineKm == null ? '' : formatDistanceKm(shrineKm, locale, t)
+  const opposite =
+    place && oppositePlaces ? oppositeStayDistance(place, oppositePlaces) : null
+  const oppositeDistance = opposite
+    ? opposite.several
+      ? `${formatDistanceKm(opposite.km, locale, t)} · ${opposite.name}`
+      : formatDistanceKm(opposite.km, locale, t)
+    : ''
+  const oppositeLabel =
+    gender === 'MALE' ? t('placements.distanceToWomen') : t('placements.distanceToMen')
 
   return (
     <article
@@ -235,6 +299,24 @@ export function StayAccommodationCard({
           empty={!manager?.phone}
           tone={tone === 'teal' ? 'mint' : 'teal'}
         />
+        {place ? (
+          <FormFactTile
+            icon={Route}
+            label={t('reservations.placementDistanceToShrine')}
+            value={shrineDistance || '—'}
+            empty={!shrineDistance}
+            tone={tone}
+          />
+        ) : null}
+        {oppositePlaces ? (
+          <FormFactTile
+            icon={gender === 'MALE' ? Venus : Mars}
+            label={oppositeLabel}
+            value={oppositeDistance || '—'}
+            empty={!oppositeDistance}
+            tone={tone === 'teal' ? 'mint' : 'teal'}
+          />
+        ) : null}
         {canOpenDetails || footerAside ? (
           <div className="flex items-center gap-2 sm:col-span-2">
             {canOpenDetails ? (
@@ -260,7 +342,8 @@ export function StayAccommodationCard({
           name={place.name}
           tone={tone}
           manager={manager}
-          locale={locale}
+          oppositeLabel={oppositePlaces ? oppositeLabel : undefined}
+          oppositeDistance={oppositePlaces ? oppositeDistance : undefined}
           onClose={() => setDetailsOpen(false)}
         />
       ) : null}
@@ -321,26 +404,27 @@ export function StayAccommodationDetailsModal({
   name,
   tone,
   manager,
-  locale,
+  oppositeLabel,
+  oppositeDistance,
   onClose,
 }: {
   place: ReservationStayAccommodation
   name: string
   tone: StayTone
   manager: { name: string | null; phone: string | null } | null
-  locale: string
+  oppositeLabel?: string
+  oppositeDistance?: string
   onClose: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const titleId = useId()
+  const shrineKm = shrineDistanceKm(place)
+  const shrineDistance = shrineKm == null ? '' : formatDistanceKm(shrineKm, locale, t)
   const lat = place.latitude
   const lng = place.longitude
   const hasPoint =
     lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)
-  const distance =
-    place.distanceToShrineKm != null
-      ? `${formatNumber(place.distanceToShrineKm, locale)} ${t('accommodations.km')}`
-      : ''
 
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -401,10 +485,19 @@ export function StayAccommodationDetailsModal({
             <FormFactTile
               icon={Route}
               label={t('reservations.placementDistanceToShrine')}
-              value={distance}
-              empty={!distance}
+              value={shrineDistance || '—'}
+              empty={!shrineDistance}
               tone={tone === 'teal' ? 'mint' : 'teal'}
             />
+            {oppositeLabel ? (
+              <FormFactTile
+                icon={tone === 'teal' ? Venus : Mars}
+                label={oppositeLabel}
+                value={oppositeDistance || '—'}
+                empty={!oppositeDistance}
+                tone={tone}
+              />
+            ) : null}
             <FormFactTile
               icon={UserRoundCog}
               label={t('reservations.placementManager')}

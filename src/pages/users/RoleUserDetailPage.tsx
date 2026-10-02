@@ -47,6 +47,7 @@ import {
 import { DateText } from '../../components/ui/DateText'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { EntityRowActions, TableCard } from '../../components/ui/ListControls'
+import { placementPanelClassName, placementTabClassName } from '../../components/ui/placementTab'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
@@ -57,7 +58,7 @@ import { collaborationYears, currentPersianYear, formatNumber, localizeDigits } 
 import { publicProfilePath } from '../../lib/public-profile'
 import { formatRoles, isAdmin } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
-import type { ManagedUser } from '../../types/app'
+import type { CaravanManagerStayPlacement, ManagedUser } from '../../types/app'
 import { HeadquartersAreasCard } from '../headquarters-representatives/HeadquartersAreasCard'
 import { showUserActivityStartYear, type RoleUserScope } from './user-scopes'
 import { RoleUserProfileHeader } from './RoleUserProfileHeader'
@@ -65,7 +66,7 @@ import { SetUserPasswordModal } from './SetUserPasswordModal'
 import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
 
 const baseTabs = ['personal', 'account', 'location', 'documents', 'social', 'other'] as const
-type UserDetailTab = (typeof baseTabs)[number] | 'accommodations' | 'caravans' | 'areas'
+type UserDetailTab = (typeof baseTabs)[number] | 'accommodations' | 'caravans' | 'areas' | 'placement'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -94,6 +95,7 @@ const tabIcons: Record<UserDetailTab, LucideIcon> = {
   accommodations: Building2,
   caravans: Tent,
   areas: Map,
+  placement: MapPinned,
 }
 
 export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
@@ -116,14 +118,32 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
       return data
     },
   })
+  const placementsQuery = useQuery({
+    queryKey: [scope.queryKey, id, 'placements'],
+    enabled: Boolean(id) && Boolean(scope.showPlacement),
+    queryFn: async () => {
+      const { data } = await api.get<{ year: number; items: CaravanManagerStayPlacement[] }>(
+        `${scope.apiBase}/${id}/placements`,
+      )
+      return data
+    },
+  })
+  const stays = placementsQuery.data?.items ?? []
 
   const tabs = useMemo(() => {
     const items: UserDetailTab[] = [...baseTabs]
     if (scope.showCaravans) items.splice(1, 0, 'caravans')
     if (scope.showAccommodations) items.push('accommodations')
     if (scope.showHeadquartersAreas) items.push('areas')
+    if (scope.showPlacement && stays.length > 0) items.push('placement')
     return items
-  }, [scope.showCaravans, scope.showAccommodations, scope.showHeadquartersAreas])
+  }, [
+    scope.showCaravans,
+    scope.showAccommodations,
+    scope.showHeadquartersAreas,
+    scope.showPlacement,
+    stays.length,
+  ])
 
   if (!query.data) {
     return <LoadingState />
@@ -192,19 +212,33 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
           {tabs.map((item) => {
             const Icon = tabIcons[item]
             const active = tab === item
+            const highlighted = item === 'placement'
             return (
               <button
                 key={item}
                 type="button"
                 onClick={() => setTab(item)}
-                className={`inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium transition ${
-                  active
-                    ? 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]'
-                    : 'bg-white text-ink-700 ring-1 ring-line hover:bg-cream-50'
+                className={`inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm transition ${
+                  highlighted
+                    ? placementTabClassName(active)
+                    : active
+                      ? 'bg-teal-500 font-medium text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]'
+                      : 'bg-white font-medium text-ink-700 ring-1 ring-line hover:bg-cream-50'
                 }`}
               >
-                <Icon className={`size-3.5 ${active ? 'text-white' : 'text-teal-600'}`} aria-hidden />
-                {t(`users.tabs.${item}`)}
+                <Icon
+                  className={`size-3.5 ${
+                    highlighted
+                      ? active
+                        ? 'text-white'
+                        : 'text-mint-800'
+                      : active
+                        ? 'text-white'
+                        : 'text-teal-600'
+                  }`}
+                  aria-hidden
+                />
+                {highlighted ? t('placements.highlightTab') : t(`users.tabs.${item}`)}
               </button>
             )
           })}
@@ -275,6 +309,49 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                     tone="teal"
                   />
                 ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {scope.showPlacement && tab === 'placement' ? (
+            <section className={placementPanelClassName}>
+              <SectionTitle icon={MapPinned}>{t('placements.managerStaysTitle')}</SectionTitle>
+              <p className="text-sm font-medium text-mint-800">
+                {t('placements.managerStaysHint', {
+                  year: formatNumber(placementsQuery.data?.year ?? currentPersianYear(), uiLocale),
+                })}
+              </p>
+              <div className="grid gap-3">
+                {stays.map((stay) => (
+                  <article
+                    key={stay.id}
+                    className="rounded-2xl border-2 border-mint-300 bg-white p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-mint-500 text-white shadow-[0_8px_16px_rgba(63,214,190,0.28)]">
+                          <Building2 className="size-5" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-mint-800">
+                            {t('placements.stayLocation')}
+                          </p>
+                          <p className="text-lg font-bold text-ink-900">{stay.name}</p>
+                          {stay.city ? (
+                            <p className="text-sm text-ink-500">{geoName(stay.city)}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                      <EntityRowActions viewTo={`/accommodations/${stay.id}`} />
+                    </div>
+                    {stay.caravans.length ? (
+                      <p className="mt-3 text-sm text-ink-700">
+                        <span className="font-medium">{t('caravans.title')}: </span>
+                        {stay.caravans.map((caravan) => caravan.name).join('، ')}
+                      </p>
+                    ) : null}
+                  </article>
+                ))}
               </div>
             </section>
           ) : null}

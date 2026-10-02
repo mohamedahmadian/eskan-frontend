@@ -1,5 +1,8 @@
 import {
   Boxes,
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
   FolderOpen,
   HandHeart,
   LogOut,
@@ -31,6 +34,7 @@ import { formatNumber } from "../../lib/datetime";
 import { isSidebarMenuActive } from "../../lib/nav-path";
 import { useHeadquartersSummary } from "../../hooks/useHeadquartersSummary";
 import { PageBreadcrumb } from "./PageBreadcrumb";
+import { PlacementSolverLive } from "../../pages/placements/PlacementSolverLive";
 import { HeaderToday } from "./HeaderToday";
 import {
   canAccessMyAccommodations,
@@ -396,6 +400,45 @@ function writeSidebarNavScroll(value: number) {
 
 let sidebarNavScrollTop = readSidebarNavScroll();
 
+const SIDEBAR_COLLAPSED_KEY = "eskan.sidebar-collapsed";
+const SIDEBAR_MODULES_COLLAPSED_KEY = "eskan.sidebar-modules-collapsed";
+const SIDEBAR_WIDTH_CLASS = "w-[20rem]";
+
+function readSidebarCollapsed() {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function useDesktopSidebar() {
+  const query = "(min-width: 1024px)";
+  const [matches, setMatches] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
+  );
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const onChange = () => setMatches(media.matches);
+    onChange();
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+  return matches;
+}
+
+function readCollapsedModules() {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_MODULES_COLLAPSED_KEY);
+    if (!raw) return new Set<string>();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set<string>();
+    return new Set(parsed.filter((item): item is string => typeof item === "string"));
+  } catch {
+    return new Set<string>();
+  }
+}
+
 function isElementFullyVisible(container: HTMLElement, item: HTMLElement) {
   const containerRect = container.getBoundingClientRect();
   const itemRect = item.getBoundingClientRect();
@@ -446,11 +489,18 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const showQuickToolsFab = isQuickToolsFabVisible(location.pathname, user);
   const [open, setOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+  const desktopSidebar = useDesktopSidebar();
+  const sidebarHidden = desktopSidebar ? sidebarCollapsed : !open;
+  const [collapsedModules, setCollapsedModules] = useState(readCollapsedModules);
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const mainRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const menuSearchRef = useRef<HTMLInputElement>(null);
+  const pendingMenuSearchFocus = useRef(false);
+  const desktopMenuToggleRef = useRef<HTMLButtonElement>(null);
+  const collapsedBeforeSearch = useRef<Set<string> | null>(null);
   const menuSearchListId = "sidebar-menu-list";
   const brandingQuery = useHeadquartersSummary();
   const branding = brandingQuery.data;
@@ -463,6 +513,84 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   useEffect(() => {
     mainRef.current?.scrollTo(0, 0);
   }, [location.pathname]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed ? "1" : "0");
+    } catch {
+      /* private mode / quota */
+    }
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    if (collapsedBeforeSearch.current) return;
+    try {
+      localStorage.setItem(
+        SIDEBAR_MODULES_COLLAPSED_KEY,
+        JSON.stringify([...collapsedModules]),
+      );
+    } catch {
+      /* private mode / quota */
+    }
+  }, [collapsedModules]);
+
+  const collapseSidebar = useCallback(() => {
+    setSidebarCollapsed(true);
+    requestAnimationFrame(() => desktopMenuToggleRef.current?.focus());
+  }, []);
+
+  const focusMenuSearch = useCallback(() => {
+    setOpen(true);
+    setSidebarCollapsed(false);
+    const input = menuSearchRef.current;
+    if (input && !input.closest("[inert]")) {
+      input.focus();
+      input.select();
+      return;
+    }
+    pendingMenuSearchFocus.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!pendingMenuSearchFocus.current || sidebarHidden) return;
+    pendingMenuSearchFocus.current = false;
+    const input = menuSearchRef.current;
+    if (!input) return;
+    input.focus();
+    input.select();
+  }, [sidebarHidden]);
+
+  useEffect(() => {
+    if (pilgrim) return;
+    const DOUBLE_CTRL_MS = 500;
+    let lastAt = 0;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.repeat || event.isComposing) return;
+      if (event.key !== "Control") {
+        lastAt = 0;
+        return;
+      }
+      const now = Date.now();
+      if (now - lastAt >= DOUBLE_CTRL_MS) {
+        lastAt = now;
+        return;
+      }
+      event.preventDefault();
+      lastAt = 0;
+      focusMenuSearch();
+    }
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [focusMenuSearch, pilgrim]);
+
+  const toggleModule = useCallback((code: string) => {
+    setCollapsedModules((current) => {
+      const next = new Set(current);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  }, []);
 
   const rememberSidebarScroll = useCallback(() => {
     if (navRef.current) writeSidebarNavScroll(navRef.current.scrollTop);
@@ -564,6 +692,20 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
 
   const visibleMenus = useMemo(() => flattenVisibleMenus(modules), [modules]);
   const searching = Boolean(query.trim());
+
+  useEffect(() => {
+    if (searching) {
+      setCollapsedModules((current) => {
+        if (!collapsedBeforeSearch.current) collapsedBeforeSearch.current = current;
+        return current.size ? new Set() : current;
+      });
+      return;
+    }
+    if (!collapsedBeforeSearch.current) return;
+    const restore = collapsedBeforeSearch.current;
+    collapsedBeforeSearch.current = null;
+    setCollapsedModules(restore);
+  }, [searching]);
   const highlightedMenu = searching
     ? visibleMenus[
         visibleMenus.length
@@ -576,6 +718,24 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
     () => navModules.flatMap((mod) => mod.menus.map((item) => item.path)),
     [navModules],
   );
+
+  const activeModuleCode = useMemo(() => {
+    return navModules.find((mod) =>
+      mod.menus.some((item) =>
+        isSidebarMenuActive(location.pathname, item.path, allMenuPaths),
+      ),
+    )?.code;
+  }, [allMenuPaths, location.pathname, navModules]);
+
+  useEffect(() => {
+    if (!activeModuleCode || searching) return;
+    setCollapsedModules((current) => {
+      if (!current.has(activeModuleCode)) return current;
+      const next = new Set(current);
+      next.delete(activeModuleCode);
+      return next;
+    });
+  }, [activeModuleCode, location.pathname, searching]);
 
   const openMenu = useCallback(
     (item: SidebarNavMenu) => {
@@ -640,12 +800,20 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
             />
           ) : null}
           <aside
-            className={`fixed inset-y-0 start-0 z-40 flex h-svh w-[280px] flex-col overflow-hidden border-e border-teal-100 bg-gradient-to-b from-white via-teal-50/70 to-cream-50 shadow-[8px_0_28px_rgba(46,189,182,0.08)] transition lg:relative lg:h-full lg:translate-x-0 ${
+            id="app-sidebar"
+            aria-hidden={sidebarHidden || undefined}
+            inert={sidebarHidden ? true : undefined}
+            className={`sidebar-shell fixed inset-y-0 start-0 z-40 flex h-svh min-w-0 shrink-0 flex-col overflow-hidden border-e bg-gradient-to-b from-white via-teal-50/70 to-cream-50 lg:relative lg:h-full ${
               open
-                ? "translate-x-0"
-                : "ltr:-translate-x-full rtl:translate-x-full lg:ltr:translate-x-0 lg:rtl:translate-x-0"
+                ? `${SIDEBAR_WIDTH_CLASS} border-teal-100 opacity-100 shadow-[8px_0_28px_rgba(46,189,182,0.08)]`
+                : `${SIDEBAR_WIDTH_CLASS} pointer-events-none border-transparent opacity-0 shadow-none`
+            } ${
+              sidebarCollapsed
+                ? "lg:pointer-events-none lg:w-0 lg:border-transparent lg:opacity-0 lg:shadow-none"
+                : "lg:pointer-events-auto lg:w-[20rem] lg:border-teal-100 lg:opacity-100 lg:shadow-[8px_0_28px_rgba(46,189,182,0.08)]"
             }`}
           >
+            <div className={`relative flex h-full min-h-0 ${SIDEBAR_WIDTH_CLASS} min-w-[20rem] flex-col`}>
             <div
               className="pointer-events-none absolute -start-16 top-24 size-44 rounded-full bg-teal-200/25 blur-2xl"
               aria-hidden
@@ -708,11 +876,19 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                 </div>
                 <button
                   type="button"
-                  className="rounded-lg p-2 text-ink-500 lg:hidden"
+                  className="cursor-pointer rounded-lg p-2 text-ink-500 lg:hidden"
                   onClick={() => setOpen(false)}
                   aria-label={t("nav.closeMenu")}
                 >
                   <X className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  className="hidden cursor-pointer rounded-lg p-2 text-ink-500 hover:bg-white/80 lg:inline-flex"
+                  onClick={collapseSidebar}
+                  aria-label={t("nav.closeMenu")}
+                >
+                  <ChevronsLeft className="size-5 rtl:-scale-x-100" aria-hidden />
                 </button>
               </div>
             </div>
@@ -758,6 +934,7 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                   isSidebarMenuActive(location.pathname, item.path, allMenuPaths),
                 );
                 const mintTone = index % 2 === 1;
+                const moduleExpanded = !collapsedModules.has(mod.code);
                 return (
                   <section
                     key={mod.code}
@@ -769,30 +946,49 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                           : "border-teal-100/90 bg-gradient-to-b from-white to-teal-50/40"
                     }`}
                   >
-                    <header
-                      className={`flex items-center gap-2.5 border-b px-3 py-2.5 ${
+                    <button
+                      type="button"
+                      className={`flex w-full cursor-pointer items-center gap-2.5 px-3 py-3 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-teal-500 ${
+                        moduleExpanded ? "border-b" : ""
+                      } ${
                         mintTone
                           ? "border-mint-100/80 bg-gradient-to-e from-mint-50 via-white to-teal-50/50"
                           : "border-teal-100/80 bg-gradient-to-e from-teal-50 via-white to-mint-50/50"
                       }`}
+                      aria-expanded={moduleExpanded}
+                      aria-controls={`sidebar-module-${mod.code}`}
+                      onClick={() => toggleModule(mod.code)}
                     >
                       <span
-                        className={`flex size-7 shrink-0 items-center justify-center rounded-xl text-white ${
+                        className={`flex size-8 shrink-0 items-center justify-center rounded-xl text-white ${
                           mintTone
                             ? "bg-mint-500 shadow-[0_6px_14px_rgba(63,214,190,0.32)]"
                             : "bg-teal-500 shadow-[0_6px_14px_rgba(46,189,182,0.32)]"
                         }`}
                       >
-                        <ModuleIcon className="size-3.5" aria-hidden />
+                        <ModuleIcon className="size-4" aria-hidden />
                       </span>
-                      <p
-                        className={`min-w-0 truncate text-[11px] font-semibold ${
+                      <span
+                        className={`min-w-0 flex-1 truncate text-base font-semibold leading-6 ${
                           mintTone ? "text-mint-800" : "text-teal-800"
                         }`}
                       >
                         {t(mod.nameKey)}
-                      </p>
-                    </header>
+                      </span>
+                      <ChevronDown
+                        className={`size-4 shrink-0 transition-transform duration-300 motion-reduce:transition-none ${
+                          moduleExpanded ? "rotate-180" : ""
+                        } ${mintTone ? "text-mint-700" : "text-teal-700"}`}
+                        aria-hidden
+                      />
+                    </button>
+                    <div
+                      id={`sidebar-module-${mod.code}`}
+                      className="sidebar-module-panel"
+                      data-open={moduleExpanded ? "true" : "false"}
+                      inert={moduleExpanded ? undefined : true}
+                    >
+                      <div className="sidebar-module-panel-inner">
                     <div className="space-y-1 p-1.5">
                       {ungrouped.map((item) => (
                         <SidebarMenuLink
@@ -839,6 +1035,8 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                         );
                       })}
                     </div>
+                      </div>
+                    </div>
                   </section>
                 );
               })}
@@ -858,18 +1056,37 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                 {user?.impersonating ? t("auth.impersonateEnd") : t("auth.logout")}
               </button>
             </div>
+            </div>
           </aside>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <ImpersonationBanner />
-            <header className="z-20 flex shrink-0 items-center gap-3 bg-cream-50/90 px-4 py-4 backdrop-blur sm:px-8">
+            <header className="relative z-20 flex shrink-0 items-center gap-3 bg-cream-50/90 px-4 py-4 backdrop-blur sm:px-8">
+              <PlacementSolverLive />
               <button
                 type="button"
-                className="rounded-xl p-2 text-ink-700 lg:hidden"
+                className="cursor-pointer rounded-xl p-2 text-ink-700 lg:hidden"
                 onClick={() => setOpen(true)}
                 aria-label={t("nav.openMenu")}
+                aria-expanded={open}
+                aria-controls="app-sidebar"
               >
                 <Menu className="size-5" />
+              </button>
+              <button
+                ref={desktopMenuToggleRef}
+                type="button"
+                className="hidden cursor-pointer rounded-xl p-2 text-ink-700 lg:inline-flex"
+                onClick={() => setSidebarCollapsed((value) => !value)}
+                aria-label={sidebarCollapsed ? t("nav.openMenu") : t("nav.closeMenu")}
+                aria-expanded={!sidebarCollapsed}
+                aria-controls="app-sidebar"
+              >
+                {sidebarCollapsed ? (
+                  <ChevronsRight className="size-5 rtl:-scale-x-100" aria-hidden />
+                ) : (
+                  <ChevronsLeft className="size-5 rtl:-scale-x-100" aria-hidden />
+                )}
               </button>
               <PageBreadcrumb
                 pathname={location.pathname}

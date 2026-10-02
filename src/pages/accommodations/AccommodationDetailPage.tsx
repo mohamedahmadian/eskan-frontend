@@ -59,6 +59,8 @@ import {
   FormSectionTitle,
   formToneClass,
 } from '../../components/ui/FormLayout'
+import { ActionsTh, EntityRowActions, TableCard, actionsColClassName } from '../../components/ui/ListControls'
+import { placementPanelClassName } from '../../components/ui/placementTab'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
@@ -66,7 +68,11 @@ import { useGeoName } from '../../lib/geo'
 import { publicAccommodationPath } from '../../lib/public-place'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { useAuth } from '../../auth/AuthProvider'
-import type { Accommodation, AccommodationStatus } from '../../types/app'
+import type {
+  Accommodation,
+  AccommodationCaravanPlacement,
+  AccommodationStatus,
+} from '../../types/app'
 import {
   accommodationContactRoles,
   type AccommodationContactRole,
@@ -107,6 +113,16 @@ export function AccommodationDetailPage() {
       return data
     },
   })
+  const placementsQuery = useQuery({
+    queryKey: ['accommodation', id, 'year-caravan-placements'],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const { data } = await api.get<{ year: number; items: AccommodationCaravanPlacement[] }>(
+        `/accommodations/${id}/year-caravan-placements`,
+      )
+      return data
+    },
+  })
 
   const item = query.data
   if (!item) {
@@ -122,6 +138,10 @@ export function AccommodationDetailPage() {
     item.contacts?.filter((contact) =>
       accommodationContactRoles.includes(contact.role as AccommodationContactRole),
     ).length ?? 0
+  const placedCaravans = placementsQuery.data?.items ?? []
+  const tabs: AccommodationTab[] = placedCaravans.length
+    ? [...accommodationTabs, 'placement']
+    : [...accommodationTabs]
   const currentYear = currentPersianYear()
   const yearContacts = [...(item.yearContacts ?? [])].sort((a, b) =>
     b.year !== a.year ? b.year - a.year : a.role.localeCompare(b.role),
@@ -180,7 +200,54 @@ export function AccommodationDetailPage() {
           }
         >
           <div className="space-y-4 p-5 sm:p-6">
-            <AccommodationTabNav tab={tab} tabs={[...accommodationTabs]} onChange={setTab} />
+            <AccommodationTabNav tab={tab} tabs={tabs} onChange={setTab} />
+
+            {tab === 'placement' ? (
+              <div data-tab="placement" className={placementPanelClassName}>
+                <FormSectionTitle icon={MapPinned}>
+                  {t('placements.assignedCaravansTitle')}
+                </FormSectionTitle>
+                <p className="text-sm font-medium text-mint-800">
+                  {t('placements.assignedCaravansHint', {
+                    year: n(placementsQuery.data?.year ?? currentYear),
+                  })}
+                </p>
+                <TableCard empty={t('common.noResults')} hasRows={placedCaravans.length > 0}>
+                  <table className="w-full text-sm">
+                    <thead className="bg-mint-50 text-ink-700">
+                      <tr>
+                        <th className="px-4 py-3 text-start font-medium">{t('caravans.name')}</th>
+                        <th className="px-4 py-3 text-start font-medium">{t('caravans.city')}</th>
+                        <th className="px-4 py-3 text-start font-medium">{t('caravans.manager')}</th>
+                        <th className="px-4 py-3 text-start font-medium">
+                          {t('accommodations.yearMaleCount')}
+                        </th>
+                        <th className="px-4 py-3 text-start font-medium">
+                          {t('accommodations.yearFemaleCount')}
+                        </th>
+                        <ActionsTh />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {placedCaravans.map((caravan) => (
+                        <tr key={caravan.id} className="border-t border-mint-100">
+                          <td className="px-4 py-3 font-medium">{caravan.name}</td>
+                          <td className="px-4 py-3">
+                            {caravan.city ? nameOf(caravan.city) : empty}
+                          </td>
+                          <td className="px-4 py-3">{caravan.manager?.fullName || empty}</td>
+                          <td className="px-4 py-3">{n(caravan.placedMaleCount)}</td>
+                          <td className="px-4 py-3">{n(caravan.placedFemaleCount)}</td>
+                          <td className={actionsColClassName}>
+                            <EntityRowActions viewTo={`/caravans/${caravan.id}`} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableCard>
+              </div>
+            ) : null}
 
             <div data-tab="general" className={panelClass('general')}>
               <FormSectionTitle icon={Building2}>

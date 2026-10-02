@@ -22,9 +22,9 @@ const pinIcon = L.divIcon({
 
 const shrinePinIcon = L.divIcon({
   className: 'eskan-shrine-pin-wrap',
-  html: '<span class="eskan-shrine-pin-dot"></span>',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
+  html: '<img class="eskan-shrine-pin-img" src="/reza.png" alt="" />',
+  iconSize: [72, 72],
+  iconAnchor: [36, 70],
 })
 
 function shrineLatLng() {
@@ -71,15 +71,38 @@ export type MapOverlayMarker = {
   id: string
   lat: number
   lng: number
-  kind: 'previous' | 'current' | 'next' | 'history' | 'station' | 'destination'
+  kind: 'previous' | 'current' | 'next' | 'history' | 'station' | 'destination' | 'venue'
   badge: string
   title: string
+  /** رنگ پین اسکان: مردانه فیروزه‌ای، زنانه صورتی. */
+  tone?: 'men' | 'women'
+  /** آیکون SVG اسکان؛ عنوان همیشه زیر پین دیده می‌شود. */
+  iconSvg?: string
   popupHtml?: string
 }
+
+function escapeMarkerText(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+const venueFallbackIcon =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>'
 
 function overlayMarkerHtml(marker: MapOverlayMarker) {
   if (marker.kind === 'history') {
     return `<span class="eskan-history-pin">${marker.badge}</span>`
+  }
+  if (marker.kind === 'venue') {
+    const tone = marker.tone === 'women' ? 'eskan-venue-chip-women' : 'eskan-venue-chip-men'
+    const title = escapeMarkerText(marker.title)
+    const count = marker.badge
+      ? `<span class="eskan-venue-chip-count">${escapeMarkerText(marker.badge)}</span>`
+      : ''
+    return `<span class="eskan-venue-chip ${tone}"><span class="eskan-venue-chip-mark">${marker.iconSvg || venueFallbackIcon}${count}</span><span class="eskan-venue-chip-title" title="${title}">${title}</span></span>`
   }
   return `<span class="eskan-route-pin"><span class="eskan-route-pin-badge">${marker.badge}</span><span class="eskan-route-pin-title">${marker.title}</span></span>`
 }
@@ -89,9 +112,21 @@ export type MapOverlayClickPoint = {
   y: number
 }
 
+export type MapOverlayLine = {
+  id: string
+  from: { lat: number; lng: number }
+  to: { lat: number; lng: number }
+  color: string
+  label?: string
+  dashed?: boolean
+}
+
 export type MapOverlays = {
   markers: MapOverlayMarker[]
   path?: { lat: number; lng: number }[]
+  lines?: MapOverlayLine[]
+  /** بعد از بازسازی لایه، پاپ‌آپ همین نشان باز بماند. */
+  openMarkerId?: string | null
   /** If set, `fit` zooms to these points instead of every marker and path vertex. */
   fitPoints?: { lat: number; lng: number }[]
   fit?: boolean
@@ -103,6 +138,10 @@ function overlayLatLngs(overlays: MapOverlays | null, extra?: L.LatLng | null) {
   const points = [
     ...overlays.markers.map((marker) => L.latLng(marker.lat, marker.lng)),
     ...(overlays.path ?? []).map((point) => L.latLng(point.lat, point.lng)),
+    ...(overlays.lines ?? []).flatMap((line) => [
+      L.latLng(line.from.lat, line.from.lng),
+      L.latLng(line.to.lat, line.to.lng),
+    ]),
   ]
   if (extra) points.push(extra)
   return points
@@ -172,6 +211,7 @@ export function OsmMapPicker({
   zoom = 16,
   overlays = null,
   showShrineDistance = false,
+  showShrinePin = false,
   pointLabel,
   fill = false,
   keepInView = null,
@@ -195,6 +235,8 @@ export function OsmMapPicker({
   overlays?: MapOverlays | null
   /** خط و برچسب فاصلهٔ مستقیم و زمان پیاده‌روی تا حرم مطهر. */
   showShrineDistance?: boolean
+  /** پین حرم بدون خط فاصله، برای نقشه‌ای که خودش روی حرم متمرکز است. */
+  showShrinePin?: boolean
   /** برچسب دائمی روی نقطهٔ موقعیت، مثل برچسب حرم. با این برچسب زوم کمی عقب‌تر می‌ماند. */
   pointLabel?: string
   fill?: boolean
@@ -367,7 +409,7 @@ export function OsmMapPicker({
     if (!open || !map) return
     overlayLayerRef.current?.remove()
     overlayLayerRef.current = null
-    if (!overlays?.markers.length && !overlays?.path?.length) {
+    if (!overlays?.markers.length && !overlays?.path?.length && !overlays?.lines?.length) {
       overlayFitKeyRef.current = ''
       return
     }
@@ -386,13 +428,47 @@ export function OsmMapPicker({
         },
       ).addTo(layer)
     }
+    for (const line of overlays.lines ?? []) {
+      L.polyline(
+        [
+          [line.from.lat, line.from.lng],
+          [line.to.lat, line.to.lng],
+        ],
+        {
+          color: line.color,
+          weight: 3,
+          opacity: 0.92,
+          ...(line.dashed ? { dashArray: '8 7' } : {}),
+          lineCap: 'round',
+          interactive: false,
+        },
+      ).addTo(layer)
+      if (!line.label) continue
+      const midLat = (line.from.lat + line.to.lat) / 2
+      const midLng = (line.from.lng + line.to.lng) / 2
+      L.marker([midLat, midLng], {
+        icon: L.divIcon({
+          className: 'eskan-line-label-wrap',
+          html: `<span class="eskan-line-label" style="color:${line.color}">${escapeMarkerText(line.label)}</span>`,
+          iconSize: [96, 22],
+          iconAnchor: [48, 11],
+        }),
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: 450,
+      }).addTo(layer)
+    }
     for (const marker of overlays.markers) {
       const isHistory = marker.kind === 'history'
+      const isVenue = marker.kind === 'venue'
       const icon = L.divIcon({
-        className: `eskan-route-pin-wrap eskan-route-pin-${marker.kind}`,
+        className: isVenue
+          ? 'eskan-venue-pin-wrap'
+          : `eskan-route-pin-wrap eskan-route-pin-${marker.kind}`,
         html: overlayMarkerHtml(marker),
-        iconSize: isHistory ? [28, 28] : [132, 52],
-        iconAnchor: isHistory ? [14, 14] : [66, 50],
+        iconSize: isHistory ? [28, 28] : isVenue ? [140, 54] : [132, 52],
+        iconAnchor: isHistory ? [14, 14] : isVenue ? [70, 15] : [66, 50],
+        popupAnchor: isVenue ? [0, -18] : [0, 0],
       })
       const pin = L.marker([marker.lat, marker.lng], {
         icon,
@@ -405,10 +481,11 @@ export function OsmMapPicker({
       })
       if (marker.popupHtml) {
         pin.bindPopup(marker.popupHtml, {
-          className: 'eskan-route-popup',
-          maxWidth: 280,
+          className: isVenue ? 'eskan-venue-popup' : 'eskan-route-popup',
+          maxWidth: isVenue ? 380 : 280,
           autoClose: false,
         })
+        if (overlays.openMarkerId === marker.id) pin.openPopup()
       }
     }
     if (overlays.fit) {
@@ -432,14 +509,14 @@ export function OsmMapPicker({
     const map = mapRef.current
     shrineLayerRef.current?.remove()
     shrineLayerRef.current = null
-    if (!open || !map || !showShrineDistance) return
+    if (!open || !map || (!showShrineDistance && !showShrinePin)) return
     const here = parseLatLng(latitude, longitude)
-    if (!here) return
+    if (showShrineDistance && !here) return
 
     const shrine = shrineLatLng()
     const layer = L.layerGroup().addTo(map)
     shrineLayerRef.current = layer
-    if (here.distanceTo(shrine) >= 8) {
+    if (showShrineDistance && here && here.distanceTo(shrine) >= 8) {
       L.polyline([here, shrine], {
         color: '#2EBDB6',
         weight: 3,
@@ -458,17 +535,19 @@ export function OsmMapPicker({
     pin.bindTooltip(t('shrine.mapLabel'), {
       permanent: true,
       direction: 'top',
-      offset: [0, -8],
+      offset: [0, -74],
       className: 'eskan-shrine-tooltip',
     })
-    if (markerRef.current) bindPointLabel(markerRef.current)
-    fitShrineDistance(map, here, Boolean(pointLabel))
+    if (showShrineDistance && here) {
+      if (markerRef.current) bindPointLabel(markerRef.current)
+      fitShrineDistance(map, here, Boolean(pointLabel))
+    }
 
     return () => {
       layer.remove()
       if (shrineLayerRef.current === layer) shrineLayerRef.current = null
     }
-  }, [latitude, longitude, open, pointLabel, showShrineDistance, t])
+  }, [latitude, longitude, open, pointLabel, showShrineDistance, showShrinePin, t])
 
   useEffect(() => {
     if (!open || !active || !mapRef.current) return

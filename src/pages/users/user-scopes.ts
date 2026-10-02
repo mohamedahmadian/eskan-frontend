@@ -12,6 +12,7 @@ export type RoleUserScope = {
   showRoleFilter?: boolean
   showAccommodations?: boolean
   showCaravans?: boolean
+  showPlacement?: boolean
   showHeadquartersAreas?: boolean
   showPilgrimCard?: boolean
   hideDelete?: boolean
@@ -70,6 +71,7 @@ export const userScopes: Record<string, RoleUserScope> = {
     hideStatus: true,
     hideListRoles: true,
     showCaravans: true,
+    showPlacement: true,
     hideDelete: true,
   },
   headquartersRepresentative: {

@@ -1,11 +1,11 @@
 import {
   ArrowLeftRight,
+  Ban,
   Building2,
   CalendarDays,
   Check,
   CircleOff,
   Plus,
-  Trash2,
   UserRound,
 } from 'lucide-react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -146,7 +146,7 @@ function YearStatsCards({
                   onDeactivateAllActive()
                 }}
               >
-                <Trash2 className="size-4" aria-hidden />
+                <Ban className="size-4" aria-hidden />
                 {t('accommodationYearManagement.deactivateAllActive', {
                   year: yearLabel,
                 })}
@@ -731,12 +731,22 @@ export function AccommodationYearManagementPage() {
               empty={manageEmptyText()}
             >
               <div className={manageListQuery.isFetching ? 'opacity-70 transition-opacity' : ''}>
-              <table className="min-w-full text-sm">
+              <table className="w-full text-sm">
+                <colgroup>
+                  <col className="w-12" />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col className="w-0" />
+                </colgroup>
                 <thead className="border-b border-line bg-cream-50 text-ink-600">
                   <tr>
                     <th className="w-12 px-3 py-3 text-start font-medium">
                       <span className="sr-only">
-                        {t('accommodationYearManagement.yearStatus')}
+                        {t('accommodationYearManagement.yearStatus', {
+                          year: formatNumber(manageYear, locale),
+                        })}
                       </span>
                     </th>
                     <SortableTh
@@ -754,12 +764,16 @@ export function AccommodationYearManagementPage() {
                       onSort={onSort}
                     />
                     <th className="px-4 py-3 text-start font-medium">
-                      {t('accommodationYearManagement.yearStatus')}
+                      {t('accommodationYearManagement.yearStatus', {
+                        year: formatNumber(manageYear, locale),
+                      })}
                     </th>
                     <th className="px-4 py-3 text-start font-medium">
                       {t('accommodations.managerName')}
                     </th>
-                    <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+                    <th className="w-0 whitespace-nowrap px-4 py-3 text-end font-medium">
+                      {t('common.actions')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -813,7 +827,7 @@ export function AccommodationYearManagementPage() {
                               )
                             : '—'}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="w-0 whitespace-nowrap px-4 py-3 text-end">
                           {item.activeInYear ? (
                             <Button
                               type="button"
@@ -822,7 +836,7 @@ export function AccommodationYearManagementPage() {
                               disabled={busy}
                               onClick={() => confirmRemove(item)}
                             >
-                              <Trash2 className="size-4" aria-hidden />
+                              <Ban className="size-4" aria-hidden />
                               {t('accommodationYearManagement.removeFromYear', {
                                 year: formatNumber(manageYear, locale),
                               })}

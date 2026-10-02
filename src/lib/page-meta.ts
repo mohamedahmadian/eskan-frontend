@@ -1073,6 +1073,12 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "accommodations.detailsSubtitle",
     };
   }
+  if (pathname.startsWith("/placements/system")) {
+    return {
+      titleKey: "placements.systemTitle",
+      subtitleKey: "placements.systemSubtitle",
+    };
+  }
   if (pathname.startsWith("/placements/vacate")) {
     return {
       titleKey: "placements.vacate",
