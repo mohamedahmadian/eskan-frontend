@@ -17,6 +17,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { CheckboxField } from '../../components/ui/CheckboxField'
 import { FileDropField } from '../../components/ui/FileDropField'
 import { Button, FormField, cardClassName } from '../../components/ui/Form'
 import { FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
@@ -43,11 +44,14 @@ export function ReservationCaravanLicenseStep({
   year,
   value,
   onChange,
+  allowConfirmed = false,
 }: {
   caravanId: string
   year: number
   value: CaravanPermitDraft
   onChange: (patch: Partial<CaravanPermitDraft>) => void
+  /** مدیریت می‌تواند مجوز را بدون استعلام یا بارگذاری تأیید کند. */
+  allowConfirmed?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -75,6 +79,7 @@ export function ReservationCaravanLicenseStep({
   const manager = caravan.data?.manager
   const nationalId = manager?.nationalId
   const licenses = options.data?.items ?? []
+  const confirmed = value.source === 'CONFIRMED'
 
   function selectIssued(id: string) {
     onChange({ source: 'ISSUED_LICENSE', issuedLicenseId: id, permitImageId: '' })
@@ -125,6 +130,29 @@ export function ReservationCaravanLicenseStep({
         />
       </div>
 
+      {allowConfirmed ? (
+        <CheckboxField
+          id="reservation-permit-confirmed"
+          checked={confirmed}
+          label={t('reservations.permitConfirmed')}
+          onChange={(checked) => {
+            if (checked) {
+              onChange({ source: 'CONFIRMED', issuedLicenseId: '', permitImageId: '' })
+              return
+            }
+            onChange({ source: '', issuedLicenseId: '', permitImageId: '' })
+          }}
+        />
+      ) : null}
+
+      {confirmed ? (
+        <p className="rounded-2xl border border-teal-100 bg-teal-50/80 px-4 py-3 text-sm leading-7 text-ink-800">
+          {t('reservations.permitConfirmedHint')}
+        </p>
+      ) : null}
+
+      {confirmed ? null : (
+      <>
       <section className="space-y-3">
         <p className="text-sm font-semibold text-ink-900">{t('reservations.permitChooseSource')}</p>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -185,6 +213,8 @@ export function ReservationCaravanLicenseStep({
           />
         </FormField>
       ) : null}
+      </>
+      )}
 
       {viewing ? (
         <IssuedLicenseViewModal item={viewing} onClose={() => setViewing(null)} />

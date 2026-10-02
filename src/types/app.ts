@@ -878,6 +878,16 @@ export type AccommodationCaravanPlacement = {
   placedFemaleCount: number;
 };
 
+export type CaravanStayPlacement = {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  city: (GeoName & { id: string; provinceId: string }) | null;
+  placedMaleCount: number;
+  placedFemaleCount: number;
+};
+
 export type CaravanManagerStayPlacement = {
   id: string;
   name: string;
@@ -2289,6 +2299,7 @@ export type ReservationPermitStatus =
 export const reservationPermitSources = {
   UPLOAD: "UPLOAD",
   ISSUED_LICENSE: "ISSUED_LICENSE",
+  CONFIRMED: "CONFIRMED",
 } as const;
 
 export type ReservationPermitSource =
@@ -2805,6 +2816,7 @@ export type ReceptionSettings = {
   caravanAutoApprove: boolean;
   caravanAutoApproveLicenses: boolean;
   caravanMaxPerNationalId: number;
+  caravanCreateInReception: boolean;
   caravanPlacementMode: PlacementMode;
   caravanIntro: string;
   caravanRules: string;

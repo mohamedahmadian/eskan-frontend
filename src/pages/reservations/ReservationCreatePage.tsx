@@ -18,6 +18,7 @@ import {
   Ticket,
   type LucideIcon,
 } from 'lucide-react'
+import axios from 'axios'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -123,6 +124,25 @@ type OpenReservation = {
   status: ReservationStatus
   returnedToStatus?: ReservationStatus | null
   createdById: string
+}
+
+function reservationFromConflict(error: unknown): OpenReservation | null {
+  if (!axios.isAxiosError(error) || error.response?.status !== 409) return null
+  const data = error.response.data
+  if (!data || typeof data !== 'object') return null
+  const body = data as Record<string, unknown>
+  if (typeof body.reservationId !== 'string' || !body.reservationId) return null
+  if (typeof body.status !== 'string') return null
+  return {
+    id: body.reservationId,
+    code: typeof body.code === 'string' ? body.code : '',
+    status: body.status as ReservationStatus,
+    returnedToStatus:
+      typeof body.returnedToStatus === 'string'
+        ? (body.returnedToStatus as ReservationStatus)
+        : null,
+    createdById: typeof body.createdById === 'string' ? body.createdById : '',
+  }
 }
 
 async function fetchMyCaravans() {
@@ -235,6 +255,9 @@ function countsFromParty(item?: {
 }
 
 function permitFromReservation(reservation: Reservation): CaravanPermitDraft {
+  if (reservation.permitSource === 'CONFIRMED') {
+    return { source: 'CONFIRMED', issuedLicenseId: '', permitImageId: '' }
+  }
   if (reservation.permitSource === 'ISSUED_LICENSE' && reservation.issuedLicenseId) {
     return {
       source: 'ISSUED_LICENSE',
@@ -439,6 +462,25 @@ export function ReservationCreatePage() {
     (!openReservationQuery.isSuccess || openReservationQuery.isFetching)
   const openReservation = openCheckPending ? null : (openReservationQuery.data ?? null)
   const openRedirectedRef = useRef(false)
+  const openingExistingRef = useRef<string | null>(null)
+
+  function showOpenReservation(open: OpenReservation, notice: boolean) {
+    const subjectId = isAdminCreate ? forUserId : user?.id
+    const continueOwnDraft =
+      isOwnerCreateDraft(open) && Boolean(subjectId) && open.createdById === subjectId
+    if (notice) toast.success(t('reservations.openedExisting'))
+    if (continueOwnDraft) {
+      openingExistingRef.current = open.id
+      setDraftId(open.id)
+      setDraftHydrated(false)
+      navigate(
+        createWizardPath(open.id, createBase, isAdminCreate ? forUserId || undefined : undefined),
+        { replace: true },
+      )
+      return
+    }
+    navigate(`${createBase}/${open.id}`, { replace: true })
+  }
 
   useEffect(() => {
     if (draftParam) {
@@ -447,21 +489,9 @@ export function ReservationCreatePage() {
     }
     if (!openReservation || openRedirectedRef.current) return
     openRedirectedRef.current = true
-    const subjectId = isAdminCreate ? forUserId : user?.id
-    const continueOwnDraft =
-      isOwnerCreateDraft(openReservation) && openReservation.createdById === subjectId
-    if (continueOwnDraft) {
-      navigate(
-        createWizardPath(
-          openReservation.id,
-          createBase,
-          isAdminCreate ? forUserId || undefined : undefined,
-        ),
-        { replace: true },
-      )
-      return
-    }
-    navigate(`${createBase}/${openReservation.id}`, { replace: true })
+    showOpenReservation(openReservation, false)
+    // showOpenReservation is recreated each render; the ref guards a second redirect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     createBase,
     draftParam,
@@ -593,6 +623,7 @@ export function ReservationCreatePage() {
 
   useEffect(() => {
     if (!draftParam) {
+      if (openingExistingRef.current) return
       setDraftHydrated(true)
       return
     }
@@ -649,6 +680,7 @@ export function ReservationCreatePage() {
     )
     setStep(reached)
     setMaxReachedStep(reached)
+    openingExistingRef.current = null
     setDraftHydrated(true)
   }, [
     draftParam,
@@ -819,6 +851,7 @@ export function ReservationCreatePage() {
               nextPermit.source === 'ISSUED_LICENSE' ? nextPermit.issuedLicenseId || null : null,
             permitImageId:
               nextPermit.source === 'UPLOAD' ? nextPermit.permitImageId || null : null,
+            permitConfirmed: nextPermit.source === 'CONFIRMED',
           }
         : {}),
     }
@@ -877,6 +910,11 @@ export function ReservationCreatePage() {
       await queryClient.invalidateQueries({ queryKey: ['reservations'] })
       return savedId
     } catch (error) {
+      const existing = reservationFromConflict(error)
+      if (existing) {
+        showOpenReservation(existing, true)
+        return null
+      }
       toast.error(getApiErrorMessage(error, t('common.error')))
       return null
     }
@@ -981,6 +1019,10 @@ export function ReservationCreatePage() {
   ): Promise<TravelValues | null> {
     if (!partyKind) return nextValues
     if (type === 'CARAVAN' ? nextValues.caravanId : nextValues.groupId) return nextValues
+    if (type === 'CARAVAN' && settings.data?.caravanCreateInReception !== true) {
+      toast.error(t('reservations.caravanRequired'))
+      return null
+    }
     const error = partyDraftError(partyDraft, partyKind, t, needsPartyCity)
     if (error) {
       toast.error(error)
@@ -1064,6 +1106,7 @@ export function ReservationCreatePage() {
       }
     }
     if (step === 'license' && !skipLicenseStep) {
+      if (permitDraft.source === 'CONFIRMED') return true
       if (permitDraft.source === 'ISSUED_LICENSE' && !permitDraft.issuedLicenseId) {
         toast.error(t('reservations.permitIssuedRequired'))
         return false
@@ -1194,7 +1237,7 @@ export function ReservationCreatePage() {
       setStep('party')
       return
     }
-    if (type === 'CARAVAN' && !skipLicenseStep) {
+    if (type === 'CARAVAN' && !skipLicenseStep && permitDraft.source !== 'CONFIRMED') {
       if (permitDraft.source === 'ISSUED_LICENSE' && !permitDraft.issuedLicenseId) {
         toast.error(t('reservations.permitIssuedRequired'))
         setStep('license')
@@ -1489,7 +1532,6 @@ export function ReservationCreatePage() {
             selectedId={selectedPartyId()}
             draft={partyDraft}
             subjectUser={subject}
-            hideExistingParties={isAdminCreate}
             knownSelected={
               draftQuery.data?.caravan && partyKind === 'CARAVAN'
                 ? {
@@ -1522,6 +1564,7 @@ export function ReservationCreatePage() {
             }}
             onAdvance={undefined}
             year={year}
+            allowCreateNew={type !== 'CARAVAN' || settings.data?.caravanCreateInReception === true}
           />
         ) : null}
 
@@ -1566,6 +1609,7 @@ export function ReservationCreatePage() {
             caravanId={values.caravanId}
             year={reservationYear}
             value={permitDraft}
+            allowConfirmed={isAdminCreate}
             onChange={(patch) => setPermitDraft((current) => ({ ...current, ...patch }))}
           />
         ) : null}

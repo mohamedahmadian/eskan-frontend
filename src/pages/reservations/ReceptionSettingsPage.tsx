@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   Plus,
   ScrollText,
+  Tent,
   Shield,
   Trash2,
   Users,
@@ -137,6 +138,7 @@ const emptyDraft = (): Draft => ({
   caravanAutoApprove: false,
   caravanAutoApproveLicenses: false,
   caravanMaxPerNationalId: 1,
+  caravanCreateInReception: false,
   caravanPlacementMode: 'MANUAL',
   caravanIntro: '',
   caravanRules: '',
@@ -225,6 +227,7 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     caravanAutoApprove: data.caravanAutoApprove,
     caravanAutoApproveLicenses: data.caravanAutoApproveLicenses ?? false,
     caravanMaxPerNationalId: data.caravanMaxPerNationalId ?? 1,
+    caravanCreateInReception: data.caravanCreateInReception ?? false,
     caravanPlacementMode: data.caravanPlacementMode ?? 'MANUAL',
     caravanIntro: data.caravanIntro ?? '',
     caravanRules: data.caravanRules ?? '',
@@ -625,6 +628,20 @@ export function ReceptionSettingsPage() {
                   </FormField>
                   <p className="text-sm leading-7 text-ink-500">
                     {t('receptionSettings.caravanMaxPerNationalIdHint')}
+                  </p>
+                  <FormField
+                    icon={Tent}
+                    label={t('receptionSettings.caravanCreateInReception')}
+                  >
+                    <ToggleField
+                      checked={draft.caravanCreateInReception}
+                      onChange={(checked) => patch('caravanCreateInReception', checked)}
+                      onLabel={t('geo.active')}
+                      offLabel={t('geo.inactive')}
+                    />
+                  </FormField>
+                  <p className="text-sm leading-7 text-ink-500">
+                    {t('receptionSettings.caravanCreateInReceptionHint')}
                   </p>
                 </>
               ) : null}

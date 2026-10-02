@@ -219,6 +219,7 @@ export function ReservationTravelFields({
   bankCardRequestCount,
   showSimBankRequests,
   year,
+  allowCreateCaravan,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -246,6 +247,7 @@ export function ReservationTravelFields({
   bankCardRequestCount?: number;
   showSimBankRequests?: boolean;
   year?: number;
+  allowCreateCaravan?: boolean;
 }) {
   if (activeSubStep === "count") {
     return (
@@ -269,6 +271,7 @@ export function ReservationTravelFields({
         selectedParty={selectedParty}
         subjectUser={subjectUser}
         year={year}
+        allowCreateNew={type !== "CARAVAN" || allowCreateCaravan === true}
       />
     );
   }
@@ -1009,6 +1012,7 @@ export function ReservationTravelPartyField({
   selectedParty,
   subjectUser,
   year,
+  allowCreateNew = true,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -1026,6 +1030,7 @@ export function ReservationTravelPartyField({
     roles?: { code: string }[];
   } | null;
   year?: number;
+  allowCreateNew?: boolean;
 }) {
   const { t } = useTranslation();
   const { user, refresh } = useAuth();
@@ -1096,6 +1101,7 @@ export function ReservationTravelPartyField({
         void createParty();
       }}
       year={year}
+      allowCreateNew={allowCreateNew}
     />
   );
 }

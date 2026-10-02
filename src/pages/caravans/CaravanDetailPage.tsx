@@ -10,6 +10,7 @@ import {
   IdCard,
   Landmark,
   MapPin,
+  MapPinned,
   Mars,
   MessageCircle,
   Phone,
@@ -39,15 +40,17 @@ import {
   listShellClassName,
 } from '../../components/ui/Form'
 import { FormCardHeaderDecor } from '../../components/ui/FormLayout'
+import { EntityRowActions } from '../../components/ui/ListControls'
+import { placementPanelClassName } from '../../components/ui/placementTab'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { useAuth } from '../../auth/AuthProvider'
 import { api, getImageUrl } from '../../lib/api'
 import { currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { isAdmin } from '../../lib/roles'
-import type { Caravan } from '../../types/app'
+import type { Caravan, CaravanStayPlacement } from '../../types/app'
 import { caravanContactRoles, type CaravanContactRole } from './caravanContacts'
-import { CaravanTabNav, type CaravanTab } from './CaravanTabs'
+import { CaravanTabNav, caravanTabs, type CaravanTab } from './CaravanTabs'
 import { CaravanYearAlert } from './CaravanYearAlert'
 
 type Tone = 'teal' | 'mint' | 'ink'
@@ -95,6 +98,17 @@ export function CaravanDetailPage() {
       return data
     },
   })
+  const placementsQuery = useQuery({
+    queryKey: ['caravan', id, 'placements'],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const { data } = await api.get<{ year: number; items: CaravanStayPlacement[] }>(
+        `/caravans/${id}/placements`,
+      )
+      return data
+    },
+  })
+  const stays = placementsQuery.data?.items ?? []
 
   const caravan = query.data
   if (!caravan) {
@@ -107,6 +121,7 @@ export function CaravanDetailPage() {
   const province = caravan.city?.province ? nameOf(caravan.city.province) : ''
   const city = caravan.city ? nameOf(caravan.city) : ''
   const empty = '—'
+  const tabs: CaravanTab[] = stays.length ? [...caravanTabs, 'placement'] : [...caravanTabs]
   const filledContacts =
     caravan.contacts?.filter((item) =>
       caravanContactRoles.includes(item.role as CaravanContactRole),
@@ -159,7 +174,62 @@ export function CaravanDetailPage() {
         </header>
 
         <div className="space-y-6 p-5 sm:p-6">
-          <CaravanTabNav tab={tab} onChange={setTab} />
+          <CaravanTabNav tab={tab} tabs={tabs} onChange={setTab} />
+
+          {tab === 'placement' ? (
+            <section className={placementPanelClassName}>
+              <SectionTitle icon={MapPinned}>{t('placements.managerStaysTitle')}</SectionTitle>
+              <p className="text-sm font-medium text-mint-800">
+                {t('placements.caravanStaysHint', {
+                  year: n(placementsQuery.data?.year ?? currentPersianYear()),
+                })}
+              </p>
+              <div className="grid gap-3">
+                {stays.map((stay) => (
+                  <article
+                    key={stay.id}
+                    className="rounded-2xl border-2 border-mint-300 bg-white p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-mint-500 text-white shadow-[0_8px_16px_rgba(63,214,190,0.28)]">
+                          <Building2 className="size-5" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-mint-800">
+                            {t('placements.stayLocation')}
+                          </p>
+                          <p className="text-lg font-bold text-ink-900">{stay.name}</p>
+                          {stay.city ? (
+                            <p className="text-sm text-ink-500">{nameOf(stay.city)}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                      <EntityRowActions viewTo={`/accommodations/${stay.id}`} />
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <p className="text-sm text-ink-700">
+                        <span className="font-medium">{t('accommodations.address')}: </span>
+                        {stay.address || empty}
+                      </p>
+                      <p className="text-sm text-ink-700">
+                        <span className="font-medium">{t('accommodations.phone')}: </span>
+                        {stay.phone ? <CopyableDigits value={stay.phone} /> : empty}
+                      </p>
+                      <p className="text-sm text-ink-700">
+                        <span className="font-medium">{t('accommodations.yearMaleCount')}: </span>
+                        {n(stay.placedMaleCount)}
+                      </p>
+                      <p className="text-sm text-ink-700">
+                        <span className="font-medium">{t('accommodations.yearFemaleCount')}: </span>
+                        {n(stay.placedFemaleCount)}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           {tab === 'basic' ? (
           <>

@@ -391,6 +391,7 @@ export function ReservationTravelStep({
           bankCardRequestCount={reservation.bankCardRequestCount ?? 0}
           showSimBankRequests={showSimBankRequests(reservation)}
           year={reservation.year}
+          allowCreateCaravan={occasionSettings.data?.caravanCreateInReception === true}
           subjectUser={
             mode === 'admin'
               ? reservation.type === 'CARAVAN' && reservation.caravanManager

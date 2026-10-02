@@ -152,6 +152,7 @@ export function ReservationPartyFields({
   hideExistingParties,
   knownSelected,
   year = currentPersianYear(),
+  allowCreateNew = true,
 }: {
   type: PartyKind
   selectedId: string
@@ -174,11 +175,13 @@ export function ReservationPartyFields({
     cityId?: string | null
     roles?: { code: string }[]
   } | null
-  /** Skip «my caravans/groups» list (admin on-behalf flow). */
+  /** Skip the existing caravan/group list and open the create form. */
   hideExistingParties?: boolean
   /** Snapshot from reservation when the party is not in «mine» list. */
   knownSelected?: PartyItemSnapshot | null
   year?: number
+  /** Caravan reception: show «create a new caravan» only when this setting is on. */
+  allowCreateNew?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -186,9 +189,11 @@ export function ReservationPartyFields({
   const { user } = useAuth()
   const partySubject = subjectUser ?? user
   const isCaravan = type === 'CARAVAN'
+  const admin = isAdmin(user)
+  const subjectId = subjectUser?.id
+  const lookupAsSubject = Boolean(admin && subjectId && subjectId !== user?.id)
   const pickManager = isCaravan && shouldPickCaravanManager(partySubject)
   const [managerChoice, setManagerChoice] = useState<CaravanManagerChoice | null>(null)
-  const admin = isAdmin(user)
   const quotaManagerId = admin ? draft.managerUserId || undefined : undefined
   const quota = useCaravanCreateQuota({
     enabled: isCaravan && (!admin || Boolean(quotaManagerId)),
@@ -196,6 +201,7 @@ export function ReservationPartyFields({
     managerUserId: quotaManagerId,
   })
   const createBlocked = isCaravan && Boolean(quota.data && !quota.data.allowed)
+  const canCreate = !isCaravan || allowCreateNew
   const quotaMessage =
     createBlocked && quota.data ? (
       <p className="rounded-[22px] border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm leading-7 text-ink-700">
@@ -207,12 +213,20 @@ export function ReservationPartyFields({
     ) : null
 
   const mine = useQuery({
-    queryKey: isCaravan ? ['caravans', 'mine', 'lookup'] : ['groups', 'mine', 'lookup'],
+    queryKey: [
+      isCaravan ? 'caravans' : 'groups',
+      'mine',
+      'lookup',
+      lookupAsSubject ? subjectId : 'self',
+    ],
     enabled: !hideExistingParties,
     queryFn: async () => {
       const path = isCaravan ? '/caravans/mine' : '/groups/mine'
       const { data } = await api.get<Paginated<PartyItem>>(path, {
-        params: { pageSize: 100 },
+        params: {
+          pageSize: 100,
+          ...(lookupAsSubject ? { userId: subjectId } : {}),
+        },
       })
       return data.items
     },
@@ -241,6 +255,7 @@ export function ReservationPartyFields({
   })
 
   const selected = fromList ?? known ?? selectedLookup.data ?? null
+  const partiesPending = !hideExistingParties && mine.isPending
   const [createOpen, setCreateOpen] = useState(() => Boolean(hideExistingParties))
   const createPanelId = useId()
   const PartyIcon = isCaravan ? Footprints : Users
@@ -250,10 +265,11 @@ export function ReservationPartyFields({
   }, [draft.managerUserId])
 
   useEffect(() => {
+    if (!canCreate) return
     if (hideExistingParties || (mine.isSuccess && items.length === 0)) {
       setCreateOpen(true)
     }
-  }, [hideExistingParties, mine.isSuccess, items.length])
+  }, [canCreate, hideExistingParties, mine.isSuccess, items.length])
 
   function choose(item: PartyItem) {
     setCreateOpen(false)
@@ -287,17 +303,37 @@ export function ReservationPartyFields({
         </section>
       ) : null}
 
+      {partiesPending ? (
+        <p className="text-sm text-ink-500">{t('common.loading')}</p>
+      ) : null}
+
       {items.length ? (
         <section className="space-y-3">
           <p className="text-sm font-semibold text-ink-800">
-            {t(isCaravan ? 'reservations.selectMyCaravan' : 'reservations.selectMyGroup')}
+            {t(
+              isCaravan
+                ? lookupAsSubject
+                  ? 'reservations.selectSubjectCaravan'
+                  : 'reservations.selectMyCaravan'
+                : lookupAsSubject
+                  ? 'reservations.selectSubjectGroup'
+                  : 'reservations.selectMyGroup',
+            )}
           </p>
           <div className="flex items-start gap-3 overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-4 py-3 shadow-[0_8px_20px_rgba(46,189,182,0.12)]">
             <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
               <PartyIcon className="size-4" aria-hidden />
             </span>
             <p className="text-sm font-medium leading-7 text-ink-800">
-              {t(isCaravan ? 'reservations.preferExistingCaravan' : 'reservations.preferExistingGroup')}
+              {t(
+                isCaravan
+                  ? lookupAsSubject
+                    ? 'reservations.preferExistingSubjectCaravan'
+                    : 'reservations.preferExistingCaravan'
+                  : lookupAsSubject
+                    ? 'reservations.preferExistingSubjectGroup'
+                    : 'reservations.preferExistingGroup',
+              )}
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -317,10 +353,16 @@ export function ReservationPartyFields({
         </section>
       ) : null}
 
-      {locked ? (
+      {partiesPending ? null : locked ? (
         selected || !selectedId ? null : (
           <p className="text-sm text-ink-600">{t('reservations.partySelectedReadonly')}</p>
         )
+      ) : !canCreate ? (
+        items.length === 0 ? (
+          <p className="text-sm leading-7 text-ink-600">
+            {t('reservations.caravanCreateUnavailable')}
+          </p>
+        ) : null
       ) : createBlocked && !pickManager ? (
         quotaMessage
       ) : (

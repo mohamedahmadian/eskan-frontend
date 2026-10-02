@@ -62,9 +62,11 @@ export function ReservationPermitPanel({
   const savePermit = useMutation({
     mutationFn: async () => {
       const body =
-        draft.source === 'ISSUED_LICENSE'
-          ? { issuedLicenseId: draft.issuedLicenseId || null, permitImageId: null }
-          : { issuedLicenseId: null, permitImageId: draft.permitImageId || null }
+        draft.source === 'CONFIRMED'
+          ? { permitConfirmed: true, issuedLicenseId: null, permitImageId: null }
+          : draft.source === 'ISSUED_LICENSE'
+            ? { permitConfirmed: false, issuedLicenseId: draft.issuedLicenseId || null, permitImageId: null }
+            : { permitConfirmed: false, issuedLicenseId: null, permitImageId: draft.permitImageId || null }
       const { data } = await api.patch<Reservation>(`/reservations/${reservation.id}/permit`, body)
       return data
     },
@@ -122,6 +124,7 @@ export function ReservationPermitPanel({
             caravanId={reservation.caravanId}
             year={reservation.year}
             value={draft}
+            allowConfirmed={admin}
             onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
           />
           <div className="flex flex-wrap gap-2">
@@ -129,6 +132,10 @@ export function ReservationPermitPanel({
               type="button"
               disabled={busy}
               onClick={() => {
+                if (draft.source === 'CONFIRMED') {
+                  savePermit.mutate()
+                  return
+                }
                 if (draft.source === 'ISSUED_LICENSE' && !draft.issuedLicenseId) {
                   toast.error(t('reservations.permitIssuedRequired'))
                   return
@@ -155,6 +162,12 @@ export function ReservationPermitPanel({
         </div>
       ) : (
         <>
+          {reservation.permitSource === 'CONFIRMED' ? (
+            <p className="rounded-2xl border border-teal-100 bg-teal-50/80 px-3 py-3 text-sm leading-7 text-ink-800">
+              {t('reservations.permitConfirmedSaved')}
+            </p>
+          ) : null}
+
           {reservation.permitSource === 'ISSUED_LICENSE' && reservation.issuedLicense ? (
             <div className="rounded-2xl border border-teal-100 bg-cream-50/80 px-3 py-3 text-sm">
               <p className="font-medium text-ink-800">
