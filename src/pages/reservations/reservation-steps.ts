@@ -116,13 +116,6 @@ export const contactRoles = [
   'RECEPTION',
 ] as const
 
-export const selfAssignableContactRoles = [
-  'CLERIC',
-  'CULTURAL',
-  'SECURITY',
-  'RECEPTION',
-] as const
-
 export type ReservationStepSource = {
   requestsAccommodation?: boolean
   placementStatus?: PlacementStatus | null

@@ -1,9 +1,12 @@
 import {
   Ban,
   CalendarClock,
+  CircleX,
   Hash,
   Hourglass,
+  MessageSquareWarning,
   RotateCcw,
+  ShieldAlert,
   Timer,
   Ticket,
   Trash2,
@@ -120,26 +123,19 @@ export function ReservationWizardPage() {
           reservation.status === "CANCELLED" &&
           canOwnerHardDelete(reservation, user?.id) ? (
             <DeleteCancelledFileButton reservationId={reservation.id} />
-          ) : reservation.status !== "COMPLETED" &&
-            reservation.status !== "CANCELLED" ? (
+          ) : reservation.status !== "COMPLETED" && !blocked ? (
             <CancelFileButton reservationId={reservation.id} />
           ) : undefined
         }
       />
+      {reservation.permitStatus === "REJECTED" && !blocked ? (
+        <PermitRejectedBanner reason={reservation.permitRejectionReason} />
+      ) : null}
       {reservation.status === "REJECTED" ? (
-        <div className={`${cardClassName} mb-4 border-red-100 p-4`}>
-          <p className="font-medium text-red-700">
-            {t("reservations.rejectedTitle")}
-          </p>
-          <p className="mt-1 text-sm text-ink-600">
-            {t("reservations.rejectedHint")}
-          </p>
-          {reservation.rejectionReason ? (
-            <p className="mt-2 text-sm text-ink-800">
-              {t("reservations.rejectionReason")}: {reservation.rejectionReason}
-            </p>
-          ) : null}
-        </div>
+        <RejectedBanner
+          rejectedAt={reservation.rejectedAt}
+          reason={reservation.rejectionReason}
+        />
       ) : null}
       {reservation.status === "CANCELLED" ? (
         <CancelledBanner cancelledAt={reservation.cancelledAt} />
@@ -155,47 +151,45 @@ export function ReservationWizardPage() {
         <ReturnedBanner />
       ) : null}
 
-      <ReservationWizardShell
-        reservation={reservation}
-        viewedStep={viewedStep}
-        onViewStep={setViewedStep}
-      >
-        {reservation.status === "CANCELLED" ? (
-          viewedStep ? (
+      {reservation.status === "REJECTED" ? null : (
+        <ReservationWizardShell
+          reservation={reservation}
+          viewedStep={viewedStep}
+          onViewStep={setViewedStep}
+        >
+          {reservation.status === "CANCELLED" ? (
+            viewedStep ? (
+              <ReservationStepReadonly
+                reservation={reservation}
+                step={viewedStep}
+                onBack={() => setViewedStep(null)}
+                backLabel={t("reservations.backToFileInfo")}
+              />
+            ) : (
+              <ReservationCompleteSummary
+                reservation={reservation}
+                variant="cancelled"
+              />
+            )
+          ) : viewedStep &&
+            viewedStep !== currentStep &&
+            !ownerCanEditStep(viewedStep, reservation.status, reservation.type) ? (
             <ReservationStepReadonly
               reservation={reservation}
               step={viewedStep}
-              onBack={() => setViewedStep(null)}
-              backLabel={t("reservations.backToFileInfo")}
             />
           ) : (
-            <ReservationCompleteSummary
+            <ActiveStep
               reservation={reservation}
-              variant="cancelled"
+              step={viewedStep ?? currentStep}
+              onChanged={() =>
+                queryClient.invalidateQueries({ queryKey: ["reservations", id] })
+              }
+              onGoToStep={setViewedStep}
             />
-          )
-        ) : blocked ? (
-          <div className={`${cardClassName} p-6`}>
-            <ReservationStatusBadge status={reservation.status} />
-          </div>
-        ) : viewedStep &&
-          viewedStep !== currentStep &&
-          !ownerCanEditStep(viewedStep, reservation.status, reservation.type) ? (
-          <ReservationStepReadonly
-            reservation={reservation}
-            step={viewedStep}
-          />
-        ) : (
-          <ActiveStep
-            reservation={reservation}
-            step={viewedStep ?? currentStep}
-            onChanged={() =>
-              queryClient.invalidateQueries({ queryKey: ["reservations", id] })
-            }
-            onGoToStep={setViewedStep}
-          />
-        )}
-      </ReservationWizardShell>
+          )}
+        </ReservationWizardShell>
+      )}
     </div>
   );
 }
@@ -311,6 +305,93 @@ function CancelledBanner({ cancelledAt }: { cancelledAt: string | null }) {
       <p className="max-w-lg text-sm leading-7 text-ink-700">
         {t("reservations.cancelledHint")}
       </p>
+    </aside>
+  );
+}
+
+function RejectedBanner({
+  rejectedAt,
+  reason,
+}: {
+  rejectedAt: string | null;
+  reason: string | null;
+}) {
+  const { t } = useTranslation();
+  return (
+    <aside
+      className="mb-4 flex flex-col items-center gap-3 rounded-[28px] border-2 border-red-200 bg-gradient-to-b from-red-50 via-white to-white px-5 py-7 text-center shadow-[0_16px_36px_rgba(185,28,28,0.14)]"
+      role="status"
+    >
+      <span className="flex size-16 items-center justify-center rounded-3xl bg-red-500 text-white shadow-[0_10px_22px_rgba(185,28,28,0.28)]">
+        <CircleX className="size-8" aria-hidden />
+      </span>
+      <p className="max-w-2xl text-lg font-bold leading-8 text-red-700 sm:text-xl">
+        {t("reservations.ownerRejectedTitle")}
+      </p>
+      <p className="max-w-lg text-sm leading-7 text-ink-700">
+        {t("reservations.ownerRejectedHint")}
+      </p>
+      {rejectedAt ? (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-red-100 bg-white px-3 py-1 text-xs text-ink-800 shadow-sm">
+          <CalendarClock className="size-3.5 shrink-0 text-red-500" aria-hidden />
+          <span className="text-ink-500">{t("reservations.ownerRejectedAt")}</span>
+          <span className="font-semibold">
+            <DateText value={rejectedAt} withTime />
+          </span>
+        </span>
+      ) : null}
+      {reason ? (
+        <div
+          className="mt-1 w-full max-w-xl rounded-2xl border border-red-200 bg-red-50/70 p-3.5 text-start"
+          role="alert"
+        >
+          <div className="flex items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
+              <MessageSquareWarning className="size-5" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-red-700">
+                {t("reservations.ownerRejectionReasonTitle")}
+              </p>
+              <p className="mt-1 whitespace-pre-line text-sm leading-7 text-ink-800">
+                {reason}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </aside>
+  );
+}
+
+function PermitRejectedBanner({ reason }: { reason: string | null }) {
+  const { t } = useTranslation();
+  return (
+    <aside
+      className="mb-4 rounded-2xl border border-red-200 bg-gradient-to-e from-red-50 via-white to-white px-3.5 py-3 shadow-[0_6px_16px_rgba(185,28,28,0.1)]"
+      role="alert"
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-red-500 text-white shadow-[0_6px_14px_rgba(185,28,28,0.25)]">
+          <ShieldAlert className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-red-700">
+            {t("reservations.permitRejectedBannerTitle")}
+          </p>
+          <p className="mt-1 text-xs leading-6 text-ink-700">
+            {t("reservations.permitRejectedBannerHint")}
+          </p>
+          {reason ? (
+            <p className="mt-1.5 text-xs leading-6 text-ink-800">
+              <span className="font-semibold text-red-700">
+                {t("reservations.rejectionReason")}:
+              </span>{" "}
+              {reason}
+            </p>
+          ) : null}
+        </div>
+      </div>
     </aside>
   );
 }

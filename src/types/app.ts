@@ -698,6 +698,7 @@ export type PublicProfile = {
   gender: UserGender | null;
   nationalId: string | null;
   phone: string | null;
+  birthDate?: string | null;
   photoId: string | null;
   activityStartYear: number | null;
   country: (GeoName & { id: string }) | null;

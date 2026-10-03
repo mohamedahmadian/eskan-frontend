@@ -16,6 +16,7 @@ import {
   UserRound,
   UserRoundCog,
   Users,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
@@ -47,7 +48,6 @@ import {
 import {
   contactRoles,
   neighborFlowStep,
-  selfAssignableContactRoles,
   type ReservationStepCode,
 } from './reservation-steps'
 import { ReservationStepNav } from './ReservationStepNav'
@@ -70,6 +70,9 @@ const toneClass: Record<Tone, { wrap: string; icon: string }> = {
     icon: 'bg-ink-700 text-white',
   },
 }
+
+/** Caravan contacts are prefilled once per file per session so a deliberate "remove all" sticks. */
+const autoLoadedReservations = new Set<string>()
 
 const roleIcons: Record<ContactRole, LucideIcon> = {
   DEPUTY: UserCog,
@@ -94,7 +97,7 @@ export function ReservationContactsStep({
   const canSeeContacts = reservation.caravanContacts !== undefined
   const contacts = reservation.caravanContacts ?? []
   const filled = new Set(contacts.map((item) => item.role))
-  const emptySelfRoles = selfAssignableContactRoles.filter((role) => !filled.has(role))
+  const emptySelfRoles = contactRoles.filter((role) => !filled.has(role))
   const me = reservation.caravanManager ?? reservation.createdBy
   const showNav =
     reservation.status !== 'COMPLETED' &&
@@ -102,6 +105,17 @@ export function ReservationContactsStep({
     reservation.status !== 'REJECTED'
   const prevStep = neighborFlowStep(reservation.type, 'contacts', -1, reservation)
   const nextStep = neighborFlowStep(reservation.type, 'contacts', 1, reservation)
+  const shouldAutoLoad =
+    canSeeContacts && showNav && !contacts.length && Boolean(reservation.caravanId)
+
+  useEffect(() => {
+    if (!shouldAutoLoad || autoLoadedReservations.has(reservation.id)) return
+    autoLoadedReservations.add(reservation.id)
+    api
+      .post(`/reservations/${reservation.id}/contacts/from-caravan`)
+      .then(() => onChanged())
+      .catch(() => undefined)
+  }, [shouldAutoLoad, reservation.id, onChanged])
 
   const assignSelf = useMutation({
     mutationFn: async () => {
@@ -222,23 +236,26 @@ export function ReservationContactsStep({
           <Copy className="size-4" aria-hidden />
           {t('reservations.useCaravanContacts')}
         </Button>
-        <Button
-          type="button"
-          variant="danger"
-          disabled={!contacts.length || removeAll.isPending}
-          onClick={() =>
-            confirmToast({
-              title: t('reservations.confirmRemoveAllContacts'),
-              confirmLabel: t('common.yesDelete'),
-              cancelLabel: t('common.cancel'),
-              confirmVariant: 'danger',
-              onConfirm: () => removeAll.mutate(),
-            })
-          }
-        >
-          <Trash2 className="size-4" aria-hidden />
-          {t('reservations.removeAllContacts')}
-        </Button>
+        {contacts.length ? (
+          <Button
+            type="button"
+            variant="danger"
+            className="ms-auto"
+            disabled={removeAll.isPending}
+            onClick={() =>
+              confirmToast({
+                title: t('reservations.confirmRemoveAllContacts'),
+                confirmLabel: t('common.yesDelete'),
+                cancelLabel: t('common.cancel'),
+                confirmVariant: 'danger',
+                onConfirm: () => removeAll.mutate(),
+              })
+            }
+          >
+            <Trash2 className="size-4" aria-hidden />
+            {t('reservations.removeAllContacts')}
+          </Button>
+        ) : null}
       </div>
       <ContactsRoles
         reservationId={reservation.id}
@@ -382,6 +399,7 @@ function ContactsRoles({
               reservationId={reservationId}
               open={open}
               onOpen={() => setOpenRole(role)}
+              onClose={() => setOpenRole(null)}
               onChanged={
                 editable
                   ? () => {
@@ -404,6 +422,7 @@ function ContactRoleCard({
   current,
   open,
   onOpen,
+  onClose,
   onChanged,
 }: {
   reservationId?: string
@@ -411,6 +430,7 @@ function ContactRoleCard({
   current?: ReservationCaravanContact
   open: boolean
   onOpen: () => void
+  onClose: () => void
   onChanged?: () => void
 }) {
   const { t } = useTranslation()
@@ -468,12 +488,23 @@ function ContactRoleCard({
     }
   }
 
+  function startNew() {
+    setFirstName('')
+    setLastName('')
+    setPhone('')
+    setMissingNationalId(null)
+    setStatus('new')
+    requestAnimationFrame(() => document.getElementById(`contact-${role}-first`)?.focus())
+  }
+
   const save = useMutation({
     mutationFn: async () => {
       if (!reservationId) return
+      const id = normalizeNationalId(nationalId)
+      if (!isValidIranianNationalId(id)) throw new Error(t('users.nationalIdInvalid'))
       await api.put(`/reservations/${reservationId}/contacts`, {
         role,
-        nationalId: normalizeNationalId(nationalId),
+        nationalId: id,
         firstName,
         lastName,
         phone: phone || null,
@@ -489,7 +520,12 @@ function ContactRoleCard({
       setMissingNationalId(null)
       onChanged?.()
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
+    onError: (error) =>
+      toast.error(
+        error instanceof Error && error.message === t('users.nationalIdInvalid')
+          ? error.message
+          : getApiErrorMessage(error, t('common.error')),
+      ),
   })
 
   return (
@@ -601,10 +637,10 @@ function ContactRoleCard({
             })}
             htmlFor={`contact-${role}-nid`}
           >
-            <div className="flex flex-col items-stretch gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 id={`contact-${role}-nid`}
-                className={`${fieldClassName} digit-field`}
+                className={`${fieldClassName} digit-field min-w-[10rem] flex-1`}
                 value={nationalId}
                 onChange={(event) => setNationalId(event.target.value)}
                 inputMode="numeric"
@@ -612,13 +648,29 @@ function ContactRoleCard({
               />
               <Button
                 type={showDetails ? 'button' : 'submit'}
-                className="self-start"
+                className="shrink-0"
                 disabled={looking}
                 onClick={showDetails ? () => void lookup() : undefined}
               >
                 <Search className="size-4" aria-hidden />
                 {looking ? t('reservations.looking') : t('reservations.lookup')}
               </Button>
+              <Button type="button" variant="soft" className="shrink-0" onClick={startNew}>
+                <UserPlus className="size-4" aria-hidden />
+                {t('reservations.newContact')}
+              </Button>
+              {current ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="shrink-0"
+                  data-form-cancel=""
+                  onClick={onClose}
+                >
+                  <X className="size-4" aria-hidden />
+                  {t('common.cancel')}
+                </Button>
+              ) : null}
             </div>
           </FormField>
           {status === 'new' && missingNationalId ? (

@@ -81,11 +81,25 @@ export function DateEquivalents({ value }: { value?: string | null }) {
   )
 }
 
-export function YearEquivalents({ year }: { year?: number | null }) {
+export function YearEquivalents({
+  year,
+  stacked,
+}: {
+  year?: number | null
+  stacked?: boolean
+}) {
   const { i18n } = useTranslation()
   if (year == null) return null
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { gregorian, hijri } = formatJalaliYearEquivalents(year, locale)
+  if (stacked) {
+    return (
+      <div className="text-xs leading-5 text-ink-500">
+        {gregorian ? <p dir="ltr">{gregorian}</p> : null}
+        {hijri ? <p dir="ltr">{hijri}</p> : null}
+      </div>
+    )
+  }
   return (
     <EquivalentLine
       items={[

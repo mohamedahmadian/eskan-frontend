@@ -152,6 +152,7 @@ export function MyReservationsListPage() {
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={onSort}
+                align="center"
               />
               <SortableTh
                 column="type"
@@ -194,10 +195,10 @@ export function MyReservationsListPage() {
                   <td className="px-4 py-3">
                     <ReservationCodeBadge code={row.code} size="md" />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center">
                     <div className="space-y-0.5">
                       <div>{n(row.year)}</div>
-                      <YearEquivalents year={row.year} />
+                      <YearEquivalents year={row.year} stacked />
                     </div>
                   </td>
                   <td className="px-4 py-3">{t(`reservations.types.${row.type}`)}</td>
@@ -223,6 +224,7 @@ export function MyReservationsListPage() {
                       maleLabel={t('reservations.countMale')}
                       femaleLabel={t('reservations.countFemale')}
                       totalLabel={t('reservations.countTotal')}
+                      stacked
                     />
                   </td>
                   <td className="px-4 py-3">

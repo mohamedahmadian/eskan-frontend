@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileBadge,
+  FileCheck2,
   Gauge,
   HeartHandshake,
   IdCard,
@@ -145,9 +146,9 @@ function reservationFromConflict(error: unknown): OpenReservation | null {
   }
 }
 
-async function fetchMyCaravans() {
+async function fetchMyCaravans(userId?: string) {
   const { data } = await api.get<Paginated<MineCaravan>>('/caravans/mine', {
-    params: { pageSize: 100 },
+    params: { pageSize: 100, ...(userId ? { userId } : {}) },
   })
   return data.items
 }
@@ -392,6 +393,7 @@ export function ReservationCreatePage() {
   const [submitting, setSubmitting] = useState(false)
   const [rulesModalOpen, setRulesModalOpen] = useState(false)
   const [pickedCaravan, setPickedCaravan] = useState<{ id: string; name: string } | null>(null)
+  const [caravanTypeBlocked, setCaravanTypeBlocked] = useState(false)
   const [draftHydrated, setDraftHydrated] = useState(!draftParam)
   const queryClient = useQueryClient()
   const deleteDraft = useDeleteOwnerDraft()
@@ -399,7 +401,7 @@ export function ReservationCreatePage() {
   const myCaravansQuery = useQuery({
     queryKey: ['caravans', 'mine', 'lookup'],
     enabled: !isAdminCreate,
-    queryFn: fetchMyCaravans,
+    queryFn: () => fetchMyCaravans(),
   })
   const soleCaravan =
     !isAdminCreate && myCaravansQuery.data?.length === 1 ? myCaravansQuery.data[0] : null
@@ -920,7 +922,45 @@ export function ReservationCreatePage() {
     }
   }
 
+  async function loadSubjectCaravans(): Promise<MineCaravan[] | null> {
+    try {
+      if (!isAdminCreate) {
+        return (
+          myCaravansQuery.data ??
+          (await queryClient.fetchQuery({
+            queryKey: ['caravans', 'mine', 'lookup'],
+            queryFn: () => fetchMyCaravans(),
+          }))
+        )
+      }
+      if (!forUserId) return []
+      return await queryClient.fetchQuery({
+        queryKey: ['caravans', 'mine', 'lookup', 'subject', forUserId],
+        queryFn: () => fetchMyCaravans(forUserId),
+      })
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+      return null
+    }
+  }
+
   async function goAfterType(next: ReservationType) {
+    let subjectCaravans: MineCaravan[] | null = null
+    if (next === 'CARAVAN') {
+      setSubmitting(true)
+      try {
+        subjectCaravans = await loadSubjectCaravans()
+      } finally {
+        setSubmitting(false)
+      }
+      if (!subjectCaravans) return
+      if (settings.data?.caravanCreateInReception !== true && subjectCaravans.length === 0) {
+        setCaravanTypeBlocked(true)
+        toast.error(t('reservations.caravanCreateUnavailable'))
+        return
+      }
+    }
+    setCaravanTypeBlocked(false)
     selectType(next)
     let nextStep: CreateStep = next === 'GROUP' || next === 'CARAVAN' ? 'party' : 'dates'
     let nextValues: TravelValues =
@@ -941,18 +981,7 @@ export function ReservationCreatePage() {
           }
     let skipParty = false
     if (next === 'CARAVAN' && !isAdminCreate) {
-      let items = myCaravansQuery.data
-      if (items === undefined) {
-        try {
-          items = await queryClient.fetchQuery({
-            queryKey: ['caravans', 'mine', 'lookup'],
-            queryFn: fetchMyCaravans,
-          })
-        } catch {
-          items = []
-        }
-      }
-      const caravans = items ?? []
+      const caravans = subjectCaravans ?? []
       if (caravans.length === 1) {
         const sole = caravans[0]
         nextValues = {
@@ -1483,7 +1512,11 @@ export function ReservationCreatePage() {
             ) : availableTypes.length === 0 ? (
               <CreateUnavailableNotice />
             ) : availableTypes.length === 1 && !type ? (
-              <LoadingState />
+              caravanTypeBlocked ? (
+                <CreateUnavailableNotice message={t('reservations.caravanCreateUnavailable')} />
+              ) : (
+                <LoadingState />
+              )
             ) : (
               <div className="flex flex-col gap-4">
                 {availableTypes.map((item) => {
@@ -1641,6 +1674,12 @@ export function ReservationCreatePage() {
           />
         ) : null}
         {step === 'dates' ? <OccasionStayHint /> : null}
+        {draftId && !isAdminCreate ? (
+          <p className="flex items-start gap-1.5 text-xs leading-6 text-teal-700">
+            <FileCheck2 className="mt-1 size-3.5 shrink-0" aria-hidden />
+            {t('reservations.draftSavedHint')}
+          </p>
+        ) : null}
       </AppForm>
       {rulesModalOpen && type ? (
         <ReceptionRulesModal
@@ -1787,7 +1826,13 @@ function RequiredHidden({ value }: { value: string }) {
   )
 }
 
-function CreateUnavailableNotice({ className }: { className?: string }) {
+function CreateUnavailableNotice({
+  className,
+  message,
+}: {
+  className?: string
+  message?: string
+}) {
   const { t } = useTranslation()
   return (
     <aside
@@ -1798,7 +1843,7 @@ function CreateUnavailableNotice({ className }: { className?: string }) {
         <Ban className="size-5" aria-hidden />
       </div>
       <p className="pt-2 text-sm font-medium leading-7 text-ink-900">
-        {t('reservations.createUnavailable')}
+        {message ?? t('reservations.createUnavailable')}
       </p>
     </aside>
   )

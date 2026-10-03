@@ -15,6 +15,7 @@ export function isPublicSessionPath(pathname: string) {
     pathname.startsWith('/register') ||
     pathname.startsWith('/impersonate') ||
     pathname.startsWith('/v/') ||
+    pathname.startsWith('/zaer/') ||
     pathname.startsWith('/p/') ||
     pathname.startsWith('/a/') ||
     pathname.startsWith('/s/')

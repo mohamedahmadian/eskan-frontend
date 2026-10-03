@@ -1,5 +1,5 @@
 export function publicProfilePath(userId: string) {
-  return `/p/${encodeURIComponent(userId)}`
+  return `/zaer/${encodeURIComponent(userId)}`
 }
 
 export function publicProfileUrl(userId: string) {

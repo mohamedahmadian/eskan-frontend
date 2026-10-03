@@ -8,6 +8,7 @@ import {
   MapPin,
   Phone,
   ScrollText,
+  Sparkles,
   Tent,
   UserRound,
   type LucideIcon,
@@ -32,10 +33,36 @@ const modelClass: Record<PilgrimCardModel, string> = {
   classic: 'pilgrim-id-card pilgrim-id-card--classic',
 }
 
+export type PilgrimCardPerson = Pick<
+  ManagedUser,
+  | 'id'
+  | 'firstName'
+  | 'lastName'
+  | 'fullName'
+  | 'gender'
+  | 'nationalId'
+  | 'phone'
+  | 'birthDate'
+  | 'photoId'
+  | 'country'
+  | 'province'
+  | 'city'
+>
+
 export const PilgrimCard = forwardRef<
   HTMLDivElement,
-  { pilgrim: ManagedUser; model?: PilgrimCardModel; variant?: 'pilgrim' | 'manager' }
->(function PilgrimCard({ pilgrim, model = 'pocket', variant = 'pilgrim' }, ref) {
+  {
+    pilgrim: PilgrimCardPerson
+    model?: PilgrimCardModel
+    variant?: 'pilgrim' | 'manager'
+    /** When provided, the card skips fetching the public profile. */
+    currentVisit?: PublicProfileCurrentVisit | null
+    hideEmptyPhoto?: boolean
+  }
+>(function PilgrimCard(
+  { pilgrim, model = 'pocket', variant = 'pilgrim', currentVisit, hideEmptyPhoto = false },
+  ref,
+) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const geoName = useGeoName()
@@ -44,16 +71,18 @@ export const PilgrimCard = forwardRef<
     .map((item) => geoName(item!))
     .join(' · ')
   const photoUrl = pilgrim.photoId ? getImageUrl(pilgrim.photoId) : null
+  const showPhoto = Boolean(photoUrl) || !hideEmptyPhoto
   const genderLabel = pilgrim.gender ? t(`userGenders.${pilgrim.gender}`) : null
   const profile = useQuery({
     queryKey: ['public', 'profile', pilgrim.id, 'card'],
+    enabled: currentVisit === undefined,
     retry: false,
     queryFn: async () => {
       const { data } = await api.get<PublicProfile>(`/public/profiles/${pilgrim.id}`)
       return data
     },
   })
-  const visit = profile.data?.currentVisit ?? null
+  const visit = currentVisit !== undefined ? currentVisit : profile.data?.currentVisit ?? null
   const hasFile = Boolean(visit?.file)
   const showPocketIdentity = model === 'pocket' && hasFile
   const originName = visit?.travel?.originCity ? geoName(visit.travel.originCity) : null
@@ -95,22 +124,26 @@ export const PilgrimCard = forwardRef<
           <div
             className={`pilgrim-id-card__identity${
               showPocketIdentity ? ' pilgrim-id-card__identity--stacked' : ''
-            }${pocketTrip ? ' pilgrim-id-card__identity--compact' : ''}`}
+            }${pocketTrip ? ' pilgrim-id-card__identity--compact' : ''}${
+              showPhoto ? '' : ' pilgrim-id-card__identity--no-photo'
+            }`}
           >
-            <div className="pilgrim-id-card__photo-wrap">
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt=""
-                  className="pilgrim-id-card__photo"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <div className="pilgrim-id-card__photo-fallback" aria-hidden>
-                  {initials(pilgrim.firstName, pilgrim.lastName)}
-                </div>
-              )}
-            </div>
+            {showPhoto ? (
+              <div className="pilgrim-id-card__photo-wrap">
+                {photoUrl ? (
+                  <img
+                    src={photoUrl}
+                    alt=""
+                    className="pilgrim-id-card__photo"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <div className="pilgrim-id-card__photo-fallback" aria-hidden>
+                    {initials(pilgrim.firstName, pilgrim.lastName)}
+                  </div>
+                )}
+              </div>
+            ) : null}
             <div className="pilgrim-id-card__name-block">
               <p className="pilgrim-id-card__name">{pilgrim.fullName}</p>
               {genderLabel ? (
@@ -186,6 +219,47 @@ export const PilgrimCard = forwardRef<
     </div>
   )
 })
+
+const modelOptions: { id: PilgrimCardModel; icon: LucideIcon; labelKey: string }[] = [
+  { id: 'pocket', icon: IdCard, labelKey: 'pilgrims.cardModelPocket' },
+  { id: 'classic', icon: Sparkles, labelKey: 'pilgrims.cardModelClassic' },
+]
+
+export function PilgrimCardModelSwitch({
+  value,
+  onChange,
+  className = '',
+}: {
+  value: PilgrimCardModel
+  onChange: (model: PilgrimCardModel) => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      {modelOptions.map((option) => {
+        const Icon = option.icon
+        const active = value === option.id
+        return (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(option.id)}
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition ${
+              active
+                ? 'bg-teal-500 text-white shadow-sm'
+                : 'bg-cream-50 text-ink-700 hover:bg-cream-100'
+            }`}
+          >
+            <Icon className="size-4" aria-hidden />
+            {t(option.labelKey)}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 function CardBarcode({
   profileUrl,

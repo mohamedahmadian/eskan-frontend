@@ -24,6 +24,11 @@ import { formatNumber } from '../../lib/datetime'
 import { publicAccommodationPath } from '../../lib/public-place'
 import { publicProfileUrl } from '../../lib/public-profile'
 import type { PublicProfile } from '../../types/app'
+import {
+  PilgrimCard,
+  PilgrimCardModelSwitch,
+  type PilgrimCardModel,
+} from '../pilgrims/PilgrimCard'
 import { PublicProfileCard } from './PublicProfileCard'
 
 const pngOptions = {
@@ -42,6 +47,7 @@ export function PublicProfilePage() {
   const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
   const [tab, setTab] = useState<ProfileTab | null>(null)
+  const [model, setModel] = useState<PilgrimCardModel>('pocket')
   const geoName = useGeoName()
 
   const query = useQuery({
@@ -111,6 +117,14 @@ export function PublicProfilePage() {
 
   const activeTab = tab && tabs.some((item) => item.id === tab) ? tab : tabs[0]?.id ?? null
 
+  const isPilgrim = Boolean(
+    profile &&
+      profile.roles.some((role) => role.code === 'PILGRIM') &&
+      !profile.roles.some(
+        (role) => role.code === 'CARAVAN_MANAGER' || role.code === 'ACCOMMODATION_MANAGER',
+      ),
+  )
+
   async function downloadCard() {
     if (!cardRef.current || !profile) return
     setDownloading(true)
@@ -118,7 +132,9 @@ export function PublicProfilePage() {
       const dataUrl = await toPng(cardRef.current, pngOptions)
       const link = document.createElement('a')
       link.href = dataUrl
-      link.download = `member-card-${profile.nationalId || profile.id}.png`
+      link.download = isPilgrim
+        ? `pilgrim-card-${model}-${profile.nationalId || profile.id}.png`
+        : `member-card-${profile.nationalId || profile.id}.png`
       link.click()
       toast.success(t('publicProfile.downloaded'))
     } catch {
@@ -153,13 +169,34 @@ export function PublicProfilePage() {
   return (
     <LandingShell>
       <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-8 sm:py-12">
-        <div className="mb-8 flex flex-col items-center gap-5">
-          <PublicProfileCard ref={cardRef} profile={profile} qrUrl={qrUrl} />
-          <Button type="button" onClick={() => void downloadCard()} disabled={downloading || !qrUrl}>
-            <Download className="size-4" aria-hidden />
-            {downloading ? t('publicProfile.downloading') : t('publicProfile.download')}
-          </Button>
-        </div>
+        {isPilgrim ? (
+          <div className="mb-8 flex flex-col items-center gap-5">
+            <PilgrimCardModelSwitch value={model} onChange={setModel} className="justify-center" />
+            <div className="w-full overflow-x-auto rounded-[28px] border border-line bg-cream-50 p-4 sm:p-6">
+              <div className="mx-auto w-fit">
+                <PilgrimCard
+                  ref={cardRef}
+                  pilgrim={profile}
+                  model={model}
+                  currentVisit={profile.currentVisit ?? null}
+                  hideEmptyPhoto
+                />
+              </div>
+            </div>
+            <Button type="button" onClick={() => void downloadCard()} disabled={downloading}>
+              <Download className="size-4" aria-hidden />
+              {downloading ? t('pilgrims.cardDownloading') : t('pilgrims.downloadCard')}
+            </Button>
+          </div>
+        ) : (
+          <div className="mb-8 flex flex-col items-center gap-5">
+            <PublicProfileCard ref={cardRef} profile={profile} qrUrl={qrUrl} />
+            <Button type="button" onClick={() => void downloadCard()} disabled={downloading || !qrUrl}>
+              <Download className="size-4" aria-hidden />
+              {downloading ? t('publicProfile.downloading') : t('publicProfile.download')}
+            </Button>
+          </div>
+        )}
 
         {tabs.length ? (
           <nav className="mb-6 flex flex-wrap justify-center gap-2">

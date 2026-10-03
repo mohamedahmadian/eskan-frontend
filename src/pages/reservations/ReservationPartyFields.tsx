@@ -116,7 +116,9 @@ export async function createReservationParty(
     femaleCount: 0,
     cityId: draft.cityId || undefined,
     walkingRouteId: draft.walkingRouteId || null,
-    year,
+  }
+  if (type === 'CARAVAN' && year != null) {
+    payload.year = year
   }
   if (draft.managerUserId) {
     payload.managerUserId = draft.managerUserId

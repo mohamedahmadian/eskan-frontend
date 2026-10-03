@@ -28,7 +28,7 @@ import {
   Button,
   FormField,
   PageHeader,
-  formShellClassName,
+  fullWidthShellClassName,
 } from "../../components/ui/Form";
 import { confirmToast } from "../../components/ui/confirmToast";
 import { FormMetaChip } from "../../components/ui/FormLayout";
@@ -264,7 +264,7 @@ export function ReservationsAdminListPage() {
   );
 
   return (
-    <div className={formShellClassName}>
+    <div className={fullWidthShellClassName}>
       <PageHeader
         icon={Ticket}
         title={t("menus.reservationsAdmin")}

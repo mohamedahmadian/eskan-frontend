@@ -1,4 +1,4 @@
-import { Download, IdCard, Sparkles, Printer } from 'lucide-react'
+import { Download, IdCard, Printer } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { toPng } from 'html-to-image'
 import { useRef, useState } from 'react'
@@ -14,7 +14,7 @@ import {
 } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
 import type { ManagedUser } from '../../types/app'
-import { PilgrimCard, type PilgrimCardModel } from './PilgrimCard'
+import { PilgrimCard, PilgrimCardModelSwitch, type PilgrimCardModel } from './PilgrimCard'
 
 const pngOptions = {
   pixelRatio: 3,
@@ -81,32 +81,11 @@ export function PilgrimCardPage() {
         icon={IdCard}
         title={t('pilgrims.card')} subtitle={t('pilgrims.cardSubtitle')} />
 
-      <div className={`mb-4 flex flex-wrap gap-2 p-3 print:hidden ${cardClassName}`}>
-        <button
-          type="button"
-          onClick={() => setModel('pocket')}
-          className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition ${
-            model === 'pocket'
-              ? 'bg-teal-500 text-white shadow-sm'
-              : 'bg-cream-50 text-ink-700 hover:bg-cream-100'
-          }`}
-        >
-          <IdCard className="size-4" aria-hidden />
-          {t('pilgrims.cardModelPocket')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setModel('classic')}
-          className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition ${
-            model === 'classic'
-              ? 'bg-teal-500 text-white shadow-sm'
-              : 'bg-cream-50 text-ink-700 hover:bg-cream-100'
-          }`}
-        >
-          <Sparkles className="size-4" aria-hidden />
-          {t('pilgrims.cardModelClassic')}
-        </button>
-      </div>
+      <PilgrimCardModelSwitch
+        value={model}
+        onChange={setModel}
+        className={`mb-4 p-3 print:hidden ${cardClassName}`}
+      />
 
       <div className="pilgrim-card-preview overflow-x-auto rounded-[28px] border border-line bg-cream-50 p-4 sm:p-6 print:hidden">
         <div className="mx-auto w-fit">

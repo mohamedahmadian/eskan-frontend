@@ -632,6 +632,9 @@ export function ReservationDateFields({
             if (stayStartDate && values.stayEndDate && values.stayEndDate < stayStartDate) {
               patch.stayEndDate = stayStartDate;
             }
+            if (stayStartDate && values.walkingStartDate && values.walkingStartDate >= stayStartDate) {
+              patch.walkingStartDate = "";
+            }
             if (
               imamRezaMartyrdomDate &&
               stayStartDate &&
@@ -910,6 +913,7 @@ export function ReservationOptionalGeoFields({
         value={values.walkingStartDate}
         locked={locked}
         required
+        maxDate={values.stayStartDate ? addDaysIso(values.stayStartDate, -1) : undefined}
         onChange={(walkingStartDate) => onChange({ walkingStartDate })}
       />
       <FormField

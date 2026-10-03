@@ -44,7 +44,7 @@ import { CheckboxField } from "../../components/ui/CheckboxField";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { CopyableDigits } from "../../components/ui/CopyableDigits";
 import { api, getApiErrorMessage } from "../../lib/api";
-import { formatNumber } from "../../lib/datetime";
+import { formatNumber, parseDigitString } from "../../lib/datetime";
 import {
   isValidIranianNationalId,
   normalizeNationalId,
@@ -749,7 +749,9 @@ function MemberLookupForm({
     if (editing || iraqi) return;
     if (!isValidIranianNationalId(id)) {
       cancelLookup("nid:");
-      if (/^\d{10}$/.test(id)) toast.error(t("users.nationalIdInvalid"));
+      if (parseDigitString(raw).length === 10) {
+        toast.error(t("users.nationalIdInvalid"));
+      }
       return;
     }
     void runIdentityLookup("nid", id);

@@ -299,6 +299,7 @@ import { HomePage } from "./routes/HomePage";
 import { ParticipationsEntry } from "./routes/ParticipationsEntry";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { WelcomeRedirect } from "./routes/WelcomeRedirect";
+import { LegacyProfileRedirect } from "./routes/LegacyProfileRedirect";
 import { RequireAdmin, RequireMenuAccess } from "./routes/RequireMenuAccess";
 import { PublicIceVoucherPage } from "./pages/public-vouchers/PublicIceVoucherPage";
 import { PublicItemVoucherPage } from "./pages/public-vouchers/PublicItemVoucherPage";
@@ -361,7 +362,8 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/v/item/:code" element={<PublicItemVoucherPage />} />
             <Route path="/v/ice/:code" element={<PublicIceVoucherPage />} />
-            <Route path="/p/:id" element={<PublicProfilePage />} />
+            <Route path="/zaer/:id" element={<PublicProfilePage />} />
+            <Route path="/p/:id" element={<LegacyProfileRedirect />} />
             <Route path="/a/:id" element={<PublicAccommodationPage />} />
             <Route path="/s/:id" element={<PublicWalkingStationPage />} />
             <Route element={<ProtectedRoute />}>

@@ -1464,6 +1464,10 @@ th {
   box-shadow: 0 4px 10px rgba(20, 40, 40, 0.06);
 }
 
+.pilgrim-id-card__identity--no-photo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .pilgrim-id-card--classic .pilgrim-id-card__photo-wrap {
   width: 46mm;
   height: 56mm;

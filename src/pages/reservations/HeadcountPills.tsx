@@ -11,6 +11,7 @@ export function HeadcountPills({
   femaleLabel,
   totalLabel,
   showTotal: showTotalProp,
+  stacked,
 }: {
   type: ReservationType
   male: number
@@ -21,14 +22,15 @@ export function HeadcountPills({
   femaleLabel: string
   totalLabel: string
   showTotal?: boolean
+  stacked?: boolean
 }) {
   const individual = type === reservationTypes.INDIVIDUAL
   const showMale = !individual || male >= 1
   const showFemale = !individual || male < 1
   const showTotal = showTotalProp ?? !individual
 
-  return (
-    <div className="inline-flex flex-wrap items-center gap-1">
+  const genderPills = (
+    <>
       {showMale ? (
         <span
           className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-sky-700"
@@ -49,16 +51,33 @@ export function HeadcountPills({
           <span>{femaleLabel}</span>
         </span>
       ) : null}
-      {showTotal ? (
-        <span
-          className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-teal-50 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-teal-800"
-          title={totalLabel}
-        >
-          <Users className="size-3 shrink-0" aria-hidden />
-          <span>{format(total)}</span>
-          <span>{totalLabel}</span>
-        </span>
-      ) : null}
+    </>
+  )
+
+  const totalPill = showTotal ? (
+    <span
+      className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-teal-50 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-teal-800"
+      title={totalLabel}
+    >
+      <Users className="size-3 shrink-0" aria-hidden />
+      <span>{format(total)}</span>
+      <span>{totalLabel}</span>
+    </span>
+  ) : null
+
+  if (stacked) {
+    return (
+      <div className="inline-flex flex-col items-start gap-1">
+        <div className="inline-flex flex-nowrap items-center gap-1">{genderPills}</div>
+        {totalPill}
+      </div>
+    )
+  }
+
+  return (
+    <div className="inline-flex flex-wrap items-center gap-1">
+      {genderPills}
+      {totalPill}
     </div>
   )
 }
