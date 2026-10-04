@@ -1010,6 +1010,12 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "accommodationManagers.subtitle",
     };
   }
+  if (pathname.startsWith("/accommodation-assignments")) {
+    return {
+      titleKey: "menus.accommodationAssignment",
+      subtitleKey: "accommodationAssignment.subtitle",
+    };
+  }
   if (pathname.startsWith("/accommodation-year-management")) {
     return {
       titleKey: "menus.accommodationYearManagement",
@@ -1020,6 +1026,27 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.accommodationReport",
       subtitleKey: "accommodations.reportSubtitle",
+    };
+  }
+  if (pathname.includes("/edit") && pathname.startsWith("/introduced-accommodations/")) {
+    return {
+      titleKey: "accommodations.edit",
+      subtitleKey: "accommodations.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/introduced-accommodations/") &&
+    pathname !== "/introduced-accommodations"
+  ) {
+    return {
+      titleKey: "accommodations.details",
+      subtitleKey: "accommodations.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/introduced-accommodations")) {
+    return {
+      titleKey: "menus.introducedAccommodations",
+      subtitleKey: "introducedAccommodations.subtitle",
     };
   }
   if (pathname.startsWith("/my-accommodations/new")) {

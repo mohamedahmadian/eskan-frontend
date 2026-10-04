@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useLocation, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LoadingState, PageHeader, EntityNameSubtitle, userFormShellClassName } from '../../components/ui/Form'
 import { useAuth } from '../../auth/AuthProvider'
 import { api } from '../../lib/api'
-import { isAdmin } from '../../lib/roles'
+import { canManageAccommodations, isAdmin } from '../../lib/roles'
 import type { Accommodation, City, Country, ManagedUser, Province } from '../../types/app'
 import { AccommodationForm } from './AccommodationForm'
 
@@ -15,10 +15,17 @@ export function AccommodationEditPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
-  const fromMine = useLocation().pathname.startsWith('/my-accommodations')
-  const listPath = fromMine ? '/my-accommodations' : '/accommodations'
+  const pathname = useLocation().pathname
+  const fromIntroduced = pathname.startsWith('/introduced-accommodations')
+  const fromMine = pathname.startsWith('/my-accommodations')
+  const listPath = fromIntroduced
+    ? '/introduced-accommodations'
+    : fromMine
+      ? '/my-accommodations'
+      : '/accommodations'
   const { user } = useAuth()
   const admin = isAdmin(user)
+  const detailPath = id ? `${listPath}/${id}` : listPath
   const item = useQuery({
     queryKey: ['accommodation', id],
     enabled: Boolean(id),
@@ -69,6 +76,10 @@ export function AccommodationEditPage() {
       return data
     },
   })
+
+  if (user && !canManageAccommodations(user)) {
+    return <Navigate to={detailPath} replace />
+  }
 
   if (!item.data || !countries.data) {
     return <LoadingState />

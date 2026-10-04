@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { FormSectionTitle as SectionTitle } from '../../components/ui/FormLayout'
 import { useTranslation } from 'react-i18next'
 import { DateText } from '../../components/ui/DateText'
 import { cardClassName } from '../../components/ui/Form'
@@ -216,25 +217,6 @@ export function ReservationInsuranceSummary({
 
       {footer ? <div className="border-t border-line px-5 py-4 sm:px-6">{footer}</div> : null}
     </section>
-  )
-}
-
-function SectionTitle({
-  icon: Icon,
-  children,
-  className = 'mb-2.5',
-}: {
-  icon: LucideIcon
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <h3 className={`inline-flex items-center gap-2 text-xs font-semibold text-ink-600 ${className}`}>
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
-        <Icon className="size-3.5" aria-hidden />
-      </span>
-      {children}
-    </h3>
   )
 }
 

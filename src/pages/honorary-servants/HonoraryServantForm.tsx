@@ -1,6 +1,6 @@
 import { AlignLeft, CalendarDays, Clock, HandHeart, Sparkles, Tags } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
@@ -8,6 +8,7 @@ import { CheckboxField } from '../../components/ui/CheckboxField'
 import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
 import { FormCard, FormSectionTitle, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { PersianDateField } from '../../components/ui/PersianDateField'
+import { PersianTimeField } from '../../components/ui/PersianTimeField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { localizeDigits } from '../../lib/datetime'
@@ -30,6 +31,40 @@ export type HonoraryServantPayload = {
   weekDays: HonoraryServiceWeekDay[]
   startTime: string
   endTime: string
+}
+
+function ApplyInvite() {
+  const { t } = useTranslation()
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-4">
+      <div
+        className="pointer-events-none absolute -start-8 -top-10 size-28 rounded-full bg-teal-200/30"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -end-6 -bottom-12 size-24 rounded-full bg-mint-100/70"
+        aria-hidden
+      />
+      <div className="relative flex gap-3">
+        <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
+          <HandHeart className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-7 text-ink-900">
+            {t('honoraryServants.applyInviteTitle')}
+          </p>
+          <p className="mt-1.5 text-sm leading-7 text-ink-700">
+            <Trans
+              i18nKey="honoraryServants.applyInviteBody"
+              components={{
+                emphasis: <strong className="font-semibold text-teal-800" />,
+              }}
+            />
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function ServiceDescriptionCard({
@@ -180,6 +215,7 @@ export function HonoraryServantForm({
         )}
         <input type="hidden" value={person?.id ?? ''} required />
 
+        {self ? <ApplyInvite /> : null}
         <FormSectionTitle icon={Tags}>{t('honoraryServants.service')}</FormSectionTitle>
         <FormField icon={Tags} label={t('honoraryServants.service')} htmlFor="serviceType">
           <SearchSelect
@@ -251,23 +287,19 @@ export function HonoraryServantForm({
         </FormField>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField icon={Clock} label={t('honoraryServants.startTime')} htmlFor="startTime">
-            <input
+            <PersianTimeField
               id="startTime"
-              type="time"
               required
-              className={`${fieldClassName} digit-field`}
               value={values.startTime}
-              onChange={(e) => set('startTime', e.target.value)}
+              onChange={(next) => set('startTime', next)}
             />
           </FormField>
           <FormField icon={Clock} label={t('honoraryServants.endTime')} htmlFor="endTime">
-            <input
+            <PersianTimeField
               id="endTime"
-              type="time"
               required
-              className={`${fieldClassName} digit-field`}
               value={values.endTime}
-              onChange={(e) => set('endTime', e.target.value)}
+              onChange={(next) => set('endTime', next)}
             />
           </FormField>
         </div>

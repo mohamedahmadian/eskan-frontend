@@ -66,8 +66,8 @@ import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { publicAccommodationPath } from '../../lib/public-place'
-import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { useAuth } from '../../auth/AuthProvider'
+import { canManageAccommodations, isAccommodationManager, isAdmin } from '../../lib/roles'
 import type {
   Accommodation,
   AccommodationCaravanPlacement,
@@ -99,10 +99,14 @@ export function AccommodationDetailPage() {
   const { user } = useAuth()
   const { id } = useParams()
   const navigate = useNavigate()
-  const fromMine = useLocation().pathname.startsWith('/my-accommodations')
-  const listPath = fromMine ? '/my-accommodations' : '/accommodations'
-  const canManage =
-    fromMine || hasMenuAccess('/accommodations', user?.modules ?? [])
+  const pathname = useLocation().pathname
+  const fromMine = pathname.startsWith('/my-accommodations')
+  const fromIntroduced = pathname.startsWith('/introduced-accommodations')
+  const listPath = fromIntroduced
+    ? '/introduced-accommodations'
+    : fromMine
+      ? '/my-accommodations'
+      : '/accommodations'
   const { confirmDelete } = useConfirmDelete()
   const [tab, setTab] = useState<AccommodationTab>('general')
   const query = useQuery({
@@ -113,9 +117,20 @@ export function AccommodationDetailPage() {
       return data
     },
   })
+  const managesThis = Boolean(
+    user && query.data?.managers.some((row) => row.userId === user.id),
+  )
+  const canManage =
+    isAdmin(user) ||
+    (canManageAccommodations(user) && (fromMine || managesThis))
+  const canSeePlacements =
+    fromMine ||
+    isAdmin(user) ||
+    (isAccommodationManager(user) && !fromIntroduced) ||
+    (fromIntroduced && managesThis)
   const placementsQuery = useQuery({
     queryKey: ['accommodation', id, 'year-caravan-placements'],
-    enabled: Boolean(id),
+    enabled: Boolean(id) && canSeePlacements,
     queryFn: async () => {
       const { data } = await api.get<{ year: number; items: AccommodationCaravanPlacement[] }>(
         `/accommodations/${id}/year-caravan-placements`,
@@ -166,7 +181,7 @@ export function AccommodationDetailPage() {
         subtitle={<EntityNameSubtitle name={item.name} icon={Building2} />}
       />
       <div className="space-y-4">
-        <AccommodationYearAlert accommodation={item} />
+        {canManage ? <AccommodationYearAlert accommodation={item} /> : null}
         <FormCard
           icon={Building2}
           title={
@@ -711,7 +726,13 @@ export function AccommodationDetailPage() {
             {canManage ? (
               <DetailActions
                 className=""
-                editTo={`${listPath}/${item.id}/edit`}
+                editTo={
+                  isAdmin(user)
+                    ? `/accommodations/${item.id}/edit`
+                    : fromIntroduced
+                      ? `/introduced-accommodations/${item.id}/edit`
+                      : `/my-accommodations/${item.id}/edit`
+                }
                 editLabel={t('common.edit')}
                 deleteLabel={t('accommodations.delete')}
                 extra={
@@ -727,7 +748,11 @@ export function AccommodationDetailPage() {
                     message: t('accommodations.confirmDelete'),
                     successMessage: t('accommodations.deleted'),
                     path: `/accommodations/${item.id}`,
-                    queryKey: fromMine ? ['accommodations', 'mine'] : ['accommodations'],
+                    queryKey: fromIntroduced
+                      ? ['accommodations', 'introduced']
+                      : fromMine
+                        ? ['accommodations', 'mine']
+                        : ['accommodations'],
                     onDeleted: () => navigate(listPath),
                   })
                 }

@@ -5,7 +5,6 @@ import {
   Footprints,
   HandHeart,
   HeartHandshake,
-  History,
   IdCard,
   MapPin,
   Plus,
@@ -28,6 +27,7 @@ import { DateText } from '../../components/ui/DateText'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useCaravanCreateQuota } from '../caravans/caravan-create-quota'
+import { WelcomeIdentityBadges } from './WelcomeIdentityBadges'
 import { useGeoName } from '../../lib/geo'
 import { publicProfilePath } from '../../lib/public-profile'
 import {
@@ -39,7 +39,6 @@ import {
 } from '../../lib/roles'
 import type {
   ReservationListItem,
-  UserHomeCaravan,
   UserHomeCaravanManager,
   UserHomeDashboard as UserHomeDashboardData,
   UserHomePilgrim,
@@ -302,27 +301,6 @@ function PilgrimSection({ data, locale }: { data: UserHomePilgrim; locale: strin
   )
 }
 
-function CaravanRow({ caravan }: { caravan: UserHomeCaravan }) {
-  const { t } = useTranslation()
-  const nameOf = useGeoName()
-  return (
-    <li className="flex flex-col gap-3 border-t border-line py-3 first:border-t-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 space-y-1">
-        <p className="font-medium text-ink-900">{caravan.name}</p>
-        <p className="text-xs text-ink-500">
-          {nameOf(caravan.city)} · {caravan.isActive ? t('geo.active') : t('geo.inactive')}
-        </p>
-      </div>
-      <Link to={`/my-caravans/${caravan.id}/pilgrimage-history`} className="shrink-0">
-        <Button type="button" variant="soft">
-          <History className="size-4" aria-hidden />
-          {t('dashboard.openHistory')}
-        </Button>
-      </Link>
-    </li>
-  )
-}
-
 function ManagerSection({ data, locale }: { data: UserHomeCaravanManager; locale: string }) {
   const { t } = useTranslation()
   const quota = useCaravanCreateQuota()
@@ -361,34 +339,6 @@ function ManagerSection({ data, locale }: { data: UserHomeCaravanManager; locale
           locale={locale}
         />
       </div>
-      <article className={`${cardClassName} p-5`}>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-medium text-ink-700">{t('dashboard.recentCaravans')}</h3>
-          <Link to="/my-caravans" className="text-sm text-teal-700 hover:underline">
-            {t('dashboard.viewAll')}
-          </Link>
-        </div>
-        {data.recentCaravans.length ? (
-          <ul>
-            {data.recentCaravans.map((caravan) => (
-              <CaravanRow key={caravan.id} caravan={caravan} />
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-ink-500">{t('myCaravans.empty')}</p>
-        )}
-      </article>
-      {data.recentReservations.length ? (
-        <article className={`${cardClassName} p-5`}>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-ink-700">{t('dashboard.recentCaravanFiles')}</h3>
-            <Link to="/my-reservations" className="text-sm text-teal-700 hover:underline">
-              {t('dashboard.viewAll')}
-            </Link>
-          </div>
-          <ReservationList items={data.recentReservations} empty={t('reservations.empty')} />
-        </article>
-      ) : null}
     </section>
   )
 }
@@ -406,7 +356,6 @@ export function UserHomeDashboard() {
   const showIdCard = showPilgrimHome || isManagerUser
   const showHonorary = isHonoraryServant(user)
   const honoraryServices = user?.honoraryServices ?? []
-  const showAssignedFiles = honoraryServices.length > 0
   const showRouteHome = showPilgrim || showManager
   const query = useQuery({
     queryKey: ['reservations', 'mine', 'home', user?.id],
@@ -429,7 +378,7 @@ export function UserHomeDashboard() {
     <div className={`${listShellClassName} flex flex-1 flex-col gap-8`}>
       <section className={`${cardClassName} overflow-hidden`}>
         <div className="h-1.5 bg-gradient-to-e from-teal-400 to-mint-300" />
-        <div className="flex items-start gap-3 px-5 py-5">
+        <div className="flex flex-wrap items-start gap-3 px-5 py-5">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
             {showManager && !showPilgrim ? (
               <Footprints className="size-5" aria-hidden />
@@ -437,7 +386,7 @@ export function UserHomeDashboard() {
               <UserRound className="size-5" aria-hidden />
             )}
           </span>
-          <div className="min-w-0">
+          <div className="min-w-[12rem] flex-1">
             <h2 className="text-lg font-semibold text-ink-900">
               {t('dashboard.welcomeUser', { name: user?.fullName ?? '' })}
             </h2>
@@ -454,6 +403,7 @@ export function UserHomeDashboard() {
               </p>
             )}
           </div>
+          <WelcomeIdentityBadges />
         </div>
       </section>
 
@@ -480,16 +430,20 @@ export function UserHomeDashboard() {
               {t('dashboard.honoraryServicesEmpty')}
             </p>
           )}
-          {showAssignedFiles ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <ActionCard
-                to="/translator-reservations"
-                icon={HandHeart}
-                label={t('dashboard.translatorFiles')}
-                tone="teal"
-              />
-            </div>
-          ) : null}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ActionCard
+              to="/translator-reservations"
+              icon={HandHeart}
+              label={t('menus.translatorReservations')}
+              tone="teal"
+            />
+            <ActionCard
+              to="/my-reservations"
+              icon={ScrollText}
+              label={t('menus.myReservations')}
+              tone="mint"
+            />
+          </div>
         </section>
       ) : null}
 

@@ -1,5 +1,16 @@
-import { useMutation } from '@tanstack/react-query'
-import { Check, Mars, SlidersHorizontal, StickyNote, UserRound, Users, Venus, X } from 'lucide-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  Check,
+  ChevronLeft,
+  FileBadge,
+  Mars,
+  SlidersHorizontal,
+  StickyNote,
+  UserRound,
+  Users,
+  Venus,
+  X,
+} from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
@@ -14,7 +25,14 @@ import {
 } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
-import type { Reservation, ReservationListItem, ReservationType } from '../../types/app'
+import type {
+  Reservation,
+  ReservationListItem,
+  ReservationPermitOption,
+  ReservationType,
+} from '../../types/app'
+import { IssuedLicenseViewModal } from './ReservationCaravanLicenseStep'
+import { PermitStatusPill, ReservationReviewPermitStep } from './ReservationReviewPermitStep'
 import {
   applicantSectionKey,
   canAdjustApprovedCapacity,
@@ -203,6 +221,7 @@ export function ReservationReviewActions({
           mode={mode}
           busy={busy}
           initialNote={initialNote}
+          onPermitChanged={onChanged}
           onClose={() => {
             if (!busy) setMode(null)
           }}
@@ -239,6 +258,7 @@ export function ReservationReviewModal({
   mode,
   busy,
   initialNote,
+  onPermitChanged,
   onClose,
   onConfirm,
 }: {
@@ -246,6 +266,7 @@ export function ReservationReviewModal({
   mode: ReservationReviewMode
   busy?: boolean
   initialNote?: string
+  onPermitChanged?: () => void
   onClose: () => void
   onConfirm: (payload: {
     note?: string
@@ -273,14 +294,26 @@ export function ReservationReviewModal({
   const approvedMale = Number(maleCount) || 0
   const approvedFemale = Number(femaleCount) || 0
   const maxCount = partyMaxSize(reservation.type)
+  const permitReview = reservation.type === 'CARAVAN' && !adjusting
+  const [step, setStep] = useState<'permit' | 'file'>(permitReview ? 'permit' : 'file')
+  const [viewingLicense, setViewingLicense] = useState<ReservationPermitOption | null>(null)
+  const detail = useQuery({
+    queryKey: ['reservations', reservation.id],
+    enabled: permitReview,
+    queryFn: async () => {
+      const { data } = await api.get<Reservation>(`/reservations/${reservation.id}`)
+      return data
+    },
+  })
+  const permitStatus = detail.data?.permitStatus ?? reservation.permitStatus
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !busy) onClose()
+      if (event.key === 'Escape' && !busy && !viewingLicense) onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [busy, onClose])
+  }, [busy, onClose, viewingLicense])
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -295,11 +328,14 @@ export function ReservationReviewModal({
     })
   }
 
-  const title = rejecting
-    ? t('reservations.rejectConfirm')
-    : adjusting
-      ? t('reservations.adjustCapacityTitle')
-      : t('reservations.reviewContinueConfirm')
+  const title =
+    step === 'permit'
+      ? t('reservations.reviewStepPermit')
+      : rejecting
+        ? t('reservations.rejectConfirm')
+        : adjusting
+          ? t('reservations.adjustCapacityTitle')
+          : t('reservations.reviewContinueConfirm')
   const confirmLabel = rejecting
     ? t('reservations.rejectFile')
     : adjusting
@@ -321,122 +357,205 @@ export function ReservationReviewModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="reservation-review-title"
-        className={`relative z-10 w-full max-w-lg p-6 ${cardClassName}`}
+        className={`relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto p-6 ${cardClassName}`}
       >
         <h2 id="reservation-review-title" className="mb-4 text-lg font-semibold text-ink-900">
           {title}
         </h2>
-        <AppForm onSubmit={submit} className="space-y-4" autoFocusFirst={false}>
-          <dl className="grid gap-2 sm:grid-cols-2">
-            <ReviewFact
-              icon={UserRound}
-              label={t(applicantSectionKey(reservation.type))}
-              value={applicantName}
-            />
-            <ReviewFact icon={Users} label={t('reservations.partyName')} value={partyName} />
-          </dl>
+        {permitReview ? <ReviewStepper step={step} /> : null}
+        <dl className="mb-4 grid gap-2 sm:grid-cols-2">
+          <ReviewFact
+            icon={UserRound}
+            label={t(applicantSectionKey(reservation.type))}
+            value={applicantName}
+          />
+          <ReviewFact icon={Users} label={t('reservations.partyName')} value={partyName} />
+        </dl>
+        {step === 'permit' ? (
+          <ReservationReviewPermitStep
+            reservationId={reservation.id}
+            onChanged={() => onPermitChanged?.()}
+            onNext={() => setStep('file')}
+            onCancel={onClose}
+            onViewLicense={setViewingLicense}
+          />
+        ) : (
+          <AppForm onSubmit={submit} className="space-y-4" autoFocusFirst={false}>
+            {permitReview ? (
+              <div
+                className={`flex flex-wrap items-center gap-2 rounded-2xl border px-3 py-2.5 ${
+                  permitStatus === 'REJECTED'
+                    ? 'border-red-100 bg-red-50'
+                    : 'border-teal-100 bg-teal-50/70'
+                }`}
+              >
+                <FileBadge
+                  className={`size-4 ${permitStatus === 'REJECTED' ? 'text-red-600' : 'text-teal-600'}`}
+                  aria-hidden
+                />
+                <span className="text-xs font-semibold text-ink-700">{t('reservations.permitTitle')}</span>
+                <PermitStatusPill status={permitStatus} />
+                {permitStatus === 'REJECTED' && !rejecting ? (
+                  <p className="w-full text-xs leading-6 text-red-700">
+                    {t('reservations.reviewPermitRejectedWarning')}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
-          <section className="space-y-2">
-            <p className="text-xs font-semibold text-ink-600">{t('reservations.requestedCounts')}</p>
-            <div className="grid grid-cols-2 gap-2">
-              <CountChip
-                icon={Mars}
-                label={t('reservations.male')}
-                value={n(requestedMale)}
-                tone="teal"
-              />
-              <CountChip
-                icon={Venus}
-                label={t('reservations.female')}
-                value={n(requestedFemale)}
-                tone="mint"
-              />
+            <section className="space-y-2">
+              <p className="text-xs font-semibold text-ink-600">{t('reservations.requestedCounts')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <CountChip
+                  icon={Mars}
+                  label={t('reservations.male')}
+                  value={n(requestedMale)}
+                  tone="teal"
+                />
+                <CountChip
+                  icon={Venus}
+                  label={t('reservations.female')}
+                  value={n(requestedFemale)}
+                  tone="mint"
+                />
+              </div>
+            </section>
+
+            <section className="space-y-2">
+              <p className="text-xs font-semibold text-ink-600">{t('reservations.approvedCounts')}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField
+                  icon={Mars}
+                  label={t('reservations.approvedMaleCount')}
+                  htmlFor="review-male-count"
+                >
+                  <input
+                    id="review-male-count"
+                    type="number"
+                    min={0}
+                    max={maxCount}
+                    className={fieldClassName}
+                    value={maleCount}
+                    onChange={(event) => setMaleCount(event.target.value)}
+                    required
+                    disabled={busy || rejecting}
+                  />
+                </FormField>
+                <FormField
+                  icon={Venus}
+                  label={t('reservations.approvedFemaleCount')}
+                  htmlFor="review-female-count"
+                >
+                  <input
+                    id="review-female-count"
+                    type="number"
+                    min={0}
+                    max={maxCount}
+                    className={fieldClassName}
+                    value={femaleCount}
+                    onChange={(event) => setFemaleCount(event.target.value)}
+                    required
+                    disabled={busy || rejecting}
+                  />
+                </FormField>
+              </div>
+            </section>
+
+            {adjusting ? (
+              <p className="text-xs text-ink-500">{t('reservations.adjustCapacityHint')}</p>
+            ) : (
+              <>
+                <FormField
+                  icon={StickyNote}
+                  label={rejecting ? t('reservations.rejectReason') : t('reservations.reviewNotes')}
+                  htmlFor="review-note"
+                >
+                  <textarea
+                    id="review-note"
+                    className={fieldClassName}
+                    rows={2}
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    placeholder={t('reservations.reviewNotesPlaceholder')}
+                    required={rejecting}
+                    minLength={rejecting ? 2 : undefined}
+                    disabled={busy}
+                  />
+                </FormField>
+                {rejecting ? (
+                  <p className="text-xs text-ink-500">{t('reservations.rejectReasonRequired')}</p>
+                ) : (
+                  <p className="text-xs text-ink-500">{t('reservations.reviewNotesHint')}</p>
+                )}
+              </>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              {permitReview ? (
+                <Button type="button" variant="ghost" onClick={() => setStep('permit')} disabled={busy}>
+                  <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
+                  {t('reservations.reviewStepPermit')}
+                </Button>
+              ) : null}
+              <div className="ms-auto flex flex-wrap justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>
+                  <X className="size-4" aria-hidden />
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" variant={rejecting ? 'danger' : 'primary'} disabled={busy}>
+                  {rejecting ? <X className="size-4" aria-hidden /> : <Check className="size-4" aria-hidden />}
+                  {confirmLabel}
+                </Button>
+              </div>
             </div>
-          </section>
-
-          <section className="space-y-2">
-            <p className="text-xs font-semibold text-ink-600">{t('reservations.approvedCounts')}</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField
-                icon={Mars}
-                label={t('reservations.approvedMaleCount')}
-                htmlFor="review-male-count"
-              >
-                <input
-                  id="review-male-count"
-                  type="number"
-                  min={0}
-                  max={maxCount}
-                  className={fieldClassName}
-                  value={maleCount}
-                  onChange={(event) => setMaleCount(event.target.value)}
-                  required
-                  disabled={busy || rejecting}
-                />
-              </FormField>
-              <FormField
-                icon={Venus}
-                label={t('reservations.approvedFemaleCount')}
-                htmlFor="review-female-count"
-              >
-                <input
-                  id="review-female-count"
-                  type="number"
-                  min={0}
-                  max={maxCount}
-                  className={fieldClassName}
-                  value={femaleCount}
-                  onChange={(event) => setFemaleCount(event.target.value)}
-                  required
-                  disabled={busy || rejecting}
-                />
-              </FormField>
-            </div>
-          </section>
-
-          {adjusting ? (
-            <p className="text-xs text-ink-500">{t('reservations.adjustCapacityHint')}</p>
-          ) : (
-            <>
-              <FormField
-                icon={StickyNote}
-                label={rejecting ? t('reservations.rejectReason') : t('reservations.reviewNotes')}
-                htmlFor="review-note"
-              >
-                <textarea
-                  id="review-note"
-                  className={fieldClassName}
-                  rows={2}
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  placeholder={t('reservations.reviewNotesPlaceholder')}
-                  required={rejecting}
-                  minLength={rejecting ? 2 : undefined}
-                  disabled={busy}
-                />
-              </FormField>
-              {rejecting ? (
-                <p className="text-xs text-ink-500">{t('reservations.rejectReasonRequired')}</p>
-              ) : (
-                <p className="text-xs text-ink-500">{t('reservations.reviewNotesHint')}</p>
-              )}
-            </>
-          )}
-
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>
-              <X className="size-4" aria-hidden />
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" variant={rejecting ? 'danger' : 'primary'} disabled={busy}>
-              {rejecting ? <X className="size-4" aria-hidden /> : <Check className="size-4" aria-hidden />}
-              {confirmLabel}
-            </Button>
-          </div>
-        </AppForm>
+          </AppForm>
+        )}
       </div>
+      {viewingLicense ? (
+        <IssuedLicenseViewModal item={viewingLicense} onClose={() => setViewingLicense(null)} />
+      ) : null}
     </div>,
     document.body,
+  )
+}
+
+function ReviewStepper({ step }: { step: 'permit' | 'file' }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const items = [
+    { key: 'permit' as const, label: t('reservations.reviewStepPermit') },
+    { key: 'file' as const, label: t('reservations.reviewStepFile') },
+  ]
+  const activeIndex = items.findIndex((item) => item.key === step)
+  return (
+    <ol className="mb-4 grid grid-cols-2 gap-2">
+      {items.map((item, index) => {
+        const done = index < activeIndex
+        const active = index === activeIndex
+        return (
+          <li
+            key={item.key}
+            aria-current={active ? 'step' : undefined}
+            className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold ${
+              active
+                ? 'border-teal-400 bg-teal-50 text-teal-800'
+                : done
+                  ? 'border-mint-100 bg-mint-50 text-mint-800'
+                  : 'border-line bg-white text-ink-500'
+            }`}
+          >
+            <span
+              className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] ${
+                active || done ? 'bg-teal-500 text-white' : 'bg-cream-100 text-ink-500'
+              }`}
+            >
+              {done ? <Check className="size-3.5" aria-hidden /> : formatNumber(index + 1, locale)}
+            </span>
+            {item.label}
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 

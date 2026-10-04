@@ -4,17 +4,18 @@ import {
   Calendar,
   Check,
   CreditCard,
+  Crown,
   FileSpreadsheet,
   History,
   IdCard,
   Mars,
   Pencil,
   Phone,
-  SearchX,
   Smartphone,
   Trash2,
   UserPlus,
   UserRound,
+  UserRoundCog,
   Users,
   Venus,
   X,
@@ -39,6 +40,7 @@ import {
   cardClassName,
   fieldClassName,
 } from "../../components/ui/Form";
+import { FormSectionTitle as SectionTitle } from "../../components/ui/FormLayout";
 import { confirmToast } from "../../components/ui/confirmToast";
 import { CheckboxField } from "../../components/ui/CheckboxField";
 import { PersianDateField } from "../../components/ui/PersianDateField";
@@ -52,8 +54,10 @@ import {
 } from "../../lib/national-id";
 import type {
   Reservation,
+  ReservationCaravanContact,
   ReservationMember,
   ReservationPerson,
+  ReservationType,
 } from "../../types/app";
 import { neighborFlowStep, showSimBankRequests, stepLabelKey, type ReservationStepCode } from "./reservation-steps";
 import { ReservationStepNav } from "./ReservationStepNav";
@@ -123,10 +127,15 @@ export function CompanionsStep({
     (item) => item.user.gender === "FEMALE",
   ).length;
   const remaining = Math.max(0, reservation.totalCount - members.length);
+  const leaderMissing = Boolean(
+    reservation.leaderUserId &&
+      !members.some((item) => item.user.id === reservation.leaderUserId),
+  );
   const countsOk =
     members.length === reservation.totalCount &&
     males === reservation.maleCount &&
-    females === reservation.femaleCount;
+    females === reservation.femaleCount &&
+    !leaderMissing;
   const isCaravan = reservation.type === "CARAVAN";
   const showNav =
     reservation.status !== "COMPLETED" &&
@@ -203,13 +212,29 @@ export function CompanionsStep({
         ) : null
       }
     >
+      {leaderMissing ? (
+        <p
+          className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700"
+          role="alert"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {t(
+            isCaravan
+              ? "reservations.leaderMissingCaravan"
+              : "reservations.leaderMissingGroup",
+          )}
+        </p>
+      ) : null}
       <MembersList
         reservationId={reservation.id}
         members={members}
+        reservationType={reservation.type}
         isCaravan={isCaravan}
         showServiceRequests={showSimBankRequests(reservation)}
         maleNeed={reservation.maleCount}
         femaleNeed={reservation.femaleCount}
+        leaderUserId={reservation.leaderUserId}
+        contacts={reservation.caravanContacts}
         onChanged={onChanged}
         addBlocked={!maleOpen && !femaleOpen}
         onAddNew={() => {
@@ -342,9 +367,12 @@ export function ReservationCompanionsSummary({
     >
       <MembersList
         members={members}
+        reservationType={reservation.type}
         isCaravan={reservation.type === "CARAVAN"}
         maleNeed={reservation.maleCount}
         femaleNeed={reservation.femaleCount}
+        leaderUserId={reservation.leaderUserId}
+        contacts={reservation.caravanContacts}
       />
     </CompanionsFrame>
   );
@@ -560,7 +588,6 @@ function MemberLookupForm({
   const { t } = useTranslation();
   const nationalIdRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
-  const lastNameRef = useRef<HTMLInputElement>(null);
   const lookupSeq = useRef(0);
   const lookingRef = useRef(false);
   const inflight = useRef<{
@@ -727,7 +754,7 @@ function MemberLookupForm({
   useEffect(() => {
     if (editing || !missingNationalId) return;
     const frame = requestAnimationFrame(() => {
-      lastNameRef.current?.focus({ preventScroll: true });
+      firstNameRef.current?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
   }, [missingNationalId, editing]);
@@ -958,7 +985,6 @@ function MemberLookupForm({
         >
           <input
             id="c-last"
-            ref={lastNameRef}
             className={fieldClassName}
             value={person.lastName ?? ""}
             onChange={(event) =>
@@ -1100,7 +1126,7 @@ function NationalIdNotFoundNotice({
       />
       <div className="flex items-start gap-3 pt-1">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold-100 bg-white text-gold-600 shadow-sm">
-          <SearchX className="size-5" aria-hidden />
+          <UserPlus className="size-5" aria-hidden />
         </span>
         <p className="pt-2 text-sm font-semibold leading-7 text-ink-900">
           {t(
@@ -1125,10 +1151,13 @@ function NationalIdNotFoundNotice({
 function MembersList({
   reservationId,
   members,
+  reservationType,
   isCaravan = false,
   showServiceRequests = false,
   maleNeed,
   femaleNeed,
+  leaderUserId,
+  contacts = [],
   onChanged,
   onEdit,
   onAddNew,
@@ -1138,10 +1167,13 @@ function MembersList({
 }: {
   reservationId?: string;
   members: ReservationMember[];
+  reservationType?: ReservationType;
   isCaravan?: boolean;
   showServiceRequests?: boolean;
   maleNeed?: number;
   femaleNeed?: number;
+  leaderUserId?: string | null;
+  contacts?: ReservationCaravanContact[];
   onChanged?: () => void;
   onEdit?: (member: ReservationMember) => void;
   onAddNew?: () => void;
@@ -1155,6 +1187,48 @@ function MembersList({
   const males = members.filter((item) => item.user.gender === "MALE").length;
   const females = members.filter((item) => item.user.gender === "FEMALE").length;
   const canManage = Boolean(reservationId && onChanged);
+
+  function contactRolesOf(member: ReservationMember) {
+    return contacts
+      .filter((item) => item.user.id === member.user.id)
+      .map((item) => item.role);
+  }
+
+  function lockReason(member: ReservationMember) {
+    if (contactRolesOf(member).length) {
+      return t("reservations.memberContactLocked");
+    }
+    return null;
+  }
+
+  function renderBadges(member: ReservationMember) {
+    const roles = contactRolesOf(member);
+    const leader = Boolean(leaderUserId && member.user.id === leaderUserId);
+    if (!leader && !roles.length) return null;
+    return (
+      <>
+        {leader ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-teal-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+            <Crown className="size-3" aria-hidden />
+            {t(
+              isCaravan
+                ? "reservations.memberLeaderCaravan"
+                : "reservations.memberLeaderGroup",
+            )}
+          </span>
+        ) : null}
+        {roles.map((role) => (
+          <span
+            key={role}
+            className="inline-flex items-center gap-1 rounded-full bg-mint-50 px-2 py-0.5 text-[11px] font-semibold text-mint-600 ring-1 ring-mint-100"
+          >
+            <UserRoundCog className="size-3" aria-hidden />
+            {t(`caravans.contactRoles.${role}`)}
+          </span>
+        ))}
+      </>
+    );
+  }
 
   function remove(member: ReservationMember) {
     if (!reservationId || !onChanged) return;
@@ -1192,9 +1266,11 @@ function MembersList({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <SectionTitle icon={Users} className="mb-0">
           {t(
-            isCaravan
+            reservationType === "CARAVAN" || (!reservationType && isCaravan)
               ? "reservations.membersListTitleCaravan"
-              : "reservations.membersListTitle",
+              : reservationType === "GROUP"
+                ? "reservations.membersListTitleGroup"
+                : "reservations.membersListTitle",
           )}
         </SectionTitle>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1254,60 +1330,45 @@ function MembersList({
         showServiceRequests={showServiceRequests}
         bareSearch
         isCaravan={isCaravan}
+        renderBadges={renderBadges}
         renderActions={
           canManage
-            ? (member) => (
-                <div className="flex items-center gap-1">
-                  {onEdit ? (
+            ? (member) => {
+                if (leaderUserId && member.user.id === leaderUserId) return null;
+                const locked = lockReason(member);
+                return (
+                  <div className="flex items-center gap-1">
+                    {onEdit ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        icon
+                        aria-label={t("common.edit")}
+                        title={t("common.edit")}
+                        onClick={() => onEdit(member)}
+                      >
+                        <Pencil className="size-4" aria-hidden />
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       variant="ghost"
                       icon
-                      aria-label={t("common.edit")}
-                      title={t("common.edit")}
-                      onClick={() => onEdit(member)}
+                      disabled={Boolean(locked)}
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                      aria-label={locked ?? t("common.delete")}
+                      title={locked ?? t("common.delete")}
+                      onClick={() => remove(member)}
                     >
-                      <Pencil className="size-4" aria-hidden />
+                      <Trash2 className="size-4" aria-hidden />
                     </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    icon
-                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                    aria-label={t("common.delete")}
-                    title={t("common.delete")}
-                    onClick={() => remove(member)}
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </Button>
-                </div>
-              )
+                  </div>
+                );
+              }
             : undefined
         }
       />
     </section>
-  );
-}
-
-function SectionTitle({
-  icon: Icon,
-  children,
-  className = "mb-2.5",
-}: {
-  icon: LucideIcon;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <h3
-      className={`inline-flex items-center gap-2 text-xs font-semibold text-ink-600 ${className}`}
-    >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
-        <Icon className="size-3.5" aria-hidden />
-      </span>
-      {children}
-    </h3>
   );
 }
 

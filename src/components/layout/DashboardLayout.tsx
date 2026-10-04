@@ -276,15 +276,18 @@ function withHonoraryServiceNav(modules: NavModule[]): NavModule[] {
   ].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-function withAccommodationsDirectoryMenu(mod: NavModule): NavModule {
+function withAccommodationsDirectoryMenu(
+  mod: NavModule,
+  browseAlways = false,
+): NavModule {
   if (mod.code !== "accommodation") return mod;
   const hasList = mod.menus.some(
     (item) => item.path === "/accommodations" || item.code === "accommodation.list",
   );
   if (hasList) return mod;
-  const shouldBrowse = mod.menus.some(
-    (item) => item.code !== "accommodation.introduce",
-  );
+  const shouldBrowse =
+    browseAlways ||
+    mod.menus.some((item) => item.code !== "accommodation.introduce");
   if (!shouldBrowse) return mod;
   const extra: SidebarNavMenu = {
     code: "accommodation.list",
@@ -499,7 +502,6 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   const navRef = useRef<HTMLElement>(null);
   const menuSearchRef = useRef<HTMLInputElement>(null);
   const pendingMenuSearchFocus = useRef(false);
-  const desktopMenuToggleRef = useRef<HTMLButtonElement>(null);
   const collapsedBeforeSearch = useRef<Set<string> | null>(null);
   const menuSearchListId = "sidebar-menu-list";
   const brandingQuery = useHeadquartersSummary();
@@ -533,11 +535,6 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
       /* private mode / quota */
     }
   }, [collapsedModules]);
-
-  const collapseSidebar = useCallback(() => {
-    setSidebarCollapsed(true);
-    requestAnimationFrame(() => desktopMenuToggleRef.current?.focus());
-  }, []);
 
   const focusMenuSearch = useCallback(() => {
     setOpen(true);
@@ -643,8 +640,13 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
     const showMyReservations = canAccessMyReservations(user);
     const showMyAccommodations = canAccessMyAccommodations(user);
     const showMyEvaluations = canAccessMyEvaluations(user);
+    const browseAccommodations = isPilgrim(user);
     const next = (user?.modules ?? [])
-      .map((mod) => (showMyAccommodations ? withAccommodationsDirectoryMenu(mod) : mod))
+      .map((mod) =>
+        showMyAccommodations || browseAccommodations
+          ? withAccommodationsDirectoryMenu(mod, browseAccommodations)
+          : mod,
+      )
       .map((mod) => {
         const menus = mod.menus.filter(
           (item) =>
@@ -882,14 +884,6 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                 >
                   <X className="size-5" />
                 </button>
-                <button
-                  type="button"
-                  className="hidden cursor-pointer rounded-lg p-2 text-ink-500 hover:bg-white/80 lg:inline-flex"
-                  onClick={collapseSidebar}
-                  aria-label={t("nav.closeMenu")}
-                >
-                  <ChevronsLeft className="size-5 rtl:-scale-x-100" aria-hidden />
-                </button>
               </div>
             </div>
 
@@ -1074,7 +1068,6 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                 <Menu className="size-5" />
               </button>
               <button
-                ref={desktopMenuToggleRef}
                 type="button"
                 className="hidden cursor-pointer rounded-xl p-2 text-ink-700 lg:inline-flex"
                 onClick={() => setSidebarCollapsed((value) => !value)}

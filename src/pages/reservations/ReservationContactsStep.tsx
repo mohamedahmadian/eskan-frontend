@@ -3,12 +3,8 @@ import {
   Check,
   ClipboardCheck,
   Copy,
-  IdCard,
   Landmark,
   Pencil,
-  Phone,
-  Search,
-  SearchX,
   Shield,
   Trash2,
   UserCog,
@@ -19,26 +15,21 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { FormSectionTitle as SectionTitle } from '../../components/ui/FormLayout'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import {
-  AppForm,
-  Button,
-  FormField,
-  cardClassName,
-  fieldClassName,
-} from '../../components/ui/Form'
+import { AppForm, Button, FormField, cardClassName } from '../../components/ui/Form'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
+import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { formatNumber } from '../../lib/datetime'
-import { isValidIranianNationalId, normalizeNationalId } from '../../lib/national-id'
+import { formatNumber, localizeDigits } from '../../lib/datetime'
 import type {
   Reservation,
   ReservationCaravanContact,
-  ReservationPerson,
+  ReservationMember,
 } from '../../types/app'
 import {
   ReservationIdentityChips,
@@ -52,7 +43,6 @@ import {
 } from './reservation-steps'
 import { ReservationStepNav } from './ReservationStepNav'
 
-type LookupResponse = { found: false } | { found: true; user: ReservationPerson }
 type ContactRole = (typeof contactRoles)[number]
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -124,9 +114,6 @@ export function ReservationContactsStep({
         await api.put(`/reservations/${reservation.id}/contacts`, {
           role,
           userId: me.id,
-          firstName: me.firstName,
-          lastName: me.lastName,
-          phone: me.phone,
         })
       }
     },
@@ -260,6 +247,7 @@ export function ReservationContactsStep({
       <ContactsRoles
         reservationId={reservation.id}
         contacts={contacts}
+        members={reservation.members ?? []}
         onChanged={onChanged}
       />
     </ContactsFrame>
@@ -374,10 +362,12 @@ function ContactsFrame({
 function ContactsRoles({
   reservationId,
   contacts,
+  members = [],
   onChanged,
 }: {
   reservationId?: string
   contacts: ReservationCaravanContact[]
+  members?: ReservationMember[]
   onChanged?: () => void
 }) {
   const { t } = useTranslation()
@@ -396,6 +386,7 @@ function ContactsRoles({
               key={role}
               role={role}
               current={current}
+              members={members}
               reservationId={reservationId}
               open={open}
               onOpen={() => setOpenRole(role)}
@@ -420,6 +411,7 @@ function ContactRoleCard({
   reservationId,
   role,
   current,
+  members,
   open,
   onOpen,
   onClose,
@@ -428,104 +420,42 @@ function ContactRoleCard({
   reservationId?: string
   role: ContactRole
   current?: ReservationCaravanContact
+  members: ReservationMember[]
   open: boolean
   onOpen: () => void
   onClose: () => void
   onChanged?: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const RoleIcon = roleIcons[role]
-  const [nationalId, setNationalId] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [status, setStatus] = useState<'idle' | 'found' | 'new'>('idle')
-  const [looking, setLooking] = useState(false)
-  const [missingNationalId, setMissingNationalId] = useState<string | null>(null)
+  const [userId, setUserId] = useState('')
   const editable = Boolean(reservationId && onChanged)
   const showLookup = editable && open
-  const showDetails = status === 'found' || status === 'new'
+  const options = members
+    .filter((item) => item.user.gender === 'MALE' || item.user.gender === 'FEMALE')
+    .map((item) => ({
+      value: item.user.id,
+      label: item.user.nationalId
+        ? `${item.user.fullName} — ${localizeDigits(item.user.nationalId, locale)}`
+        : item.user.fullName,
+    }))
 
   useEffect(() => {
-    if (showLookup) return
-    setNationalId('')
-    setFirstName('')
-    setLastName('')
-    setPhone('')
-    setStatus('idle')
-    setMissingNationalId(null)
-  }, [showLookup])
-
-  async function lookup(event?: FormEvent) {
-    event?.preventDefault()
-    const id = normalizeNationalId(nationalId)
-    if (!isValidIranianNationalId(id)) {
-      toast.error(t('users.nationalIdInvalid'))
-      return
-    }
-    setLooking(true)
-    try {
-      const { data } = await api.post<LookupResponse>('/pilgrims/identity-lookup', {
-        nationalId: id,
-      })
-      if (data.found) {
-        setMissingNationalId(null)
-        setFirstName(data.user.firstName)
-        setLastName(data.user.lastName)
-        setPhone(data.user.phone ?? '')
-        setStatus('found')
-        return
-      }
-      setFirstName('')
-      setLastName('')
-      setPhone('')
-      setMissingNationalId(id)
-      setStatus('new')
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, t('common.error')))
-    } finally {
-      setLooking(false)
-    }
-  }
-
-  function startNew() {
-    setFirstName('')
-    setLastName('')
-    setPhone('')
-    setMissingNationalId(null)
-    setStatus('new')
-    requestAnimationFrame(() => document.getElementById(`contact-${role}-first`)?.focus())
-  }
+    if (showLookup) setUserId(current?.user.id ?? '')
+  }, [showLookup, current?.user.id])
 
   const save = useMutation({
     mutationFn: async () => {
-      if (!reservationId) return
-      const id = normalizeNationalId(nationalId)
-      if (!isValidIranianNationalId(id)) throw new Error(t('users.nationalIdInvalid'))
-      await api.put(`/reservations/${reservationId}/contacts`, {
-        role,
-        nationalId: id,
-        firstName,
-        lastName,
-        phone: phone || null,
-      })
+      if (!reservationId || !userId) return
+      await api.put(`/reservations/${reservationId}/contacts`, { role, userId })
     },
     onSuccess: () => {
       toast.success(t('caravans.contactSave'))
-      setNationalId('')
-      setFirstName('')
-      setLastName('')
-      setPhone('')
-      setStatus('idle')
-      setMissingNationalId(null)
+      setUserId('')
       onChanged?.()
     },
-    onError: (error) =>
-      toast.error(
-        error instanceof Error && error.message === t('users.nationalIdInvalid')
-          ? error.message
-          : getApiErrorMessage(error, t('common.error')),
-      ),
+    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
   return (
@@ -623,160 +553,58 @@ function ContactRoleCard({
           className="mt-4 space-y-3"
           onSubmit={(event) => {
             event.preventDefault()
-            if (showDetails) {
-              save.mutate()
-              return
-            }
-            void lookup()
+            save.mutate()
           }}
         >
-          <FormField
-            icon={IdCard}
-            label={t('reservations.contactLookupByNationalId', {
-              role: t(`caravans.contactRoles.${role}`),
-            })}
-            htmlFor={`contact-${role}-nid`}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                id={`contact-${role}-nid`}
-                className={`${fieldClassName} digit-field min-w-[10rem] flex-1`}
-                value={nationalId}
-                onChange={(event) => setNationalId(event.target.value)}
-                inputMode="numeric"
-                data-enter-ignore={showDetails ? '' : undefined}
-              />
-              <Button
-                type={showDetails ? 'button' : 'submit'}
-                className="shrink-0"
-                disabled={looking}
-                onClick={showDetails ? () => void lookup() : undefined}
-              >
-                <Search className="size-4" aria-hidden />
-                {looking ? t('reservations.looking') : t('reservations.lookup')}
-              </Button>
-              <Button type="button" variant="soft" className="shrink-0" onClick={startNew}>
-                <UserPlus className="size-4" aria-hidden />
-                {t('reservations.newContact')}
-              </Button>
-              {current ? (
+          {options.length ? (
+            <FormField
+              icon={UserRound}
+              label={t('reservations.contactPickFromMembers', {
+                role: t(`caravans.contactRoles.${role}`),
+              })}
+              htmlFor={`contact-${role}-member`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-[14rem] flex-1">
+                  <SearchSelect
+                    id={`contact-${role}-member`}
+                    value={userId}
+                    onChange={setUserId}
+                    options={options}
+                    placeholder={t('reservations.contactPickPlaceholder')}
+                    required
+                  />
+                </div>
                 <Button
-                  type="button"
-                  variant="ghost"
+                  type="submit"
                   className="shrink-0"
-                  data-form-cancel=""
-                  onClick={onClose}
+                  disabled={!userId || save.isPending}
                 >
-                  <X className="size-4" aria-hidden />
-                  {t('common.cancel')}
-                </Button>
-              ) : null}
-            </div>
-          </FormField>
-          {status === 'new' && missingNationalId ? (
-            <NationalIdNotFoundNotice nationalId={missingNationalId} />
-          ) : null}
-          {showDetails ? (
-            <div className="space-y-4 rounded-2xl border border-teal-200 bg-gradient-to-b from-teal-50 to-white p-4 shadow-[0_12px_28px_rgba(20,40,40,0.1)]">
-              <div className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
-                  {status === 'found' ? (
-                    <UserRound className="size-4" aria-hidden />
-                  ) : (
-                    <UserPlus className="size-4" aria-hidden />
-                  )}
-                </span>
-                <p className="pt-2 text-sm font-semibold text-ink-900">
-                  {status === 'found'
-                    ? t('reservations.found', { name: `${firstName} ${lastName}`.trim() })
-                    : t('reservations.newContactTitle')}
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-                <FormField icon={UserRound} label={t('users.firstName')} htmlFor={`contact-${role}-first`}>
-                  <input
-                    id={`contact-${role}-first`}
-                    className={fieldClassName}
-                    value={firstName}
-                    onChange={(event) => setFirstName(event.target.value)}
-                    required={status === 'new'}
-                    disabled={status === 'found'}
-                  />
-                </FormField>
-                <FormField icon={UserRound} label={t('users.lastName')} htmlFor={`contact-${role}-last`}>
-                  <input
-                    id={`contact-${role}-last`}
-                    className={fieldClassName}
-                    value={lastName}
-                    onChange={(event) => setLastName(event.target.value)}
-                    required={status === 'new'}
-                    disabled={status === 'found'}
-                  />
-                </FormField>
-                <FormField icon={Phone} label={t('users.phone')} htmlFor={`contact-${role}-phone`}>
-                  <input
-                    id={`contact-${role}-phone`}
-                    className={fieldClassName}
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                  />
-                </FormField>
-                <Button type="submit" className="shrink-0" disabled={save.isPending}>
                   <Check className="size-4" aria-hidden />
                   {t('caravans.contactSave')}
                 </Button>
+                {current ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="shrink-0"
+                    data-form-cancel=""
+                    onClick={onClose}
+                  >
+                    <X className="size-4" aria-hidden />
+                    {t('common.cancel')}
+                  </Button>
+                ) : null}
               </div>
-            </div>
-          ) : null}
+            </FormField>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-teal-200 bg-teal-50/50 px-3 py-3 text-sm text-ink-600">
+              {t('reservations.contactPickEmpty')}
+            </p>
+          )}
         </AppForm>
       ) : null}
     </article>
-  )
-}
-
-function NationalIdNotFoundNotice({ nationalId }: { nationalId: string }) {
-  const { t } = useTranslation()
-  return (
-    <aside
-      className="relative overflow-hidden rounded-[22px] border border-gold-100 bg-gradient-to-b from-gold-50 via-white to-cream-50 p-4 shadow-[0_12px_28px_rgba(232,184,58,0.14)]"
-      role="status"
-    >
-      <div
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-e from-gold-400 via-gold-500 to-teal-400"
-        aria-hidden
-      />
-      <div className="flex items-start gap-3 pt-1">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold-100 bg-white text-gold-600 shadow-sm">
-          <SearchX className="size-5" aria-hidden />
-        </span>
-        <p className="pt-2 text-sm font-semibold leading-7 text-ink-900">
-          {t('reservations.nationalIdNotFoundBefore')}
-          <span className="mx-1.5 inline-flex items-center rounded-lg bg-white px-2 py-0.5 font-bold tracking-wide text-ink-900 shadow-sm ring-1 ring-gold-100">
-            <CopyableDigits value={nationalId} />
-          </span>
-          {t('reservations.nationalIdNotFoundAfter')}
-        </p>
-      </div>
-    </aside>
-  )
-}
-
-function SectionTitle({
-  icon: Icon,
-  children,
-  className = 'mb-2.5',
-}: {
-  icon: LucideIcon
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <h3 className={`inline-flex items-center gap-2 text-xs font-semibold text-ink-600 ${className}`}>
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
-        <Icon className="size-3.5" aria-hidden />
-      </span>
-      {children}
-    </h3>
   )
 }
 

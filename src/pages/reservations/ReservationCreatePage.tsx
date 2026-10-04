@@ -22,7 +22,7 @@ import {
 import axios from 'axios'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
@@ -36,7 +36,7 @@ import {
 } from '../../components/ui/Form'
 import { FormMetaChip } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { addDaysIso, currentPersianYear, formatNumber } from '../../lib/datetime'
+import { addDaysIso, currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
 import { isIranCountry, useGeoName } from '../../lib/geo'
 import { isCaravanManager } from '../../lib/roles'
 import type {
@@ -47,7 +47,6 @@ import type {
   ReceptionCapacitySlice,
   ReceptionSettings,
   Reservation,
-  ReservationPermitOptions,
   ReservationStatus,
   ReservationType,
   WalkingRoute,
@@ -56,6 +55,7 @@ import {
   CAPACITY_WARNING_RATIO,
   capacityKey,
   createWizardPath,
+  isInactiveReservationStatus,
   isOwnerCreateDraft,
   partyMaxSize,
   isReceptionTypeAvailable,
@@ -90,7 +90,6 @@ import {
   fetchSubjectReservationSpans,
 } from './reservation-date-overlap'
 import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
-import { StepBlockedNotice } from './ReservationStepNav'
 import { StepProgressChart } from './StepProgressChart'
 import { useDeleteOwnerDraft } from './useDeleteOwnerDraft'
 
@@ -127,6 +126,10 @@ type OpenReservation = {
   createdById: string
 }
 
+function blocksNewReservation(open: OpenReservation | null | undefined): open is OpenReservation {
+  return Boolean(open && open.id && !isInactiveReservationStatus(open.status))
+}
+
 function reservationFromConflict(error: unknown): OpenReservation | null {
   if (!axios.isAxiosError(error) || error.response?.status !== 409) return null
   const data = error.response.data
@@ -134,6 +137,7 @@ function reservationFromConflict(error: unknown): OpenReservation | null {
   const body = data as Record<string, unknown>
   if (typeof body.reservationId !== 'string' || !body.reservationId) return null
   if (typeof body.status !== 'string') return null
+  if (isInactiveReservationStatus(body.status as ReservationStatus)) return null
   return {
     id: body.reservationId,
     code: typeof body.code === 'string' ? body.code : '',
@@ -219,7 +223,7 @@ const emptyTravel = (): TravelValues => ({
     stayStartDate: '',
     stayEndDate: '',
     walkingStartDate: '',
-    arrivalPeriod: '',
+    arrivalPeriod: 'AFTER_NOON',
   maleCount: '0',
   femaleCount: '0',
   requestedMaleCount: '0',
@@ -286,7 +290,7 @@ function valuesFromReservation(reservation: Reservation): TravelValues {
     stayStartDate: reservation.stayStartDate ?? '',
     stayEndDate: reservation.stayEndDate ?? '',
     walkingStartDate: reservation.walkingStartDate ?? '',
-    arrivalPeriod: reservation.arrivalPeriod ?? '',
+    arrivalPeriod: reservation.arrivalPeriod ?? 'AFTER_NOON',
     maleCount: male,
     femaleCount: female,
     requestedMaleCount: male,
@@ -415,23 +419,6 @@ export function ReservationCreatePage() {
   })
   const iranId = countries.data?.find((item) => item.iso2 === 'IR')?.id ?? ''
 
-  const permitOptionsQuery = useQuery({
-    queryKey: ['reservations', 'permit-options', values.caravanId, reservationYear],
-    enabled: Boolean(values.caravanId) && type === 'CARAVAN',
-    queryFn: async () => {
-      const { data } = await api.get<ReservationPermitOptions>('/reservations/permit-options', {
-        params: { caravanId: values.caravanId, year: reservationYear },
-      })
-      return data
-    },
-  })
-
-  function isIssuedLicenseAwaitingHqApproval(licenseId: string) {
-    if (!licenseId) return false
-    const selected = permitOptionsQuery.data?.items.find((item) => item.id === licenseId)
-    return selected?.status === 'ISSUED'
-  }
-
   const draftQuery = useQuery({
     queryKey: ['reservations', draftParam, 'create-draft'],
     enabled: Boolean(draftParam),
@@ -448,12 +435,12 @@ export function ReservationCreatePage() {
     ''
   const openSubjectId = isAdminCreate ? forUserId : (user?.id ?? '')
   const openReservationQuery = useQuery({
-    queryKey: ['reservations', 'open', openSubjectId],
+    queryKey: ['reservations', 'open', openSubjectId, year],
     enabled: !draftParam && Boolean(openSubjectId),
     refetchOnMount: 'always',
     queryFn: async () => {
       const { data } = await api.get<OpenReservation | null>('/reservations/open', {
-        params: isAdminCreate ? { userId: openSubjectId } : undefined,
+        params: isAdminCreate ? { userId: openSubjectId, year } : { year },
       })
       return data
     },
@@ -462,7 +449,10 @@ export function ReservationCreatePage() {
     !draftParam &&
     Boolean(openSubjectId) &&
     (!openReservationQuery.isSuccess || openReservationQuery.isFetching)
-  const openReservation = openCheckPending ? null : (openReservationQuery.data ?? null)
+  const openReservation =
+    !openCheckPending && blocksNewReservation(openReservationQuery.data)
+      ? openReservationQuery.data
+      : null
   const openRedirectedRef = useRef(false)
   const openingExistingRef = useRef<string | null>(null)
 
@@ -615,13 +605,6 @@ export function ReservationCreatePage() {
   const stepIndex = steps.indexOf(step)
   const maxReachedIndex = Math.max(stepIndex, steps.indexOf(maxReachedStep))
   const lastStep = stepIndex === steps.length - 1
-  const finalSubmitBlocked =
-    lastStep &&
-    !skipLicenseStep &&
-    type === 'CARAVAN' &&
-    permitDraft.source === 'ISSUED_LICENSE' &&
-    Boolean(permitDraft.issuedLicenseId) &&
-    isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
 
   useEffect(() => {
     if (!draftParam) {
@@ -1287,16 +1270,6 @@ export function ReservationCreatePage() {
     try {
       const id = await persistDraft({ silent: true, wizardStep: step })
       if (!id) return
-      if (
-        type === 'CARAVAN' &&
-        !skipLicenseStep &&
-        permitDraft.source === 'ISSUED_LICENSE' &&
-        permitDraft.issuedLicenseId &&
-        isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
-      ) {
-        toast.error(t('reservations.permitAwaitingHqApproval'))
-        return
-      }
       const rules = type ? (settings.data?.[settingsRulesKey(type)] ?? '') : ''
       if (splitMultilineItems(rules).length === 0) {
         await finalizeReservation()
@@ -1313,18 +1286,6 @@ export function ReservationCreatePage() {
     if (!(await assertTravelDatesReady())) {
       setRulesModalOpen(false)
       setStep('dates')
-      return
-    }
-    if (
-      type === 'CARAVAN' &&
-      !skipLicenseStep &&
-      permitDraft.source === 'ISSUED_LICENSE' &&
-      permitDraft.issuedLicenseId &&
-      isIssuedLicenseAwaitingHqApproval(permitDraft.issuedLicenseId)
-    ) {
-      setRulesModalOpen(false)
-      toast.error(t('reservations.permitAwaitingHqApproval'))
-      setStep('license')
       return
     }
     setSubmitting(true)
@@ -1518,7 +1479,15 @@ export function ReservationCreatePage() {
                 <LoadingState />
               )
             ) : (
-              <div className="flex flex-col gap-4">
+              <div
+                className={`grid grid-cols-1 items-stretch gap-4 ${
+                  availableTypes.length >= 3
+                    ? 'md:grid-cols-3'
+                    : availableTypes.length === 2
+                      ? 'md:grid-cols-2'
+                      : ''
+                }`}
+              >
                 {availableTypes.map((item) => {
                   const Icon = typeIcons[item]
                   const selected = type === item
@@ -1529,7 +1498,7 @@ export function ReservationCreatePage() {
                       disabled={submitting}
                       data-enter-ignore=""
                       onClick={() => void goAfterType(item)}
-                      className={`w-full rounded-[22px] border p-5 text-start transition-[box-shadow,transform,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:p-6 ${
+                      className={`flex h-full w-full min-w-0 flex-col rounded-[22px] border p-5 text-start transition-[box-shadow,transform,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 sm:p-6 ${
                         selected
                           ? 'border-teal-500 bg-teal-50 shadow-[0_16px_36px_rgba(46,189,182,0.24),0_0_0_4px_rgba(255,255,255,0.95),0_0_0_7px_rgba(46,189,182,0.32)]'
                           : 'border-line bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]'
@@ -1648,7 +1617,7 @@ export function ReservationCreatePage() {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3 pt-6">
-          {stepIndex > 0 ? (
+          {stepIndex > 0 && step !== 'count' ? (
             <Button type="button" onClick={goBack} disabled={submitting}>
               <ChevronRight className="size-4" aria-hidden />
               {t('reservations.prevStep')}
@@ -1657,8 +1626,7 @@ export function ReservationCreatePage() {
           <Button
             type="submit"
             className="ms-auto"
-            disabled={submitting || (step === 'type' && !type) || finalSubmitBlocked}
-            aria-describedby={finalSubmitBlocked ? 'final-submit-blocked-reason' : undefined}
+            disabled={submitting || (step === 'type' && !type)}
           >
             {lastStep
               ? t(step === 'services' ? 'reservations.createFileSubmit' : 'reservations.finalSubmit')
@@ -1666,18 +1634,23 @@ export function ReservationCreatePage() {
             {lastStep ? <Check className="size-4" aria-hidden /> : <ChevronLeft className="size-4" aria-hidden />}
           </Button>
         </div>
-        {finalSubmitBlocked ? (
-          <StepBlockedNotice
-            id="final-submit-blocked-reason"
-            title={t('reservations.finalSubmitBlockedTitle')}
-            message={t('reservations.permitAwaitingHqApproval')}
-          />
-        ) : null}
         {step === 'dates' ? <OccasionStayHint /> : null}
         {draftId && !isAdminCreate ? (
           <p className="flex items-start gap-1.5 text-xs leading-6 text-teal-700">
             <FileCheck2 className="mt-1 size-3.5 shrink-0" aria-hidden />
-            {t('reservations.draftSavedHint')}
+            <span>
+              {draftQuery.data?.code ? (
+                <Trans
+                  i18nKey="reservations.draftSavedHintWithCode"
+                  values={{ code: localizeDigits(draftQuery.data.code, locale) }}
+                  components={{
+                    code: <bdi dir="ltr" className="font-bold text-teal-800" />,
+                  }}
+                />
+              ) : (
+                t('reservations.draftSavedHint')
+              )}
+            </span>
           </p>
         ) : null}
       </AppForm>
@@ -1756,8 +1729,7 @@ function CreateStepBar({
               index === currentIndex ? 'current' : index <= maxReachedIndex ? 'done' : 'pending'
             const styles = {
               done: 'border-teal-200 bg-teal-50 text-teal-800',
-              current:
-                'border-teal-500 bg-teal-500 text-white shadow-[0_10px_24px_rgba(46,189,182,0.28)]',
+              current: 'wizard-step-blink border-teal-500 bg-teal-500 text-white',
               pending: 'border-line bg-cream-50 text-ink-400',
             }
             const clickable = index <= maxReachedIndex

@@ -138,9 +138,12 @@ export type AuthUser = {
   fullName: string;
   locale: string;
   gender?: UserGender | null;
+  nationalId?: string | null;
+  phone?: string | null;
   provinceId?: string | null;
   cityId?: string | null;
   countryId?: string | null;
+  photoId?: string | null;
   issuingOrganization?: {
     id: string;
     name: string;
@@ -1025,6 +1028,29 @@ export type AccommodationYearStats = {
   inactive: number;
 };
 
+export type AccommodationAssignmentStats = {
+  year: number;
+  total: number;
+  withManager: number;
+  withoutManager: number;
+};
+
+export type AccommodationAssignmentRow = {
+  id: string;
+  name: string;
+  type: AccommodationType;
+  city: (GeoName & { id: string }) | null;
+  province: (GeoName & { id: string }) | null;
+  managerUserId: string | null;
+  managerName: string | null;
+  maleCapacity: number;
+  femaleCapacity: number;
+};
+
+export type AccommodationAssignmentList = Paginated<AccommodationAssignmentRow> & {
+  year: number;
+};
+
 export type AccommodationYearRow = Accommodation & {
   activeInYear: boolean;
 };
@@ -1844,6 +1870,9 @@ export type IssuedLicenseCaravan = {
   licenseNumber: string | null;
   foundedYear: number | null;
   isActive: boolean;
+  maleCount: number;
+  femaleCount: number;
+  totalCount: number;
   city: {
     id: string;
     nameFa: string;
@@ -1879,6 +1908,7 @@ export type IssuedLicense = {
 
 export type CaravanManagerLookup = {
   manager: IssuedLicensePerson & {
+    photoId?: string | null;
     city?:
       | (GeoName & { id: string; provinceId: string; province: GeoName })
       | null;
@@ -2673,6 +2703,8 @@ export type Reservation = ReservationListItem & {
   placementCompletedBy?: ReservationPerson | null;
   rejectedBy?: ReservationPerson | null;
   cancelledBy?: ReservationPerson | null;
+  /** Applicant / group head / caravan manager; always one of the members. */
+  leaderUserId?: string | null;
   members?: ReservationMember[];
   caravanContacts?: ReservationCaravanContact[];
   allocations?: ReservationAllocationSummary[];

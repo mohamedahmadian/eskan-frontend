@@ -19,9 +19,12 @@ const pngOptions = {
 export function PilgrimCardModal({
   onClose,
   variant = 'pilgrim',
+  user,
 }: {
   onClose: () => void
   variant?: 'pilgrim' | 'manager'
+  /** Card owner when shown from the admin panel; defaults to the signed-in account. */
+  user?: ManagedUser
 }) {
   const { t } = useTranslation()
   const [model, setModel] = useState<PilgrimCardModel>('pocket')
@@ -30,11 +33,19 @@ export function PilgrimCardModal({
 
   const query = useQuery({
     queryKey: ['account', 'pilgrim-card'],
+    enabled: !user,
     queryFn: async () => {
       const { data } = await api.get<ManagedUser>('/account')
       return data
     },
   })
+  const titleKey = user
+    ? variant === 'manager'
+      ? 'pilgrims.managerCardTitle'
+      : 'pilgrims.cardTitle'
+    : variant === 'manager'
+      ? 'dashboard.quickManagerCard'
+      : 'dashboard.quickPilgrimCard'
 
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -49,7 +60,7 @@ export function PilgrimCardModal({
     }
   }, [onClose])
 
-  const pilgrim = query.data
+  const pilgrim = user ?? query.data
 
   async function downloadCard() {
     if (!cardRef.current || !pilgrim) return
@@ -58,7 +69,7 @@ export function PilgrimCardModal({
       const dataUrl = await toPng(cardRef.current, pngOptions)
       const link = document.createElement('a')
       link.href = dataUrl
-      link.download = `pilgrim-card-${model}-${pilgrim.nationalId || pilgrim.id}.png`
+      link.download = `${variant === 'manager' ? 'manager' : 'pilgrim'}-card-${model}-${pilgrim.nationalId || pilgrim.id}.png`
       link.click()
       toast.success(t('pilgrims.cardDownloaded'))
     } catch (error) {
@@ -84,7 +95,7 @@ export function PilgrimCardModal({
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
           <h2 id="pilgrim-card-modal-title" className="text-base font-semibold text-ink-900">
-            {t(variant === 'manager' ? 'dashboard.quickManagerCard' : 'dashboard.quickPilgrimCard')}
+            {t(titleKey)}
           </h2>
           <Button type="button" variant="ghost" icon onClick={onClose} aria-label={t('common.close')}>
             <X className="size-4" aria-hidden />
@@ -92,9 +103,9 @@ export function PilgrimCardModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-          {query.isLoading ? (
+          {!user && query.isLoading ? (
             <LoadingState />
-          ) : query.isError || !pilgrim ? (
+          ) : !pilgrim ? (
             <p className="text-sm text-ink-700">{t('common.error')}</p>
           ) : (
             <div className="space-y-4">

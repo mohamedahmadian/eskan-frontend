@@ -1,6 +1,7 @@
 import {
   Calendar,
   Check,
+  FileBadge,
   Footprints,
   HeartHandshake,
   MapPin,
@@ -21,13 +22,13 @@ const travelSubStepIcons: Record<TravelSubStep, LucideIcon> = {
   party: Users,
   dates: Calendar,
   services: HeartHandshake,
+  license: FileBadge,
   optional: MapPin,
 }
 
 const circleStyles = {
   done: 'border-teal-400 bg-teal-500 text-white',
-  current:
-    'border-teal-500 bg-teal-500 text-white shadow-[0_4px_12px_rgba(46,189,182,0.28)] ring-4 ring-teal-100',
+  current: 'wizard-step-blink border-teal-500 bg-teal-500 text-white',
   pending: 'border-line bg-white text-ink-300',
 } as const
 

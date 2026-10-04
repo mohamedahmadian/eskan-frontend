@@ -5,6 +5,7 @@ import persian from 'react-date-object/calendars/persian'
 import arabic_ar from 'react-date-object/locales/arabic_ar'
 import gregorian_en from 'react-date-object/locales/gregorian_en'
 import gregorian_hi from 'react-date-object/locales/gregorian_hi'
+import persian_en from 'react-date-object/locales/persian_en'
 import persian_fa from 'react-date-object/locales/persian_fa'
 
 export const numberingDigits: Record<string, string[]> = {
@@ -163,6 +164,15 @@ export function formatJalaliDate(value: string, locale: string) {
     `${jalaliDate.year}/${jalaliDate.month.number}/${jalaliDate.day}`,
     locale,
   )
+}
+
+export function formatJalaliMonthName(value: string, locale: string) {
+  const date = fromIsoDateOnly(value)
+  if (!date) return ''
+  const monthLocale =
+    locale === 'ar' ? persianArLocale : usesJalaliCalendar(locale) ? persian_fa : persian_en
+  const name = cloneDateObject(date).convert(persian, monthLocale).month?.name
+  return typeof name === 'string' ? name.trim() : ''
 }
 
 export function formatWeekday(value: string, locale: string) {

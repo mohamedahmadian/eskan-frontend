@@ -179,7 +179,6 @@ export function PublicProfilePage() {
                   pilgrim={profile}
                   model={model}
                   currentVisit={profile.currentVisit ?? null}
-                  hideEmptyPhoto
                 />
               </div>
             </div>

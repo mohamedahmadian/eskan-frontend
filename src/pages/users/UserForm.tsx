@@ -24,6 +24,8 @@ import { type FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } 
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { useAuth } from '../../auth/AuthProvider'
+import { QuickRoleToggles, isQuickRoleCode } from '../../components/users/QuickRoleToggles'
 import { FileDropField } from '../../components/ui/FileDropField'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
@@ -50,6 +52,7 @@ import {
   USERNAME_ENGLISH_PATTERN,
 } from '../../lib/identity'
 import { isValidIranianNationalId, normalizeNationalId, normalizePassportNumber } from '../../lib/national-id'
+import { isAdmin } from '../../lib/roles'
 import {
   religions,
   userGenders,
@@ -159,8 +162,10 @@ export function UserForm({
   onSubmit: (payload: UserPayload) => Promise<void>
 }) {
   const { t, i18n } = useTranslation()
+  const { user: actor, refresh } = useAuth()
   const uiLocale = i18n.language.split('-')[0] ?? 'fa'
   const geoName = useGeoName()
+  const quickAssignable = Boolean(initial?.id) && isAdmin(actor)
   const lockedIds = useMemo(
     () => roles.filter((role) => lockedRoleCodes.includes(role.code)).map((role) => role.id),
     [lockedRoleCodes, roles],
@@ -205,6 +210,15 @@ export function UserForm({
   const [roleIds, setRoleIds] = useState<string[]>(
     [...new Set([...(initial?.roleIds ?? initial?.roles?.map((role) => role.id) ?? []), ...lockedIds])],
   )
+  const roleIdsRef = useRef(roleIds)
+  const quickRoleIdsRef = useRef(
+    new Set(roles.filter((role) => isQuickRoleCode(role.code)).map((role) => role.id)),
+  )
+  const [knownRoles, setKnownRoles] = useState<RoleOption[]>(roles)
+  function commitRoleIds(next: string[]) {
+    roleIdsRef.current = next
+    setRoleIds(next)
+  }
   const licenseIssuerRoleId = roles.find((role) => role.code === 'LICENSE_ISSUER')?.id
   const governmentOrgOfficerRoleId = roles.find((role) => role.code === 'GOVERNMENT_ORG_OFFICER')?.id
   const showIssuingOrganization = Boolean(
@@ -222,7 +236,7 @@ export function UserForm({
     (roleIds.includes(governmentOrgOfficerRoleId) || lockedIds.includes(governmentOrgOfficerRoleId))
     ? t('users.linkedOrganizationRequired')
     : t('users.issuingOrganizationRequired')
-  const selectedRoleCodes = roles
+  const selectedRoleCodes = knownRoles
     .filter((role) => roleIds.includes(role.id) || lockedIds.includes(role.id))
     .map((role) => role.code)
   const showActivityStart = showUserActivityStartYear(i18nPrefix, {
@@ -294,9 +308,7 @@ export function UserForm({
   const selectedCountryId = countryId || (isCreate ? iranCountryId : '')
   const isIranian = !iranCountryId || !selectedCountryId || selectedCountryId === iranCountryId
   const phoneRequired = selfProfile ? isIranian : true
-  const identityRequired = !selfProfile && isIranian
   const identityIsPassport = selfProfile && !isIranian
-  const personalFieldsLocked = isCreate && !selfProfile && identityRequired && !nationalIdReady
   const provinces = useQuery({
     queryKey: ['provinces', 'lookup', selectedCountryId],
     enabled: Boolean(selectedCountryId),
@@ -328,10 +340,32 @@ export function UserForm({
 
   function toggleRole(id: string) {
     if (lockedIds.includes(id)) return
-    setRoleIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    )
+    const current = roleIdsRef.current
+    commitRoleIds(current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   }
+
+  function syncQuickRoles(nextRoles: RoleOption[]) {
+    for (const role of nextRoles) {
+      if (isQuickRoleCode(role.code)) quickRoleIdsRef.current.add(role.id)
+    }
+    const kept = roleIdsRef.current.filter((id) => !quickRoleIdsRef.current.has(id))
+    const granted = nextRoles.filter((role) => isQuickRoleCode(role.code)).map((role) => role.id)
+    const lockedKept = lockedIds.filter((id) => !quickRoleIdsRef.current.has(id))
+    commitRoleIds([...new Set([...kept, ...granted, ...lockedKept])])
+    setKnownRoles((current) => {
+      const byId = new Map(current.map((role) => [role.id, role]))
+      for (const role of nextRoles) byId.set(role.id, role)
+      return [...byId.values()]
+    })
+    if (selfProfile) void refresh()
+  }
+
+  const assignedQuickCodes = knownRoles
+    .filter((role) => isQuickRoleCode(role.code) && roleIds.includes(role.id))
+    .map((role) => role.code)
+  const listedRoles = quickAssignable
+    ? roles.filter((role) => !isQuickRoleCode(role.code))
+    : roles
 
   async function uploadImage(file: File, field: 'photo' | 'nationalCard' | 'passport') {
     const body = new FormData()
@@ -366,7 +400,7 @@ export function UserForm({
       setNationalIdReady(false)
       setIdentityStatus('idle')
       clearError('nationalId')
-      return !identityRequired
+      return true
     }
     if (identityIsPassport) {
       if (value.length < 5) {
@@ -601,16 +635,16 @@ export function UserForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const nextRoleIds = [...new Set([...roleIds, ...lockedIds])]
+    const lockedKeptIds = lockedIds.filter((id) => {
+      const role = roles.find((item) => item.id === id)
+      return !role || !isQuickRoleCode(role.code)
+    })
+    const nextRoleIds = [...new Set([...roleIdsRef.current, ...lockedKeptIds])]
     const identityValue = identityIsPassport
       ? normalizePassportNumber(nationalId)
       : normalizeNationalId(nationalId)
     const phoneDigits = parseDigitString(phone)
     const emailValue = toLatinDigits(email).trim().toLowerCase()
-    if (identityRequired && !identityValue) {
-      failField('personal', 'nationalId', t('users.nationalIdRequired'))
-      return
-    }
     if (identityIsPassport) {
       if (identityValue && identityValue.length < 5) {
         failField('personal', 'nationalId', t('users.passportRequired'))
@@ -815,7 +849,6 @@ export function UserForm({
                 inputMode={identityIsPassport ? 'text' : 'numeric'}
                 autoComplete="off"
                 maxLength={identityIsPassport ? 20 : 10}
-                required={identityRequired}
                 aria-invalid={Boolean(fieldErrors.nationalId)}
                 aria-busy={checkingNationalId}
                 onChange={(e) => {
@@ -834,7 +867,7 @@ export function UserForm({
                   }
                 }}
                 onBlur={() => {
-                  if (identityRequired || nationalId.trim()) void checkNationalIdTaken()
+                  if (nationalId.trim()) void checkNationalIdTaken()
                 }}
                 onMouseLeave={() => {
                   if (identityIsPassport) {
@@ -847,13 +880,7 @@ export function UserForm({
             </div>
           </UniqueFieldWrap>
         </FormField>
-        <div
-          className={`space-y-4 transition-opacity duration-200 ${
-            personalFieldsLocked ? 'opacity-50' : ''
-          }`}
-          aria-busy={checkingNationalId}
-          aria-disabled={personalFieldsLocked}
-        >
+        <div className="space-y-4" aria-busy={checkingNationalId}>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               icon={UserRound}
@@ -866,7 +893,6 @@ export function UserForm({
                 className={`${inputClassName(Boolean(fieldErrors.firstName))} disabled:cursor-not-allowed`}
                 value={firstName}
                 required
-                disabled={personalFieldsLocked}
                 aria-invalid={Boolean(fieldErrors.firstName)}
                 onChange={(e) => {
                   setFirstName(e.target.value)
@@ -885,7 +911,6 @@ export function UserForm({
                 className={`${inputClassName(Boolean(fieldErrors.lastName))} disabled:cursor-not-allowed`}
                 value={lastName}
                 required
-                disabled={personalFieldsLocked}
                 aria-invalid={Boolean(fieldErrors.lastName)}
                 onChange={(e) => {
                   setLastName(e.target.value)
@@ -910,7 +935,6 @@ export function UserForm({
                 className={`${inputClassName(Boolean(fieldErrors.phone))} disabled:cursor-not-allowed`}
                 value={phone}
                 required={phoneRequired}
-                disabled={personalFieldsLocked}
                 aria-invalid={Boolean(fieldErrors.phone)}
                 onChange={(e) => {
                   const value = parseDigitString(e.target.value).slice(0, isIranian ? 11 : 15)
@@ -937,7 +961,6 @@ export function UserForm({
             <SearchSelect
               id="gender"
               value={gender}
-              disabled={personalFieldsLocked}
               onChange={setGender}
               placeholder={t('users.selectOptional')}
               options={[
@@ -953,7 +976,6 @@ export function UserForm({
             <SearchSelect
               id="religion"
               value={religion}
-              disabled={personalFieldsLocked}
               onChange={setReligion}
               placeholder={t('users.selectOptional')}
               options={[
@@ -971,7 +993,6 @@ export function UserForm({
                 id="religionOther"
                 className={`${fieldClassName} disabled:cursor-not-allowed`}
                 value={religionOther}
-                disabled={personalFieldsLocked}
                 onChange={(e) => setReligionOther(e.target.value)}
               />
             </FormField>
@@ -989,7 +1010,6 @@ export function UserForm({
                 max={currentPersianYear()}
                 className={`${fieldClassName} digit-field disabled:cursor-not-allowed`}
                 value={activityStartYear}
-                disabled={personalFieldsLocked}
                 onChange={(e) => setActivityStartYear(e.target.value)}
               />
               {yearsOfCollaboration != null ? (
@@ -1040,10 +1060,18 @@ export function UserForm({
             title={t('users.usernameEnglish')}
           />
         </FormField>
-        {hideRoles ? null : (
+        {quickAssignable && initial?.id ? (
+          <QuickRoleToggles
+            userId={initial.id}
+            roleCodes={assignedQuickCodes}
+            lockedCodes={lockedRoleCodes}
+            onChanged={syncQuickRoles}
+          />
+        ) : null}
+        {hideRoles || listedRoles.length === 0 ? null : (
           <FormField icon={Shield} label={t('users.roles')} error={fieldErrors.roles}>
             <div id="roles" tabIndex={-1} className="space-y-2">
-              {roles.map((role) => {
+              {listedRoles.map((role) => {
                 const locked = lockedIds.includes(role.id)
                 const checked = roleIds.includes(role.id) || locked
                 return (

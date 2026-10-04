@@ -1,14 +1,16 @@
-import { BadgeCheck, Check, FileBadge, FileImage, X } from 'lucide-react'
+import { Check, Eye, FileBadge, FileImage, ShieldAlert, X } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button, cardClassName } from '../../components/ui/Form'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { formatDate } from '../../lib/datetime'
 import type { Reservation } from '../../types/app'
+import { IssuedLicenseStatusBadge } from '../licenses/license-ui'
 import {
+  IssuedLicenseViewModal,
   ReservationCaravanLicenseStep,
   type CaravanPermitDraft,
 } from './ReservationCaravanLicenseStep'
@@ -27,6 +29,7 @@ export function ReservationPermitPanel({
   const status = reservation.permitStatus
   const admin = mode === 'admin'
   const [editing, setEditing] = useState(false)
+  const [viewingLicense, setViewingLicense] = useState(false)
   const [draft, setDraft] = useState<CaravanPermitDraft>({
     source: reservation.permitSource ?? '',
     issuedLicenseId: reservation.issuedLicenseId ?? '',
@@ -70,8 +73,16 @@ export function ReservationPermitPanel({
       const { data } = await api.patch<Reservation>(`/reservations/${reservation.id}/permit`, body)
       return data
     },
-    onSuccess: () => {
-      toast.success(t('reservations.permitResubmitted'))
+    onSuccess: (data) => {
+      toast.success(
+        t(
+          !admin
+            ? 'reservations.permitResubmitted'
+            : data.permitSource === 'CONFIRMED'
+              ? 'reservations.permitApproved'
+              : 'reservations.permitSaved',
+        ),
+      )
       setEditing(false)
       onChanged()
     },
@@ -81,19 +92,34 @@ export function ReservationPermitPanel({
   if (reservation.type !== 'CARAVAN') return null
 
   const busy = approve.isPending || reject.isPending || savePermit.isPending
+  const fileOpen =
+    reservation.status !== 'CANCELLED' &&
+    reservation.status !== 'REJECTED' &&
+    reservation.status !== 'COMPLETED'
   const canReview =
     admin &&
+    fileOpen &&
     (status === 'PENDING' || status === 'REJECTED') &&
-    Boolean(reservation.issuedLicenseId || reservation.permitImageId) &&
-    reservation.status !== 'CANCELLED' &&
-    reservation.status !== 'REJECTED' &&
-    reservation.status !== 'COMPLETED'
+    Boolean(reservation.issuedLicenseId || reservation.permitImageId)
+  const canReRejectApproved = admin && fileOpen && status === 'APPROVED'
   const canResubmit =
-    !admin &&
-    status !== 'APPROVED' &&
+    (admin || status !== 'APPROVED') &&
     reservation.status !== 'CANCELLED' &&
     reservation.status !== 'REJECTED' &&
     reservation.status !== 'COMPLETED'
+  const viewableLicense =
+    reservation.permitSource === 'ISSUED_LICENSE' ? reservation.issuedLicense : null
+  const viewableImageId =
+    reservation.permitSource === 'UPLOAD' ? reservation.permitImageId : null
+  const canView = Boolean(viewableLicense || viewableImageId)
+
+  function viewPermit() {
+    if (viewableLicense) {
+      setViewingLicense(true)
+      return
+    }
+    if (viewableImageId) window.open(getImageUrl(viewableImageId), '_blank', 'noopener,noreferrer')
+  }
 
   return (
     <section className={`${cardClassName} space-y-3 p-4`}>
@@ -152,7 +178,7 @@ export function ReservationPermitPanel({
               }}
             >
               <Check className="size-4" aria-hidden />
-              {t('reservations.permitResubmit')}
+              {t(admin ? 'reservations.permitSave' : 'reservations.permitResubmit')}
             </Button>
             <Button type="button" variant="ghost" disabled={busy} onClick={() => setEditing(false)}>
               <X className="size-4" aria-hidden />
@@ -170,9 +196,12 @@ export function ReservationPermitPanel({
 
           {reservation.permitSource === 'ISSUED_LICENSE' && reservation.issuedLicense ? (
             <div className="rounded-2xl border border-teal-100 bg-cream-50/80 px-3 py-3 text-sm">
-              <p className="font-medium text-ink-800">
-                {reservation.issuedLicense.organization?.name || t('reservations.permitUnknownOrg')}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium text-ink-800">
+                  {reservation.issuedLicense.organization?.name || t('reservations.permitUnknownOrg')}
+                </p>
+                <IssuedLicenseStatusBadge status={reservation.issuedLicense.status} />
+              </div>
               <p className="mt-1 text-xs text-ink-500">
                 {t('licenses.issuedAt')}: {formatDate(reservation.issuedLicense.issuedAt, locale)}
               </p>
@@ -180,17 +209,6 @@ export function ReservationPermitPanel({
                 <p className="mt-1 text-xs leading-5 text-ink-600">
                   {reservation.issuedLicense.description}
                 </p>
-              ) : null}
-              {reservation.issuedLicense.fileId ? (
-                <a
-                  href={getImageUrl(reservation.issuedLicense.fileId)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-teal-700 underline-offset-2 hover:underline"
-                >
-                  <BadgeCheck className="size-3.5" aria-hidden />
-                  {t('reservations.permitViewIssuedFile')}
-                </a>
               ) : null}
             </div>
           ) : null}
@@ -211,10 +229,42 @@ export function ReservationPermitPanel({
             </div>
           ) : null}
 
-          {status === 'REJECTED' && reservation.permitRejectionReason ? (
-            <p className="rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-xs leading-5 text-red-800">
-              {reservation.permitRejectionReason}
-            </p>
+          {status === 'REJECTED' ? (
+            <div
+              className="flex items-start gap-2.5 rounded-2xl border border-red-100 bg-red-50 px-3 py-2.5"
+              role="alert"
+            >
+              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden />
+              <div className="min-w-0 flex-1 space-y-1 text-xs leading-6 text-red-800">
+                <p>
+                  <Trans
+                    i18nKey={
+                      reservation.permitReviewedBy
+                        ? 'reservations.permitRejectedByHint'
+                        : 'reservations.permitRejectedAtHint'
+                    }
+                    values={{
+                      date: reservation.permitReviewedAt
+                        ? formatDate(reservation.permitReviewedAt, locale)
+                        : '—',
+                      name: reservation.permitReviewedBy?.fullName ?? '',
+                    }}
+                    components={{ b: <span className="font-semibold" /> }}
+                  />
+                </p>
+                {reservation.permitRejectionReason ? (
+                  <p className="whitespace-pre-line text-ink-800">
+                    <span className="font-semibold text-red-700">
+                      {t('reservations.rejectionReason')}:
+                    </span>{' '}
+                    {reservation.permitRejectionReason}
+                  </p>
+                ) : null}
+                {!admin ? (
+                  <p className="font-medium">{t('reservations.permitRejectedUploadNew')}</p>
+                ) : null}
+              </div>
+            </div>
           ) : null}
 
           {!reservation.hasPermit && status === 'PENDING' ? (
@@ -225,49 +275,75 @@ export function ReservationPermitPanel({
             <p className="text-xs leading-5 text-ink-500">{t('reservations.permitRequired')}</p>
           ) : null}
 
-          {canResubmit ? (
-            <Button
-              type="button"
-              variant="soft"
-              onClick={() => {
-                setDraft({
-                  source: reservation.permitSource ?? '',
-                  issuedLicenseId: reservation.issuedLicenseId ?? '',
-                  permitImageId: reservation.permitImageId ?? '',
-                })
-                setEditing(true)
-              }}
-            >
-              <FileBadge className="size-4" aria-hidden />
-              {t(status === 'NONE' ? 'reservations.permitResubmit' : 'reservations.permitChange')}
-            </Button>
+          {canResubmit || canView ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {canResubmit ? (
+                <Button
+                  type="button"
+                  variant="soft"
+                  onClick={() => {
+                    setDraft({
+                      source: reservation.permitSource ?? '',
+                      issuedLicenseId: reservation.issuedLicenseId ?? '',
+                      permitImageId: reservation.permitImageId ?? '',
+                    })
+                    setEditing(true)
+                  }}
+                >
+                  <FileBadge className="size-4" aria-hidden />
+                  {t(
+                    admin
+                      ? status === 'NONE'
+                        ? 'reservations.permitAdd'
+                        : 'reservations.permitChange'
+                      : status === 'NONE'
+                        ? 'reservations.permitResubmit'
+                        : 'reservations.permitChange',
+                  )}
+                </Button>
+              ) : null}
+              {canView ? (
+                <Button type="button" variant="ghost" onClick={viewPermit}>
+                  <Eye className="size-4" aria-hidden />
+                  {t('reservations.permitViewLicense')}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
 
-          {canReview ? (
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  confirmToast({
-                    title: t('reservations.confirmApprovePermit'),
-                    confirmLabel: t('reservations.approvePermit'),
-                    cancelLabel: t('common.cancel'),
-                    onConfirm: () => approve.mutate(),
-                  })
-                }}
-              >
-                <Check className="size-4" aria-hidden />
-                {t('reservations.approvePermit')}
-              </Button>
+          {canReview || canReRejectApproved ? (
+            <div className="flex flex-wrap justify-center gap-2 pt-1">
+              {canReview ? (
+                <Button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    confirmToast({
+                      title: t('reservations.confirmApprovePermit'),
+                      confirmLabel: t('reservations.approvePermit'),
+                      cancelLabel: t('common.cancel'),
+                      onConfirm: () => approve.mutate(),
+                    })
+                  }}
+                >
+                  <Check className="size-4" aria-hidden />
+                  {t('reservations.approvePermit')}
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="danger"
                 disabled={busy}
                 onClick={() => {
                   confirmToast({
-                    title: t('reservations.confirmRejectPermit'),
-                    confirmLabel: t('reservations.rejectPermit'),
+                    title: t(
+                      canReRejectApproved
+                        ? 'reservations.confirmReRejectPermit'
+                        : 'reservations.confirmRejectPermit',
+                    ),
+                    confirmLabel: t(
+                      canReRejectApproved ? 'reservations.reRejectPermit' : 'reservations.rejectPermit',
+                    ),
                     cancelLabel: t('common.cancel'),
                     confirmVariant: 'danger',
                     onConfirm: () => reject.mutate(undefined),
@@ -275,12 +351,16 @@ export function ReservationPermitPanel({
                 }}
               >
                 <X className="size-4" aria-hidden />
-                {t('reservations.rejectPermit')}
+                {t(canReRejectApproved ? 'reservations.reRejectPermit' : 'reservations.rejectPermit')}
               </Button>
             </div>
           ) : null}
         </>
       )}
+
+      {viewingLicense && viewableLicense ? (
+        <IssuedLicenseViewModal item={viewableLicense} onClose={() => setViewingLicense(false)} />
+      ) : null}
     </section>
   )
 }

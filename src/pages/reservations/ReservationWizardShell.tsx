@@ -64,6 +64,10 @@ export function ReservationWizardShell({
     ? Math.max(0, recordedIndex)
     : Math.max(0, steps.indexOf(current))
   const remaining = stopped ? 0 : Math.max(0, steps.length - currentIndex - 1)
+  const completedOwnerView = audience === 'owner' && status === 'COMPLETED'
+  const visibleSteps = completedOwnerView
+    ? steps.filter((step) => step === 'complete' || step === 'placement')
+    : steps
   const stepGridClass =
     steps.length >= 7
       ? 'grid-cols-4 sm:grid-cols-7'
@@ -77,28 +81,43 @@ export function ReservationWizardShell({
     <div className="space-y-4">
       <div className={`${cardClassName} p-4`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-          <StepProgressChart
-            currentIndex={currentIndex}
-            total={steps.length}
-            locale={locale}
-            label={t('reservations.stepOf', {
-              current: formatNumber(currentIndex + 1, locale),
-              total: formatNumber(steps.length, locale),
-            })}
-            caption={
-              remaining > 0
-                ? t('reservations.remainingSteps', { count: formatNumber(remaining, locale) })
-                : undefined
+          {completedOwnerView ? null : (
+            <StepProgressChart
+              currentIndex={currentIndex}
+              total={steps.length}
+              locale={locale}
+              label={t('reservations.stepOf', {
+                current: formatNumber(currentIndex + 1, locale),
+                total: formatNumber(steps.length, locale),
+              })}
+              caption={
+                remaining > 0
+                  ? t('reservations.remainingSteps', { count: formatNumber(remaining, locale) })
+                  : undefined
+              }
+            />
+          )}
+          <ol
+            className={
+              completedOwnerView
+                ? 'flex min-w-0 w-full flex-1 flex-wrap justify-center gap-2 [&>li]:w-40'
+                : `grid min-w-0 w-full flex-1 gap-2 sm:order-first ${stepGridClass}`
             }
-          />
-          <ol className={`grid min-w-0 w-full flex-1 gap-2 sm:order-first ${stepGridClass}`}>
-            {steps.map((step, index) => (
+          >
+            {visibleSteps.map((step) => (
               <StepCard
                 key={step}
                 step={step}
-                index={index}
+                index={steps.indexOf(step)}
+                hideNumber={completedOwnerView}
                 locale={locale}
-                label={t(stepLabelKey(step, type))}
+                label={
+                  completedOwnerView && step === 'complete'
+                    ? t('reservations.wizard')
+                    : completedOwnerView && step === 'placement'
+                      ? t('reservations.steps.placementCompleted')
+                      : t(stepLabelKey(step, type))
+                }
                 recordedAt={stepCardDate(step, reservation)}
                 state={chipState(step, reservation, current, viewedStep, audience)}
                 active={viewedStep === step}
@@ -133,6 +152,9 @@ function chipState(
   if (status === 'REJECTED' || status === 'CANCELLED') {
     return stepHasProgress(step, reservation) ? 'done' : 'pending'
   }
+  if (audience === 'owner' && status === 'COMPLETED' && viewedStep) {
+    return step === viewedStep ? 'current' : 'done'
+  }
   const flow = ownerFlowSteps(type, reservation)
   if (viewedStep && flow.includes(viewedStep) && status !== 'COMPLETED') {
     if (step === viewedStep) return 'current'
@@ -149,6 +171,7 @@ function chipState(
 function StepCard({
   step,
   index,
+  hideNumber = false,
   locale,
   label,
   recordedAt,
@@ -158,6 +181,7 @@ function StepCard({
 }: {
   step: ReservationStepCode
   index: number
+  hideNumber?: boolean
   locale: string
   label: string
   recordedAt: string | null
@@ -173,10 +197,16 @@ function StepCard({
     pending: 'border-line bg-cream-50 text-ink-400',
   }
   const clickable = state === 'done' || state === 'current' || state === 'waiting'
-  const className = `flex h-full w-full flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-center transition-[box-shadow,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${styles[state]} ${
-    active && state !== 'current' && state !== 'waiting' ? 'ring-2 ring-teal-300' : ''
-  } ${clickable ? 'cursor-pointer' : 'cursor-not-allowed'}`
   const highlighted = state === 'current' || state === 'waiting'
+  const blinkClass =
+    state === 'waiting'
+      ? 'wizard-step-blink wizard-step-blink-waiting'
+      : state === 'current'
+        ? 'wizard-step-blink'
+        : ''
+  const className = `flex h-full w-full flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-center transition-[box-shadow,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${styles[state]} ${blinkClass} ${
+    active && !highlighted ? 'ring-2 ring-teal-300' : ''
+  } ${clickable ? 'cursor-pointer' : 'cursor-not-allowed'}`
   const numberClass = highlighted ? 'text-white' : state === 'done' ? 'text-teal-800' : 'text-ink-400'
   const dateClass = highlighted ? 'text-white/80' : state === 'done' ? 'text-teal-700' : 'text-ink-400'
   const content = (
@@ -193,9 +223,11 @@ function StepCard({
         {state === 'done' ? <Check className="size-4" aria-hidden /> : <Icon className="size-4" aria-hidden />}
       </span>
       <span className="text-[11px] font-medium leading-5 sm:text-xs">{label}</span>
-      <span className={`text-base font-semibold ${numberClass}`}>
-        {formatNumber(index + 1, locale)}
-      </span>
+      {hideNumber ? null : (
+        <span className={`text-base font-semibold ${numberClass}`}>
+          {formatNumber(index + 1, locale)}
+        </span>
+      )}
       {recordedAt ? (
         <span className={`max-w-full text-[10px] font-medium leading-4 ${dateClass}`}>
           <DateText value={recordedAt} withTime />

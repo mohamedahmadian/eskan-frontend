@@ -57,6 +57,7 @@ import type {
 import { ReceptionKindChips } from './ReceptionKindChips'
 import { ReceptionMatchModal } from './ReceptionMatchModal'
 import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
+import { QuickRoleToggles } from '../../components/users/QuickRoleToggles'
 import {
   ReservationStatusBadge,
   ReservationTypeBadge,
@@ -224,6 +225,15 @@ export function ReceptionDesk({
       toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
       setLoadingProfile(false)
+    }
+  }
+
+  async function refreshProfile(id: string) {
+    try {
+      const { data } = await api.get<ReceptionProfile>(`/reception/people/${id}`)
+      setProfile(data)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
     }
   }
 
@@ -599,6 +609,21 @@ export function ReceptionDesk({
                   />
                 </div>
               </div>
+              <QuickRoleToggles
+                userId={profile.person.id}
+                roleCodes={profile.person.roles.map((role) => role.code)}
+                onChanged={(nextRoles) => {
+                  setProfile((current) =>
+                    current
+                      ? {
+                          ...current,
+                          person: { ...current.person, roles: nextRoles },
+                        }
+                      : current,
+                  )
+                  void refreshProfile(profile.person.id)
+                }}
+              />
               <div className="flex flex-wrap justify-end gap-2">
                 <Link
                   to={personPath(profile.person)}

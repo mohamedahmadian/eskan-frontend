@@ -743,7 +743,7 @@ export function AccommodationIntroduceWizardPage() {
                 />
               ) : null}
             </div>
-            <Button type="button" onClick={() => navigate(`/my-accommodations/${done.id}`)}>
+            <Button type="button" onClick={() => navigate(`/introduced-accommodations/${done.id}`)}>
               <Eye className="size-4" aria-hidden />
               {t('accommodationIntroduce.viewAccommodation')}
             </Button>

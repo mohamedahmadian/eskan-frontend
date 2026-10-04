@@ -26,6 +26,8 @@ import {
 } from '../lib/roles'
 import type { ParticipationCampaign } from '../types/app'
 import { HeadquartersServiceYearsCard } from './dashboard/HeadquartersServiceYearsCard'
+import { HonoraryReadinessCard } from './dashboard/HonoraryReadinessCard'
+import { NewCaravansCard } from './dashboard/NewCaravansCard'
 import { CampaignCard } from './participations/CampaignCard'
 import { GovernmentOrgOfficerDashboard } from './dashboard/GovernmentOrgOfficerDashboard'
 import { LicenseIssuerDashboard } from './dashboard/LicenseIssuerDashboard'
@@ -64,6 +66,8 @@ function QuickCard({
 function AdminOverview() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
+  const { user } = useAuth()
+  const admin = isAdmin(user)
   const stats = useQuery({
     queryKey: ['stats'],
     queryFn: async () => {
@@ -149,35 +153,44 @@ function AdminOverview() {
 
       <section>
         <h2 className="mb-4 text-sm font-medium text-ink-500">{t('dashboard.statsTitle')}</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <article className={`${cardClassName} flex items-center gap-4 p-5`}>
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
-              <Users className="size-5" />
-            </span>
-            <div>
-              <p className="text-sm text-ink-500">{t('dashboard.pilgrimCount')}</p>
-              <p className="mt-1 text-2xl font-semibold text-ink-900">
-                {stats.data ? formatNumber(stats.data.pilgrims, locale) : '—'}
-              </p>
+        <div className={`grid gap-4 ${admin ? 'lg:grid-cols-3' : ''}`}>
+          <div className="flex flex-col gap-4">
+            <div className={`grid gap-4 sm:grid-cols-2 ${admin ? 'lg:grid-cols-1' : ''}`}>
+              <article className={`${cardClassName} flex items-center gap-4 p-5`}>
+                <span className="flex size-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                  <Users className="size-5" />
+                </span>
+                <div>
+                  <p className="text-sm text-ink-500">{t('dashboard.pilgrimCount')}</p>
+                  <p className="mt-1 text-2xl font-semibold text-ink-900">
+                    {stats.data ? formatNumber(stats.data.pilgrims, locale) : '—'}
+                  </p>
+                </div>
+              </article>
+              <article className={`${cardClassName} flex items-center gap-4 p-5`}>
+                <span className="flex size-12 items-center justify-center rounded-2xl bg-gold-50 text-gold-600">
+                  <Footprints className="size-5" />
+                </span>
+                <div>
+                  <p className="text-sm text-ink-500">{t('dashboard.caravanCount')}</p>
+                  <p className="mt-1 text-2xl font-semibold text-ink-900">
+                    {stats.data ? formatNumber(stats.data.caravans, locale) : '—'}
+                  </p>
+                </div>
+              </article>
             </div>
-          </article>
-          <article className={`${cardClassName} flex items-center gap-4 p-5`}>
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-gold-50 text-gold-600">
-              <Footprints className="size-5" />
-            </span>
-            <div>
-              <p className="text-sm text-ink-500">{t('dashboard.caravanCount')}</p>
-              <p className="mt-1 text-2xl font-semibold text-ink-900">
-                {stats.data ? formatNumber(stats.data.caravans, locale) : '—'}
-              </p>
-            </div>
-          </article>
+            <p className={`${cardClassName} px-5 py-4 text-sm text-ink-700`}>
+              {t('dashboard.internationalNote')}
+            </p>
+          </div>
+          {admin ? (
+            <>
+              <HonoraryReadinessCard />
+              <NewCaravansCard />
+            </>
+          ) : null}
         </div>
       </section>
-
-      <p className={`${cardClassName} px-5 py-4 text-sm text-ink-700`}>
-        {t('dashboard.internationalNote')}
-      </p>
 
       {campaigns.data?.length ? (
         <section>

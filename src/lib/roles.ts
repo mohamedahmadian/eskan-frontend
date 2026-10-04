@@ -72,7 +72,12 @@ export function canAccessMyCaravans(user: RoleUser) {
 export function canAccessMyReservations(user: RoleUser) {
   if (!user || isAdmin(user)) return false
   if (hasNoRoles(user)) return true
-  return isPilgrim(user) || isCaravanManager(user) || isGroupManager(user)
+  return (
+    isPilgrim(user) ||
+    isCaravanManager(user) ||
+    isGroupManager(user) ||
+    isHonoraryServant(user)
+  )
 }
 
 export function canAccessMyGroups(user: RoleUser) {
@@ -80,6 +85,11 @@ export function canAccessMyGroups(user: RoleUser) {
     return true
   }
   return isPilgrim(user) && pilgrimHasGroupOrHousingAccess(user)
+}
+
+/** ویرایش اسکان: مدیر سامانه و مدیر اسکان. */
+export function canManageAccommodations(user: RoleUser) {
+  return isAdmin(user) || isAccommodationManager(user)
 }
 
 export function canAccessMyAccommodations(user: RoleUser) {

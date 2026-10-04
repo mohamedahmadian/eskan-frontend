@@ -59,29 +59,53 @@ export function ReservationWizardPage() {
   const locale = i18n.language.split("-")[0] ?? "fa";
   const { id } = useParams();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const query = useQuery({
     queryKey: ["reservations", id],
     enabled: Boolean(id),
+    retry: (failureCount, error) => {
+      const status = axios.isAxiosError(error) ? error.response?.status : 0;
+      if (status === 404 || status === 403) return false;
+      return failureCount < 3;
+    },
     queryFn: async () => {
       const { data } = await api.get<Reservation>(`/reservations/${id}`);
       return data;
     },
   });
 
+  const notFound =
+    query.isError &&
+    axios.isAxiosError(query.error) &&
+    query.error.response?.status === 404;
+
+  useEffect(() => {
+    if (!notFound) return;
+    toast.error(t("reservations.notFound"), { id: "reservation-not-found" });
+    queryClient.removeQueries({ queryKey: ["reservations", id] });
+    navigate("/my-reservations", { replace: true });
+  }, [notFound, id, navigate, queryClient, t]);
+
   const reservation = query.data;
   const currentStep = reservation
     ? currentStepFromStatus(reservation.status, reservation.type, reservation)
     : "travel";
+  const defaultViewedStep: ReservationStepCode | null =
+    reservation?.status === "CANCELLED"
+      ? null
+      : reservation?.status === "COMPLETED"
+        ? "complete"
+        : currentStep;
   const [viewedStep, setViewedStep] = useState<ReservationStepCode | null>(
-    reservation?.status === "CANCELLED" ? null : currentStep,
+    defaultViewedStep,
   );
 
   useEffect(() => {
-    setViewedStep(reservation?.status === "CANCELLED" ? null : currentStep);
-  }, [currentStep, reservation?.status]);
+    setViewedStep(defaultViewedStep);
+  }, [defaultViewedStep]);
 
-  if (!id || query.isLoading) return <LoadingState />;
+  if (!id || query.isLoading || notFound) return <LoadingState />;
   if (query.isError || !reservation) {
     const status = axios.isAxiosError(query.error)
       ? query.error.response?.status

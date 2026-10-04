@@ -90,14 +90,14 @@ function DatePickerActions({
     >
       <button
         type="button"
-        className="inline-flex flex-1 items-center justify-center rounded-xl bg-mint-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-mint-600"
+        className="inline-flex flex-1 cursor-pointer items-center justify-center rounded-xl bg-mint-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-mint-600"
         onClick={goToToday}
       >
         {t('common.today')}
       </button>
       <button
         type="button"
-        className="inline-flex flex-1 items-center justify-center rounded-xl border border-line bg-white px-2 py-1.5 text-xs font-medium text-ink-700 hover:bg-cream-100 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex flex-1 cursor-pointer items-center justify-center rounded-xl border border-line bg-white px-2 py-1.5 text-xs font-medium text-ink-700 hover:bg-cream-100 disabled:cursor-not-allowed disabled:opacity-40"
         disabled={!selected}
         onClick={clearDate}
       >
@@ -195,12 +195,15 @@ export function PersianDateField({
           <DatePickerActions key="actions" position="bottom" />,
         ]}
         render={(formatted, openCalendar) => (
-          <div className={`${fieldClassName} flex items-center gap-1`}>
+          // Inner buttons rely on bubbling: openCalendar toggles, so calling it twice per click would close it again.
+          <div
+            className={`${fieldClassName} flex cursor-pointer items-center gap-1`}
+            onClick={openCalendar}
+          >
             <button
               type="button"
               id={id}
-              className="min-w-0 flex-1 truncate text-start"
-              onClick={openCalendar}
+              className="min-w-0 flex-1 cursor-pointer truncate text-start"
             >
               <span className={formatted ? 'text-ink-900' : 'text-ink-400'}>
                 {formatted || t('common.selectDate')}
@@ -209,18 +212,20 @@ export function PersianDateField({
             {value ? (
               <button
                 type="button"
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-400 hover:bg-cream-100 hover:text-ink-700"
+                className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-400 hover:bg-cream-100 hover:text-ink-700"
                 aria-label={t('common.clearDate')}
-                onClick={() => onChange(undefined)}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onChange(undefined)
+                }}
               >
                 <X className="size-4" aria-hidden />
               </button>
             ) : null}
             <button
               type="button"
-              className="inline-flex size-8 shrink-0 items-center justify-center text-teal-600"
+              className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center text-teal-600"
               aria-label={t('common.selectDate')}
-              onClick={openCalendar}
             >
               <CalendarDays className="size-4" aria-hidden />
             </button>

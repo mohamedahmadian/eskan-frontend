@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { cardClassName, listShellClassName } from '../../components/ui/Form'
 import { HeadquartersServiceYearsCard } from './HeadquartersServiceYearsCard'
+import { WelcomeIdentityBadges } from './WelcomeIdentityBadges'
 
 const actionTone = {
   teal: 'bg-teal-50 text-teal-700',
@@ -45,16 +46,17 @@ export function LicenseIssuerDashboard() {
     <div className={`${listShellClassName} flex flex-1 flex-col gap-8`}>
       <section className={`${cardClassName} overflow-hidden`}>
         <div className="h-1.5 bg-gradient-to-e from-teal-400 to-mint-300" />
-        <div className="flex items-start gap-3 px-5 py-5">
+        <div className="flex flex-wrap items-start gap-3 px-5 py-5">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
             <Stamp className="size-5" aria-hidden />
           </span>
-          <div className="min-w-0">
+          <div className="min-w-[12rem] flex-1">
             <h2 className="text-lg font-semibold text-ink-900">
               {t('dashboard.welcomeUser', { name: user?.fullName ?? '' })}
             </h2>
             <p className="mt-1 text-sm text-ink-500">{t('dashboard.licenseSubtitle')}</p>
           </div>
+          <WelcomeIdentityBadges />
         </div>
       </section>
 

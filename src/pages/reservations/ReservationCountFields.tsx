@@ -71,7 +71,7 @@ export function ReservationCountFields({
               disabled={locked}
               icon={Venus}
               label={t("reservations.iAmFemale")}
-              tone="mint"
+              tone="pink"
               onSelect={() => onChange({ maleCount: "0", femaleCount: "1" })}
             />
           </div>
@@ -126,6 +126,7 @@ export function ReservationCountFields({
         {reservationId ? (
           <PreviousApprovedCountsHint reservationId={reservationId} />
         ) : null}
+        <LeaderIncludedHint type={type} />
         {maxTotal ? <PartyMaxHint max={maxTotal} locale={locale} /> : null}
       </div>
     );
@@ -160,7 +161,7 @@ export function ReservationCountFields({
           value={values.femaleCount}
           displayValue={formatNumber(female, locale)}
           unit={t("reservations.people")}
-          tone="mint"
+          tone="pink"
           locked={locked}
           min={0}
           max={femaleMax}
@@ -177,8 +178,23 @@ export function ReservationCountFields({
           locked
         />
       </div>
+      <LeaderIncludedHint type={type} />
       {maxTotal ? <PartyMaxHint max={maxTotal} locale={locale} /> : null}
     </>
+  );
+}
+
+function LeaderIncludedHint({ type }: { type: ReservationType }) {
+  const { t } = useTranslation();
+  return (
+    <p className="flex items-start gap-2 rounded-2xl border border-teal-100 bg-teal-50/60 px-3 py-2 text-xs font-medium leading-6 text-ink-700">
+      <UserRound className="mt-1 size-3.5 shrink-0 text-teal-600" aria-hidden />
+      {t(
+        type === "CARAVAN"
+          ? "reservations.countIncludesLeaderCaravan"
+          : "reservations.countIncludesLeaderGroup",
+      )}
+    </p>
   );
 }
 
@@ -238,7 +254,7 @@ function CountPairSection({
           value={femaleValue}
           displayValue={formatNumber(female, locale)}
           unit={t("reservations.people")}
-          tone="mint"
+          tone="pink"
           locked={locked}
           min={0}
           max={femaleMax}
@@ -285,6 +301,11 @@ const countToneClass = {
     wrap: "border-mint-100 bg-gradient-to-b from-mint-50 to-white",
     icon: "bg-mint-500 text-white shadow-[0_8px_16px_rgba(63,214,190),0.24)]",
     btn: "bg-mint-500 text-white hover:bg-mint-600 disabled:bg-mint-300",
+  },
+  pink: {
+    wrap: "border-pink-200 bg-gradient-to-b from-pink-50 to-white",
+    icon: "bg-pink-300 text-white shadow-[0_8px_16px_rgba(244,114,182,0.22)]",
+    btn: "bg-pink-300 text-white hover:bg-pink-400 disabled:bg-pink-200",
   },
   ink: {
     wrap: "border-line bg-gradient-to-b from-cream-50 to-white",
@@ -431,19 +452,19 @@ function GenderChoiceCard({
   disabled?: boolean;
   icon: typeof Mars;
   label: string;
-  tone: "teal" | "mint";
+  tone: "teal" | "pink";
   onSelect: () => void;
 }) {
   const idle =
     tone === "teal"
       ? "border-line bg-white hover:border-teal-200"
-      : "border-line bg-white hover:border-mint-300";
+      : "border-pink-200 bg-pink-50/40 hover:border-pink-300";
   const active =
     tone === "teal"
       ? "border-teal-500 bg-teal-50 shadow-[0_8px_18px_rgba(46,189,182,0.2)]"
-      : "border-mint-400 bg-mint-50 shadow-[0_8px_18px_rgba(63,214,190),0.18)]";
+      : "border-pink-300 bg-pink-50 shadow-[0_8px_18px_rgba(244,114,182,0.18)]";
   const iconWrap =
-    tone === "teal" ? "bg-teal-500 text-white" : "bg-mint-500 text-white";
+    tone === "teal" ? "bg-teal-500 text-white" : "bg-pink-300 text-white";
 
   return (
     <button
@@ -471,7 +492,7 @@ function GenderChoiceCard({
       </span>
       {selected ? (
         <Check
-          className={`size-3.5 shrink-0 ${tone === "teal" ? "text-teal-700" : "text-mint-600"}`}
+          className={`size-3.5 shrink-0 ${tone === "teal" ? "text-teal-700" : "text-pink-500"}`}
           aria-hidden
         />
       ) : null}

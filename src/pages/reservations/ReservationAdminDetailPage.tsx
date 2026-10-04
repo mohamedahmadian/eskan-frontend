@@ -11,6 +11,7 @@ import {
   Smartphone,
   StickyNote,
   Tent,
+  Trash2,
   UserRound,
   Users,
   X,
@@ -19,7 +20,7 @@ import {
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { toast } from 'sonner'
 import {
@@ -39,15 +40,16 @@ import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
-import { useGeoName } from '../../lib/geo'
+import { isIranCountry, useGeoName } from '../../lib/geo'
 import { canAssignReservationHonorary } from '../../lib/honorary-services'
 import { isAdmin } from '../../lib/roles'
-import type { Reservation, ReservationPerson, ReservationStatus } from '../../types/app'
+import type { Country, Reservation, ReservationPerson, ReservationStatus } from '../../types/app'
 import {
   currentStepFromStatus,
   isInsuranceAccepted,
   validRewindStatuses,
   applicantSectionKey,
+  pilgrimOriginCountryId,
   type ReservationStepCode,
 } from './reservation-steps'
 import { ReservationReviewActions } from './ReservationReviewModal'
@@ -83,6 +85,7 @@ export function ReservationAdminDetailPage() {
   const { pathname } = useLocation()
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const admin = isAdmin(user)
   const translatorView = pathname.startsWith('/translator-reservations')
 
@@ -91,6 +94,15 @@ export function ReservationAdminDetailPage() {
     enabled: Boolean(id),
     queryFn: async () => {
       const { data } = await api.get<Reservation>(`/reservations/${id}`)
+      return data
+    },
+  })
+
+  const countries = useQuery({
+    queryKey: ['countries', 'lookup'],
+    enabled: admin,
+    queryFn: async () => {
+      const { data } = await api.get<Country[]>('/countries', { params: { activeOnly: true } })
       return data
     },
   })
@@ -133,6 +145,34 @@ export function ReservationAdminDetailPage() {
   const honoraryCount = reservation.honoraryAssignments?.length ?? 0
   const fileInfoOnly = !admin || translatorView
   const showFileRejectActions = admin && canRejectMidStage && !pendingReview
+  const iranId = countries.data?.find((item) => item.iso2 === 'IR')?.id ?? ''
+  const pilgrimCountryId = pilgrimOriginCountryId({
+    userCountryId: reservation.originCountry?.id,
+    caravanCity: reservation.caravan?.city,
+    groupCity: reservation.group?.city,
+  })
+  const showSimBank = Boolean(pilgrimCountryId) && !isIranCountry(pilgrimCountryId, iranId)
+
+  function deleteFile() {
+    if (!reservation) return
+    confirmToast({
+      title: t('reservations.confirmDeleteAny'),
+      confirmLabel: t('reservations.deleteDraft'),
+      cancelLabel: t('common.cancel'),
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/reservations/${reservation.id}`)
+          toast.success(t('reservations.fileDeleted'))
+          queryClient.removeQueries({ queryKey: ['reservations', reservation.id] })
+          void queryClient.invalidateQueries({ queryKey: ['reservations'] })
+          navigate(translatorView ? '/translator-reservations' : '/reservations', { replace: true })
+        } catch (error) {
+          toast.error(getApiErrorMessage(error, t('common.error')))
+        }
+      },
+    })
+  }
 
   return (
     <div className={formShellClassName}>
@@ -298,32 +338,36 @@ export function ReservationAdminDetailPage() {
         <section className={`${cardClassName} mt-4 overflow-hidden`}>
           <ReservationSectionHeader icon={Settings2} title={t('common.actions')} />
           <div className="flex flex-wrap items-center justify-center gap-2 p-5 sm:p-6">
-            <Button
-              type="button"
-              variant={issuedModal === 'sim' ? 'primary' : 'ghost'}
-              aria-pressed={issuedModal === 'sim'}
-              onClick={() => {
-                setToolPanel(null)
-                setHonoraryModal(false)
-                setIssuedModal((current) => (current === 'sim' ? null : 'sim'))
-              }}
-            >
-              <Smartphone className="size-4" aria-hidden />
-              {t('reservations.trackSimCard')}
-            </Button>
-            <Button
-              type="button"
-              variant={issuedModal === 'bank' ? 'primary' : 'ghost'}
-              aria-pressed={issuedModal === 'bank'}
-              onClick={() => {
-                setToolPanel(null)
-                setHonoraryModal(false)
-                setIssuedModal((current) => (current === 'bank' ? null : 'bank'))
-              }}
-            >
-              <CreditCard className="size-4" aria-hidden />
-              {t('reservations.trackMobile')}
-            </Button>
+            {showSimBank ? (
+              <>
+                <Button
+                  type="button"
+                  variant={issuedModal === 'sim' ? 'primary' : 'ghost'}
+                  aria-pressed={issuedModal === 'sim'}
+                  onClick={() => {
+                    setToolPanel(null)
+                    setHonoraryModal(false)
+                    setIssuedModal((current) => (current === 'sim' ? null : 'sim'))
+                  }}
+                >
+                  <Smartphone className="size-4" aria-hidden />
+                  {t('reservations.trackSimCard')}
+                </Button>
+                <Button
+                  type="button"
+                  variant={issuedModal === 'bank' ? 'primary' : 'ghost'}
+                  aria-pressed={issuedModal === 'bank'}
+                  onClick={() => {
+                    setToolPanel(null)
+                    setHonoraryModal(false)
+                    setIssuedModal((current) => (current === 'bank' ? null : 'bank'))
+                  }}
+                >
+                  <CreditCard className="size-4" aria-hidden />
+                  {t('reservations.trackMobile')}
+                </Button>
+              </>
+            ) : null}
             {showHonoraryAssign ? (
               <Button
                 type="button"
@@ -362,6 +406,10 @@ export function ReservationAdminDetailPage() {
                 requireRejectReason
               />
             ) : null}
+            <Button type="button" variant="danger" onClick={deleteFile}>
+              <Trash2 className="size-4" aria-hidden />
+              {t('reservations.deleteDraft')}
+            </Button>
           </div>
         </section>
       ) : null}
@@ -444,18 +492,22 @@ function AdminEditableStep({
     return <ReservationTravelStep reservation={reservation} onChanged={onChanged} mode="admin" />
   }
   if (step === 'review') {
+    const permitSettled = caravanPermitSettled(reservation)
     const showDecision =
       reservation.status === 'PENDING_MANAGEMENT_REVIEW' &&
-      (reservation.type !== 'CARAVAN' || caravanPermitSettled(reservation))
+      (reservation.type !== 'CARAVAN' || permitSettled)
+    const permitPanel =
+      reservation.type === 'CARAVAN' ? (
+        <ReservationPermitPanel reservation={reservation} mode="admin" onChanged={onChanged} />
+      ) : null
     return (
       <div className="space-y-4">
-        <ReservationTravelSummary reservation={reservation} variant="review" audience="admin" />
-        {reservation.type === 'CARAVAN' ? (
-          <ReservationPermitPanel reservation={reservation} mode="admin" onChanged={onChanged} />
-        ) : null}
+        {permitSettled ? null : permitPanel}
         {showDecision ? (
           <ReviewDecisionCard reservation={reservation} onChanged={onChanged} />
         ) : null}
+        <ReservationTravelSummary reservation={reservation} variant="review" audience="admin" />
+        {permitSettled ? permitPanel : null}
       </div>
     )
   }

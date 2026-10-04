@@ -34,6 +34,7 @@ export function ReservationMembersGrid({
   beforeTable,
   bareSearch = false,
   renderActions,
+  renderBadges,
 }: {
   members: ReservationMember[]
   inputId?: string
@@ -44,6 +45,7 @@ export function ReservationMembersGrid({
   beforeTable?: ReactNode
   bareSearch?: boolean
   renderActions?: (member: ReservationMember) => ReactNode
+  renderBadges?: (member: ReservationMember) => ReactNode
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -172,7 +174,12 @@ export function ReservationMembersGrid({
                     <td className="px-4 py-3 tabular-nums text-ink-600">
                       {formatNumber(start + index + 1, locale)}
                     </td>
-                    <td className="px-4 py-3 font-medium text-ink-900">{item.user.fullName}</td>
+                    <td className="px-4 py-3 font-medium text-ink-900">
+                      <span className="inline-flex flex-wrap items-center gap-1.5">
+                        {item.user.fullName}
+                        {renderBadges?.(item)}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <CopyableDigits value={item.user.nationalId} />
                     </td>

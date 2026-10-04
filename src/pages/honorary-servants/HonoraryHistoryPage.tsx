@@ -3,11 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import {
+  ActionsTh,
   EntityRowActions,
   PaginationBar,
   SearchBar,
   SortableTh,
   TableCard,
+  actionsColClassName,
 } from '../../components/ui/ListControls'
 import { Button, FormField, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
@@ -27,10 +29,12 @@ import {
   formatHonoraryWeekDays,
   honoraryServiceLabel,
 } from './HonoraryServantForm'
+import { useWithdrawHonoraryService } from './useWithdrawHonoraryService'
 
 export function HonoraryHistoryPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
+  const { withdraw } = useWithdrawHonoraryService()
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const year = searchParams.get('year') ?? ''
@@ -158,7 +162,7 @@ export function HonoraryHistoryPage() {
                 sortDir={sortDir}
                 onSort={onSort}
               />
-              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+              <ActionsTh />
             </tr>
           </thead>
           <tbody>
@@ -180,8 +184,12 @@ export function HonoraryHistoryPage() {
                 <td className="px-4 py-3" dir="ltr">
                   {formatHonoraryHours(item.startTime, item.endTime, locale)}
                 </td>
-                <td className="px-4 py-3">
-                  <EntityRowActions viewTo={`/honorary-history/${item.id}`} />
+                <td className={actionsColClassName}>
+                  <EntityRowActions
+                    viewTo={`/honorary-history/${item.id}`}
+                    deleteLabel={t('honoraryServants.withdraw')}
+                    onDelete={() => withdraw(item.id)}
+                  />
                 </td>
               </tr>
             ))}

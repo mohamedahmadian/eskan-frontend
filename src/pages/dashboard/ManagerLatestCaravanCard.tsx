@@ -1,8 +1,9 @@
 import { Building2, Hash, MapPin, Phone, Tent, UserRound, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { toDataURL } from 'qrcode'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import {
   FormCard,
   FormFactTile,
@@ -104,6 +105,7 @@ export function ManagerLatestCaravanCard({
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const geoName = useGeoName()
+  const navigate = useNavigate()
   const caravanQuery = useQuery({
     queryKey: ['caravans', caravanId],
     queryFn: async () => {
@@ -144,87 +146,105 @@ export function ManagerLatestCaravanCard({
   const male = reservation?.maleCount ?? caravan?.maleCount ?? 0
   const female = reservation?.femaleCount ?? caravan?.femaleCount ?? 0
   const total = reservation?.totalCount ?? male + female
+  const detailPath = `/my-caravans/${caravanId}`
+
+  function openDetail(event: MouseEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).closest('button, a, input, textarea, select')) return
+    if (window.getSelection()?.toString()) return
+    navigate(detailPath)
+  }
 
   return (
-    <FormCard
-      icon={Tent}
-      title={caravan?.name || t('dashboard.managerLatestCaravan')}
-      subtitle={t('dashboard.managerLatestCaravan')}
-      chips={<ReservationCodeBadge code={fileCode} size="sm" />}
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={caravan?.name || t('dashboard.managerLatestCaravan')}
+      className="cursor-pointer rounded-[22px] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+      onClick={openDetail}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' && event.target === event.currentTarget) navigate(detailPath)
+      }}
     >
-      <div className={formCardBodyClassName}>
-        {caravanQuery.isLoading && !caravan ? (
-          <p className="text-sm text-ink-500">{t('common.loading')}</p>
-        ) : caravanQuery.isError && !caravan ? (
-          <p className="text-sm text-ink-700">{t('common.error')}</p>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-            <FormFactTile
-              icon={MapPin}
-              label={t('caravans.city')}
-              value={city || '—'}
-              empty={!city}
-              tone="teal"
-              compact
-            />
-            <FormFactTile
-              icon={UserRound}
-              label={t('caravans.manager')}
-              value={managerName || '—'}
-              empty={!managerName}
-              tone="mint"
-              compact
-            />
-            {managerPhone ? (
+      <FormCard
+        icon={Tent}
+        title={caravan?.name || t('dashboard.managerLatestCaravan')}
+        subtitle={t('dashboard.managerLatestCaravan')}
+        chips={<ReservationCodeBadge code={fileCode} size="sm" />}
+      >
+        <div className={formCardBodyClassName}>
+          {caravanQuery.isLoading && !caravan ? (
+            <p className="text-sm text-ink-500">{t('common.loading')}</p>
+          ) : caravanQuery.isError && !caravan ? (
+            <p className="text-sm text-ink-700">{t('common.error')}</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
               <FormFactTile
-                icon={Phone}
-                label={t('users.phone')}
-                copyValue={managerPhone}
+                icon={MapPin}
+                label={t('caravans.city')}
+                value={city || '—'}
+                empty={!city}
                 tone="teal"
                 compact
               />
-            ) : null}
-            <FormFactTile
-              icon={Users}
-              label={t('caravans.sectionCounts')}
-              value={t('caravans.peopleCount', { count: formatNumber(total, locale) })}
-              tone="ink"
-              compact
-            />
-            {caravan?.licenseNumber ? (
               <FormFactTile
-                icon={Hash}
-                label={t('caravans.licenseNumber')}
-                value={caravan.licenseNumber}
+                icon={UserRound}
+                label={t('caravans.manager')}
+                value={managerName || '—'}
+                empty={!managerName}
                 tone="mint"
                 compact
               />
-            ) : null}
-            {caravan?.officePhone ? (
+              {managerPhone ? (
+                <FormFactTile
+                  icon={Phone}
+                  label={t('users.phone')}
+                  copyValue={managerPhone}
+                  tone="teal"
+                  compact
+                />
+              ) : null}
               <FormFactTile
-                icon={Phone}
-                label={t('caravans.officePhone')}
-                copyValue={caravan.officePhone}
+                icon={Users}
+                label={t('caravans.sectionCounts')}
+                value={t('caravans.peopleCount', { count: formatNumber(total, locale) })}
                 tone="ink"
                 compact
               />
-            ) : null}
-          </div>
-        )}
-
-        {stays.length ? (
-          <div className="space-y-3">
-            <FormSectionTitle icon={Building2} className="mb-0">
-              {t('dashboard.accommodationAssigned')}
-            </FormSectionTitle>
-            <div className={`grid gap-3 ${stays.length > 1 ? 'lg:grid-cols-2' : ''}`}>
-              {stays.map((stay) => (
-                <StayBlock key={stay.place.id} place={stay.place} genders={stay.genders} />
-              ))}
+              {caravan?.licenseNumber ? (
+                <FormFactTile
+                  icon={Hash}
+                  label={t('caravans.licenseNumber')}
+                  value={caravan.licenseNumber}
+                  tone="mint"
+                  compact
+                />
+              ) : null}
+              {caravan?.officePhone ? (
+                <FormFactTile
+                  icon={Phone}
+                  label={t('caravans.officePhone')}
+                  copyValue={caravan.officePhone}
+                  tone="ink"
+                  compact
+                />
+              ) : null}
             </div>
-          </div>
-        ) : null}
-      </div>
-    </FormCard>
+          )}
+
+          {stays.length ? (
+            <div className="space-y-3">
+              <FormSectionTitle icon={Building2} className="mb-0">
+                {t('dashboard.accommodationAssigned')}
+              </FormSectionTitle>
+              <div className={`grid gap-3 ${stays.length > 1 ? 'lg:grid-cols-2' : ''}`}>
+                {stays.map((stay) => (
+                  <StayBlock key={stay.place.id} place={stay.place} genders={stay.genders} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </FormCard>
+    </div>
   )
 }

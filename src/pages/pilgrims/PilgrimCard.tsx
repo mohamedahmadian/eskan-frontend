@@ -57,10 +57,9 @@ export const PilgrimCard = forwardRef<
     variant?: 'pilgrim' | 'manager'
     /** When provided, the card skips fetching the public profile. */
     currentVisit?: PublicProfileCurrentVisit | null
-    hideEmptyPhoto?: boolean
   }
 >(function PilgrimCard(
-  { pilgrim, model = 'pocket', variant = 'pilgrim', currentVisit, hideEmptyPhoto = false },
+  { pilgrim, model = 'pocket', variant = 'pilgrim', currentVisit },
   ref,
 ) {
   const { t, i18n } = useTranslation()
@@ -71,7 +70,6 @@ export const PilgrimCard = forwardRef<
     .map((item) => geoName(item!))
     .join(' · ')
   const photoUrl = pilgrim.photoId ? getImageUrl(pilgrim.photoId) : null
-  const showPhoto = Boolean(photoUrl) || !hideEmptyPhoto
   const genderLabel = pilgrim.gender ? t(`userGenders.${pilgrim.gender}`) : null
   const profile = useQuery({
     queryKey: ['public', 'profile', pilgrim.id, 'card'],
@@ -125,23 +123,17 @@ export const PilgrimCard = forwardRef<
             className={`pilgrim-id-card__identity${
               showPocketIdentity ? ' pilgrim-id-card__identity--stacked' : ''
             }${pocketTrip ? ' pilgrim-id-card__identity--compact' : ''}${
-              showPhoto ? '' : ' pilgrim-id-card__identity--no-photo'
+              photoUrl ? '' : ' pilgrim-id-card__identity--no-photo'
             }`}
           >
-            {showPhoto ? (
+            {photoUrl ? (
               <div className="pilgrim-id-card__photo-wrap">
-                {photoUrl ? (
-                  <img
-                    src={photoUrl}
-                    alt=""
-                    className="pilgrim-id-card__photo"
-                    crossOrigin="anonymous"
-                  />
-                ) : (
-                  <div className="pilgrim-id-card__photo-fallback" aria-hidden>
-                    {initials(pilgrim.firstName, pilgrim.lastName)}
-                  </div>
-                )}
+                <img
+                  src={photoUrl}
+                  alt=""
+                  className="pilgrim-id-card__photo"
+                  crossOrigin="anonymous"
+                />
               </div>
             ) : null}
             <div className="pilgrim-id-card__name-block">
@@ -519,10 +511,4 @@ function CardFact({
       </div>
     </div>
   )
-}
-
-function initials(firstName: string, lastName: string) {
-  const a = firstName.trim().charAt(0)
-  const b = lastName.trim().charAt(0)
-  return `${a}${b}` || 'ز'
 }

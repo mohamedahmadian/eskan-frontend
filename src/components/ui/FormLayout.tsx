@@ -202,7 +202,7 @@ export function FormMetaChip({
 export function FormSectionTitle({
   icon: Icon,
   children,
-  className = 'mb-2.5',
+  className = 'mb-3',
 }: {
   icon: LucideIcon
   children: ReactNode
@@ -210,10 +210,10 @@ export function FormSectionTitle({
 }) {
   return (
     <h3
-      className={`inline-flex items-center gap-2 text-xs font-semibold text-ink-600 ${className}`}
+      className={`inline-flex items-center gap-2.5 rounded-xl border-s-4 border-teal-500 bg-gradient-to-e from-teal-50 to-white py-1.5 ps-2 pe-4 text-base font-bold leading-6 text-teal-900 ${className}`}
     >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
-        <Icon className="size-3.5" aria-hidden />
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-teal-500 bg-[linear-gradient(135deg,var(--color-teal-500),var(--color-mint-500))] text-white shadow-[0_6px_14px_rgba(46,189,182,0.3)]">
+        <Icon className="size-4" aria-hidden />
       </span>
       {children}
     </h3>

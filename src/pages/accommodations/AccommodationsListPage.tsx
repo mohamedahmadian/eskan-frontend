@@ -36,6 +36,7 @@ import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber, persianYearOptions } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
+import { canManageAccommodations, isAdmin } from '../../lib/roles'
 import {
   accommodationTypes,
   genderTypes,
@@ -55,7 +56,9 @@ export function AccommodationsListPage() {
   const { user } = useAuth()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const name = useGeoName()
-  const canManage = hasMenuAccess('/accommodations', user?.modules ?? [])
+  const hasDirectoryMenu = hasMenuAccess('/accommodations', user?.modules ?? [])
+  const canEdit = canManageAccommodations(user)
+  const canManage = hasDirectoryMenu && isAdmin(user)
   const { q, page, term, setTerm, setPage, setParams, searchParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
@@ -437,9 +440,15 @@ export function AccommodationsListPage() {
                 <td className="px-4 py-3">
                   <EntityRowActions
                     viewTo={`/accommodations/${item.id}`}
-                    editTo={canManage ? `/accommodations/${item.id}/edit` : undefined}
+                    editTo={
+                      canEdit
+                        ? isAdmin(user)
+                          ? `/accommodations/${item.id}/edit`
+                          : `/my-accommodations/${item.id}/edit`
+                        : undefined
+                    }
                     onDelete={
-                      canManage
+                      canEdit
                         ? () =>
                             confirmDelete({
                               message: t('accommodations.confirmDelete'),

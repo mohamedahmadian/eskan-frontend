@@ -7,6 +7,7 @@ import {
   Phone,
   Sparkles,
   Tags,
+  Trash2,
   UserRound,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -14,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import {
+  Button,
   DetailActions,
   EntityNameSubtitle,
   LoadingState,
@@ -35,6 +37,7 @@ import {
   formatHonoraryWeekDays,
   honoraryServiceLabel,
 } from './HonoraryServantForm'
+import { useWithdrawHonoraryService } from './useWithdrawHonoraryService'
 
 export function HonoraryServantDetailPage() {
   const { t, i18n } = useTranslation()
@@ -48,6 +51,7 @@ export function HonoraryServantDetailPage() {
     location.pathname.startsWith('/honorary-history') ||
     location.pathname.startsWith('/honorary-apply')
   const { confirmDelete } = useConfirmDelete()
+  const { withdraw } = useWithdrawHonoraryService()
   const query = useQuery({
     queryKey: ['honorary-servant', id],
     enabled: Boolean(id),
@@ -158,7 +162,18 @@ export function HonoraryServantDetailPage() {
             />
           </div>
 
-          {admin ? (
+          {selfView && item.user.id === user?.id ? (
+            <div className="mt-6">
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => withdraw(item.id, () => navigate('/honorary-history'))}
+              >
+                <Trash2 className="size-4" aria-hidden />
+                {t('honoraryServants.withdraw')}
+              </Button>
+            </div>
+          ) : admin ? (
           <DetailActions
             editTo={`/honorary-servants/${item.id}/edit`}
             editLabel={t('common.edit')}

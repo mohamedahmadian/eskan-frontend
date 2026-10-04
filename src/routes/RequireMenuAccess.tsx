@@ -6,6 +6,7 @@ import {
   canAccessMyGroups,
   canAccessMyReservations,
   isAdmin,
+  isHonoraryServant,
   isPilgrim,
 } from '../lib/roles'
 
@@ -52,7 +53,8 @@ export function RequireMenuAccess({
     user &&
       (hasMenuAccess(path, user.modules) ||
         (allowModule ? hasModuleAccess(allowModule, user.modules) : false) ||
-        (path === '/participations/campaigns' && isPilgrim(user))),
+        (path === '/participations/campaigns' && isPilgrim(user)) ||
+        (path === '/my-reservations' && isHonoraryServant(user))),
   )
 
   if (!user || !allowed) {

@@ -13,6 +13,12 @@ import { Button, cardClassName, cancelPendingFormEnter } from '../ui/Form'
 import { QuickToolsContext } from './quick-tools-context'
 
 const DOUBLE_ENTER_MS = 500
+const TRIPLE_KEY_MS = 500
+const TRIPLE_KEY_COUNT = 3
+
+function isReservationsShortcutKey(event: KeyboardEvent) {
+  return event.code === 'KeyP' || event.key === 'p' || event.key === 'P' || event.key === 'ح'
+}
 
 function isReceptionPath(pathname: string) {
   return pathname === '/reception' || pathname.startsWith('/reception/')
@@ -48,13 +54,22 @@ function getQuickToolsFlags(pathname: string, user: QuickToolsUser) {
       hasMenuAccess('/my-accommodations', list) ||
       hasModuleAccess('accommodation', list))
   const showLocation = canLocation && (pilgrim || !isLocationPath(pathname))
+  const staffReservationsPath = pilgrimHome
+    ? null
+    : (['/reservations', '/translator-reservations', '/my-reservations'].find((path) =>
+        hasMenuAccess(path, list),
+      ) ?? null)
+  const reservationsPath = pilgrimHome ? '/my-reservations' : staffReservationsPath
+  const showReservations = staffReservationsPath !== null
   return {
     pilgrim,
     canReception,
     canFileSearch: showFileSearch,
+    reservationsPath,
     showTasharof,
     showDashboard,
     showMyReservations,
+    showReservations,
     showSearch,
     showFileSearch,
     showAccommodationSearch,
@@ -63,6 +78,7 @@ function getQuickToolsFlags(pathname: string, user: QuickToolsUser) {
       showTasharof ||
       showDashboard ||
       showMyReservations ||
+      showReservations ||
       showSearch ||
       showFileSearch ||
       showAccommodationSearch ||
@@ -172,9 +188,11 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
   const {
     canReception,
     canFileSearch,
+    reservationsPath,
     showTasharof,
     showDashboard,
     showMyReservations,
+    showReservations,
     showSearch,
     showFileSearch,
     showAccommodationSearch,
@@ -250,6 +268,53 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
     setMenuOpen(false)
     navigate('/my-reservations')
   }, [navigate])
+
+  const openReservations = useCallback(() => {
+    if (!reservationsPath) return
+    cancelPendingFormEnter()
+    setMenuOpen(false)
+    navigate(reservationsPath)
+  }, [navigate, reservationsPath])
+
+  useEffect(() => {
+    if (!reservationsPath) return
+    let count = 0
+    let lastAt = 0
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.repeat || event.isComposing) return
+      if (
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        !isReservationsShortcutKey(event)
+      ) {
+        count = 0
+        return
+      }
+      const target = event.target as HTMLElement | null
+      if (
+        target?.closest(
+          'input, textarea, select, [contenteditable="true"], [role="combobox"], [data-nested-dialog]',
+        )
+      ) {
+        count = 0
+        return
+      }
+
+      const now = Date.now()
+      count = now - lastAt < TRIPLE_KEY_MS ? count + 1 : 1
+      lastAt = now
+      if (count < TRIPLE_KEY_COUNT) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      count = 0
+      lastAt = 0
+      openReservations()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [openReservations, reservationsPath])
 
   useEffect(() => {
     setMenuOpen(false)
@@ -336,6 +401,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
           showTasharof={showTasharof}
           showDashboard={showDashboard}
           showMyReservations={showMyReservations}
+          showReservations={showReservations}
           showSearch={showSearch}
           showFileSearch={showFileSearch}
           showAccommodationSearch={showAccommodationSearch}
@@ -345,6 +411,7 @@ export function QuickToolsProvider({ children }: { children: ReactNode }) {
           onOpenTasharof={openTasharof}
           onOpenDashboard={openDashboard}
           onOpenMyReservations={openMyReservations}
+          onOpenReservations={openReservations}
           onOpenSearch={openSearch}
           onOpenFileSearch={openFileSearch}
           onOpenAccommodationSearch={openAccommodationSearch}
@@ -371,6 +438,7 @@ function QuickToolsFab({
   showTasharof,
   showDashboard,
   showMyReservations,
+  showReservations,
   showSearch,
   showFileSearch,
   showAccommodationSearch,
@@ -380,6 +448,7 @@ function QuickToolsFab({
   onOpenTasharof,
   onOpenDashboard,
   onOpenMyReservations,
+  onOpenReservations,
   onOpenSearch,
   onOpenFileSearch,
   onOpenAccommodationSearch,
@@ -391,6 +460,7 @@ function QuickToolsFab({
   showTasharof: boolean
   showDashboard: boolean
   showMyReservations: boolean
+  showReservations: boolean
   showSearch: boolean
   showFileSearch: boolean
   showAccommodationSearch: boolean
@@ -400,6 +470,7 @@ function QuickToolsFab({
   onOpenTasharof: () => void
   onOpenDashboard: () => void
   onOpenMyReservations: () => void
+  onOpenReservations: () => void
   onOpenSearch: () => void
   onOpenFileSearch: () => void
   onOpenAccommodationSearch: () => void
@@ -574,6 +645,20 @@ function QuickToolsFab({
               <span className="min-w-0">
                 <span className="block font-medium">{t('quickTools.myReservations')}</span>
                 <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.myReservationsHint')}</span>
+              </span>
+            </button>
+          ) : null}
+          {showReservations ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-start text-sm text-ink-800 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-300"
+              onClick={onOpenReservations}
+            >
+              <ClipboardList className="size-4 shrink-0 text-teal-600" aria-hidden />
+              <span className="min-w-0">
+                <span className="block font-medium">{t('quickTools.reservations')}</span>
+                <span className="mt-0.5 block text-xs text-ink-400">{t('quickTools.reservationsHint')}</span>
               </span>
             </button>
           ) : null}

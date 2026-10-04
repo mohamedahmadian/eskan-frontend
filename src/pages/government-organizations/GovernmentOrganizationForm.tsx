@@ -1,14 +1,17 @@
-import { AlignLeft, Building, MapPin, Phone, Smartphone, UserRound } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { type FormEvent, useMemo, useState } from 'react'
+import { AlignLeft, Building, MapPin, Phone, Smartphone, UserRound, UserRoundPlus } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { type FormEvent, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
+import { AppForm, Button, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { localizeDigits } from '../../lib/datetime'
 import type { GovernmentOrganization, ManagedUser } from '../../types/app'
+import { OrganizationOfficerModal } from './OrganizationOfficerModal'
+
+const officersQueryKey = ['users', 'lookup', 'GOVERNMENT_ORG_OFFICER'] as const
 
 export type GovernmentOrganizationPayload = {
   name: string
@@ -43,8 +46,12 @@ export function GovernmentOrganizationForm({
     description: initial?.description ?? '',
   })
 
+  const queryClient = useQueryClient()
+  const [officerModalOpen, setOfficerModalOpen] = useState(false)
+  const closeOfficerModal = useCallback(() => setOfficerModalOpen(false), [])
+
   const officers = useQuery({
-    queryKey: ['users', 'lookup', 'GOVERNMENT_ORG_OFFICER'],
+    queryKey: officersQueryKey,
     queryFn: async () => {
       const { data } = await api.get<ManagedUser[]>('/users', {
         params: { roleCode: 'GOVERNMENT_ORG_OFFICER' },
@@ -71,6 +78,15 @@ export function GovernmentOrganizationForm({
 
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({ ...current, [key]: value }))
+  }
+
+  function onOfficerCreated(user: ManagedUser) {
+    queryClient.setQueryData<ManagedUser[]>(officersQueryKey, (current) =>
+      current ? [user, ...current.filter((item) => item.id !== user.id)] : [user],
+    )
+    void queryClient.invalidateQueries({ queryKey: ['users'] })
+    set('contactUserId', user.id)
+    setOfficerModalOpen(false)
   }
 
   async function submit(event: FormEvent) {
@@ -131,21 +147,36 @@ export function GovernmentOrganizationForm({
         label={t('governmentOrganizations.contactPerson')}
         htmlFor="contactUserId"
       >
-        <SearchSelect
-          id="contactUserId"
-          value={values.contactUserId}
-          placeholder={t('governmentOrganizations.selectContactPerson')}
-          onChange={(next) => set('contactUserId', next)}
-          options={[
-            { value: '', label: t('governmentOrganizations.selectContactPerson') },
-            ...officerOptions.map((user) => ({
-              value: user.id,
-              label: user.phone
-                ? `${user.fullName} — ${localizeDigits(user.phone, locale)}`
-                : user.fullName,
-            })),
-          ]}
-        />
+        <div className="flex items-stretch gap-2">
+          <div className="min-w-0 flex-1">
+            <SearchSelect
+              id="contactUserId"
+              value={values.contactUserId}
+              placeholder={t('governmentOrganizations.selectContactPerson')}
+              onChange={(next) => set('contactUserId', next)}
+              options={[
+                { value: '', label: t('governmentOrganizations.selectContactPerson') },
+                ...officerOptions.map((user) => ({
+                  value: user.id,
+                  label: user.phone
+                    ? `${user.fullName} — ${localizeDigits(user.phone, locale)}`
+                    : user.fullName,
+                })),
+              ]}
+            />
+          </div>
+          {initial?.id ? (
+            <Button
+              type="button"
+              variant="soft"
+              className="shrink-0 whitespace-nowrap"
+              onClick={() => setOfficerModalOpen(true)}
+            >
+              <UserRoundPlus className="size-4" aria-hidden />
+              {t('governmentOrganizations.addOfficer')}
+            </Button>
+          ) : null}
+        </div>
         <p className="text-xs text-ink-500">{t('governmentOrganizations.contactPersonHint')}</p>
       </FormField>
       <FormField icon={Smartphone} label={t('governmentOrganizations.mobile')} htmlFor="mobile">
@@ -172,6 +203,13 @@ export function GovernmentOrganizationForm({
         onCancel={() => history.back()}
       />
     </AppForm>
+    {officerModalOpen && initial?.id ? (
+      <OrganizationOfficerModal
+        organizationId={initial.id}
+        onClose={closeOfficerModal}
+        onCreated={onOfficerCreated}
+      />
+    ) : null}
     </FormCard>
   )
 }

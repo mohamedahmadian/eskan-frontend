@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -80,6 +80,17 @@ export function ReservationCaravanLicenseStep({
   const nationalId = manager?.nationalId
   const licenses = options.data?.items ?? []
   const confirmed = value.source === 'CONFIRMED'
+  const preferredLicense =
+    licenses.find((item) => item.status === 'APPROVED') ?? licenses[0] ?? null
+  const autoPickedKeyRef = useRef('')
+
+  useEffect(() => {
+    const key = `${caravanId}:${year}`
+    if (autoPickedKeyRef.current === key || !options.isSuccess) return
+    autoPickedKeyRef.current = key
+    if (value.source || !preferredLicense) return
+    onChange({ source: 'ISSUED_LICENSE', issuedLicenseId: preferredLicense.id, permitImageId: '' })
+  }, [caravanId, year, options.isSuccess, preferredLicense, value.source, onChange])
 
   function selectIssued(id: string) {
     onChange({ source: 'ISSUED_LICENSE', issuedLicenseId: id, permitImageId: '' })
@@ -162,7 +173,7 @@ export function ReservationCaravanLicenseStep({
             title={t('reservations.permitSourceIssued')}
             hint={t('reservations.permitSourceIssuedHint')}
             onClick={() => {
-              if (licenses[0]) selectIssued(licenses[0].id)
+              if (preferredLicense) selectIssued(preferredLicense.id)
               else onChange({ source: 'ISSUED_LICENSE', issuedLicenseId: '', permitImageId: '' })
             }}
           />
@@ -307,7 +318,7 @@ function IssuedLicenseCard({
           </p>
           {item.status === 'ISSUED' ? (
             <p className="mt-1 text-[11px] leading-5 text-amber-800">
-              {t('reservations.permitAwaitingHqApproval')}
+              {t('reservations.permitIssuedReviewHint')}
             </p>
           ) : null}
           {item.description ? (
@@ -326,7 +337,7 @@ function IssuedLicenseCard({
   )
 }
 
-function IssuedLicenseViewModal({
+export function IssuedLicenseViewModal({
   item,
   onClose,
 }: {

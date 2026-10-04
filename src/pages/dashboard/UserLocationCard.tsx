@@ -124,8 +124,8 @@ export function UserLocationCard() {
             ) : null}
           </>
         )}
-        <Link to="/my-location" className="block">
-          <Button type="button" className="w-full justify-center">
+        <Link to="/my-location" className="inline-flex">
+          <Button type="button">
             <MapPinned className="size-4" aria-hidden />
             {t('location.registerNew')}
           </Button>

@@ -6,10 +6,12 @@ import {
   FileImage,
   IdCard,
   MapPin,
+  Mars,
   Phone,
   Search,
   Tent,
   UserRound,
+  Venus,
 } from 'lucide-react'
 import { DateObject } from 'react-multi-date-picker'
 import gregorian from 'react-date-object/calendars/gregorian'
@@ -37,7 +39,7 @@ import { FileDropField } from '../../components/ui/FileDropField'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
-import { localizeDigits, toIsoDateOnly } from '../../lib/datetime'
+import { formatNumber, localizeDigits, toIsoDateOnly } from '../../lib/datetime'
 import { optimizeImageFile } from '../../lib/optimize-image'
 import { useGeoName } from '../../lib/geo'
 import { isValidIranianNationalId, normalizeNationalId } from '../../lib/national-id'
@@ -185,32 +187,43 @@ export function IssueLicensePage() {
               </>
             }
           >
-            <div className="grid gap-2 p-5 sm:grid-cols-2 sm:gap-3 sm:p-6">
-              <FormFactTile
-                icon={UserRound}
-                label={t('users.fullName')}
-                value={lookup.manager.fullName}
-                tone="teal"
-              />
-              <FormFactTile
-                icon={IdCard}
-                label={t('users.nationalId')}
-                copyValue={lookup.manager.nationalId}
-                tone="mint"
-              />
-              <FormFactTile
-                icon={Phone}
-                label={t('users.phone')}
-                copyValue={lookup.manager.phone}
-                tone="ink"
-              />
-              <FormFactTile
-                icon={MapPin}
-                label={t('geo.city')}
-                value={lookup.manager.city ? nameOf(lookup.manager.city) : empty}
-                empty={!lookup.manager.city}
-                tone="teal"
-              />
+            <div className="space-y-3 p-5 sm:p-6">
+              <div className="flex items-center gap-4 rounded-2xl border border-teal-100 bg-gradient-to-e from-teal-50 to-white p-3">
+                <ManagerPhoto
+                  photoId={lookup.manager.photoId}
+                  firstName={lookup.manager.firstName}
+                  lastName={lookup.manager.lastName}
+                />
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-[11px] text-ink-500">
+                    <MapPin className="size-3.5 text-teal-600" aria-hidden />
+                    {t('geo.city')}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-ink-900">
+                    {lookup.manager.city ? nameOf(lookup.manager.city) : empty}
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                <FormFactTile
+                  icon={UserRound}
+                  label={t('users.fullName')}
+                  value={lookup.manager.fullName}
+                  tone="teal"
+                />
+                <FormFactTile
+                  icon={IdCard}
+                  label={t('users.nationalId')}
+                  copyValue={lookup.manager.nationalId}
+                  tone="mint"
+                />
+                <FormFactTile
+                  icon={Phone}
+                  label={t('users.phone')}
+                  copyValue={lookup.manager.phone}
+                  tone="ink"
+                />
+              </div>
             </div>
           </FormCard>
 
@@ -300,6 +313,32 @@ export function IssueLicensePage() {
   )
 }
 
+function ManagerPhoto({
+  photoId,
+  firstName,
+  lastName,
+}: {
+  photoId?: string | null
+  firstName: string
+  lastName: string
+}) {
+  if (photoId) {
+    return (
+      <img
+        src={getImageUrl(photoId)}
+        alt=""
+        className="size-20 shrink-0 rounded-2xl object-cover shadow-[0_10px_22px_rgba(46,189,182,0.28)] ring-2 ring-white"
+      />
+    )
+  }
+  const initials = `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}` || '؟'
+  return (
+    <span className="flex size-20 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-lg font-bold text-white shadow-[0_10px_22px_rgba(46,189,182,0.28)]">
+      {initials}
+    </span>
+  )
+}
+
 function CaravanSummary({ caravan }: { caravan: IssuedLicenseCaravan }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -315,6 +354,18 @@ function CaravanSummary({ caravan }: { caravan: IssuedLicenseCaravan }) {
       <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
         <FormFactTile icon={Tent} label={t('caravans.name')} value={caravan.name} tone="teal" />
         <FormFactTile icon={MapPin} label={t('geo.city')} value={cityLabel} tone="mint" />
+        <FormFactTile
+          icon={Mars}
+          label={t('licenses.maleCapacity')}
+          value={formatNumber(caravan.maleCount, locale)}
+          tone="teal"
+        />
+        <FormFactTile
+          icon={Venus}
+          label={t('licenses.femaleCapacity')}
+          value={formatNumber(caravan.femaleCount, locale)}
+          tone="mint"
+        />
         <FormFactTile
           icon={Phone}
           label={t('caravans.officePhone')}

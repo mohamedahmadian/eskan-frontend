@@ -1,14 +1,19 @@
 import type { ReservationType } from '../../types/app'
 import type { TravelValues } from './ReservationTravelFields'
 
-export const travelSubSteps = ['count', 'party', 'dates', 'services', 'optional'] as const
+export const travelSubSteps = ['party', 'count', 'dates', 'services', 'license', 'optional'] as const
 export type TravelSubStep = (typeof travelSubSteps)[number]
 
-export function travelSubStepsForType(type: ReservationType): TravelSubStep[] {
+export function travelSubStepsForType(
+  type: ReservationType,
+  options: { license?: boolean } = {},
+): TravelSubStep[] {
   if (type === 'INDIVIDUAL') {
     return ['dates', 'services']
   }
-  return ['count', 'party', 'dates', 'services']
+  const steps: TravelSubStep[] = ['party', 'count', 'dates', 'services']
+  if (type === 'CARAVAN' && options.license) steps.push('license')
+  return steps
 }
 
 export function travelSubStepLabelKey(step: TravelSubStep, type: ReservationType): string {
@@ -22,8 +27,9 @@ export function travelSubStepLabelKey(step: TravelSubStep, type: ReservationType
 export function inferTravelSubMaxReached(
   type: ReservationType,
   values: TravelValues,
+  options: { license?: boolean } = {},
 ): TravelSubStep {
-  const steps = travelSubStepsForType(type)
+  const steps = travelSubStepsForType(type, options)
   let furthest: TravelSubStep = steps[0]
 
   for (const step of steps) {
@@ -53,7 +59,7 @@ export function inferTravelSubMaxReached(
       furthest = step
       continue
     }
-    // services are always reachable once prior steps are filled
+    // services and license are reachable once prior steps are filled
     furthest = step
   }
 

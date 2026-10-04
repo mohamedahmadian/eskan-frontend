@@ -152,6 +152,7 @@ import { UsersListPage } from "./pages/users/UsersListPage";
 import { AccommodationCreatePage } from "./pages/accommodations/AccommodationCreatePage";
 import { AccommodationDetailPage } from "./pages/accommodations/AccommodationDetailPage";
 import { AccommodationEditPage } from "./pages/accommodations/AccommodationEditPage";
+import { AccommodationAssignmentPage } from "./pages/accommodations/AccommodationAssignmentPage";
 import { AccommodationYearManagementPage } from "./pages/accommodations/AccommodationYearManagementPage";
 import { AccommodationReportPage } from "./pages/accommodations/AccommodationReportPage";
 import { PlacementsListPage } from "./pages/placements/PlacementsListPage";
@@ -161,6 +162,7 @@ import { PlacementSystemPage } from "./pages/placements/PlacementSystemPage";
 import { AccommodationsListPage } from "./pages/accommodations/AccommodationsListPage";
 import { AccommodationIntroduceWizardPage } from "./pages/accommodations/AccommodationIntroduceWizardPage";
 import { MyAccommodationCreatePage } from "./pages/accommodations/MyAccommodationCreatePage";
+import { IntroducedAccommodationsListPage } from "./pages/accommodations/IntroducedAccommodationsListPage";
 import { MyAccommodationsListPage } from "./pages/accommodations/MyAccommodationsListPage";
 import { AccommodationManagerCreatePage } from "./pages/accommodation-managers/AccommodationManagerCreatePage";
 import { AccommodationManagerDetailPage } from "./pages/accommodation-managers/AccommodationManagerDetailPage";
@@ -1116,6 +1118,24 @@ export default function App() {
                     element={<AccommodationIntroduceWizardPage />}
                   />
                 </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/introduced-accommodations" />
+                  }
+                >
+                  <Route
+                    path="/introduced-accommodations"
+                    element={<IntroducedAccommodationsListPage />}
+                  />
+                  <Route
+                    path="/introduced-accommodations/:id"
+                    element={<AccommodationDetailPage />}
+                  />
+                  <Route
+                    path="/introduced-accommodations/:id/edit"
+                    element={<AccommodationEditPage />}
+                  />
+                </Route>
                 <Route element={<RequireMenuAccess path="/my-accommodations" />}>
                   <Route
                     path="/my-accommodations"
@@ -1174,6 +1194,16 @@ export default function App() {
                   <Route
                     path="/placements/:reservationId"
                     element={<PlacementDetailPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/accommodation-assignments" />
+                  }
+                >
+                  <Route
+                    path="/accommodation-assignments"
+                    element={<AccommodationAssignmentPage />}
                   />
                 </Route>
                 <Route

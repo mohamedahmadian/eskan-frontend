@@ -28,7 +28,10 @@ import { useTranslation } from 'react-i18next'
 import { DateEquivalents, DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { cardClassName } from '../../components/ui/Form'
-import { FormCardHeaderDecor } from '../../components/ui/FormLayout'
+import {
+  FormCardHeaderDecor,
+  FormSectionTitle as SectionTitle,
+} from '../../components/ui/FormLayout'
 import { elapsedDurationParts, formatGroupedNumber, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Reservation } from '../../types/app'
@@ -662,25 +665,6 @@ function CompleteViewTabs({
         })}
       </div>
     </div>
-  )
-}
-
-function SectionTitle({
-  icon: Icon,
-  children,
-  className = 'mb-2.5',
-}: {
-  icon: LucideIcon
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <h3 className={`inline-flex items-center gap-2 text-xs font-semibold text-ink-600 ${className}`}>
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
-        <Icon className="size-3.5" aria-hidden />
-      </span>
-      {children}
-    </h3>
   )
 }
 

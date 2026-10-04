@@ -51,7 +51,7 @@ export function reservationRangesOverlap(
 }
 
 export function isActiveForDateOverlap(row: Pick<ReservationDateSpan, 'status'>) {
-  return row.status !== 'CANCELLED'
+  return row.status !== 'CANCELLED' && row.status !== 'REJECTED'
 }
 
 export function findOverlappingReservation(

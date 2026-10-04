@@ -29,7 +29,7 @@ import {
   UserRound,
   type LucideIcon,
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -56,7 +56,7 @@ import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { FormCard } from '../../components/ui/FormLayout'
 import { collaborationYears, currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
 import { publicProfilePath } from '../../lib/public-profile'
-import { formatRoles, isAdmin } from '../../lib/roles'
+import { formatRoles, isAccommodationManager, isAdmin, isCaravanManager } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import type { CaravanManagerStayPlacement, ManagedUser } from '../../types/app'
 import { HeadquartersAreasCard } from '../headquarters-representatives/HeadquartersAreasCard'
@@ -64,6 +64,8 @@ import { showUserActivityStartYear, type RoleUserScope } from './user-scopes'
 import { RoleUserProfileHeader } from './RoleUserProfileHeader'
 import { SetUserPasswordModal } from './SetUserPasswordModal'
 import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
+import { QuickRoleToggles } from '../../components/users/QuickRoleToggles'
+import { PilgrimCardModal } from '../dashboard/PilgrimCardModal'
 
 const baseTabs = ['personal', 'account', 'location', 'documents', 'social', 'other'] as const
 type UserDetailTab = (typeof baseTabs)[number] | 'accommodations' | 'caravans' | 'areas' | 'placement'
@@ -103,13 +105,15 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
   const uiLocale = i18n.language.split('-')[0] ?? 'fa'
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user: actor } = useAuth()
+  const { user: actor, refresh } = useAuth()
+  const queryClient = useQueryClient()
   const geoName = useGeoName()
   const { confirmDelete } = useConfirmDelete()
   const keys = scope.i18nPrefix
   const [tab, setTab] = useState<UserDetailTab>('personal')
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   const [passwordSaving, setPasswordSaving] = useState(false)
+  const [managerCardOpen, setManagerCardOpen] = useState(false)
   const query = useQuery({
     queryKey: [scope.queryKey, id],
     enabled: Boolean(id),
@@ -151,6 +155,7 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
   const user = query.data
 
   const isSelf = actor?.id === user.id
+  const isManagerUser = isCaravanManager(user) || isAccommodationManager(user)
   const hideRoles = Boolean(scope.hideRoles) && !isAdmin(actor)
   const locale = user.locale as AppLanguage
   const empty = '—'
@@ -194,6 +199,9 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
           }}
           onSubmit={submitUserPassword}
         />
+      ) : null}
+      {managerCardOpen ? (
+        <PilgrimCardModal variant="manager" user={user} onClose={() => setManagerCardOpen(false)} />
       ) : null}
       <PageHeader
         icon={UserRound}
@@ -420,8 +428,21 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
           ) : null}
 
           {tab === 'account' ? (
-            <section>
+            <section className="space-y-4">
               <SectionTitle icon={KeyRound}>{t('users.tabs.account')}</SectionTitle>
+              {isAdmin(actor) ? (
+                <QuickRoleToggles
+                  userId={user.id}
+                  roleCodes={user.roles.map((role) => role.code)}
+                  lockedCodes={scope.lockedRoleCodes}
+                  onChanged={(nextRoles) => {
+                    queryClient.setQueryData([scope.queryKey, user.id], (current: ManagedUser | undefined) =>
+                      current ? { ...current, roles: nextRoles } : current,
+                    )
+                    if (actor?.id === user.id) void refresh()
+                  }}
+                />
+              ) : null}
               <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
                 <FactTile
                   icon={UserRound}
@@ -746,12 +767,19 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                 </Link>
               ) : (
                 <>
-                  <Link to={publicProfilePath(user.id)}>
-                    <Button type="button" variant="soft">
+                  {isManagerUser ? (
+                    <Button type="button" variant="soft" onClick={() => setManagerCardOpen(true)}>
                       <IdCard className="size-4" aria-hidden />
-                      {t('publicProfile.openPage')}
+                      {t('pilgrims.managerCardTitle')}
                     </Button>
-                  </Link>
+                  ) : (
+                    <Link to={publicProfilePath(user.id)}>
+                      <Button type="button" variant="soft">
+                        <IdCard className="size-4" aria-hidden />
+                        {t('publicProfile.openPage')}
+                      </Button>
+                    </Link>
+                  )}
                   <Link to={`${scope.listPath}/${user.id}/location`}>
                     <Button type="button" variant="soft">
                       <MapPinned className="size-4" aria-hidden />

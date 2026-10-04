@@ -1,15 +1,16 @@
-import { Building2, MapPin, Plus } from 'lucide-react'
+import { Building2, MapPin } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { Button, PageHeader, listShellClassName } from '../../components/ui/Form'
+import { PageHeader, listShellClassName } from '../../components/ui/Form'
 import {
+  ActionsTh,
   PaginationBar,
   SearchBar,
   TableCard,
   EntityRowActions,
   SortableTh,
+  actionsColClassName,
 } from '../../components/ui/ListControls'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
@@ -18,18 +19,17 @@ import { canManageAccommodations } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import type { Accommodation, Paginated } from '../../types/app'
 
-export function MyAccommodationsListPage() {
+export function IntroducedAccommodationsListPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const canEdit = canManageAccommodations(user)
   const nameOf = useGeoName()
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } =
     useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const query = useQuery({
-    queryKey: ['accommodations', 'mine', q, page, sortBy, sortDir],
+    queryKey: ['accommodations', 'introduced', q, page, sortBy, sortDir],
     queryFn: async () => {
-      const { data } = await api.get<Paginated<Accommodation>>('/accommodations/mine', {
+      const { data } = await api.get<Paginated<Accommodation>>('/accommodations/introduced', {
         params: { q: q || undefined, page, ...sortParams },
       })
       return data
@@ -42,27 +42,19 @@ export function MyAccommodationsListPage() {
     <div className={listShellClassName}>
       <PageHeader
         icon={Building2}
-        title={t('menus.myAccommodations')}
-        subtitle={t('myAccommodations.subtitle')}
-        action={
-          <Link to="/my-accommodations/new">
-            <Button>
-              <Plus className="size-4" />
-              {t('accommodations.create')}
-            </Button>
-          </Link>
-        }
+        title={t('menus.introducedAccommodations')}
+        subtitle={t('introducedAccommodations.subtitle')}
       />
       <SearchBar
         term={term}
         onTermChange={setTerm}
         onSubmit={() => applySearch()}
         label={t('common.search')}
-        placeholder={t('myAccommodations.searchPlaceholder')}
+        placeholder={t('introducedAccommodations.searchPlaceholder')}
       />
       <TableCard
         loading={query.isLoading}
-        empty={q ? t('myAccommodations.noResults') : t('myAccommodations.empty')}
+        empty={q ? t('introducedAccommodations.noResults') : t('introducedAccommodations.empty')}
         hasRows={rows.length > 0}
       >
         <table className="w-full text-sm">
@@ -95,31 +87,36 @@ export function MyAccommodationsListPage() {
                 sortDir={sortDir}
                 onSort={onSort}
               />
-              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+              <ActionsTh />
             </tr>
           </thead>
           <tbody>
-            {rows.map((item) => (
-              <tr key={item.id} className="border-t border-line">
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center gap-2">
-                    <Building2 className="size-4 text-teal-600" aria-hidden />
-                    {item.name}
-                  </span>
-                </td>
-                <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
-                <td className="px-4 py-3">{item.city ? nameOf(item.city) : '—'}</td>
-                <td className="px-4 py-3">{t(`genderTypes.${item.genderType}`)}</td>
-                <td className="px-4 py-3">
-                  <EntityRowActions
-                    viewTo={`/my-accommodations/${item.id}`}
-                    editTo={
-                      canEdit ? `/my-accommodations/${item.id}/edit` : undefined
-                    }
-                  />
-                </td>
-              </tr>
-            ))}
+            {rows.map((item) => {
+              const manages =
+                canManageAccommodations(user) &&
+                item.managers.some((row) => row.userId === user?.id)
+              return (
+                <tr key={item.id} className="border-t border-line">
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-2">
+                      <Building2 className="size-4 text-teal-600" aria-hidden />
+                      {item.name}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
+                  <td className="px-4 py-3">{item.city ? nameOf(item.city) : '—'}</td>
+                  <td className="px-4 py-3">{t(`genderTypes.${item.genderType}`)}</td>
+                  <td className={actionsColClassName}>
+                    <EntityRowActions
+                      viewTo={`/introduced-accommodations/${item.id}`}
+                      editTo={
+                        manages ? `/introduced-accommodations/${item.id}/edit` : undefined
+                      }
+                    />
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </TableCard>

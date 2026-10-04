@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import { toLatinDigits } from '../../lib/datetime'
 import { fieldClassName } from './Form'
 
 export type SearchSelectOption = {
@@ -173,7 +174,12 @@ export function SearchSelect({
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase()
     if (!term) return options
-    return options.filter((option) => option.label.toLowerCase().includes(term))
+    const foldedTerm = toLatinDigits(term)
+    return options.filter((option) => {
+      const label = option.label.toLowerCase()
+      if (label.includes(term)) return true
+      return toLatinDigits(label).includes(foldedTerm)
+    })
   }, [options, query])
 
   const createQuery = query.trim()

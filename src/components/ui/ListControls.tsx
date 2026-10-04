@@ -303,6 +303,7 @@ export function EntityRowActions({
   extra,
   editTo,
   onDelete,
+  deleteLabel,
   canDelete = true,
 }: {
   viewTo: string
@@ -310,6 +311,7 @@ export function EntityRowActions({
   extra?: ReactNode
   editTo?: string
   onDelete?: () => void
+  deleteLabel?: string
   canDelete?: boolean
 }) {
   const { t } = useTranslation()
@@ -341,8 +343,8 @@ export function EntityRowActions({
           variant="ghost"
           icon
           className="text-red-600 hover:bg-red-50 hover:text-red-700"
-          aria-label={t('common.delete')}
-          title={t('common.delete')}
+          aria-label={deleteLabel ?? t('common.delete')}
+          title={deleteLabel ?? t('common.delete')}
           onClick={onDelete}
         >
           <Trash2 className="size-4" aria-hidden />

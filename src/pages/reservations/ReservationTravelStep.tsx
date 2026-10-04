@@ -19,6 +19,7 @@ import {
   fetchSubjectReservationSpans,
 } from './reservation-date-overlap'
 import { workingHeadcount, requestedHeadcount, pilgrimOriginCountryId, showSimBankRequests } from './reservation-steps'
+import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
 import { TravelSubStepBar } from './TravelSubStepBar'
 import {
   inferTravelSubMaxReached,
@@ -51,7 +52,7 @@ export function ReservationTravelStep({
     stayStartDate: reservation.stayStartDate ?? '',
     stayEndDate: reservation.stayEndDate ?? '',
     walkingStartDate: reservation.walkingStartDate ?? '',
-    arrivalPeriod: reservation.arrivalPeriod ?? '',
+    arrivalPeriod: reservation.arrivalPeriod ?? 'AFTER_NOON',
     maleCount: String(counts.male),
     femaleCount: String(counts.female),
     requestedMaleCount: String(requested.male),
@@ -84,10 +85,26 @@ export function ReservationTravelStep({
             city: reservation.group.city,
           }
         : null
-  const subSteps = useMemo(() => travelSubStepsForType(reservation.type), [reservation.type])
+  const showLicense = reservation.type === 'CARAVAN' && !showSimBankRequests(reservation)
+  const savedPermit: CaravanPermitDraft = {
+    source: reservation.permitSource ?? '',
+    issuedLicenseId: reservation.issuedLicenseId ?? '',
+    permitImageId: reservation.permitImageId ?? '',
+  }
+  const [permitDraft, setPermitDraft] = useState<CaravanPermitDraft>(savedPermit)
+  const permitEditable =
+    mode === 'admin' || (!locked && reservation.permitStatus !== 'APPROVED')
+  const permitChanged =
+    permitDraft.source !== savedPermit.source ||
+    permitDraft.issuedLicenseId !== savedPermit.issuedLicenseId ||
+    permitDraft.permitImageId !== savedPermit.permitImageId
+  const subSteps = useMemo(
+    () => travelSubStepsForType(reservation.type, { license: showLicense }),
+    [reservation.type, showLicense],
+  )
   const inferredMax = useMemo(
-    () => inferTravelSubMaxReached(reservation.type, values),
-    [reservation.type, values],
+    () => inferTravelSubMaxReached(reservation.type, values, { license: showLicense }),
+    [reservation.type, values, showLicense],
   )
   const [subStep, setSubStep] = useState<TravelSubStep>(() => subSteps[0])
   const [maxReached, setMaxReached] = useState<TravelSubStep>(() =>
@@ -164,6 +181,9 @@ export function ReservationTravelStep({
           `/reservations/${reservation.id}`,
           travelPayload(reservation.type, values, dualCounts),
         )
+      }
+      if (showLicense && permitEditable && permitChanged && permitDraft.source) {
+        await api.patch(`/reservations/${reservation.id}/permit`, permitPayload(permitDraft))
       }
       if (sendForReview) {
         await api.post(`/reservations/${reservation.id}/submit`)
@@ -268,10 +288,35 @@ export function ReservationTravelStep({
     if (activeSubStep === 'dates') {
       return assertTravelDates()
     }
+    if (activeSubStep === 'license') {
+      return assertPermit()
+    }
+    return true
+  }
+
+  function assertPermit() {
+    if (!showLicense || !permitEditable) return true
+    if (permitDraft.source === 'CONFIRMED') return true
+    if (permitDraft.source === 'ISSUED_LICENSE' && !permitDraft.issuedLicenseId) {
+      toast.error(t('reservations.permitIssuedRequired'))
+      return false
+    }
+    if (permitDraft.source === 'UPLOAD' && !permitDraft.permitImageId) {
+      toast.error(t('reservations.permitImageRequired'))
+      return false
+    }
+    if (!permitDraft.source && sendForReview) {
+      toast.error(t('reservations.permitRequired'))
+      return false
+    }
     return true
   }
 
   async function assertAllForSubmit() {
+    if (!assertPermit()) {
+      setSubStep('license')
+      return false
+    }
     if (locked) return true
     if (countTotal() <= 0) {
       toast.error(t('reservations.countInvalid'))
@@ -355,6 +400,17 @@ export function ReservationTravelStep({
         ) : locked ? (
           <p className="text-sm text-ink-500">{t('reservations.lockedHint')}</p>
         ) : null}
+        {activeSubStep === 'license' && reservation.caravanId ? (
+          <fieldset disabled={!permitEditable} className="min-w-0">
+            <ReservationCaravanLicenseStep
+              caravanId={reservation.caravanId}
+              year={reservation.year}
+              value={permitDraft}
+              allowConfirmed={mode === 'admin'}
+              onChange={(patch) => setPermitDraft((current) => ({ ...current, ...patch }))}
+            />
+          </fieldset>
+        ) : null}
         <ReservationTravelFields
           values={values}
           imamRezaMartyrdomDate={imamRezaMartyrdomDate}
@@ -424,6 +480,16 @@ export function ReservationTravelStep({
       </AppForm>
     </div>
   )
+}
+
+function permitPayload(draft: CaravanPermitDraft) {
+  if (draft.source === 'CONFIRMED') {
+    return { permitConfirmed: true, issuedLicenseId: null, permitImageId: null }
+  }
+  if (draft.source === 'ISSUED_LICENSE') {
+    return { permitConfirmed: false, issuedLicenseId: draft.issuedLicenseId || null, permitImageId: null }
+  }
+  return { permitConfirmed: false, issuedLicenseId: null, permitImageId: draft.permitImageId || null }
 }
 
 function travelPayload(

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
+import { getImageUrl } from '../../lib/api'
 import { formatRoles, isAccommodationManager, isCaravanManager, isPilgrim } from '../../lib/roles'
 import { PilgrimCardModal } from '../../pages/dashboard/PilgrimCardModal'
 
@@ -18,6 +19,12 @@ export function UserMenu() {
   const ref = useRef<HTMLDivElement>(null)
   const pilgrim = isPilgrim(user)
   const isManagerUser = isCaravanManager(user) || isAccommodationManager(user)
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const photoSrc = user?.photoId && !photoFailed ? getImageUrl(user.photoId) : undefined
+
+  useEffect(() => {
+    setPhotoFailed(false)
+  }, [user?.photoId])
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -37,9 +44,18 @@ export function UserMenu() {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-teal-100 text-xs font-semibold text-teal-800">
-          {user?.fullName.slice(0, 1)}
-        </span>
+        {photoSrc ? (
+          <img
+            src={photoSrc}
+            alt=""
+            className="size-8 shrink-0 rounded-full object-cover ring-2 ring-teal-100"
+            onError={() => setPhotoFailed(true)}
+          />
+        ) : (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-teal-100 text-xs font-semibold text-teal-800">
+            {user?.fullName.slice(0, 1)}
+          </span>
+        )}
         <span className="hidden min-w-0 flex-1 text-start sm:block">
           <span className="block font-medium text-ink-900">{user?.fullName}</span>
           <span className="block text-xs text-ink-400">

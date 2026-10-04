@@ -481,6 +481,11 @@ export function summarizeInsurance(
 }
 
 /** Owner create-wizard draft (never submitted / not admin-returned). */
+/** Rejected or cancelled files never block opening a new file in the same year. */
+export function isInactiveReservationStatus(status: ReservationStatus) {
+  return status === 'REJECTED' || status === 'CANCELLED'
+}
+
 export function isOwnerCreateDraft(reservation: {
   status: ReservationStatus
   returnedToStatus?: ReservationStatus | null
