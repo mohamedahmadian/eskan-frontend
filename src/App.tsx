@@ -296,6 +296,7 @@ import { HonoraryServiceTypeDetailPage } from "./pages/honorary-servants/Honorar
 import { HonoraryServiceTypeEditPage } from "./pages/honorary-servants/HonoraryServiceTypeEditPage";
 import { HonoraryServiceTypesListPage } from "./pages/honorary-servants/HonoraryServiceTypesListPage";
 import { DataManagementPage } from "./pages/system-management/DataManagementPage";
+import { HealthcareSectionPage } from "./pages/healthcare/HealthcareSectionPage";
 import { CampaignsEntry } from "./routes/CampaignsEntry";
 import { HomePage } from "./routes/HomePage";
 import { ParticipationsEntry } from "./routes/ParticipationsEntry";
@@ -1817,6 +1818,24 @@ export default function App() {
                   <Route
                     path="/honorary-servants/:id/edit"
                     element={<HonoraryServantEditPage />}
+                  />
+                </Route>
+                <Route element={<RequireMenuAccess path="/healthcare/bases" />}>
+                  <Route path="/healthcare/bases" element={<HealthcareSectionPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/healthcare/servants" />}>
+                  <Route path="/healthcare/servants" element={<HealthcareSectionPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/healthcare/services" />}>
+                  <Route path="/healthcare/services" element={<HealthcareSectionPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/healthcare/visits" />}>
+                  <Route path="/healthcare/visits" element={<HealthcareSectionPage />} />
+                </Route>
+                <Route element={<RequireMenuAccess path="/healthcare/warehouse" />}>
+                  <Route
+                    path="/healthcare/warehouse"
+                    element={<HealthcareSectionPage />}
                   />
                 </Route>
                 <Route

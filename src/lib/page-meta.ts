@@ -1961,5 +1961,35 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "dataManagement.subtitle",
     };
   }
+  if (pathname.startsWith("/healthcare/bases")) {
+    return {
+      titleKey: "menus.treatmentBases",
+      subtitleKey: "healthcare.subtitle",
+    };
+  }
+  if (pathname.startsWith("/healthcare/servants")) {
+    return {
+      titleKey: "menus.healthServants",
+      subtitleKey: "healthcare.subtitle",
+    };
+  }
+  if (pathname.startsWith("/healthcare/services")) {
+    return {
+      titleKey: "menus.medicalServices",
+      subtitleKey: "healthcare.subtitle",
+    };
+  }
+  if (pathname.startsWith("/healthcare/visits")) {
+    return {
+      titleKey: "menus.visitManagement",
+      subtitleKey: "healthcare.subtitle",
+    };
+  }
+  if (pathname.startsWith("/healthcare/warehouse")) {
+    return {
+      titleKey: "menus.pharmacyWarehouse",
+      subtitleKey: "healthcare.subtitle",
+    };
+  }
   return { titleKey: "menus.overview", subtitleKey: "dashboard.subtitle" };
 }

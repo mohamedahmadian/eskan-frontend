@@ -323,10 +323,15 @@
     "evaluations": "ارزیابی و نظرسنجی",
     "honoraryServants": "خادمین افتخاری",
     "honoraryService": "خدمت افتخاری",
+    "healthcare": "بهداشت و درمان",
     "location": "الان کجا هستم",
     "participations": "مشارکت‌ها",
     "stations": "ایستگاه",
     "systemManagement": "مدیریت سیستم"
+  },
+  "healthcare": {
+    "subtitle": "خدمات بهداشت و درمان زائران",
+    "empty": "این بخش به‌زودی تکمیل می‌شود"
   },
   "menus": {
     "overview": "داشبورد",
@@ -420,6 +425,11 @@
     "honoraryApply": "اعلام همکاری",
     "honoraryHistory": "تاریخچه خدمات",
     "honoraryServiceTypes": "انواع خدمت",
+    "treatmentBases": "پایگاه‌های درمان",
+    "healthServants": "خادمان سلامت",
+    "medicalServices": "مدیریت خدمات درمانی",
+    "visitManagement": "مدیریت ویزیت",
+    "pharmacyWarehouse": "انبار دارو و تجهیزات",
     "translatorReservations": "پرونده‌های زیارتی جهت خدمت",
     "myLocation": "ثبت مکان جدید",
     "myLocationHistory": "گزارش مکان‌هایی که بودم",

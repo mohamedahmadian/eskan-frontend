@@ -270,7 +270,7 @@ function withHonoraryServiceNav(modules: NavModule[]): NavModule[] {
       code: "honorary-service",
       nameKey: "modules.honoraryService",
       icon: "hand-heart",
-      sortOrder: 13,
+      sortOrder: 10,
       menus: HONORARY_SERVICE_MENUS,
     },
   ].sort((a, b) => a.sortOrder - b.sortOrder);
