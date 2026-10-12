@@ -75,10 +75,12 @@ type LookupResponse =
 
 type CompanionPanel = "new" | "excel" | "previousCaravan";
 type Tone = "teal" | "mint" | "ink";
-type CountMatch = "ok" | "mismatch";
+type CountMatch = "ok" | "partial" | "over";
 
 function countMatch(have: number, need: number): CountMatch {
-  return have === need ? "ok" : "mismatch";
+  if (have > need) return "over";
+  if (have === need) return "ok";
+  return "partial";
 }
 
 function genderSlotOpen(
@@ -132,9 +134,10 @@ export function CompanionsStep({
       !members.some((item) => item.user.id === reservation.leaderUserId),
   );
   const countsOk =
-    members.length === reservation.totalCount &&
-    males === reservation.maleCount &&
-    females === reservation.femaleCount &&
+    members.length >= 1 &&
+    males + females === members.length &&
+    males <= reservation.maleCount &&
+    females <= reservation.femaleCount &&
     !leaderMissing;
   const isCaravan = reservation.type === "CARAVAN";
   const showNav =
@@ -1388,24 +1391,29 @@ function MetricTile({
   const { t } = useTranslation();
   const colors = toneClass[tone];
   const complete = match === "ok";
+  const over = match === "over";
   const wrap = complete
     ? "border-mint-400 bg-mint-50"
-    : "border-red-300 bg-red-50";
+    : over
+      ? "border-red-300 bg-red-50"
+      : colors.wrap;
 
   return (
     <article
       className={`flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-1.5 ${wrap}`}
-      aria-label={`${label}: ${value}، ${
+      aria-label={`${label}: ${value}${
         complete
-          ? t("reservations.companionsCountComplete")
-          : t("reservations.companionsCountIncomplete")
+          ? `، ${t("reservations.companionsCountComplete")}`
+          : over
+            ? `، ${t("reservations.companionsCountIncomplete")}`
+            : ""
       }`}
     >
       <span
         className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${
-          complete
-            ? colors.icon
-            : "bg-red-500 text-white shadow-[0_8px_16px_rgba(239,68,68,0.24)]"
+          over
+            ? "bg-red-500 text-white shadow-[0_8px_16px_rgba(239,68,68,0.24)]"
+            : colors.icon
         }`}
       >
         <Icon className="size-3.5" aria-hidden />
@@ -1416,9 +1424,9 @@ function MetricTile({
       </div>
       {complete ? (
         <Check className="size-4 shrink-0 text-mint-600" strokeWidth={3} aria-hidden />
-      ) : (
+      ) : over ? (
         <AlertCircle className="size-4 shrink-0 text-red-500" aria-hidden />
-      )}
+      ) : null}
     </article>
   );
 }
