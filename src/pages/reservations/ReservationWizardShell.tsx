@@ -17,7 +17,6 @@ import type { Reservation } from '../../types/app'
 import {
   currentStepFromStatus,
   isStepDone,
-  ownerFlowSteps,
   stepCardDate,
   stepHasProgress,
   stepLabelKey,
@@ -119,7 +118,7 @@ export function ReservationWizardShell({
                       : t(stepLabelKey(step, type))
                 }
                 recordedAt={stepCardDate(step, reservation)}
-                state={chipState(step, reservation, current, viewedStep, audience)}
+                state={chipState(step, reservation, current, audience)}
                 active={viewedStep === step}
                 onSelect={onViewStep}
               />
@@ -145,26 +144,17 @@ function chipState(
   step: ReservationStepCode,
   reservation: Reservation,
   current: ReservationStepCode,
-  viewedStep: ReservationStepCode | null,
   audience: 'owner' | 'admin',
 ) {
   const { status, type } = reservation
   if (status === 'REJECTED' || status === 'CANCELLED') {
     return stepHasProgress(step, reservation) ? 'done' : 'pending'
   }
-  if (audience === 'owner' && status === 'COMPLETED' && viewedStep) {
-    return step === viewedStep ? 'current' : 'done'
-  }
-  const flow = ownerFlowSteps(type, reservation)
-  if (viewedStep && flow.includes(viewedStep) && status !== 'COMPLETED') {
-    if (step === viewedStep) return 'current'
-    if (isStepDone(step, status, type, reservation) || step === current) return 'done'
-  }
-  if (isStepDone(step, status, type, reservation)) return 'done'
   if (step === current && status === 'PENDING_MANAGEMENT_REVIEW' && step === 'review') {
     return audience === 'admin' ? 'current' : 'waiting'
   }
   if (step === current) return 'current'
+  if (isStepDone(step, status, type, reservation)) return 'done'
   return 'pending'
 }
 

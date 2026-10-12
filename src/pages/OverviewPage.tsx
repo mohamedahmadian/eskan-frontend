@@ -27,6 +27,7 @@ import {
 import type { ParticipationCampaign } from '../types/app'
 import { HeadquartersServiceYearsCard } from './dashboard/HeadquartersServiceYearsCard'
 import { HonoraryReadinessCard } from './dashboard/HonoraryReadinessCard'
+import { NewAccommodationsCard } from './dashboard/NewAccommodationsCard'
 import { NewCaravansCard } from './dashboard/NewCaravansCard'
 import { CampaignCard } from './participations/CampaignCard'
 import { GovernmentOrgOfficerDashboard } from './dashboard/GovernmentOrgOfficerDashboard'
@@ -153,7 +154,7 @@ function AdminOverview() {
 
       <section>
         <h2 className="mb-4 text-sm font-medium text-ink-500">{t('dashboard.statsTitle')}</h2>
-        <div className={`grid gap-4 ${admin ? 'lg:grid-cols-3' : ''}`}>
+        <div className={`grid gap-4 ${admin ? 'lg:grid-cols-2 xl:grid-cols-4' : ''}`}>
           <div className="flex flex-col gap-4">
             <div className={`grid gap-4 sm:grid-cols-2 ${admin ? 'lg:grid-cols-1' : ''}`}>
               <article className={`${cardClassName} flex items-center gap-4 p-5`}>
@@ -187,6 +188,7 @@ function AdminOverview() {
             <>
               <HonoraryReadinessCard />
               <NewCaravansCard />
+              <NewAccommodationsCard />
             </>
           ) : null}
         </div>

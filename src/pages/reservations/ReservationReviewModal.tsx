@@ -33,6 +33,7 @@ import type {
 } from '../../types/app'
 import { IssuedLicenseViewModal } from './ReservationCaravanLicenseStep'
 import { PermitStatusPill, ReservationReviewPermitStep } from './ReservationReviewPermitStep'
+import { useCaravanNewHeadcountLimit } from './caravan-headcount-limit'
 import {
   applicantSectionKey,
   canAdjustApprovedCapacity,
@@ -293,7 +294,18 @@ export function ReservationReviewModal({
       : reservation.createdBy?.fullName || '—'
   const approvedMale = Number(maleCount) || 0
   const approvedFemale = Number(femaleCount) || 0
-  const maxCount = partyMaxSize(reservation.type)
+  const caravanLimit = useCaravanNewHeadcountLimit({
+    year: reservation.year,
+    caravanId: reservation.caravanId,
+    excludeId: reservation.id,
+    enabled: reservation.type === 'CARAVAN' && Boolean(reservation.caravanId),
+  })
+  const maxCount =
+    reservation.type === 'CARAVAN'
+      ? caravanLimit.data?.applies
+        ? (caravanLimit.data.max ?? undefined)
+        : undefined
+      : partyMaxSize(reservation.type)
   const permitReview = reservation.type === 'CARAVAN' && !adjusting
   const [step, setStep] = useState<'permit' | 'file'>(permitReview ? 'permit' : 'file')
   const [viewingLicense, setViewingLicense] = useState<ReservationPermitOption | null>(null)
@@ -320,7 +332,18 @@ export function ReservationReviewModal({
     const trimmed = note.trim()
     if (rejecting && trimmed.length < 2) return
     if (approvedMale < 0 || approvedFemale < 0 || approvedMale + approvedFemale <= 0) return
-    if (maxCount && approvedMale + approvedFemale > maxCount) return
+    if (reservation.type === 'CARAVAN' && reservation.caravanId && caravanLimit.isPending) return
+    if (maxCount && approvedMale + approvedFemale > maxCount) {
+      toast.error(
+        t(
+          reservation.type === 'CARAVAN'
+            ? 'reservations.caravanMaxExceeded'
+            : 'reservations.groupMaxExceeded',
+          { count: formatNumber(maxCount, locale) },
+        ),
+      )
+      return
+    }
     onConfirm({
       note: adjusting ? undefined : trimmed.length >= 2 ? trimmed : undefined,
       maleCount: approvedMale,
@@ -459,6 +482,13 @@ export function ReservationReviewModal({
                   />
                 </FormField>
               </div>
+              {reservation.type === 'CARAVAN' && maxCount ? (
+                <p className="text-sm font-medium leading-7 text-ink-700">
+                  {t('reservations.newCaravanMaxHint', {
+                    count: formatNumber(maxCount, locale),
+                  })}
+                </p>
+              ) : null}
             </section>
 
             {adjusting ? (

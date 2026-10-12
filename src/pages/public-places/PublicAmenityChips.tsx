@@ -5,7 +5,9 @@ import {
   Car,
   Droplets,
   Flame,
+  LayoutGrid,
   Maximize2,
+  School,
   Shirt,
   Snowflake,
   Wifi,
@@ -25,6 +27,8 @@ type AmenitySource = {
   bathroomCount?: number | null
   toiletCount?: number | null
   areaSqm?: number | null
+  classroomCount?: number | null
+  schoolDistrict?: { name: string } | null
 }
 
 export function listPublicAmenityLabels(
@@ -56,6 +60,12 @@ export function listPublicAmenityLabels(
   if (amenities.areaSqm != null) {
     items.push(`${t('walkingStations.areaSqm')} ${formatNumber(amenities.areaSqm, locale)}`)
   }
+  if (amenities.schoolDistrict?.name) {
+    items.push(`${t('accommodations.schoolDistrict')}: ${amenities.schoolDistrict.name}`)
+  }
+  if (amenities.classroomCount != null) {
+    items.push(`${t('accommodations.classroomCount')} ${formatNumber(amenities.classroomCount, locale)}`)
+  }
   return items
 }
 
@@ -70,7 +80,9 @@ export function hasPublicAmenities(amenities: AmenitySource) {
     amenities.parkingCapacity != null ||
     amenities.bathroomCount != null ||
     amenities.toiletCount != null ||
-    amenities.areaSqm != null
+    amenities.areaSqm != null ||
+    Boolean(amenities.schoolDistrict?.name) ||
+    amenities.classroomCount != null
   )
 }
 
@@ -120,6 +132,18 @@ export function PublicAmenityChips({
     items.push({
       icon: Maximize2,
       label: `${t('walkingStations.areaSqm')} ${formatNumber(amenities.areaSqm, locale)}`,
+    })
+  }
+  if (amenities.schoolDistrict?.name) {
+    items.push({
+      icon: School,
+      label: `${t('accommodations.schoolDistrict')}: ${amenities.schoolDistrict.name}`,
+    })
+  }
+  if (amenities.classroomCount != null) {
+    items.push({
+      icon: LayoutGrid,
+      label: `${t('accommodations.classroomCount')} ${formatNumber(amenities.classroomCount, locale)}`,
     })
   }
 

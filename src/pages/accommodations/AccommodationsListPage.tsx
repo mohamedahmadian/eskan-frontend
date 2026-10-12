@@ -1,10 +1,12 @@
 import {
   BadgeCheck,
   CalendarDays,
+  CircleDot,
   Download,
   Flag,
   Landmark,
   MapPin,
+  School,
   MapPinned,
   Mars,
   Plus,
@@ -38,9 +40,11 @@ import { useGeoName } from '../../lib/geo'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { canManageAccommodations, isAdmin } from '../../lib/roles'
 import {
+  accommodationStatuses,
   accommodationTypes,
   genderTypes,
   managementTypes,
+  type AccommodationStatus,
   type Accommodation,
   type AccommodationType,
   type City,
@@ -49,6 +53,7 @@ import {
   type ManagementType,
   type Paginated,
   type Province,
+  type SchoolDistrict,
 } from '../../types/app'
 
 export function AccommodationsListPage() {
@@ -66,11 +71,14 @@ export function AccommodationsListPage() {
   const type = (searchParams.get('type') ?? '') as AccommodationType | ''
   const genderType = (searchParams.get('genderType') ?? '') as GenderType | ''
   const managementType = (searchParams.get('managementType') ?? '') as ManagementType | ''
+  const status = (searchParams.get('status') ?? '') as AccommodationStatus | ''
   const countryId = searchParams.get('countryId') ?? ''
   const provinceId = searchParams.get('provinceId') ?? ''
   const cityId = searchParams.get('cityId') ?? ''
   const year = searchParams.get('year') ?? ''
   const hasManagerThisYear = searchParams.get('hasManagerThisYear') ?? ''
+  const schoolDistrictId = searchParams.get('schoolDistrictId') ?? ''
+  const schoolTypeSelected = type === accommodationTypes.SCHOOL
 
   const countries = useQuery({
     queryKey: ['countries', 'lookup'],
@@ -87,6 +95,15 @@ export function AccommodationsListPage() {
       const { data } = await api.get<Province[]>('/provinces', {
         params: { countryId },
       })
+      return data
+    },
+  })
+
+  const schoolDistricts = useQuery({
+    queryKey: ['school-districts', 'lookup'],
+    enabled: schoolTypeSelected,
+    queryFn: async () => {
+      const { data } = await api.get<SchoolDistrict[]>('/school-districts')
       return data
     },
   })
@@ -108,11 +125,13 @@ export function AccommodationsListPage() {
     ...(type ? { type } : {}),
     ...(genderType ? { genderType } : {}),
     ...(managementType ? { managementType } : {}),
+    ...(status ? { status } : {}),
     ...(countryId ? { countryId } : {}),
     ...(provinceId ? { provinceId } : {}),
     ...(cityId ? { cityId } : {}),
     ...(year ? { year } : {}),
     ...(hasManagerThisYear ? { hasManagerThisYear } : {}),
+    ...(schoolTypeSelected && schoolDistrictId ? { schoolDistrictId } : {}),
     ...sortParams,
   }
 
@@ -123,11 +142,13 @@ export function AccommodationsListPage() {
       type,
       genderType,
       managementType,
+      status,
       countryId,
       provinceId,
       cityId,
       year,
       hasManagerThisYear,
+      schoolDistrictId,
       sortBy,
       sortDir,
       page,
@@ -153,11 +174,13 @@ export function AccommodationsListPage() {
           ...(type ? { type } : {}),
           ...(genderType ? { genderType } : {}),
           ...(managementType ? { managementType } : {}),
+          ...(status ? { status } : {}),
           ...(countryId ? { countryId } : {}),
           ...(provinceId ? { provinceId } : {}),
           ...(cityId ? { cityId } : {}),
           ...(year ? { year } : {}),
           ...(hasManagerThisYear ? { hasManagerThisYear } : {}),
+          ...(schoolTypeSelected && schoolDistrictId ? { schoolDistrictId } : {}),
           ...sortParams,
         },
         responseType: 'blob',
@@ -187,7 +210,16 @@ export function AccommodationsListPage() {
 
   const rows = query.data?.items ?? []
   const filtersActive = Boolean(
-    type || genderType || managementType || countryId || provinceId || cityId || year || hasManagerThisYear,
+    type ||
+      genderType ||
+      managementType ||
+      status ||
+      countryId ||
+      provinceId ||
+      cityId ||
+      year ||
+      hasManagerThisYear ||
+      (schoolTypeSelected && schoolDistrictId),
   )
   const emptyMessage =
     q || filtersActive ? t('accommodations.noResults') : t('accommodations.empty')
@@ -279,7 +311,7 @@ export function AccommodationsListPage() {
                 />
               </FormField>
             </FilterPair>
-            <FilterPair columns={3}>
+            <FilterPair columns={schoolTypeSelected ? 4 : 3}>
               <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor="accommodation-year">
                 <SearchSelect
                   id="accommodation-year"
@@ -297,7 +329,16 @@ export function AccommodationsListPage() {
                   id="accommodation-type"
                   value={type}
                   placeholder={t('accommodations.allTypes')}
-                  onChange={(next) => setParams({ type: next || undefined }, { resetPage: true })}
+                  onChange={(next) =>
+                    setParams(
+                      {
+                        type: next || undefined,
+                        schoolDistrictId:
+                          next === accommodationTypes.SCHOOL ? schoolDistrictId || undefined : undefined,
+                      },
+                      { resetPage: true },
+                    )
+                  }
                   options={[
                     { value: '', label: t('accommodations.allTypes') },
                     ...Object.values(accommodationTypes).map((value) => ({
@@ -307,6 +348,29 @@ export function AccommodationsListPage() {
                   ]}
                 />
               </FormField>
+              {schoolTypeSelected ? (
+                <FormField
+                  icon={School}
+                  label={t('accommodations.schoolDistrict')}
+                  htmlFor="accommodation-school-district"
+                >
+                  <SearchSelect
+                    id="accommodation-school-district"
+                    value={schoolDistrictId}
+                    placeholder={t('schoolDistricts.all')}
+                    onChange={(next) =>
+                      setParams({ schoolDistrictId: next || undefined }, { resetPage: true })
+                    }
+                    options={[
+                      { value: '', label: t('schoolDistricts.all') },
+                      ...(schoolDistricts.data ?? []).map((item) => ({
+                        value: item.id,
+                        label: item.name,
+                      })),
+                    ]}
+                  />
+                </FormField>
+              ) : null}
               <FormField icon={Users} label={t('accommodations.genderType')} htmlFor="accommodation-gender-type">
                 <SearchSelect
                   id="accommodation-gender-type"
@@ -323,7 +387,22 @@ export function AccommodationsListPage() {
                 />
               </FormField>
             </FilterPair>
-            <FilterPair columns={2}>
+            <FilterPair columns={3}>
+              <FormField icon={CircleDot} label={t('accommodations.status')} htmlFor="accommodation-status">
+                <SearchSelect
+                  id="accommodation-status"
+                  value={status}
+                  placeholder={t('accommodations.allStatuses')}
+                  onChange={(next) => setParams({ status: next || undefined }, { resetPage: true })}
+                  options={[
+                    { value: '', label: t('accommodations.allStatuses') },
+                    ...Object.values(accommodationStatuses).map((value) => ({
+                      value,
+                      label: t(`accommodationStatuses.${value}`),
+                    })),
+                  ]}
+                />
+              </FormField>
               <FormField
                 icon={UserRound}
                 label={t('accommodations.currentYearManager')}

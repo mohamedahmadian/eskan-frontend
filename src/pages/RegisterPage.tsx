@@ -57,6 +57,9 @@ export function RegisterPage() {
   const [params] = useSearchParams()
   const next = params.get('next')
   const afterAuth = afterAuthPath(next)
+  const nextPath = afterAuth.split(/[?#]/)[0]
+  const honoraryRegister =
+    nextPath === '/honorary-apply' || nextPath.startsWith('/honorary-apply/')
   const initial = useMemo(
     () => splitIdentifier(params.get('identifier') ?? ''),
     [params],
@@ -345,7 +348,7 @@ export function RegisterPage() {
       <FormCard
         icon={UserPlus}
         title={t('auth.register')}
-        subtitle={t('auth.registerSubtitle')}
+        subtitle={t(honoraryRegister ? 'auth.registerHonorarySubtitle' : 'auth.registerSubtitle')}
         action={<AuthBackButton to={withNext('/login', next)} />}
       >
         <AppForm className={formCardBodyClassName} onSubmit={onSubmit} autoFocusFirst>
@@ -514,7 +517,7 @@ export function RegisterPage() {
             </FormField>
             <Button type="submit" className="w-full" disabled={submitting}>
               <UserPlus className="size-4" />
-              {t('auth.register')}
+              {t(honoraryRegister ? 'auth.registerHonorary' : 'auth.register')}
             </Button>
             <p className="text-center text-sm text-ink-500">
               {t('auth.hasAccount')}{' '}

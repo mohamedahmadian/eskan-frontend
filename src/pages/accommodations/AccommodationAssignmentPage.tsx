@@ -1,10 +1,17 @@
-import { Building2, CircleOff, UserRound, UserRoundCheck, UserRoundPlus } from 'lucide-react'
+import { Building2, CircleOff, Eye, UserRound, UserRoundCheck, UserRoundPlus, X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { FormField, PageHeader, cardClassName, listShellClassName } from '../../components/ui/Form'
+import {
+  Button,
+  FormField,
+  PageHeader,
+  cardClassName,
+  listShellClassName,
+} from '../../components/ui/Form'
 import {
   PaginationBar,
   SearchBar,
@@ -17,12 +24,15 @@ import { useListSort } from '../../hooks/useListSort'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
+import { isAccommodationManager } from '../../lib/roles'
 import type {
   AccommodationAssignmentList,
   AccommodationAssignmentRow,
   AccommodationAssignmentStats,
   ManagedUser,
 } from '../../types/app'
+import { userScopes } from '../users/user-scopes'
+import { RoleUserDetailPage } from '../users/RoleUserDetailPage'
 
 type ManagerFilter = '' | 'with' | 'without'
 
@@ -101,6 +111,63 @@ function AssignmentStatsCards({
   )
 }
 
+function ManagerDossierModal({ userId, onClose }: { userId: string; onClose: () => void }) {
+  const { t } = useTranslation()
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      const dialogs = document.querySelectorAll('[role="dialog"]')
+      if (dialogs[dialogs.length - 1] !== dialogRef.current) return
+      event.preventDefault()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previous
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-ink-900/30"
+        aria-label={t('common.close')}
+        onClick={onClose}
+      />
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manager-dossier-title"
+        className="relative z-10 flex max-h-[min(92vh,100%)] w-full max-w-6xl flex-col overflow-hidden rounded-[22px] bg-cream-50 shadow-[0_24px_60px_rgba(20,40,40,0.18)]"
+      >
+        <div className="flex shrink-0 items-center justify-end border-b border-line bg-white px-3 py-2">
+          <h2 id="manager-dossier-title" className="sr-only">
+            {t('accommodationManagers.details')}
+          </h2>
+          <Button type="button" variant="ghost" icon onClick={onClose} aria-label={t('common.close')}>
+            <X className="size-4" aria-hidden />
+          </Button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+          <RoleUserDetailPage
+            scope={userScopes.accommodationManager}
+            userId={userId}
+            embedded
+          />
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 function ManagerAssignSelect({
   item,
   year,
@@ -116,6 +183,7 @@ function ManagerAssignSelect({
   const queryClient = useQueryClient()
   const saved = item.managerUserId ?? ''
   const [value, setValue] = useState(saved)
+  const [dossierId, setDossierId] = useState<string | null>(null)
 
   useEffect(() => {
     setValue(saved)
@@ -169,18 +237,36 @@ function ManagerAssignSelect({
   }, [item.managerName, item.managerUserId, t, users])
 
   return (
-    <SearchSelect
-      id={`assignment-manager-${item.id}`}
-      value={value}
-      disabled={usersLoading || assign.isPending}
-      placeholder={t('accommodationAssignment.selectManager')}
-      onChange={(next) => {
-        if (next === value || assign.isPending) return
-        setValue(next)
-        assign.mutate(next)
-      }}
-      options={options}
-    />
+    <div className="flex min-w-0 items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <SearchSelect
+          id={`assignment-manager-${item.id}`}
+          value={value}
+          disabled={usersLoading || assign.isPending}
+          placeholder={t('accommodationAssignment.selectManager')}
+          onChange={(next) => {
+            if (next === value || assign.isPending) return
+            setValue(next)
+            assign.mutate(next)
+          }}
+          options={options}
+        />
+      </div>
+      {value ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className="shrink-0 whitespace-nowrap"
+          onClick={() => setDossierId(value)}
+        >
+          <Eye className="size-4" aria-hidden />
+          {t('accommodationAssignment.viewDossier')}
+        </Button>
+      ) : null}
+      {dossierId ? (
+        <ManagerDossierModal userId={dossierId} onClose={() => setDossierId(null)} />
+      ) : null}
+    </div>
   )
 }
 
@@ -220,12 +306,10 @@ export function AccommodationAssignmentPage() {
   })
 
   const usersQuery = useQuery({
-    queryKey: ['users', 'lookup', 'ACCOMMODATION_MANAGER'],
+    queryKey: ['accommodation-managers', 'lookup'],
     queryFn: async () => {
-      const { data } = await api.get<ManagedUser[]>('/users', {
-        params: { roleCode: 'ACCOMMODATION_MANAGER' },
-      })
-      return data
+      const { data } = await api.get<ManagedUser[]>('/accommodation-managers')
+      return data.filter((user) => isAccommodationManager(user))
     },
   })
 
@@ -328,7 +412,7 @@ export function AccommodationAssignmentPage() {
                   sortDir={sortDir}
                   onSort={onSort}
                 />
-                <th className="w-72 min-w-56 px-4 py-3 text-start font-medium">
+                <th className="min-w-80 px-4 py-3 text-start font-medium">
                   {t('accommodationAssignment.manager')}
                 </th>
               </tr>
@@ -351,7 +435,7 @@ export function AccommodationAssignmentPage() {
                     ) : null}
                   </td>
                   <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
-                  <td className="w-72 min-w-56 px-4 py-3">
+                  <td className="min-w-80 px-4 py-3">
                     {year != null ? (
                       <ManagerAssignSelect
                         item={item}

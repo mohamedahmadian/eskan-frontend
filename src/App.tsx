@@ -117,6 +117,7 @@ import { ParticipantEditPage } from "./pages/participations/ParticipantEditPage"
 import { ParticipantsListPage } from "./pages/participations/ParticipantsListPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PublicAboutPage } from "./pages/landing/PublicAboutPage";
+import { PublicAccommodationIntroducePage } from "./pages/landing/PublicAccommodationIntroducePage";
 import { PublicAnnouncementPage } from "./pages/landing/PublicAnnouncementPage";
 import { PublicCampaignPage } from "./pages/landing/PublicCampaignPage";
 import { PublicContactPage } from "./pages/landing/PublicContactPage";
@@ -160,6 +161,10 @@ import { PlacementDetailPage } from "./pages/placements/PlacementDetailPage";
 import { PlacementVacatePage } from "./pages/placements/PlacementVacatePage";
 import { PlacementSystemPage } from "./pages/placements/PlacementSystemPage";
 import { AccommodationsListPage } from "./pages/accommodations/AccommodationsListPage";
+import { SchoolDistrictCreatePage } from "./pages/school-districts/SchoolDistrictCreatePage";
+import { SchoolDistrictDetailPage } from "./pages/school-districts/SchoolDistrictDetailPage";
+import { SchoolDistrictEditPage } from "./pages/school-districts/SchoolDistrictEditPage";
+import { SchoolDistrictsListPage } from "./pages/school-districts/SchoolDistrictsListPage";
 import { AccommodationIntroduceWizardPage } from "./pages/accommodations/AccommodationIntroduceWizardPage";
 import { MyAccommodationCreatePage } from "./pages/accommodations/MyAccommodationCreatePage";
 import { IntroducedAccommodationsListPage } from "./pages/accommodations/IntroducedAccommodationsListPage";
@@ -303,7 +308,7 @@ import { ParticipationsEntry } from "./routes/ParticipationsEntry";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { WelcomeRedirect } from "./routes/WelcomeRedirect";
 import { LegacyProfileRedirect } from "./routes/LegacyProfileRedirect";
-import { RequireAdmin, RequireMenuAccess } from "./routes/RequireMenuAccess";
+import { RequireAccommodationDirectory, RequireAdmin, RequireMenuAccess } from "./routes/RequireMenuAccess";
 import { PublicIceVoucherPage } from "./pages/public-vouchers/PublicIceVoucherPage";
 import { PublicItemVoucherPage } from "./pages/public-vouchers/PublicItemVoucherPage";
 
@@ -356,6 +361,10 @@ export default function App() {
               element={<PublicCampaignPage />}
             />
             <Route path="/about" element={<PublicAboutPage />} />
+            <Route
+              path="/introduce-accommodation"
+              element={<PublicAccommodationIntroducePage />}
+            />
             <Route path="/contact" element={<PublicContactPage />} />
             <Route path="/welcome/*" element={<WelcomeRedirect />} />
             <Route path="/login" element={<LoginPage />} />
@@ -1155,6 +1164,34 @@ export default function App() {
                     element={<AccommodationEditPage />}
                   />
                 </Route>
+                <Route element={<RequireAccommodationDirectory />}>
+                  <Route
+                    path="/accommodations"
+                    element={<AccommodationsListPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/accommodation-base-info" />
+                  }
+                >
+                  <Route
+                    path="/accommodation-base-info"
+                    element={<SchoolDistrictsListPage />}
+                  />
+                  <Route
+                    path="/accommodation-base-info/schools/new"
+                    element={<SchoolDistrictCreatePage />}
+                  />
+                  <Route
+                    path="/accommodation-base-info/schools/:id"
+                    element={<SchoolDistrictDetailPage />}
+                  />
+                  <Route
+                    path="/accommodation-base-info/schools/:id/edit"
+                    element={<SchoolDistrictEditPage />}
+                  />
+                </Route>
                 <Route
                   element={
                     <RequireMenuAccess
@@ -1163,10 +1200,6 @@ export default function App() {
                     />
                   }
                 >
-                  <Route
-                    path="/accommodations"
-                    element={<AccommodationsListPage />}
-                  />
                   <Route
                     path="/accommodations/:id"
                     element={<AccommodationDetailPage />}

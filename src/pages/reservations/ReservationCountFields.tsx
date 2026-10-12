@@ -29,6 +29,7 @@ export function ReservationCountFields({
   idPrefix = "",
   dual = false,
   reservationId,
+  caravanMax,
 }: {
   values: CountValues;
   onChange: (patch: Partial<CountValues>) => void;
@@ -39,11 +40,15 @@ export function ReservationCountFields({
   dual?: boolean;
   /** When dual, show last approved counts for this applicant. */
   reservationId?: string;
+  /** Cap for a newly established caravan, from reception settings. */
+  caravanMax?: number;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
   const male = Number(values.maleCount) || 0;
   const female = Number(values.femaleCount) || 0;
+  const maxTotal = type === "CARAVAN" ? caravanMax : partyMaxSize(type);
+  const maxHint = type === "CARAVAN" ? "newCaravan" : "group";
   const individualMale = type === "INDIVIDUAL" && male === 1 && female === 0;
   const individualFemale = type === "INDIVIDUAL" && female === 1 && male === 0;
   const maleId = `${idPrefix}maleCount`;
@@ -88,7 +93,6 @@ export function ReservationCountFields({
   if (dual) {
     const requestedMale = Number(values.requestedMaleCount) || 0;
     const requestedFemale = Number(values.requestedFemaleCount) || 0;
-    const maxTotal = partyMaxSize(type);
     return (
       <div className="space-y-4">
         <CountPairSection
@@ -127,12 +131,13 @@ export function ReservationCountFields({
           <PreviousApprovedCountsHint reservationId={reservationId} />
         ) : null}
         <LeaderIncludedHint type={type} />
-        {maxTotal ? <PartyMaxHint max={maxTotal} locale={locale} /> : null}
+        {maxTotal ? (
+          <PartyMaxHint max={maxTotal} locale={locale} variant={maxHint} />
+        ) : null}
       </div>
     );
   }
 
-  const maxTotal = partyMaxSize(type);
   const maleMax = maxTotal == null ? undefined : Math.max(0, maxTotal - female);
   const femaleMax = maxTotal == null ? undefined : Math.max(0, maxTotal - male);
 
@@ -179,7 +184,9 @@ export function ReservationCountFields({
         />
       </div>
       <LeaderIncludedHint type={type} />
-      {maxTotal ? <PartyMaxHint max={maxTotal} locale={locale} /> : null}
+      {maxTotal ? (
+        <PartyMaxHint max={maxTotal} locale={locale} variant={maxHint} />
+      ) : null}
     </>
   );
 }
@@ -275,17 +282,35 @@ function CountPairSection({
   );
 }
 
-function PartyMaxHint({ max, locale }: { max: number; locale: string }) {
+function PartyMaxHint({
+  max,
+  locale,
+  variant,
+}: {
+  max: number;
+  locale: string;
+  variant: "group" | "newCaravan";
+}) {
   const { t } = useTranslation();
+  const message = t(
+    variant === "newCaravan"
+      ? "reservations.newCaravanMaxHint"
+      : "reservations.groupMaxHint",
+    { count: formatNumber(max, locale) },
+  );
   return (
-    <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-3 py-2.5 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white">
+    <div className="flex items-start gap-2.5 rounded-2xl border border-teal-100 bg-gradient-to-e from-mint-50 via-white to-teal-50 px-3 py-2.5 shadow-[0_6px_16px_rgba(20,40,40,0.04)]">
+      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white">
         <Users className="size-3.5" aria-hidden />
       </span>
-      <p className="text-sm font-bold text-ink-800">
-        {t("reservations.groupMaxHint", {
-          count: formatNumber(max, locale),
-        })}
+      <p
+        className={
+          variant === "newCaravan"
+            ? "text-sm font-medium leading-7 text-ink-800"
+            : "text-sm font-bold text-ink-800"
+        }
+      >
+        {message}
       </p>
     </div>
   );

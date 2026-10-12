@@ -51,6 +51,7 @@ import type {
   ReservationType,
   WalkingRoute,
 } from '../../types/app'
+import { useCaravanNewHeadcountLimit } from './caravan-headcount-limit'
 import {
   CAPACITY_WARNING_RATIO,
   capacityKey,
@@ -86,10 +87,16 @@ import {
   type TravelValues,
 } from './ReservationTravelFields'
 import {
-  RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
   fetchSubjectReservationSpans,
 } from './reservation-date-overlap'
 import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
+import {
+  emptyManagerProfileDraft,
+  isManagerProfileComplete,
+  managerProfileError,
+  ReservationManagerProfileStep,
+  type ManagerProfileDraft,
+} from './ReservationManagerProfileStep'
 import { StepProgressChart } from './StepProgressChart'
 import { useDeleteOwnerDraft } from './useDeleteOwnerDraft'
 
@@ -99,11 +106,12 @@ const typeCardHoverClass =
   'hover:-translate-y-0.5 hover:border-teal-400 hover:shadow-[0_18px_40px_rgba(46,189,182,0.28),0_0_0_4px_rgba(255,255,255,0.95),0_0_0_7px_rgba(46,189,182,0.35)]'
 const typeIcons = { INDIVIDUAL: User, GROUP: Users, CARAVAN: Footprints }
 
-type CreateStep = 'type' | 'party' | 'count' | 'dates' | 'services' | 'license'
+type CreateStep = 'type' | 'party' | 'count' | 'dates' | 'services' | 'license' | 'manager'
 type CreateStepOptions = {
   skipCaravanParty?: boolean
   skipType?: boolean
   skipLicense?: boolean
+  includeManager?: boolean
 }
 const individualCreateSteps: CreateStep[] = ['type', 'dates', 'services']
 const groupCreateSteps: CreateStep[] = ['type', 'party', 'count', 'dates', 'services']
@@ -169,11 +177,13 @@ function stepsForCreateType(
       : type === 'GROUP'
         ? [...groupCreateSteps]
         : [...individualCreateSteps]
-  return list.filter((item) => {
+  const filtered = list.filter((item) => {
     if (options.skipType && item === 'type') return false
     if (options.skipLicense && item === 'license') return false
     return true
   })
+  if (options.includeManager) filtered.push('manager')
+  return filtered
 }
 
 const createStepIcons: Record<CreateStep, LucideIcon> = {
@@ -183,6 +193,7 @@ const createStepIcons: Record<CreateStep, LucideIcon> = {
   dates: Calendar,
   services: HeartHandshake,
   license: FileBadge,
+  manager: IdCard,
 }
 
 function stayDatesFromOccasions(
@@ -361,6 +372,32 @@ function furtherCreateStep(
   return aIndex >= bIndex ? a : b
 }
 
+function createStepTitle(
+  item: CreateStep,
+  type: ReservationType | '',
+  translate: (key: string) => string,
+) {
+  if (item === 'party') {
+    return translate(
+      type === 'CARAVAN' ? 'reservations.createSteps.caravan' : 'reservations.createSteps.group',
+    )
+  }
+  return translate(`reservations.createSteps.${item}`)
+}
+
+function savedThroughCreateStep(
+  step: CreateStep,
+  maxReached: CreateStep,
+  steps: CreateStep[],
+): CreateStep | null {
+  const stepIndex = steps.indexOf(step)
+  const maxIndex = steps.indexOf(maxReached)
+  if (stepIndex < 0) return null
+  if (maxIndex > stepIndex) return steps[maxIndex] ?? null
+  if (stepIndex <= 0) return null
+  return steps[stepIndex - 1] ?? null
+}
+
 export function ReservationCreatePage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -394,6 +431,11 @@ export function ReservationCreatePage() {
     issuedLicenseId: '',
     permitImageId: '',
   })
+  const [managerDraft, setManagerDraft] = useState<ManagerProfileDraft>(emptyManagerProfileDraft)
+  const [managerPhotoUploading, setManagerPhotoUploading] = useState(false)
+  const [managerProfileSaved, setManagerProfileSaved] = useState(false)
+  const managerDirtyRef = useRef(false)
+  const pendingTravelValuesRef = useRef<TravelValues | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [rulesModalOpen, setRulesModalOpen] = useState(false)
   const [pickedCaravan, setPickedCaravan] = useState<{ id: string; name: string } | null>(null)
@@ -542,7 +584,6 @@ export function ReservationCreatePage() {
       subjectNationalId ?? '',
     ],
     enabled:
-      RESERVATION_DATE_OVERLAP_CHECK_ENABLED &&
       (isAdminCreate ? Boolean(forUserId) : Boolean(user?.id)),
     queryFn: () =>
       fetchSubjectReservationSpans({
@@ -561,6 +602,16 @@ export function ReservationCreatePage() {
   })
   const imamRezaMartyrdomDate = settings.data?.imamRezaMartyrdomDate ?? null
   const prophetDemiseDate = settings.data?.prophetDemiseDate ?? null
+  const caravanLimit = useCaravanNewHeadcountLimit({
+    year: reservationYear,
+    caravanId: type === 'CARAVAN' ? values.caravanId : '',
+    excludeId: draftId || undefined,
+    enabled: type === 'CARAVAN' && Boolean(values.caravanId),
+  })
+  const caravanMax =
+    type === 'CARAVAN' && caravanLimit.data?.applies
+      ? (caravanLimit.data.max ?? undefined)
+      : undefined
   const datesOverlapError = useMemo(() => {
     if (!existingReservationsQuery.data) return null
     if (travelDatesError(values, t, { imamRezaMartyrdomDate, prophetDemiseDate })) return null
@@ -584,6 +635,39 @@ export function ReservationCreatePage() {
     return admissionTypes.filter((item) => isReceptionTypeAvailable(settings.data, item))
   }, [admissionTypes, settings.data, settings.isSuccess])
   const skipTypeStep = Boolean(availableTypes?.length === 1)
+  const profileType = type || draftQuery.data?.type || ''
+  const managerUserId = !isAdminCreate
+    ? isCaravanManager(user) || profileType === 'CARAVAN'
+      ? (user?.id ?? '')
+      : ''
+    : profileType === 'CARAVAN'
+      ? draftQuery.data?.caravan?.managerUserId || partyDraft.managerUserId || ''
+      : isCaravanManager(forUserQuery.data)
+        ? forUserId
+        : ''
+  const managerProfileQuery = useQuery({
+    queryKey: ['users', managerUserId, 'manager-profile'],
+    enabled:
+      Boolean(managerUserId) &&
+      !(isAdminCreate && managerUserId === forUserId && Boolean(forUserQuery.data)),
+    queryFn: async () => {
+      const path =
+        !isAdminCreate && managerUserId === user?.id ? '/account' : `/users/${managerUserId}`
+      const { data } = await api.get<ManagedUser>(path)
+      return data
+    },
+  })
+  const managerAccount =
+    isAdminCreate && managerUserId === forUserId && forUserQuery.data
+      ? forUserQuery.data
+      : (managerProfileQuery.data ?? null)
+  const managerIranian = isIranCountry(managerAccount?.countryId, iranId)
+  const managerProfileIncomplete = Boolean(
+    managerAccount && !managerProfileSaved && !isManagerProfileComplete(managerAccount, iranId),
+  )
+  const includeManagerStep = managerProfileIncomplete || step === 'manager'
+  const awaitingManagerProfile =
+    Boolean(managerUserId) && !managerAccount && managerProfileQuery.isLoading
   const createOptions = (
     nextType: ReservationType | '' = type,
     skipParty = skipCaravanParty,
@@ -591,6 +675,7 @@ export function ReservationCreatePage() {
     skipCaravanParty: skipParty,
     skipLicense: nextType === 'CARAVAN' && Boolean(pilgrimCountryId) && !isIranCountry(pilgrimCountryId, iranId),
     skipType: skipTypeStep,
+    includeManager: includeManagerStep,
   })
   const steps = useMemo(
     () =>
@@ -598,8 +683,9 @@ export function ReservationCreatePage() {
         skipCaravanParty,
         skipLicense: skipLicenseStep,
         skipType: skipTypeStep,
+        includeManager: includeManagerStep,
       }),
-    [type, skipCaravanParty, skipLicenseStep, skipTypeStep],
+    [type, skipCaravanParty, skipLicenseStep, skipTypeStep, includeManagerStep],
   )
   const autoTypeHandledRef = useRef(false)
   const stepIndex = steps.indexOf(step)
@@ -622,6 +708,7 @@ export function ReservationCreatePage() {
     const nextType = reservation.type
     if (nextType === 'CARAVAN' && !isAdminCreate && myCaravansQuery.isPending) return
     if (!countries.isSuccess) return
+    if (awaitingManagerProfile) return
     const skipParty = nextType === 'CARAVAN' && Boolean(soleCaravan)
     const nextValues = withDefaultStayDates(
       valuesFromReservation(reservation),
@@ -681,7 +768,26 @@ export function ReservationCreatePage() {
     soleCaravan,
     settings.data,
     countries.isSuccess,
+    awaitingManagerProfile,
   ])
+
+  useEffect(() => {
+    if (!managerAccount || managerDirtyRef.current) return
+    setManagerDraft({
+      firstName: managerAccount.firstName ?? '',
+      lastName: managerAccount.lastName ?? '',
+      nationalId: managerAccount.nationalId ?? '',
+      phone: managerAccount.phone ?? '',
+      birthDate: managerAccount.birthDate?.slice(0, 10) ?? '',
+      gender:
+        managerAccount.gender === 'MALE' || managerAccount.gender === 'FEMALE'
+          ? managerAccount.gender
+          : '',
+      provinceId: managerAccount.provinceId ?? '',
+      cityId: managerAccount.cityId ?? '',
+      photoId: managerAccount.photoId ?? '',
+    })
+  }, [managerAccount])
 
   useEffect(() => {
     if (!draftParam || !draftQuery.isError) return
@@ -1096,7 +1202,8 @@ export function ReservationCreatePage() {
         toast.error(t('reservations.countInvalid'))
         return false
       }
-      const max = partyMaxSize(type)
+      if (type === 'CARAVAN' && values.caravanId && caravanLimit.isPending) return false
+      const max = type === 'CARAVAN' ? caravanMax : partyMaxSize(type)
       if (max && male + female > max) {
         toast.error(
           t(type === 'CARAVAN' ? 'reservations.caravanMaxExceeded' : 'reservations.groupMaxExceeded', {
@@ -1132,16 +1239,26 @@ export function ReservationCreatePage() {
         return false
       }
     }
+    if (step === 'manager') {
+      if (managerPhotoUploading) {
+        toast.error(t('reservations.managerPhotoUploading'))
+        return false
+      }
+      const profileError = managerProfileError(managerDraft, t, managerIranian)
+      if (profileError) {
+        toast.error(profileError)
+        return false
+      }
+    }
     return true
   }
 
   async function assertTravelDatesReady() {
     try {
-      const others = RESERVATION_DATE_OVERLAP_CHECK_ENABLED
-        ? (existingReservationsQuery.data ??
-          (await existingReservationsQuery.refetch()).data ??
-          [])
-        : []
+      const others =
+        existingReservationsQuery.data ??
+        (await existingReservationsQuery.refetch()).data ??
+        []
       const dateError = travelDatesError(values, t, {
         others,
         excludeId: draftId || undefined,
@@ -1200,6 +1317,51 @@ export function ReservationCreatePage() {
     if (!id) return false
     if (!lastStep) setStep(nextStep)
     return true
+  }
+
+  async function saveManagerProfile() {
+    if (!managerAccount) {
+      toast.error(t('common.error'))
+      return false
+    }
+    const gender = managerDraft.gender === 'MALE' || managerDraft.gender === 'FEMALE'
+      ? managerDraft.gender
+      : null
+    if (!gender) return false
+    try {
+      const path =
+        !isAdminCreate && managerAccount.id === user?.id
+          ? '/account'
+          : `/users/${managerAccount.id}`
+      await api.patch(path, {
+        firstName: managerDraft.firstName.trim(),
+        lastName: managerDraft.lastName.trim(),
+        nationalId: managerDraft.nationalId.trim(),
+        phone: managerDraft.phone.trim(),
+        birthDate: managerDraft.birthDate,
+        gender,
+        provinceId: managerDraft.provinceId,
+        cityId: managerDraft.cityId,
+        photoId: managerDraft.photoId,
+        ...(managerAccount.countryId || iranId
+          ? { countryId: managerAccount.countryId || iranId }
+          : {}),
+      })
+      if (!isAdminCreate) await refresh()
+      await queryClient.invalidateQueries({
+        queryKey: ['users', managerAccount.id, 'manager-profile'],
+      })
+      if (isAdminCreate) {
+        await queryClient.invalidateQueries({
+          queryKey: ['users', forUserId, 'create-on-behalf'],
+        })
+      }
+      setManagerProfileSaved(true)
+      return true
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, t('common.error')))
+      return false
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -1266,9 +1428,30 @@ export function ReservationCreatePage() {
         return
       }
     }
+    if (awaitingManagerProfile) return
+    if (includeManagerStep && step !== 'manager') {
+      setStep('manager')
+      setMaxReachedStep((current) =>
+        furtherCreateStep(type, 'manager', current, createOptions()),
+      )
+      return
+    }
     setSubmitting(true)
     try {
-      const id = await persistDraft({ silent: true, wizardStep: step })
+      let nextValues = values
+      if (step === 'manager') {
+        const saved = await saveManagerProfile()
+        if (!saved) return
+        if (
+          type === 'INDIVIDUAL' &&
+          (managerDraft.gender === 'MALE' || managerDraft.gender === 'FEMALE')
+        ) {
+          nextValues = { ...values, ...countsForIndividualGender(managerDraft.gender) }
+          setValues(nextValues)
+        }
+      }
+      pendingTravelValuesRef.current = nextValues
+      const id = await persistDraft({ silent: true, wizardStep: step, nextValues })
       if (!id) return
       const rules = type ? (settings.data?.[settingsRulesKey(type)] ?? '') : ''
       if (splitMultilineItems(rules).length === 0) {
@@ -1290,7 +1473,11 @@ export function ReservationCreatePage() {
     }
     setSubmitting(true)
     try {
-      const id = await persistDraft({ silent: true, wizardStep: step })
+      const id = await persistDraft({
+        silent: true,
+        wizardStep: step,
+        nextValues: pendingTravelValuesRef.current ?? undefined,
+      })
       if (!id) return
       const { data } = await api.post<Reservation>(`/reservations/${id}/submit`)
       setRulesModalOpen(false)
@@ -1310,6 +1497,11 @@ export function ReservationCreatePage() {
 
   const patchValues = (patch: Partial<TravelValues>) =>
     setValues((current) => ({ ...current, ...patch }))
+  const currentStepLabel = createStepTitle(step, type, t)
+  const savedStepLabel = (() => {
+    const saved = savedThroughCreateStep(step, maxReachedStep, steps)
+    return saved ? createStepTitle(saved, type, t) : ''
+  })()
 
   async function selectPartyAndAdvance(item: {
     id: string
@@ -1579,6 +1771,7 @@ export function ReservationCreatePage() {
               values={values}
               onChange={patchValues}
               type={type}
+              caravanMax={caravanMax}
             />
           </>
         ) : null}
@@ -1616,6 +1809,19 @@ export function ReservationCreatePage() {
           />
         ) : null}
 
+        {step === 'manager' ? (
+          <ReservationManagerProfileStep
+            draft={managerDraft}
+            iranian={managerIranian}
+            countryId={managerAccount?.countryId || iranId}
+            onUploading={setManagerPhotoUploading}
+            onChange={(patch) => {
+              managerDirtyRef.current = true
+              setManagerDraft((current) => ({ ...current, ...patch }))
+            }}
+          />
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-3 pt-6">
           {stepIndex > 0 && step !== 'count' ? (
             <Button type="button" onClick={goBack} disabled={submitting}>
@@ -1626,10 +1832,14 @@ export function ReservationCreatePage() {
           <Button
             type="submit"
             className="ms-auto"
-            disabled={submitting || (step === 'type' && !type)}
+            disabled={submitting || (step === 'type' && !type) || (lastStep && awaitingManagerProfile)}
           >
             {lastStep
-              ? t(step === 'services' ? 'reservations.createFileSubmit' : 'reservations.finalSubmit')
+              ? t(
+                  step === 'services' || step === 'manager'
+                    ? 'reservations.createFileSubmit'
+                    : 'reservations.finalSubmit',
+                )
               : t('reservations.nextStep')}
             {lastStep ? <Check className="size-4" aria-hidden /> : <ChevronLeft className="size-4" aria-hidden />}
           </Button>
@@ -1639,17 +1849,27 @@ export function ReservationCreatePage() {
           <p className="flex items-start gap-1.5 text-xs leading-6 text-teal-700">
             <FileCheck2 className="mt-1 size-3.5 shrink-0" aria-hidden />
             <span>
-              {draftQuery.data?.code ? (
-                <Trans
-                  i18nKey="reservations.draftSavedHintWithCode"
-                  values={{ code: localizeDigits(draftQuery.data.code, locale) }}
-                  components={{
-                    code: <bdi dir="ltr" className="font-bold text-teal-800" />,
-                  }}
-                />
-              ) : (
-                t('reservations.draftSavedHint')
-              )}
+              <Trans
+                i18nKey={
+                  draftQuery.data?.code
+                    ? savedStepLabel
+                      ? 'reservations.draftSavedHintWithCode'
+                      : 'reservations.draftSavedHintWithCodeHere'
+                    : savedStepLabel
+                      ? 'reservations.draftSavedHint'
+                      : 'reservations.draftSavedHintHere'
+                }
+                values={{
+                  code: localizeDigits(draftQuery.data?.code ?? '', locale),
+                  step: currentStepLabel,
+                  saved: savedStepLabel,
+                }}
+                components={{
+                  code: <bdi dir="ltr" className="font-bold text-teal-800" />,
+                  step: <strong className="font-bold text-teal-800" />,
+                  saved: <strong className="font-bold text-teal-800" />,
+                }}
+              />
             </span>
           </p>
         ) : null}
@@ -1689,7 +1909,8 @@ function CreateStepBar({
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const currentIndex = steps.indexOf(current)
-  const maxReachedIndex = Math.max(currentIndex, steps.indexOf(maxReached))
+  const reachedIndex = steps.indexOf(maxReached)
+  const liveIndex = reachedIndex >= 0 ? Math.max(currentIndex, reachedIndex) : currentIndex
   const total = steps.length
   return (
     <div className={`${cardClassName} mb-4 p-4`}>
@@ -1713,29 +1934,31 @@ function CreateStepBar({
         />
         <div
           className={`grid min-w-0 w-full flex-1 gap-2 sm:order-first ${
-            total >= 6
-              ? 'grid-cols-3 sm:grid-cols-6'
-              : total === 5
-                ? 'grid-cols-5'
-                : total === 3
-                  ? 'grid-cols-3'
-                  : 'grid-cols-4'
+            total >= 7
+              ? 'grid-cols-3 sm:grid-cols-7'
+              : total >= 6
+                ? 'grid-cols-3 sm:grid-cols-6'
+                : total === 5
+                  ? 'grid-cols-5'
+                  : total === 3
+                    ? 'grid-cols-3'
+                    : 'grid-cols-4'
           }`}
         >
           {steps.map((item, index) => {
             const Icon =
               item === 'party' ? (type === 'CARAVAN' ? Footprints : Users) : createStepIcons[item]
-            const state =
-              index === currentIndex ? 'current' : index <= maxReachedIndex ? 'done' : 'pending'
+            const state = index === liveIndex ? 'current' : index < liveIndex ? 'done' : 'pending'
+            const selected = index === currentIndex && state !== 'current'
             const styles = {
               done: 'border-teal-200 bg-teal-50 text-teal-800',
               current: 'wizard-step-blink border-teal-500 bg-teal-500 text-white',
               pending: 'border-line bg-cream-50 text-ink-400',
             }
-            const clickable = index <= maxReachedIndex
+            const clickable = index <= liveIndex
             const className = `flex h-full w-full flex-col items-center gap-1 rounded-2xl border px-1.5 py-3 text-center transition-[box-shadow,border-color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${styles[state]} ${
-              clickable ? 'cursor-pointer' : 'cursor-not-allowed'
-            }`
+              selected ? 'ring-2 ring-teal-300' : ''
+            } ${clickable ? 'cursor-pointer' : 'cursor-not-allowed'}`
             const numberClass =
               state === 'current' ? 'text-white' : state === 'done' ? 'text-teal-800' : 'text-ink-400'
             const label =

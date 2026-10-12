@@ -531,6 +531,7 @@ export function DetailActions({
   onDelete,
   extra,
   className = 'mt-6',
+  cardNavigation = true,
 }: {
   editTo: string
   editLabel: string
@@ -538,11 +539,13 @@ export function DetailActions({
   onDelete?: () => void
   extra?: ReactNode
   className?: string
+  cardNavigation?: boolean
 }) {
   const actionsRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (!cardNavigation) return
     const actions = actionsRef.current
     const card =
       actions?.closest<HTMLElement>('[data-form-card]') ??
@@ -565,7 +568,7 @@ export function DetailActions({
       card.removeEventListener('click', onClick)
       card.style.cursor = previousCursor
     }
-  }, [editTo, navigate])
+  }, [cardNavigation, editTo, navigate])
 
   return (
     <div

@@ -9,8 +9,7 @@ import { AppForm, Button, cardClassName } from '../../components/ui/Form'
 import { FormEmptyHint } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { useGeoName } from '../../lib/geo'
-import { isPilgrim } from '../../lib/roles'
-import { hasMenuAccess, hasModuleAccess } from '../../routes/RequireMenuAccess'
+import { canManageAccommodations, isPilgrim } from '../../lib/roles'
 import type { Accommodation, Paginated } from '../../types/app'
 
 export function AccommodationSearchModal({ onClose }: { onClose: () => void }) {
@@ -23,10 +22,8 @@ export function AccommodationSearchModal({ onClose }: { onClose: () => void }) {
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)
   const [rows, setRows] = useState<Accommodation[]>([])
-  const canBrowseAll =
-    hasMenuAccess('/accommodations', user?.modules ?? []) ||
-    hasModuleAccess('accommodation', user?.modules ?? [])
-  const showViewAll = isPilgrim(user)
+  const canBrowseAll = canManageAccommodations(user)
+  const showViewAll = isPilgrim(user) && canBrowseAll
 
   useEffect(() => {
     const previous = document.body.style.overflow

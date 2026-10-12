@@ -10,6 +10,7 @@ export type RoleUserScope = {
   hideStatus?: boolean
   hideListRoles?: boolean
   showRoleFilter?: boolean
+  showPersonFilters?: boolean
   showAccommodations?: boolean
   showCaravans?: boolean
   showPlacement?: boolean
@@ -59,6 +60,7 @@ export const userScopes: Record<string, RoleUserScope> = {
     i18nPrefix: 'accommodationManagers',
     listTitleKey: 'menus.accommodationManagers',
     showAccommodations: true,
+    showPersonFilters: true,
   },
   caravanManager: {
     queryKey: 'caravan-managers',
@@ -73,6 +75,7 @@ export const userScopes: Record<string, RoleUserScope> = {
     showCaravans: true,
     showPlacement: true,
     hideDelete: true,
+    showPersonFilters: true,
   },
   headquartersRepresentative: {
     queryKey: 'headquarters-representatives',

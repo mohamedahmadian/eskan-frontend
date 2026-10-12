@@ -746,6 +746,8 @@ export type PublicAccommodation = {
   parkingCapacity: number | null;
   bathroomCount: number | null;
   toiletCount: number | null;
+  classroomCount: number | null;
+  schoolDistrict: { id: string; name: string } | null;
 };
 
 export type PublicWalkingStation = StationAmenities & {
@@ -937,6 +939,14 @@ export type AccommodationContactPerson = {
   status?: string;
 };
 
+export type SchoolDistrict = {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AccommodationContactLink = {
   id: string;
   role:
@@ -993,6 +1003,9 @@ export type Accommodation = {
   parkingCapacity: number | null;
   bathroomCount: number | null;
   toiletCount: number | null;
+  classroomCount: number | null;
+  schoolDistrictId: string | null;
+  schoolDistrict: { id: string; name: string } | null;
   managers: AccommodationManagerLink[];
   contacts?: AccommodationContactLink[];
   yearContacts?: AccommodationYearContactLink[];
@@ -2849,6 +2862,7 @@ export type ReceptionSettings = {
   caravanAutoApprove: boolean;
   caravanAutoApproveLicenses: boolean;
   caravanMaxPerNationalId: number;
+  caravanNewMaxHeadcount: number;
   caravanCreateInReception: boolean;
   caravanPlacementMode: PlacementMode;
   caravanIntro: string;

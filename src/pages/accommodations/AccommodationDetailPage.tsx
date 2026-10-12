@@ -15,6 +15,7 @@ import {
   HeartPulse,
   IdCard,
   Landmark,
+  LayoutGrid,
   MapPin,
   MapPinned,
   Mars,
@@ -25,6 +26,7 @@ import {
   Route,
   Share2,
   Shield,
+  School,
   Shirt,
   Snowflake,
   UserCheck,
@@ -467,6 +469,24 @@ export function AccommodationDetailPage() {
                 {t('accommodations.sectionAmenities')}
               </FormSectionTitle>
               <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                {item.type === 'SCHOOL' ? (
+                  <>
+                    <FormFactTile
+                      icon={School}
+                      label={t('accommodations.schoolDistrict')}
+                      value={item.schoolDistrict?.name || empty}
+                      empty={!item.schoolDistrict}
+                      tone="teal"
+                    />
+                    <FormFactTile
+                      icon={LayoutGrid}
+                      label={t('accommodations.classroomCount')}
+                      value={item.classroomCount == null ? empty : n(item.classroomCount)}
+                      empty={item.classroomCount == null}
+                      tone="mint"
+                    />
+                  </>
+                ) : null}
                 <FormFactTile
                   icon={Shirt}
                   label={t('accommodations.hasLaundry')}

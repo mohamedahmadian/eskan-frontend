@@ -1079,6 +1079,30 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "myAccommodations.subtitle",
     };
   }
+  if (pathname.startsWith("/accommodation-base-info/schools/new")) {
+    return {
+      titleKey: "schoolDistricts.create",
+      subtitleKey: "schoolDistricts.createSubtitle",
+    };
+  }
+  if (/^\/accommodation-base-info\/schools\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      titleKey: "schoolDistricts.edit",
+      subtitleKey: "schoolDistricts.editSubtitle",
+    };
+  }
+  if (/^\/accommodation-base-info\/schools\/[^/]+$/.test(pathname)) {
+    return {
+      titleKey: "schoolDistricts.details",
+      subtitleKey: "schoolDistricts.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/accommodation-base-info")) {
+    return {
+      titleKey: "menus.accommodationBaseInfo",
+      subtitleKey: "accommodationBaseInfo.subtitle",
+    };
+  }
   if (pathname.startsWith("/accommodations/new")) {
     return {
       titleKey: "accommodations.create",

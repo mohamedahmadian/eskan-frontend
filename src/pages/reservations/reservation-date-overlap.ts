@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { api } from '../../lib/api'
+import { lateSafarYears, stayOverlapsLateSafar } from '../../lib/hijri'
 import type {
   Paginated,
   PilgrimPilgrimageHistoryItem,
@@ -67,6 +68,27 @@ export function findOverlappingReservation(
     if (!isActiveForDateOverlap(row)) continue
     const other = reservationTripRange(row)
     if (other && reservationRangesOverlap(range, other)) return row
+  }
+  return null
+}
+
+export function findLateSafarConflict(
+  candidate: DateFields,
+  others: ReservationDateSpan[],
+  excludeId?: string,
+) {
+  const start = candidate.stayStartDate || ''
+  const end = candidate.stayEndDate || ''
+  if (!start || !end || !stayOverlapsLateSafar(start, end)) return null
+  for (const row of others) {
+    if (excludeId && row.id === excludeId) continue
+    if (!isActiveForDateOverlap(row)) continue
+    const otherStart = row.stayStartDate || ''
+    const otherEnd = row.stayEndDate || ''
+    if (!otherStart || !otherEnd || !stayOverlapsLateSafar(otherStart, otherEnd)) continue
+    const candidateYears = lateSafarYears(start, end)
+    const otherYears = lateSafarYears(otherStart, otherEnd)
+    if ([...candidateYears].some((year) => otherYears.has(year))) return row
   }
   return null
 }

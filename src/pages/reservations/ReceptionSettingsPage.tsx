@@ -138,6 +138,7 @@ const emptyDraft = (): Draft => ({
   caravanAutoApprove: false,
   caravanAutoApproveLicenses: false,
   caravanMaxPerNationalId: 1,
+  caravanNewMaxHeadcount: 20,
   caravanCreateInReception: false,
   caravanPlacementMode: 'MANUAL',
   caravanIntro: '',
@@ -227,6 +228,7 @@ function toDraft(data: ReceptionSettings | Draft): Draft {
     caravanAutoApprove: data.caravanAutoApprove,
     caravanAutoApproveLicenses: data.caravanAutoApproveLicenses ?? false,
     caravanMaxPerNationalId: data.caravanMaxPerNationalId ?? 1,
+    caravanNewMaxHeadcount: data.caravanNewMaxHeadcount ?? 20,
     caravanCreateInReception: data.caravanCreateInReception ?? false,
     caravanPlacementMode: data.caravanPlacementMode ?? 'MANUAL',
     caravanIntro: data.caravanIntro ?? '',
@@ -628,6 +630,26 @@ export function ReceptionSettingsPage() {
                   </FormField>
                   <p className="text-sm leading-7 text-ink-500">
                     {t('receptionSettings.caravanMaxPerNationalIdHint')}
+                  </p>
+                  <FormField
+                    icon={Users}
+                    label={t('receptionSettings.caravanNewMaxHeadcount')}
+                    htmlFor="caravanNewMaxHeadcount"
+                  >
+                    <input
+                      id="caravanNewMaxHeadcount"
+                      type="number"
+                      min={1}
+                      className={fieldClassName}
+                      value={draft.caravanNewMaxHeadcount}
+                      onChange={(event) =>
+                        patch('caravanNewMaxHeadcount', Math.max(1, Number(event.target.value) || 1))
+                      }
+                      required
+                    />
+                  </FormField>
+                  <p className="text-sm leading-7 text-ink-500">
+                    {t('receptionSettings.caravanNewMaxHeadcountHint')}
                   </p>
                   <FormField
                     icon={Tent}

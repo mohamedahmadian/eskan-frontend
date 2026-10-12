@@ -1,4 +1,5 @@
-import { Filter, Plus, Shield, Tent, Users } from 'lucide-react'
+import { FileText, Filter, Flag, MapPin, MapPinned, Mars, Plus, Shield, Tent, ToggleRight, Users, Venus } from 'lucide-react'
+import { useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -15,6 +16,7 @@ import {
   Button,
   FormField,
   PageHeader,
+  fieldClassName,
   listShellClassName,
 } from '../../components/ui/Form'
 import { CheckboxField } from '../../components/ui/CheckboxField'
@@ -27,13 +29,18 @@ import { api } from '../../lib/api'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { formatRoles } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
-import type {
-  City,
-  ManagedCaravan,
-  ManagedUser,
-  Paginated,
-  Province,
-  RoleOption,
+import {
+  userGenders,
+  userStatuses,
+  type City,
+  type Country,
+  type ManagedCaravan,
+  type ManagedUser,
+  type Paginated,
+  type Province,
+  type RoleOption,
+  type UserGender,
+  type UserStatus,
 } from '../../types/app'
 import type { RoleUserScope } from './user-scopes'
 
@@ -133,9 +140,17 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   const geoName = useGeoName()
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } = useListParams()
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
+  const personFilters = Boolean(scope.showPersonFilters)
+  const notesRef = useRef<HTMLInputElement>(null)
   const roleCodes = scope.showRoleFilter ? parseRoleCodes(searchParams) : []
-  const provinceId = scope.showHeadquartersAreas ? (searchParams.get('provinceId') ?? '') : ''
-  const cityId = scope.showHeadquartersAreas ? (searchParams.get('cityId') ?? '') : ''
+  const countryId = personFilters ? (searchParams.get('countryId') ?? '') : ''
+  const provinceId =
+    personFilters || scope.showHeadquartersAreas ? (searchParams.get('provinceId') ?? '') : ''
+  const cityId =
+    personFilters || scope.showHeadquartersAreas ? (searchParams.get('cityId') ?? '') : ''
+  const status = personFilters ? ((searchParams.get('status') ?? '') as UserStatus | '') : ''
+  const gender = personFilters ? ((searchParams.get('gender') ?? '') as UserGender | '') : ''
+  const notesParam = personFilters ? (searchParams.get('notes') ?? '') : ''
   const keys = scope.i18nPrefix
   const roles = useQuery({
     queryKey: ['roles'],
@@ -145,17 +160,27 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
       return data
     },
   })
-  const provinces = useQuery({
-    queryKey: ['provinces', 'lookup'],
-    enabled: Boolean(scope.showHeadquartersAreas),
+  const countries = useQuery({
+    queryKey: ['countries', 'lookup'],
+    enabled: personFilters,
     queryFn: async () => {
-      const { data } = await api.get<Province[]>('/provinces')
+      const { data } = await api.get<Country[]>('/countries')
+      return data
+    },
+  })
+  const provinces = useQuery({
+    queryKey: personFilters ? ['provinces', 'lookup', countryId] : ['provinces', 'lookup'],
+    enabled: personFilters ? Boolean(countryId) : Boolean(scope.showHeadquartersAreas),
+    queryFn: async () => {
+      const { data } = await api.get<Province[]>('/provinces', {
+        params: personFilters ? { countryId } : undefined,
+      })
       return data
     },
   })
   const cities = useQuery({
     queryKey: ['cities', 'lookup', provinceId],
-    enabled: Boolean(scope.showHeadquartersAreas && provinceId),
+    enabled: Boolean((personFilters || scope.showHeadquartersAreas) && provinceId),
     queryFn: async () => {
       const { data } = await api.get<City[]>('/cities', { params: { provinceId } })
       return data
@@ -163,15 +188,32 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   })
   const roleCodesKey = roleCodes.join(',')
   const query = useQuery({
-    queryKey: [scope.queryKey, q, page, roleCodesKey, provinceId, cityId, sortBy, sortDir],
+    queryKey: [
+      scope.queryKey,
+      q,
+      page,
+      roleCodesKey,
+      countryId,
+      provinceId,
+      cityId,
+      status,
+      gender,
+      notesParam,
+      sortBy,
+      sortDir,
+    ],
     queryFn: async () => {
       const { data } = await api.get<Paginated<ManagedUser>>(scope.apiBase, {
         params: {
           q: q || undefined,
           page,
           roleCodes: roleCodesKey || undefined,
+          countryId: countryId || undefined,
           provinceId: provinceId || undefined,
           cityId: cityId || undefined,
+          status: status || undefined,
+          gender: gender || undefined,
+          notes: notesParam || undefined,
           ...sortParams,
         },
       })
@@ -180,8 +222,17 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   })
 
   const rows = query.data?.items ?? []
-  const filtered = Boolean(q || roleCodes.length || provinceId || cityId)
-  const hasExtraFilters = Boolean(scope.showHeadquartersAreas || scope.showRoleFilter)
+  const filtersActive = Boolean(
+    roleCodes.length || countryId || provinceId || cityId || status || gender || notesParam,
+  )
+  const filtered = Boolean(q || filtersActive)
+  const hasExtraFilters = Boolean(
+    scope.showHeadquartersAreas || scope.showRoleFilter || personFilters,
+  )
+
+  function currentNotes() {
+    return notesRef.current?.value.trim() ?? notesParam
+  }
 
   function toggleRole(code: string, on: boolean) {
     const next = on
@@ -220,18 +271,150 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
         inputId={`${scope.queryKey}-search`}
         term={term}
         onTermChange={setTerm}
-        onSubmit={() => applySearch()}
+        onSubmit={() =>
+          personFilters
+            ? setParams(
+                {
+                  q: term.trim() || undefined,
+                  notes: currentNotes() || undefined,
+                },
+                { resetPage: true },
+              )
+            : applySearch()
+        }
         label={t('common.search')}
         placeholder={t(`${keys}.searchPlaceholder`)}
-        filtersActive={Boolean(roleCodes.length || provinceId || cityId)}
+        filtersActive={filtersActive}
         extraClassName={
-          scope.showRoleFilter && !scope.showHeadquartersAreas
+          scope.showRoleFilter && !scope.showHeadquartersAreas && !personFilters
             ? 'sm:grid-cols-1'
             : 'sm:grid-cols-2'
         }
         extra={
           hasExtraFilters ? (
             <>
+              {personFilters ? (
+                <>
+                  <FilterPair>
+                    <FormField icon={ToggleRight} label={t('users.status')} htmlFor={`${scope.queryKey}-status`}>
+                      <SearchSelect
+                        id={`${scope.queryKey}-status`}
+                        value={status}
+                        placeholder={t('users.allStatuses')}
+                        onChange={(next) =>
+                          setParams({ status: next || undefined }, { resetPage: true })
+                        }
+                        options={[
+                          { value: '', label: t('users.allStatuses') },
+                          ...Object.values(userStatuses).map((item) => ({
+                            value: item,
+                            label: t(`userStatuses.${item}`),
+                          })),
+                        ]}
+                      />
+                    </FormField>
+                    <FormField
+                      icon={gender === 'FEMALE' ? Venus : Mars}
+                      label={t('users.gender')}
+                      htmlFor={`${scope.queryKey}-gender`}
+                    >
+                      <SearchSelect
+                        id={`${scope.queryKey}-gender`}
+                        value={gender}
+                        placeholder={t('users.allGenders')}
+                        onChange={(next) =>
+                          setParams({ gender: next || undefined }, { resetPage: true })
+                        }
+                        options={[
+                          { value: '', label: t('users.allGenders') },
+                          ...Object.values(userGenders).map((item) => ({
+                            value: item,
+                            label: t(`userGenders.${item}`),
+                          })),
+                        ]}
+                      />
+                    </FormField>
+                  </FilterPair>
+                  <FilterPair columns={3}>
+                    <FormField icon={Flag} label={t('geo.country')} htmlFor={`${scope.queryKey}-country`}>
+                      <SearchSelect
+                        id={`${scope.queryKey}-country`}
+                        value={countryId}
+                        placeholder={t('geo.allCountries')}
+                        onChange={(next) =>
+                          setParams(
+                            {
+                              countryId: next || undefined,
+                              provinceId: undefined,
+                              cityId: undefined,
+                            },
+                            { resetPage: true },
+                          )
+                        }
+                        options={[
+                          { value: '', label: t('geo.allCountries') },
+                          ...(countries.data ?? []).map((country) => ({
+                            value: country.id,
+                            label: geoName(country),
+                          })),
+                        ]}
+                      />
+                    </FormField>
+                    <FormField icon={MapPinned} label={t('geo.province')} htmlFor={`${scope.queryKey}-province`}>
+                      <SearchSelect
+                        id={`${scope.queryKey}-province`}
+                        value={provinceId}
+                        disabled={!countryId}
+                        placeholder={t('geo.allProvinces')}
+                        onChange={(next) =>
+                          setParams(
+                            { provinceId: next || undefined, cityId: undefined },
+                            { resetPage: true },
+                          )
+                        }
+                        options={[
+                          { value: '', label: t('geo.allProvinces') },
+                          ...(provinces.data ?? []).map((province) => ({
+                            value: province.id,
+                            label: geoName(province),
+                          })),
+                        ]}
+                      />
+                    </FormField>
+                    <FormField icon={MapPin} label={t('geo.city')} htmlFor={`${scope.queryKey}-city`}>
+                      <SearchSelect
+                        id={`${scope.queryKey}-city`}
+                        value={cityId}
+                        disabled={!provinceId}
+                        placeholder={t('geo.allCities')}
+                        onChange={(next) =>
+                          setParams({ cityId: next || undefined }, { resetPage: true })
+                        }
+                        options={[
+                          { value: '', label: t('geo.allCities') },
+                          ...(cities.data ?? []).map((city) => ({
+                            value: city.id,
+                            label: geoName(city),
+                          })),
+                          { value: 'none', label: t('geo.noCity') },
+                        ]}
+                      />
+                    </FormField>
+                  </FilterPair>
+                  <div className="sm:col-span-2">
+                    <FormField icon={FileText} label={t('users.notes')} htmlFor={`${scope.queryKey}-notes`}>
+                      <input
+                        id={`${scope.queryKey}-notes`}
+                        key={notesParam}
+                        ref={notesRef}
+                        className={fieldClassName}
+                        defaultValue={notesParam}
+                        placeholder={t('users.notesFilterPlaceholder')}
+                      />
+                    </FormField>
+                  </div>
+                </>
+              ) : null}
               {scope.showHeadquartersAreas ? (
                 <FilterPair>
                   <FormField icon={Filter} label={t('geo.province')} htmlFor="hq-list-province">

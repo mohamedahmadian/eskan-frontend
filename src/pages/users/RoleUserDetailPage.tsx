@@ -100,10 +100,19 @@ const tabIcons: Record<UserDetailTab, LucideIcon> = {
   placement: MapPinned,
 }
 
-export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
+export function RoleUserDetailPage({
+  scope,
+  userId,
+  embedded = false,
+}: {
+  scope: RoleUserScope
+  userId?: string
+  embedded?: boolean
+}) {
   const { t, i18n } = useTranslation()
   const uiLocale = i18n.language.split('-')[0] ?? 'fa'
-  const { id } = useParams()
+  const { id: routeId } = useParams()
+  const id = userId ?? routeId
   const navigate = useNavigate()
   const { user: actor, refresh } = useAuth()
   const queryClient = useQueryClient()
@@ -207,13 +216,23 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
         icon={UserRound}
         title={t(`${keys}.details`)}
         subtitle={<EntityNameSubtitle name={user.fullName} icon={UserRound} />}
+        backTo={embedded ? false : undefined}
+        className={embedded ? 'mb-4' : 'mb-6'}
       />
 
       <section className={`${cardClassName} overflow-hidden`}>
         <RoleUserProfileHeader
           user={user}
           hideRoles={scope.hideRoles}
-          action={<OpenUserPanelButton userId={user.id} status={user.status} />}
+          action={
+            <OpenUserPanelButton
+              userId={user.id}
+              status={user.status}
+              label={
+                scope.i18nPrefix === 'pilgrims' ? t('pilgrims.viewSystem') : undefined
+              }
+            />
+          }
         />
 
         <nav className="flex flex-wrap gap-2 border-b border-line bg-cream-50/60 px-4 py-3 sm:px-5">
@@ -738,6 +757,7 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
         <div className="border-t border-line px-5 py-4 sm:px-6">
           <DetailActions
             className=""
+            cardNavigation={!embedded}
             editTo={`${scope.listPath}/${user.id}/edit`}
             editLabel={t('common.edit')}
             deleteLabel={
@@ -758,14 +778,7 @@ export function RoleUserDetailPage({ scope }: { scope: RoleUserScope }) {
                     })
             }
             extra={
-              scope.showPilgrimCard ? (
-                <Link to={publicProfilePath(user.id)}>
-                  <Button type="button" variant="soft">
-                    <IdCard className="size-4" aria-hidden />
-                    {t('publicProfile.openPage')}
-                  </Button>
-                </Link>
-              ) : (
+              scope.showPilgrimCard ? undefined : (
                 <>
                   {isManagerUser ? (
                     <Button type="button" variant="soft" onClick={() => setManagerCardOpen(true)}>

@@ -9,6 +9,7 @@ import {
   Flag,
   Flame,
   Landmark,
+  LayoutGrid,
   MapPin,
   MapPinned,
   MessageCircle,
@@ -17,6 +18,7 @@ import {
   Phone,
   Route,
   Share2,
+  School,
   Shirt,
   Snowflake,
   ToggleRight,
@@ -26,14 +28,15 @@ import {
   BookOpen,
   Compass,
 } from 'lucide-react'
-import { type FormEvent, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { type FormEvent, type ReactNode, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppForm, FormActions, FormField, ToggleField, fieldClassName } from '../../components/ui/Form'
 import { FormCard } from '../../components/ui/FormLayout'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
-import { getApiErrorMessage } from '../../lib/api'
+import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import {
@@ -50,6 +53,7 @@ import {
   type ManagementType,
   type Province,
   type City,
+  type SchoolDistrict,
 } from '../../types/app'
 import { AccommodationActivityYearFields, AccommodationManagersCard } from './AccommodationManagersCard'
 import { AccommodationTabNav, type AccommodationTab } from './AccommodationTabs'
@@ -60,6 +64,8 @@ import {
 } from './AccommodationContactsPanel'
 import {
   accommodationContactDraftsFromInitial,
+  accommodationContactRoles,
+  isAccommodationContactComplete,
   toAccommodationContactPayloads,
   type AccommodationContactDraft,
   type AccommodationContactRole,
@@ -97,6 +103,8 @@ export type AccommodationPayload = {
   parkingCapacity: number | null
   bathroomCount: number | null
   toiletCount: number | null
+  classroomCount: number | null
+  schoolDistrictId: string | null
   year?: number
   managerUserIds?: string[]
   primaryManagerUserId?: string | null
@@ -161,6 +169,13 @@ export function AccommodationForm({
   onCountryChange,
   onProvinceChange,
   onSubmit,
+  onCancel,
+  headerAction,
+  activityYear,
+  lockActivityYear = false,
+  createSubtitle,
+  contactsOptional = false,
+  autoFocus = false,
 }: {
   initial?: Accommodation
   countries: Country[]
@@ -172,6 +187,14 @@ export function AccommodationForm({
   onCountryChange: (countryId: string) => void
   onProvinceChange: (provinceId: string) => void
   onSubmit: (payload: AccommodationPayload) => Promise<void>
+  onCancel?: () => void
+  headerAction?: ReactNode
+  activityYear?: number
+  lockActivityYear?: boolean
+  createSubtitle?: string
+  /** Contacts may be left empty; incomplete drafts are not sent. */
+  contactsOptional?: boolean
+  autoFocus?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -211,7 +234,9 @@ export function AccommodationForm({
     parkingCapacity: initial?.parkingCapacity != null ? String(initial.parkingCapacity) : '',
     bathroomCount: initial?.bathroomCount != null ? String(initial.bathroomCount) : '',
     toiletCount: initial?.toiletCount != null ? String(initial.toiletCount) : '',
-    activityYear: String(currentPersianYear()),
+    classroomCount: initial?.classroomCount != null ? String(initial.classroomCount) : '',
+    schoolDistrictId: initial?.schoolDistrictId ?? '',
+    activityYear: String(activityYear ?? currentPersianYear()),
     managerUserId: '',
     isPrimary: initial?.managers
       ? initial.managers.some(
@@ -232,6 +257,15 @@ export function AccommodationForm({
   const [yearContactMode, setYearContactMode] = useState<
     'manager' | 'fromAccommodation' | 'manual'
   >('manager')
+  const isSchool = values.type === accommodationTypes.SCHOOL
+  const districts = useQuery({
+    queryKey: ['school-districts', 'lookup'],
+    enabled: isSchool,
+    queryFn: async () => {
+      const { data } = await api.get<SchoolDistrict[]>('/school-districts')
+      return data
+    },
+  })
 
   const tabs = useMemo(
     () =>
@@ -288,6 +322,28 @@ export function AccommodationForm({
       setTab('location')
       return
     }
+    if (contactsOptional) {
+      for (const role of accommodationContactRoles) {
+        const draft = drafts[role]
+        const started = Boolean(
+          draft.userId ||
+            draft.nationalId.trim() ||
+            draft.firstName.trim() ||
+            draft.lastName.trim() ||
+            draft.phone.trim(),
+        )
+        if (started && !draft.userId && !isAccommodationContactComplete(draft)) {
+          toast.error(
+            t('accommodations.contactIncomplete', {
+              role: t(`accommodations.contactRoles.${role}`),
+            }),
+          )
+          setTab('contacts')
+          setActiveContactRole(role)
+          return
+        }
+      }
+    }
     setSaving(true)
     try {
       await onSubmit({
@@ -322,6 +378,8 @@ export function AccommodationForm({
         parkingCapacity: toOptionalNumber(values.parkingCapacity),
         bathroomCount: toOptionalNumber(values.bathroomCount),
         toiletCount: toOptionalNumber(values.toiletCount),
+        classroomCount: isSchool ? toOptionalNumber(values.classroomCount) : null,
+        schoolDistrictId: isSchool ? emptyToNull(values.schoolDistrictId) : null,
         contacts: toAccommodationContactPayloads(drafts),
         ...(!isAdmin && !initial?.id ? { yearContactMode } : {}),
         ...(isAdmin && !initial?.id
@@ -349,7 +407,8 @@ export function AccommodationForm({
       <FormCard
         icon={Building2}
         title={initial ? initial.name || t('accommodations.edit') : t('accommodations.create')}
-        subtitle={initial ? undefined : t('accommodations.createSubtitle')}
+        subtitle={initial ? undefined : (createSubtitle ?? t('accommodations.createSubtitle'))}
+        action={headerAction}
       >
       <div className="space-y-4 p-5 sm:p-6">
       <AccommodationTabNav tab={tab} tabs={tabs} onChange={setTab} />
@@ -362,6 +421,7 @@ export function AccommodationForm({
         />
       ) : (
         <AppForm
+          autoFocusFirst={autoFocus || undefined}
           onSubmit={submit}
           onInvalid={(event) => {
             const panel = (event.target as HTMLElement | null)?.closest('[data-tab]')
@@ -703,6 +763,53 @@ export function AccommodationForm({
       </div>
 
       <div data-tab="amenities" className={panelClass('amenities')}>
+        {isSchool ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              icon={School}
+              label={t('accommodations.schoolDistrict')}
+              htmlFor="schoolDistrictId"
+            >
+              <SearchSelect
+                id="schoolDistrictId"
+                value={values.schoolDistrictId}
+                placeholder={t('schoolDistricts.select')}
+                onChange={(next) => set('schoolDistrictId', next)}
+                options={[
+                  { value: '', label: t('schoolDistricts.none') },
+                  ...(values.schoolDistrictId &&
+                  initial?.schoolDistrict?.id === values.schoolDistrictId &&
+                  !(districts.data ?? []).some((item) => item.id === values.schoolDistrictId)
+                    ? [
+                        {
+                          value: initial.schoolDistrict.id,
+                          label: initial.schoolDistrict.name,
+                        },
+                      ]
+                    : []),
+                  ...(districts.data ?? []).map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                  })),
+                ]}
+              />
+            </FormField>
+            <FormField
+              icon={LayoutGrid}
+              label={t('accommodations.classroomCount')}
+              htmlFor="classroomCount"
+            >
+              <input
+                id="classroomCount"
+                type="number"
+                min={0}
+                className={fieldClassName}
+                value={values.classroomCount}
+                onChange={(e) => set('classroomCount', e.target.value)}
+              />
+            </FormField>
+          </div>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <AmenityCheck
             icon={Shirt}
@@ -815,6 +922,11 @@ export function AccommodationForm({
       </div>
 
       <div data-tab="contacts" className={panelClass('contacts')}>
+        {contactsOptional ? (
+          <p className="rounded-2xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm leading-6 text-ink-700">
+            {t('accommodationYearManagement.contactsOptionalHint')}
+          </p>
+        ) : null}
         <AccommodationContactsPanel
           drafts={drafts}
           activeRole={activeContactRole}
@@ -822,6 +934,7 @@ export function AccommodationForm({
           onDraftChange={(role, draft) =>
             setDrafts((current) => ({ ...current, [role]: draft }))
           }
+          fieldsRequired={!contactsOptional}
         />
         {!isAdmin && !initial?.id ? (
           <FormField icon={Users} label={t('accommodations.yearContactMode')} htmlFor="yearContactMode">
@@ -850,6 +963,7 @@ export function AccommodationForm({
           <div className="space-y-4">
             <AccommodationActivityYearFields
               year={values.activityYear}
+              yearDisabled={lockActivityYear}
               onYearChange={(next) => set('activityYear', next)}
               userId={values.managerUserId}
               onUserIdChange={(next) => set('managerUserId', next)}
@@ -873,7 +987,7 @@ export function AccommodationForm({
           submitLabel={t('accommodations.save')}
           cancelLabel={t('accommodations.cancel')}
           submitting={saving}
-          onCancel={() => history.back()}
+          onCancel={onCancel ?? (() => history.back())}
         />
       </div>
         </AppForm>

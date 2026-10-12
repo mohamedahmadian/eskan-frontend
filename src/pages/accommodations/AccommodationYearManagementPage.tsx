@@ -39,6 +39,7 @@ import {
   formatNumber,
   persianYearOptions,
 } from '../../lib/datetime'
+import { AccommodationCreateModal } from './AccommodationCreateModal'
 import type {
   Accommodation,
   AccommodationYearRow,
@@ -309,6 +310,7 @@ export function AccommodationYearManagementPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [copyManagers, setCopyManagers] = useState(true)
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
 
   useEffect(() => {
     if (tab === 'manage' && !yearFromUrl) {
@@ -722,6 +724,12 @@ export function AccommodationYearManagementPage() {
               onSubmit={() => applySearch()}
               label={t('common.search')}
               placeholder={t('accommodationYearManagement.searchPlaceholder')}
+              endAction={
+                <Button type="button" onClick={() => setCreateOpen(true)}>
+                  <Plus className="size-4" aria-hidden />
+                  {t('accommodationYearManagement.addAccommodation')}
+                </Button>
+              }
             />
 
             <TableCard
@@ -1045,6 +1053,16 @@ export function AccommodationYearManagementPage() {
           </div>
         </>
       )}
+      {createOpen ? (
+        <AccommodationCreateModal
+          year={manageYear}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            setCreateOpen(false)
+            void invalidateYearQueries()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

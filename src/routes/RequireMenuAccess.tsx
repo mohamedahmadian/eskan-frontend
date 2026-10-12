@@ -5,6 +5,7 @@ import {
   canAccessMyEvaluations,
   canAccessMyGroups,
   canAccessMyReservations,
+  canManageAccommodations,
   isAdmin,
   isHonoraryServant,
   isPilgrim,
@@ -77,6 +78,14 @@ export function RequireMenuAccess({
     return <Navigate to="/" replace />
   }
 
+  return <Outlet />
+}
+
+export function RequireAccommodationDirectory() {
+  const { user } = useAuth()
+  if (!canManageAccommodations(user)) {
+    return <Navigate to="/" replace />
+  }
   return <Outlet />
 }
 

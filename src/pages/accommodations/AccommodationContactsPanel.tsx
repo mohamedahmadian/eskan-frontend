@@ -100,6 +100,7 @@ export function AccommodationContactsPanel({
   onActiveRoleChange,
   onDraftChange,
   newPersonInModal = false,
+  fieldsRequired = true,
 }: {
   drafts: Record<AccommodationContactRole, AccommodationContactDraft>
   activeRole: AccommodationContactRole
@@ -107,6 +108,8 @@ export function AccommodationContactsPanel({
   onDraftChange: (role: AccommodationContactRole, draft: AccommodationContactDraft) => void
   /** When the national id is unknown, collect the person in a modal. */
   newPersonInModal?: boolean
+  /** When false, inline person fields do not block the parent form. */
+  fieldsRequired?: boolean
 }) {
   const { t } = useTranslation()
   const draft = drafts[activeRole]
@@ -292,7 +295,7 @@ export function AccommodationContactsPanel({
                   id={`contact-${activeRole}-firstName`}
                   className={inputClassName()}
                   value={draft.firstName}
-                  required
+                  required={fieldsRequired}
                   onChange={(e) =>
                     onDraftChange(activeRole, { ...draft, firstName: e.target.value })
                   }
@@ -307,7 +310,7 @@ export function AccommodationContactsPanel({
                   id={`contact-${activeRole}-lastName`}
                   className={inputClassName()}
                   value={draft.lastName}
-                  required
+                  required={fieldsRequired}
                   onChange={(e) =>
                     onDraftChange(activeRole, { ...draft, lastName: e.target.value })
                   }
@@ -325,7 +328,7 @@ export function AccommodationContactsPanel({
                   className={`${inputClassName()} digit-field`}
                   value={draft.phone}
                   dir="ltr"
-                  required
+                  required={fieldsRequired}
                   onChange={(e) =>
                     onDraftChange(activeRole, { ...draft, phone: e.target.value })
                   }

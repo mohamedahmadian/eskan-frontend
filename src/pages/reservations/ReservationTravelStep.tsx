@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { AppForm, Button, cardClassName } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
+import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { ReceptionSettings, Reservation, WalkingRoute } from '../../types/app'
 import {
@@ -15,9 +16,9 @@ import {
   type TravelValues,
 } from './ReservationTravelFields'
 import {
-  RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
   fetchSubjectReservationSpans,
 } from './reservation-date-overlap'
+import { useCaravanNewHeadcountLimit } from './caravan-headcount-limit'
 import { workingHeadcount, requestedHeadcount, pilgrimOriginCountryId, showSimBankRequests } from './reservation-steps'
 import { ReservationCaravanLicenseStep, type CaravanPermitDraft } from './ReservationCaravanLicenseStep'
 import { TravelSubStepBar } from './TravelSubStepBar'
@@ -37,7 +38,8 @@ export function ReservationTravelStep({
   onChanged: () => void
   mode?: 'owner' | 'admin'
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const nameOf = useGeoName()
   const queryClient = useQueryClient()
   const locked = mode === 'owner' && Boolean(reservation.basicInfoLockedAt)
@@ -139,7 +141,7 @@ export function ReservationTravelStep({
       applicant.id,
       applicant.nationalId ?? '',
     ],
-    enabled: RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
+    enabled: Boolean(applicant.id),
     queryFn: () =>
       fetchSubjectReservationSpans({
         forSelf: mode === 'owner',
@@ -156,6 +158,18 @@ export function ReservationTravelStep({
   })
   const imamRezaMartyrdomDate = occasionSettings.data?.imamRezaMartyrdomDate ?? null
   const prophetDemiseDate = occasionSettings.data?.prophetDemiseDate ?? null
+  const selectedCaravanId = values.caravanId || reservation.caravanId || ''
+  const caravanLimitEnabled = reservation.type === 'CARAVAN' && Boolean(selectedCaravanId)
+  const caravanLimit = useCaravanNewHeadcountLimit({
+    year: reservation.year,
+    caravanId: selectedCaravanId,
+    excludeId: reservation.id,
+    enabled: caravanLimitEnabled,
+  })
+  const caravanMax =
+    caravanLimitEnabled && caravanLimit.data?.applies
+      ? (caravanLimit.data.max ?? undefined)
+      : undefined
   const datesOverlapError = useMemo(() => {
     if (!existingReservationsQuery.data) return null
     if (travelDatesError(values, t, { imamRezaMartyrdomDate, prophetDemiseDate })) return null
@@ -202,11 +216,10 @@ export function ReservationTravelStep({
 
   async function assertTravelDates() {
     try {
-      const others = RESERVATION_DATE_OVERLAP_CHECK_ENABLED
-        ? (existingReservationsQuery.data ??
-          (await existingReservationsQuery.refetch()).data ??
-          [])
-        : []
+      const others =
+        existingReservationsQuery.data ??
+        (await existingReservationsQuery.refetch()).data ??
+        []
       const dateError = travelDatesError(values, t, {
         others,
         excludeId: reservation.id,
@@ -270,6 +283,15 @@ export function ReservationTravelStep({
     if (activeSubStep === 'count') {
       if (countTotal() <= 0) {
         toast.error(t('reservations.countInvalid'))
+        return false
+      }
+      if (caravanLimitEnabled && caravanLimit.isPending) return false
+      if (caravanMax && countTotal() > caravanMax) {
+        toast.error(
+          t('reservations.caravanMaxExceeded', {
+            count: formatNumber(caravanMax, locale),
+          }),
+        )
         return false
       }
       return true
@@ -448,6 +470,7 @@ export function ReservationTravelStep({
           showSimBankRequests={showSimBankRequests(reservation)}
           year={reservation.year}
           allowCreateCaravan={occasionSettings.data?.caravanCreateInReception === true}
+          caravanMax={caravanMax}
           subjectUser={
             mode === 'admin'
               ? reservation.type === 'CARAVAN' && reservation.caravanManager

@@ -53,7 +53,8 @@ export function TravelSubStepBar({
 }) {
   const { t } = useTranslation()
   const currentIndex = steps.indexOf(current)
-  const maxReachedIndex = Math.max(currentIndex, steps.indexOf(maxReached))
+  const reachedIndex = steps.indexOf(maxReached)
+  const liveIndex = reachedIndex >= 0 ? Math.max(currentIndex, reachedIndex) : currentIndex
   const widthClass =
     steps.length <= 2 ? 'max-w-sm' : steps.length === 3 ? 'max-w-md' : 'max-w-xl'
 
@@ -63,13 +64,13 @@ export function TravelSubStepBar({
         {steps.map((item, index) => {
           const Icon =
             item === 'party' ? (type === 'CARAVAN' ? Footprints : Users) : travelSubStepIcons[item]
-          const state =
-            index === currentIndex ? 'current' : index <= maxReachedIndex ? 'done' : 'pending'
-          const clickable = index <= maxReachedIndex
+          const state = index === liveIndex ? 'current' : index < liveIndex ? 'done' : 'pending'
+          const selected = index === currentIndex && state !== 'current'
+          const clickable = index <= liveIndex
           const label = t(travelSubStepLabelKey(item, type))
-          const controlClass = `group relative z-10 flex w-full flex-col items-center gap-1 focus-visible:outline-none ${
-            clickable ? 'cursor-pointer' : 'cursor-not-allowed'
-          }`
+          const controlClass = `group relative z-10 flex w-full flex-col items-center gap-1 rounded-2xl focus-visible:outline-none ${
+            selected ? 'ring-2 ring-teal-300' : ''
+          } ${clickable ? 'cursor-pointer' : 'cursor-not-allowed'}`
           const content = (
             <>
               <span
@@ -91,7 +92,7 @@ export function TravelSubStepBar({
               {index < steps.length - 1 ? (
                 <span
                   className={`absolute top-[21px] start-1/2 z-0 h-0.5 w-full ${
-                    index < currentIndex ? 'bg-teal-300' : 'bg-line'
+                    index < liveIndex ? 'bg-teal-300' : 'bg-line'
                   }`}
                   aria-hidden
                 />

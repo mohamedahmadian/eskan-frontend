@@ -100,12 +100,16 @@ export function FilterPair({
   columns = 2,
 }: {
   children: ReactNode
-  columns?: 2 | 3
+  columns?: 2 | 3 | 4
 }) {
   return (
     <div
       className={`grid gap-4 sm:col-span-2 ${
-        columns === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+        columns === 4
+          ? 'sm:grid-cols-4'
+          : columns === 3
+            ? 'sm:grid-cols-3'
+            : 'sm:grid-cols-2'
       }`}
     >
       {children}
@@ -171,6 +175,7 @@ export function SearchBar({
   placeholder,
   extra,
   beside,
+  endAction,
   filtersActive = false,
   extraClassName = 'sm:grid-cols-2',
   inputId = 'list-search',
@@ -185,6 +190,8 @@ export function SearchBar({
   placeholder: string
   extra?: ReactNode
   beside?: ReactNode
+  /** Sits on the inline end of the search row (visual left in RTL). */
+  endAction?: ReactNode
   filtersActive?: boolean
   extraClassName?: string
   inputId?: string
@@ -269,7 +276,10 @@ export function SearchBar({
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
           {searchInput}
           {hideSubmit ? null : searchButton}
-          {filterButton ? <div className="sm:ms-auto">{filterButton}</div> : null}
+          {endAction ? <div className="self-end sm:ms-auto">{endAction}</div> : null}
+          {filterButton ? (
+            <div className={endAction ? 'self-end' : 'self-end sm:ms-auto'}>{filterButton}</div>
+          ) : null}
         </div>
       )}
       {extra ? (

@@ -276,25 +276,30 @@ function withHonoraryServiceNav(modules: NavModule[]): NavModule[] {
   ].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+function isAccommodationsDirectoryMenu(item: { path: string; code: string }) {
+  return item.path === "/accommodations" || item.code === "accommodation.list";
+}
+
 function withAccommodationsDirectoryMenu(
   mod: NavModule,
-  browseAlways = false,
+  allowed: boolean,
 ): NavModule {
   if (mod.code !== "accommodation") return mod;
-  const hasList = mod.menus.some(
-    (item) => item.path === "/accommodations" || item.code === "accommodation.list",
-  );
+  const hasList = mod.menus.some(isAccommodationsDirectoryMenu);
+  if (!allowed) {
+    if (!hasList) return mod;
+    return {
+      ...mod,
+      menus: mod.menus.filter((item) => !isAccommodationsDirectoryMenu(item)),
+    };
+  }
   if (hasList) return mod;
-  const shouldBrowse =
-    browseAlways ||
-    mod.menus.some((item) => item.code !== "accommodation.introduce");
-  if (!shouldBrowse) return mod;
   const extra: SidebarNavMenu = {
     code: "accommodation.list",
     nameKey: "menus.accommodations",
     path: "/accommodations",
     icon: "building-2",
-    sortOrder: 0,
+    sortOrder: 1,
   };
   return { ...mod, menus: [extra, ...mod.menus] };
 }
@@ -605,6 +610,16 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   }, []);
 
   const showPilgrimageYears = isPilgrim(user) && canAccessMyReservations(user);
+  const pendingIntroductions = useQuery({
+    queryKey: ["accommodations", "pending-introductions", "count"],
+    enabled: isAdmin(user),
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<{ id: string }>>("/accommodations", {
+        params: { status: "INACTIVE", introduced: true, page: 1, pageSize: 1 },
+      });
+      return data.total;
+    },
+  });
   const mineNavQuery = useQuery({
     queryKey: ["reservations", "mine", "nav"],
     enabled: showPilgrimageYears,
@@ -640,12 +655,11 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
     const showMyReservations = canAccessMyReservations(user);
     const showMyAccommodations = canAccessMyAccommodations(user);
     const showMyEvaluations = canAccessMyEvaluations(user);
-    const browseAccommodations = isPilgrim(user);
+    const showAccommodationsDirectory =
+      isAdmin(user) || isAccommodationManager(user);
     const next = (user?.modules ?? [])
       .map((mod) =>
-        showMyAccommodations || browseAccommodations
-          ? withAccommodationsDirectoryMenu(mod, browseAccommodations)
-          : mod,
+        withAccommodationsDirectoryMenu(mod, showAccommodationsDirectory),
       )
       .map((mod) => {
         const menus = mod.menus.filter(
@@ -989,6 +1003,11 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                           key={item.code}
                           item={item}
                           allMenuPaths={allMenuPaths}
+                          badge={
+                            isAccommodationsDirectoryMenu(item)
+                              ? pendingIntroductions.data
+                              : undefined
+                          }
                           highlighted={highlightedMenu?.code === item.code}
                           onHighlight={() => highlightMenu(item.code)}
                           onNavigate={() => {
@@ -1016,6 +1035,11 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                                   key={item.code}
                                   item={item}
                                   allMenuPaths={allMenuPaths}
+                                  badge={
+                                    isAccommodationsDirectoryMenu(item)
+                                      ? pendingIntroductions.data
+                                      : undefined
+                                  }
                                   highlighted={highlightedMenu?.code === item.code}
                                   onHighlight={() => highlightMenu(item.code)}
                                   onNavigate={() => {
@@ -1114,17 +1138,21 @@ function SidebarMenuLink({
   onNavigate,
   highlighted = false,
   onHighlight,
+  badge,
 }: {
   item: SidebarNavMenu;
   allMenuPaths: string[];
   onNavigate: () => void;
   highlighted?: boolean;
   onHighlight?: () => void;
+  badge?: number;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
   const { pathname } = useLocation();
   const Icon = getNavIcon(item.icon);
   const isActive = isSidebarMenuActive(pathname, item.path, allMenuPaths);
+  const badgeCount = badge != null && badge > 0 ? badge : null;
   return (
     <Link
       id={sidebarMenuItemId(item.code)}
@@ -1152,6 +1180,18 @@ function SidebarMenuLink({
         <Icon className="size-3.5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1 truncate">{item.label ?? t(item.nameKey)}</span>
+      {badgeCount != null ? (
+        <span
+          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-4 ${
+            isActive ? "bg-white text-teal-700" : "bg-teal-500 text-white"
+          }`}
+          aria-label={t("accommodations.pendingIntroductions", {
+            count: formatNumber(badgeCount, locale),
+          })}
+        >
+          {formatNumber(badgeCount, locale)}
+        </span>
+      ) : null}
     </Link>
   );
 }

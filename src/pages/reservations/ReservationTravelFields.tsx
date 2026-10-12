@@ -61,6 +61,7 @@ import {
 import type { TravelSubStep } from "./travel-sub-steps";
 import {
   RESERVATION_DATE_OVERLAP_CHECK_ENABLED,
+  findLateSafarConflict,
   findOverlappingReservation,
   type ReservationDateSpan,
 } from "./reservation-date-overlap";
@@ -141,6 +142,9 @@ export function travelDatesError(
     return t("reservations.stayRangeInvalid");
   }
   const martyrdom = overlap?.imamRezaMartyrdomDate;
+  if (martyrdom && values.stayStartDate && values.stayStartDate > martyrdom) {
+    return t("reservations.stayStartAfterMartyrdom");
+  }
   if (
     martyrdom &&
     values.stayStartDate &&
@@ -166,6 +170,16 @@ export function travelDatesError(
     values.arrivalPeriod === "BEFORE_NOON"
   ) {
     return t("reservations.arrivalMustBeAfternoon");
+  }
+  if (overlap?.others && values.stayStartDate && values.stayEndDate) {
+    const safarConflict = findLateSafarConflict(
+      values,
+      overlap.others,
+      overlap.excludeId,
+    );
+    if (safarConflict) {
+      return t("reservations.safarSingleFile", { code: safarConflict.code });
+    }
   }
   if (overlap?.others && RESERVATION_DATE_OVERLAP_CHECK_ENABLED) {
     const conflict = findOverlappingReservation(
@@ -220,6 +234,7 @@ export function ReservationTravelFields({
   showSimBankRequests,
   year,
   allowCreateCaravan,
+  caravanMax,
 }: {
   values: TravelValues;
   onChange: (patch: Partial<TravelValues>) => void;
@@ -248,6 +263,7 @@ export function ReservationTravelFields({
   showSimBankRequests?: boolean;
   year?: number;
   allowCreateCaravan?: boolean;
+  caravanMax?: number;
 }) {
   if (activeSubStep === "count") {
     return (
@@ -258,6 +274,7 @@ export function ReservationTravelFields({
         locked={locked}
         dual={dualCounts && type !== "INDIVIDUAL"}
         reservationId={dualCounts ? reservationId : undefined}
+        caravanMax={caravanMax}
       />
     );
   }
@@ -597,8 +614,8 @@ export function ReservationDateFields({
   })();
   const earliestArrival = prophetDemiseDate ? addDaysIso(prophetDemiseDate, -1) : "";
   const afternoonOnly = Boolean(earliestArrival) && values.stayStartDate === earliestArrival;
-  const startMinDate =
-    earliestArrival && earliestArrival > todayIso ? earliestArrival : todayIso;
+  const startMinDate = earliestArrival || todayIso;
+  const startMaxDate = imamRezaMartyrdomDate || undefined;
   const martyrdomError =
     imamRezaMartyrdomDate &&
     values.stayStartDate &&
@@ -609,11 +626,18 @@ export function ReservationDateFields({
       : null;
   const arrivalLimitError = !values.stayStartDate
     ? null
-    : values.stayStartDate < earliestArrival
+    : earliestArrival && values.stayStartDate < earliestArrival
       ? t("reservations.stayStartBeforeProphet")
-      : afternoonOnly && values.arrivalPeriod === "BEFORE_NOON"
-        ? t("reservations.arrivalMustBeAfternoon")
-        : null;
+      : imamRezaMartyrdomDate && values.stayStartDate > imamRezaMartyrdomDate
+        ? t("reservations.stayStartAfterMartyrdom")
+        : afternoonOnly && values.arrivalPeriod === "BEFORE_NOON"
+          ? t("reservations.arrivalMustBeAfternoon")
+          : null;
+
+  useEffect(() => {
+    if (!afternoonOnly || values.arrivalPeriod === "AFTER_NOON") return;
+    onChange({ arrivalPeriod: "AFTER_NOON" });
+  }, [afternoonOnly, onChange, values.arrivalPeriod]);
 
   return (
     <div className="space-y-4">
@@ -626,6 +650,7 @@ export function ReservationDateFields({
           locked={locked}
           required
           minDate={startMinDate}
+          maxDate={startMaxDate}
           showEquivalentsBadges
           onChange={(stayStartDate) => {
             const patch: Partial<TravelValues> = { stayStartDate };
@@ -646,8 +671,7 @@ export function ReservationDateFields({
             }
             if (
               earliestArrival &&
-              stayStartDate === earliestArrival &&
-              values.arrivalPeriod === "BEFORE_NOON"
+              stayStartDate === earliestArrival
             ) {
               patch.arrivalPeriod = "AFTER_NOON";
             }
@@ -685,12 +709,14 @@ export function ReservationDateFields({
               },
             ]}
             placeholder={t("reservations.arrivalPeriodPlaceholder")}
-            disabled={locked}
+            disabled={locked || afternoonOnly}
             required
           />
           <p className="flex items-start gap-1.5 text-xs leading-5 text-ink-500">
             <Info className="mt-0.5 size-3.5 shrink-0 text-teal-600" aria-hidden />
-            {t("reservations.arrivalPeriodLunchHint")}
+            {afternoonOnly
+              ? t("reservations.arrivalAfternoonLocked")
+              : t("reservations.arrivalPeriodLunchHint")}
           </p>
         </FormField>
         <DateValueField
@@ -700,14 +726,8 @@ export function ReservationDateFields({
           value={values.stayEndDate}
           locked={locked}
           required
-          minDate={values.stayStartDate || todayIso}
-          maxDate={
-            imamRezaMartyrdomDate &&
-            values.stayStartDate &&
-            values.stayStartDate <= imamRezaMartyrdomDate
-              ? imamRezaMartyrdomDate
-              : undefined
-          }
+          minDate={values.stayStartDate || startMinDate}
+          maxDate={imamRezaMartyrdomDate || undefined}
           showEquivalentsBadges
           onChange={(stayEndDate) => onChange({ stayEndDate })}
         />

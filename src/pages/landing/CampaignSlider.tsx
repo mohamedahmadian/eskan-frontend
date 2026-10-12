@@ -53,7 +53,7 @@ export function CampaignSlider({ items }: { items: PublicCampaign[] }) {
           aria-live="polite"
           aria-atomic="true"
         >
-          <div className="relative min-h-56 overflow-hidden bg-gradient-to-e from-teal-500 via-mint-500 to-teal-400 sm:min-h-72">
+          <div className="relative min-h-44 overflow-hidden bg-gradient-to-e from-teal-500 via-mint-500 to-teal-400 sm:min-h-56">
             {item.imageId ? (
               <img
                 src={getImageUrl(item.imageId)}
@@ -68,7 +68,7 @@ export function CampaignSlider({ items }: { items: PublicCampaign[] }) {
               {item.name}
             </p>
           </div>
-          <div className="flex flex-col gap-4 p-5 sm:p-8">
+          <div className="flex flex-col gap-3 p-4 sm:p-5">
             <p className="inline-flex items-center gap-2 text-xs font-medium text-teal-700">
               <HeartHandshake className="size-4" aria-hidden />
               {t('landing.participations.slideLabel', {
@@ -77,7 +77,7 @@ export function CampaignSlider({ items }: { items: PublicCampaign[] }) {
               })}
             </p>
             {item.description ? (
-              <p className="line-clamp-4 text-sm leading-8 text-ink-600">{item.description}</p>
+              <p className="line-clamp-3 text-sm leading-6 text-ink-600">{item.description}</p>
             ) : null}
             <div className="mt-auto">
               <CampaignProgressBar
@@ -95,7 +95,7 @@ export function CampaignSlider({ items }: { items: PublicCampaign[] }) {
       </div>
 
       {count > 1 ? (
-        <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="mt-3 flex items-center justify-between gap-3">
           <button
             type="button"
             aria-label={t('landing.participations.prev')}
