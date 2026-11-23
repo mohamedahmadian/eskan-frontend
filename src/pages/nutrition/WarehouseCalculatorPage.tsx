@@ -1,9 +1,9 @@
-import { Calculator, Coins, Hash, Plus, Trash2, UtensilsCrossed, Warehouse, Wheat, X } from 'lucide-react'
-import { type FormEvent, useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { Calculator, Coins, Hash, Plus, Trash2, UtensilsCrossed, Warehouse, Wheat } from 'lucide-react'
+import { type FormEvent, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { AppModal } from '../../components/ui/AppModal'
 import {
   AppForm,
   Button,
@@ -496,44 +496,17 @@ function StockFoodDetailModal({
     ...food.otherLimits.map((line) => ({ name: line.name, maxServings: line.maxServings })),
   ].reduce((lowest, item) => (item.maxServings < lowest.maxServings ? item : lowest))
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.close')}
-        onClick={onClose}
-      />
-      <div
-        dir={languageDir(locale)}
-        role="dialog"
-        aria-modal="true"
-        className="relative z-10 w-full max-w-2xl"
-      >
+  return (
+    <AppModal
+      onClose={onClose}
+      ariaLabel={food.name}
+      zClassName="z-[70]"
+      className="w-full max-w-2xl"
+    >
+      <div dir={languageDir(locale)}>
         <FormCard
           icon={UtensilsCrossed}
           title={food.name}
-          action={
-            <Button type="button" variant="ghost" icon onClick={onClose} aria-label={t('common.close')}>
-              <X className="size-4" aria-hidden />
-            </Button>
-          }
         >
           <div className="max-h-[70vh] space-y-6 overflow-y-auto p-5 sm:p-6">
             <p className="rounded-2xl bg-cream-50 px-4 py-3 text-sm leading-7 text-ink-800">
@@ -603,7 +576,6 @@ function StockFoodDetailModal({
           </div>
         </FormCard>
       </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

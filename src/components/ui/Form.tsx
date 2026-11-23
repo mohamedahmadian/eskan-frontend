@@ -229,6 +229,7 @@ export function PageHeader({
   const backButton = showBack ? (
     <button
       type="button"
+      data-page-back=""
       aria-label={t('common.back')}
       className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl text-teal-700 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 print:hidden"
       onClick={() => goBack(fallback)}
@@ -238,7 +239,10 @@ export function PageHeader({
   ) : null
 
   return (
-    <section className={`${cardClassName} overflow-hidden ${className}`}>
+    <section
+      className={`${cardClassName} overflow-hidden ${className}`}
+      {...(backTo === false ? { 'data-escape-stay': '' } : {})}
+    >
       <FormCardHeader
         icon={icon}
         heading="h1"
@@ -419,16 +423,6 @@ export function AppForm({
     function onKey(event: KeyboardEvent) {
       if (event.repeat || event.isComposing || event.defaultPrevented) return
       if (!formOwnsShortcut(activeForm, event.target)) return
-
-      if (event.key === 'Escape') {
-        if (event.ctrlKey || event.metaKey || event.altKey) return
-        if (shortcutBlockedByOverlay(event.target)) return
-        const cancel = activeForm.querySelector<HTMLButtonElement>('[data-form-cancel]')
-        if (!cancel || cancel.disabled) return
-        event.preventDefault()
-        cancel.click()
-        return
-      }
 
       if (event.code !== 'KeyS') {
         if (event.key !== 'Shift') lastS = 0

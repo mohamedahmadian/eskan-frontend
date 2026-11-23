@@ -4,6 +4,145 @@
     "tagline": "Pilgrim management and guidance for the Holy Shrine of Imam Reza",
     "welcome": "Welcome"
   },
+  "landing": {
+    "heroTitle": "Holy Mashhad, home of pilgrims",
+    "heroSubtitle": "Pilgrimage, lodging, and companionship for Iranian and international pilgrims — calm, clear, and unified.",
+    "heroEyebrow": "Pilgrimage of Imam Reza, peace be upon him",
+    "heroBlessing": "السَّلامُ عَلَيْكَ يا عَلِي بْنَ مُوسَى الرِّضا",
+    "heroImageAlt": "A view of the shrine of Imam Reza (peace be upon him)",
+    "capabilities": "Pilgrim services",
+    "servicesTitle": "Where shall we begin?",
+    "servicesHint": "Three main paths; uncluttered, in the same familiar space of the system.",
+    "login": "Sign in",
+    "register": "Register",
+    "enterSystem": "Enter the system",
+    "goToPanel": "Go to panel",
+    "volunteer": {
+      "title": "Offer to serve",
+      "hint": "Become an honorary servant and share when you can help.",
+      "action": "Offer to serve",
+      "inviteEyebrow": "Honorary servant",
+      "inviteTitle": "Offer to serve",
+      "inviteHint": "Become an honorary servant and share when you can help.",
+      "inviteAction": "Offer to serve"
+    },
+    "pilgrimage": {
+      "title": "Pilgrimage to Holy Mashhad",
+      "hint": "Open a pilgrimage file and follow lodging services.",
+      "action": "Open a file",
+      "heroAction": "Pilgrimage to Holy Mashhad in {{year}}"
+    },
+    "introduceAccommodation": {
+      "eyebrow": "Lodging",
+      "title": "Introduce a new lodging",
+      "hint": "If you have a place for pilgrims to stay, register its details so the association lodging unit can review it.",
+      "action": "Introduce a new lodging"
+    },
+    "participations": {
+      "title": "Participation",
+      "hint": "Service, financial support, or in-kind gifts — each reaches the pilgrims of the shrine.",
+      "action": "View campaigns",
+      "sectionTitle": "Join in serving pilgrims",
+      "sectionHint": "Active campaigns; details and direct payment with no sign-up required",
+      "progress": "Campaign progress",
+      "percentValue": "{{value}}%",
+      "slideLabel": "Campaign {{current}} of {{total}}",
+      "prev": "Previous campaign",
+      "next": "Next campaign",
+      "goToSlide": "Go to campaign {{n}}",
+      "join": "View and take part",
+      "hubTitle": "How to stand with pilgrims",
+      "hubHint": "Three clear ways to take part: honorary service, a cash campaign, or donating goods and facilities.",
+      "serviceTitle": "Service participation",
+      "serviceHint": "Become an honorary servant and offer your time and ability to accompany pilgrims.",
+      "serviceAction": "Offer to serve",
+      "cashTitle": "Cash participation",
+      "cashHint": "Join financial support campaigns and transfer your share directly.",
+      "cashAction": "View campaigns",
+      "inKindTitle": "In-kind participation",
+      "inKindHint": "Blankets, food, medicine, and whatever pilgrims need — leave them with the headquarters.",
+      "inKindAction": "How to take part",
+      "listTitle": "Active campaigns",
+      "listHint": "Open each campaign, see the share amount, and transfer directly. Membership is optional.",
+      "notFound": "This campaign is not available",
+      "payDirect": "Pay directly",
+      "bankSection": "Bank account",
+      "cryptoSection": "Cryptocurrency",
+      "joinSystem": "Benefit of membership",
+      "joinSystemHint": "If you pay through campaigns, your payment history will be visible",
+      "joinRegister": "Quick registration",
+      "joinLogin": "Sign in",
+      "inKindPageTitle": "An in-kind gift for pilgrims",
+      "inKindPageHint": "Leave goods and facilities with the headquarters, or transfer the equivalent value to a card or wallet.",
+      "inKindIntro": "Many walking, family, or individual pilgrims on the way to Mashhad and during their visit need blankets, seasonal clothing, simple medicines, packaged food, hygiene items, and light lodging equipment. In-kind participation means placing these needs, directly and with respect, in the pilgrim’s hands.",
+      "inKindHow": "The association headquarters is ready to receive, sort, and deliver these items. Before sending a shipment, it is better to coordinate with the participation unit so current needs are clear and goods go to the right place. Items should be new or fully sound, clean, and usable.",
+      "inKindItemsTitle": "Examples of in-kind participation",
+      "inKindItems": {
+        "blanket": "Blankets, ground covers, and light heating items",
+        "food": "Dry and packaged food",
+        "medicine": "Simple medicines and first-aid supplies",
+        "hygiene": "Personal and family hygiene items",
+        "stay": "Light lodging equipment and pilgrim support"
+      },
+      "inKindPaymentTitle": "Bank card and wallet",
+      "inKindPaymentHint": "Active bank accounts and wallets registered in the system, for transferring the equivalent value of goods or financial coordination.",
+      "inKindPaymentError": "Bank accounts and wallets could not be read from the system.",
+      "inKindEmptyPayment": "No active bank account or wallet has been registered in the system yet."
+    },
+    "news": {
+      "title": "News",
+      "hint": "The latest news from the association headquarters",
+      "empty": "No news has been published",
+      "readMore": "Read more",
+      "notFound": "This news item is not available"
+    },
+    "announcements": {
+      "title": "Announcements",
+      "hint": "For pilgrims, caravan managers, and lodging managers",
+      "empty": "There is no announcement for this group",
+      "notFound": "This announcement is not available",
+      "audiences": {
+        "PILGRIMS": "Pilgrims",
+        "CARAVAN_MANAGERS": "Caravan managers",
+        "ACCOMMODATION_MANAGERS": "Lodging managers"
+      }
+    },
+    "nav": {
+      "menu": "Home page menu",
+      "home": "Home",
+      "participations": "Participation",
+      "about": "About the association",
+      "contact": "Contact us",
+      "open": "Open menu",
+      "close": "Close menu"
+    },
+    "about": {
+      "eyebrow": "Association headquarters",
+      "title": "About the association",
+      "hint": "Headquarters units and the person in charge of each section, for coordinating service to pilgrims.",
+      "yearsOfService": "{{years}} years of service",
+      "unitsTitle": "Association units",
+      "unitsHint": "See each unit on its own: introduction, contact routes, and the person in charge.",
+      "empty": "No unit has been registered for display yet",
+      "unitLabel": "Unit {{n}}",
+      "noDescription": "No description has been registered for this unit",
+      "manager": "Unit manager",
+      "managerRole": "Person in charge of this unit",
+      "noManager": "The person in charge of this unit has not been assigned yet"
+    },
+    "contact": {
+      "eyebrow": "Ways to reach us",
+      "title": "Contact us",
+      "hint": "Every way to reach {{name}} at a glance: phone, address, and social networks.",
+      "empty": "No contact route has been registered yet",
+      "addressTitle": "Address",
+      "phonesTitle": "Phone numbers",
+      "phonesHint": "Tap a number to call.",
+      "socialsTitle": "Networks and sites",
+      "socialsHint": "The same links as at the bottom of the page; larger and clearer here.",
+      "openLink": "View"
+    }
+  },
   "auth": {
     "loginTitle": "Unified Pilgrim Authentication System",
     "loginSubtitle": "Sign in to manage Iranian and international pilgrims",
@@ -57,7 +196,9 @@
     "panel": "Admin panel",
     "searchMenu": "Search menu...",
     "searchMenuHint": "Double-tap Ctrl to activate",
-    "contactFooter": "Association Contact Info"
+    "contactFooter": "Association Contact Info",
+    "appVersion": "Version",
+    "openFooter": "Show contact routes"
   },
   "quickTools": {
     "open": "Tools",

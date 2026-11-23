@@ -167,7 +167,9 @@ export function HonoraryServantDetailPage() {
               <Button
                 type="button"
                 variant="danger"
-                onClick={() => withdraw(item.id, () => navigate('/honorary-history'))}
+                onClick={() =>
+                  withdraw(item.id, () => navigate('/honorary-history', { replace: true }))
+                }
               >
                 <Trash2 className="size-4" aria-hidden />
                 {t('honoraryServants.withdraw')}

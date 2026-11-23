@@ -7,13 +7,11 @@ import {
   TrendingUp,
   Users,
   Venus,
-  X,
   ChartColumn,
   type LucideIcon,
 } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { languageDir } from '../../i18n'
 import { toast } from 'sonner'
@@ -30,6 +28,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { AppModal } from '../../components/ui/AppModal'
 import {
   Button,
   cardClassName,
@@ -1399,22 +1398,6 @@ function PlaceYearGrowthModal({
     },
   })
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
   const rows = (query.data?.byYear ?? []).map((row) => ({
     key: String(row.year),
     name: formatNumber(row.year, locale),
@@ -1436,20 +1419,14 @@ function PlaceYearGrowthModal({
   const emptyKey =
     kind === 'province' ? 'pilgrimReports.provinceYearEmpty' : 'pilgrimReports.cityYearEmpty'
 
-  return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto p-4 sm:p-6">
-      <button
-        type="button"
-        className="fixed inset-0 bg-ink-900/30"
-        aria-label={t('pilgrimReports.closeModal')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="place-year-growth-title"
-        className={`relative z-10 mb-4 flex w-full max-w-3xl flex-col overflow-hidden ${cardClassName}`}
-      >
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="place-year-growth-title"
+      zClassName="z-[80]"
+      overlayClassName="flex items-start justify-center p-4 sm:p-6"
+      className={`mb-4 flex max-h-[min(90vh,100%)] w-full max-w-3xl flex-col overflow-hidden ${cardClassName}`}
+    >
         <div className="flex items-start justify-between gap-3 border-b border-line p-5 sm:p-6">
           <div className="min-w-0 space-y-1">
             <h2
@@ -1460,19 +1437,15 @@ function PlaceYearGrowthModal({
             </h2>
             <p className="text-sm text-ink-500">{t(subtitleKey)}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 pe-12">
             <ExcelExportButton
               onClick={onExport}
               exporting={exporting}
               disabled={query.isLoading || query.isError || rows.length === 0}
             />
-            <Button type="button" variant="ghost" icon onClick={onClose}>
-              <X className="size-4" aria-hidden />
-              <span className="sr-only">{t('pilgrimReports.closeModal')}</span>
-            </Button>
           </div>
         </div>
-        <div className="min-h-0 p-5 sm:p-6">
+        <div className="min-h-0 overflow-y-auto p-5 sm:p-6">
           {query.isLoading ? (
             <LoadingState />
           ) : query.isError ? (
@@ -1486,8 +1459,6 @@ function PlaceYearGrowthModal({
             </div>
           )}
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

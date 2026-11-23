@@ -1,7 +1,8 @@
-import { FileBadge2, HandCoins, Package, Trash2, LayoutDashboard } from 'lucide-react'
+import { FileBadge2, HandCoins, LayoutDashboard, Package, Trash2, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { TableCard } from '../../components/ui/ListControls'
 import { Button, PageHeader, listShellClassName } from '../../components/ui/Form'
@@ -85,6 +86,14 @@ export function DataManagementPage() {
         icon={LayoutDashboard}
         title={t('menus.dataManagement')}
         subtitle={t('dataManagement.subtitle')}
+        action={
+          <Link to="/system-management/data-management/import">
+            <Button type="button" variant="soft">
+              <Upload className="size-4" aria-hidden />
+              {t('pilgrims.import')}
+            </Button>
+          </Link>
+        }
       />
       <TableCard
         loading={query.isLoading}

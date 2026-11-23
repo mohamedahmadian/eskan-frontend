@@ -25,10 +25,10 @@ export function HonoraryApplyPage() {
         self
         onSubmit={async (payload) => {
           const { userId: _userId, ...body } = payload
-          const { data } = await api.post<HonoraryServant>('/honorary-servants/mine', body)
+          await api.post<HonoraryServant>('/honorary-servants/mine', body)
           await refresh()
           toast.success(t('honoraryServants.created'))
-          navigate(`/honorary-history/${data.id}`)
+          navigate('/honorary-history')
         }}
       />
     </div>

@@ -11,10 +11,10 @@ import {
   Venus,
   X,
 } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { AppModal } from '../../components/ui/AppModal'
 import { confirmToast } from '../../components/ui/confirmToast'
 import {
   AppForm,
@@ -319,14 +319,6 @@ export function ReservationReviewModal({
   })
   const permitStatus = detail.data?.permitStatus ?? reservation.permitStatus
 
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !busy && !viewingLicense) onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [busy, onClose, viewingLicense])
-
   function submit(event: FormEvent) {
     event.preventDefault()
     const trimmed = note.trim()
@@ -365,24 +357,18 @@ export function ReservationReviewModal({
       ? t('reservations.adjustCapacity')
       : t('reservations.approveFile')
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        disabled={busy}
-        onClick={() => {
-          if (!busy) onClose()
-        }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reservation-review-title"
-        className={`relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto p-6 ${cardClassName}`}
-      >
-        <h2 id="reservation-review-title" className="mb-4 text-lg font-semibold text-ink-900">
+  return (
+    <>
+    <AppModal
+      onClose={onClose}
+      closeDisabled={busy}
+      labelledBy="reservation-review-title"
+      zClassName="z-50"
+      overlayClassName="flex items-center justify-center px-4"
+      className={`flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden ${cardClassName}`}
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+        <h2 id="reservation-review-title" className="mb-4 pe-12 text-lg font-semibold text-ink-900">
           {title}
         </h2>
         {permitReview ? <ReviewStepper step={step} /> : null}
@@ -541,11 +527,11 @@ export function ReservationReviewModal({
           </AppForm>
         )}
       </div>
+    </AppModal>
       {viewingLicense ? (
         <IssuedLicenseViewModal item={viewingLicense} onClose={() => setViewingLicense(null)} />
       ) : null}
-    </div>,
-    document.body,
+    </>
   )
 }
 

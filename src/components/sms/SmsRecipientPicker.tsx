@@ -1,8 +1,8 @@
 import { Filter, Flag, MapPin, MapPinned, Send, Users, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
+import { AppModal } from '../ui/AppModal'
 import { CheckboxField } from '../ui/CheckboxField'
 import {
   FilterPair,
@@ -50,22 +50,6 @@ export function SmsRecipientPicker({
   const [countryId, setCountryId] = useState('')
   const [provinceId, setProvinceId] = useState('')
   const [cityId, setCityId] = useState('')
-
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
 
   const countries = useQuery({
     queryKey: ['countries', 'lookup'],
@@ -161,21 +145,14 @@ export function SmsRecipientPicker({
     setSelected(next)
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="sms-group-picker-title"
-        className={`relative z-10 flex max-h-[min(92vh,52rem)] w-full max-w-5xl flex-col overflow-hidden ${cardClassName}`}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="sms-group-picker-title"
+      zClassName="z-50"
+      className={`flex max-h-[min(92vh,52rem)] w-full max-w-5xl flex-col overflow-hidden ${cardClassName}`}
+    >
+        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 pe-12 sm:px-6">
           <div className="min-w-0">
             <h2
               id="sms-group-picker-title"
@@ -185,9 +162,6 @@ export function SmsRecipientPicker({
             </h2>
             <p className="mt-1 text-xs leading-6 text-ink-600">{t('sms.groupSmsHint')}</p>
           </div>
-          <Button type="button" variant="ghost" onClick={onClose} aria-label={t('common.cancel')}>
-            <X className="size-4" aria-hidden />
-          </Button>
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 sm:p-6">
@@ -393,9 +367,7 @@ export function SmsRecipientPicker({
             {t('sms.sendGroupSms')}
           </Button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }
 

@@ -8,9 +8,11 @@ import {
   EntityRowActions,
   FilterPair,
   PaginationBar,
+  ActionsTh,
   SearchBar,
   SortableTh,
   TableCard,
+  actionsColClassName,
 } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
@@ -168,7 +170,10 @@ export function HeadquartersAnnouncementsListPage() {
                 sortDir={sortDir}
                 onSort={onSort}
               />
-              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+              <th className="px-4 py-3 text-start font-medium">
+                {t('headquartersAnnouncements.availableLocales')}
+              </th>
+              <ActionsTh />
             </tr>
           </thead>
           <tbody>
@@ -190,6 +195,22 @@ export function HeadquartersAnnouncementsListPage() {
                   <PublishStatus published={item.isPublished} ns="headquartersAnnouncements" />
                 </td>
                 <td className="px-4 py-3">
+                  {(item.translatedLocales ?? []).length ? (
+                    <span className="inline-flex flex-wrap gap-1">
+                      {(item.translatedLocales ?? []).map((locale) => (
+                        <span
+                          key={locale}
+                          className="inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700"
+                        >
+                          {t(`languages.${locale}`, { defaultValue: locale })}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="text-ink-400">{t('headquartersAnnouncements.fallbackPersian')}</span>
+                  )}
+                </td>
+                <td className={actionsColClassName}>
                   <EntityRowActions
                     viewTo={`/headquarters/announcements/${item.id}`}
                     editTo={`/headquarters/announcements/${item.id}/edit`}

@@ -1,4 +1,4 @@
-import { AlignLeft, CalendarDays, Megaphone, ToggleRight, Type, Users } from 'lucide-react'
+import { AlignLeft, CalendarDays, Languages, Megaphone, ToggleRight, Type, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -9,9 +9,10 @@ import {
   PageHeader,
   formShellClassName,
 } from '../../components/ui/Form'
-import { FormCard, FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
+import { FormCard, FormEmptyHint, FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
 import { DateText } from '../../components/ui/DateText'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
+import { languageDir } from '../../i18n'
 import { api } from '../../lib/api'
 import type { HeadquartersAnnouncement } from '../../types/app'
 import { PublishStatus } from '../headquarters-news/PublishStatus'
@@ -37,6 +38,8 @@ export function HeadquartersAnnouncementDetailPage() {
     return <LoadingState />
   }
 
+  const translations = item.translations ?? []
+
   return (
     <div className={formShellClassName}>
       <PageHeader
@@ -48,7 +51,7 @@ export function HeadquartersAnnouncementDetailPage() {
         <div className="space-y-6 p-5 sm:p-6">
           <section>
             <FormSectionTitle icon={Megaphone}>
-              {t('headquartersAnnouncements.details')}
+              {t('headquartersAnnouncements.persianContent')}
             </FormSectionTitle>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
               <FormFactTile
@@ -84,6 +87,53 @@ export function HeadquartersAnnouncementDetailPage() {
                 className="sm:col-span-2"
               />
             </div>
+          </section>
+
+          <section>
+            <FormSectionTitle icon={Languages}>{t('headquartersAnnouncements.translations')}</FormSectionTitle>
+            {translations.length ? (
+              <div className="space-y-4">
+                {translations.map((row) => (
+                  <div key={row.locale} className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                    <FormFactTile
+                      icon={Languages}
+                      label={t('headquartersAnnouncements.availableLocales')}
+                      value={t(`languages.${row.locale}`, { defaultValue: row.locale })}
+                      tone="teal"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={Type}
+                      label={t('headquartersAnnouncements.titleLabel')}
+                      value={
+                        <span dir={languageDir(row.locale)} lang={row.locale}>
+                          {row.title}
+                        </span>
+                      }
+                      tone="mint"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={AlignLeft}
+                      label={t('headquartersAnnouncements.body')}
+                      value={
+                        <span
+                          className="whitespace-pre-wrap"
+                          dir={languageDir(row.locale)}
+                          lang={row.locale}
+                        >
+                          {row.body}
+                        </span>
+                      }
+                      tone="ink"
+                      className="sm:col-span-2"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <FormEmptyHint>{t('headquartersAnnouncements.noTranslations')}</FormEmptyHint>
+            )}
           </section>
           <DetailActions
             editTo={`/headquarters/announcements/${item.id}/edit`}

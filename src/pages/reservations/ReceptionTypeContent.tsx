@@ -1,7 +1,6 @@
 import { Check, Info, ScrollText, X, type LucideIcon } from 'lucide-react'
-import { useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import { AppModal } from '../../components/ui/AppModal'
 import { Button, cardClassName } from '../../components/ui/Form'
 import type { ReceptionSettings, ReservationType } from '../../types/app'
 
@@ -118,32 +117,15 @@ export function ReceptionRulesModal({
   const { t } = useTranslation()
   const rules = settings?.[settingsRulesKey(type)] ?? ''
 
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !submitting) onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, submitting])
-
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        disabled={submitting}
-        onClick={() => {
-          if (!submitting) onClose()
-        }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reception-rules-title"
-        className={`relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] sm:rounded-[28px] ${cardClassName}`}
-      >
-        <header className="flex items-start gap-3 border-b border-line px-5 py-4 sm:px-6">
+  return (
+    <AppModal
+      onClose={onClose}
+      closeDisabled={submitting}
+      labelledBy="reception-rules-title"
+      zClassName="z-50"
+      className={`flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] sm:rounded-[28px] ${cardClassName}`}
+    >
+        <header className="flex items-start gap-3 border-b border-line px-5 py-4 pe-12 sm:px-6">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-mint-50 text-mint-600">
             <ScrollText className="size-5" aria-hidden />
           </span>
@@ -175,8 +157,6 @@ export function ReceptionRulesModal({
             {t('common.cancel')}
           </Button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

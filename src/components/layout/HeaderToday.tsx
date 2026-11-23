@@ -101,7 +101,10 @@ export function HeaderToday() {
       if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false)
     }
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      setOpen(false)
     }
     document.addEventListener('mousedown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
@@ -117,6 +120,7 @@ export function HeaderToday() {
       type="button"
       onClick={() => setOpen((value) => !value)}
       aria-expanded={open}
+      {...(open ? { 'data-escape-layer': '' } : {})}
       aria-label={`${t('nav.todayCalendars')} — ${
         open ? t('nav.hideAllCalendars') : t('nav.showAllCalendars')
       }`}
@@ -132,20 +136,18 @@ export function HeaderToday() {
       </span>
       <time dateTime={iso} className="flex min-w-0 items-stretch">
         {weekday ? (
-          <Reveal open={open}>
-            <span className="flex min-w-0 flex-col justify-center pe-2.5 sm:pe-3">
-              <span className="text-[10px] font-medium leading-none text-ink-400">
-                {t('common.today')}
-              </span>
-              <span className="mt-0.5 truncate text-xs font-semibold leading-tight text-teal-800">
-                {weekday}
-              </span>
+          <span className="flex min-w-0 flex-col justify-center pe-2.5 sm:pe-3">
+            <span className="text-[10px] font-medium leading-none text-ink-400">
+              {t('common.today')}
             </span>
-          </Reveal>
+            <span className="mt-0.5 truncate text-xs font-semibold leading-tight text-teal-800">
+              {weekday}
+            </span>
+          </span>
         ) : null}
         <span
           className={`flex min-w-0 flex-col items-center justify-center px-1 text-center sm:px-1.5 ${
-            open ? 'border-s border-line ps-2.5 sm:ps-3' : ''
+            weekday ? 'border-s border-line ps-2.5 sm:ps-3' : ''
           }`}
         >
           <span className="text-sm font-semibold leading-tight text-ink-900" dir="ltr">

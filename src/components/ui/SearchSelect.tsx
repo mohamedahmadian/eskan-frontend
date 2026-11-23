@@ -48,7 +48,7 @@ function isTouchPicker() {
   )
 }
 
-function placeMenu(trigger: DOMRect): MenuPos {
+function placeMenu(trigger: DOMRect, minWidth = 0): MenuPos {
   const vv = window.visualViewport
   const viewTop = vv?.offsetTop ?? 0
   const viewLeft = vv?.offsetLeft ?? 0
@@ -56,7 +56,7 @@ function placeMenu(trigger: DOMRect): MenuPos {
   const viewHeight = vv?.height ?? window.innerHeight
   const viewBottom = viewTop + viewHeight
   const viewRight = viewLeft + viewWidth
-  const width = Math.min(trigger.width, viewWidth - VIEW_MARGIN * 2)
+  const width = Math.min(Math.max(trigger.width, minWidth), viewWidth - VIEW_MARGIN * 2)
   const spaceBelow = viewBottom - trigger.bottom - VIEW_MARGIN
   const spaceAbove = trigger.top - viewTop - VIEW_MARGIN
   const showAbove = spaceBelow < 160 && spaceAbove > spaceBelow
@@ -141,6 +141,8 @@ export function SearchSelect({
   disabled,
   onCreate,
   createLabel,
+  className,
+  menuMinWidth,
 }: {
   id?: string
   name?: string
@@ -152,6 +154,8 @@ export function SearchSelect({
   disabled?: boolean
   onCreate?: (query: string) => void
   createLabel?: (query: string) => string
+  className?: string
+  menuMinWidth?: number
 }) {
   const { t } = useTranslation()
   const generatedId = useId()
@@ -201,9 +205,9 @@ export function SearchSelect({
   const updatePlace = useCallback(() => {
     const trigger = triggerRef.current?.getBoundingClientRect()
     if (!trigger) return
-    const next = placeMenu(trigger)
+    const next = placeMenu(trigger, menuMinWidth)
     setPos((current) => (samePos(current, next) ? current : next))
-  }, [])
+  }, [menuMinWidth])
 
   function openMenu() {
     const nextSheet = isTouchPicker()
@@ -214,7 +218,7 @@ export function SearchSelect({
       setPos(null)
     } else {
       const trigger = triggerRef.current?.getBoundingClientRect()
-      if (trigger) setPos(placeMenu(trigger))
+      if (trigger) setPos(placeMenu(trigger, menuMinWidth))
       setSheetPos(null)
     }
     setOpen(true)
@@ -467,7 +471,7 @@ export function SearchSelect({
   )
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={`relative ${className ?? ''}`}>
       <button
         ref={triggerRef}
         id={fieldId}

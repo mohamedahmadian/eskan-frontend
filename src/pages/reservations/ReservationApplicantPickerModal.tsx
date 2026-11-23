@@ -1,8 +1,8 @@
-import { IdCard, Phone, Search, UserRound, X } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
-import { createPortal } from 'react-dom'
+import { IdCard, Phone, Search, UserRound } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { AppModal } from '../../components/ui/AppModal'
 import {
   AppForm,
   Button,
@@ -26,14 +26,6 @@ export function ReservationApplicantPickerModal({
   const [term, setTerm] = useState('')
   const [q, setQ] = useState('')
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [])
-
   const query = useQuery({
     queryKey: ['users', 'reservation-applicant-picker', q],
     enabled: q.trim().length >= 2,
@@ -52,21 +44,14 @@ export function ReservationApplicantPickerModal({
     setQ(term.trim())
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reservation-applicant-picker-title"
-        className={`relative z-10 flex max-h-[min(90vh,40rem)] w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="reservation-applicant-picker-title"
+      zClassName="z-50"
+      className={`flex max-h-[min(90vh,40rem)] w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
+    >
+        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 pe-12 sm:px-6">
           <div className="min-w-0">
             <h2
               id="reservation-applicant-picker-title"
@@ -78,9 +63,6 @@ export function ReservationApplicantPickerModal({
               {t('reservations.pickApplicantHint')}
             </p>
           </div>
-          <Button type="button" variant="ghost" onClick={onClose} aria-label={t('common.cancel')}>
-            <X className="size-4" aria-hidden />
-          </Button>
         </div>
 
         <div className="space-y-4 overflow-y-auto p-5 sm:p-6">
@@ -150,8 +132,6 @@ export function ReservationApplicantPickerModal({
             </ul>
           )}
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

@@ -11,9 +11,10 @@ import { LandingPageHeader } from "./LandingPageHeader";
 import { LandingShell } from "./LandingShell";
 
 export function PublicCampaignsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.split("-")[0] ?? "fa";
   const query = useQuery({
-    queryKey: ["public", "participation-campaigns"],
+    queryKey: ["public", "participation-campaigns", locale],
     queryFn: async () => {
       const { data } = await api.get<PublicCampaign[]>(
         "/participation-campaigns/public",

@@ -42,7 +42,7 @@ export function SchoolDistrictEditPage() {
         onSubmit={async (payload) => {
           await api.patch(`/school-districts/${id}`, payload)
           toast.success(t('schoolDistricts.updated'))
-          navigate(`/accommodation-base-info/schools/${id}`)
+          navigate(`/school-districts/${id}`)
         }}
       />
     </div>

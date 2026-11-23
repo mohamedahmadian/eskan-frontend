@@ -54,9 +54,9 @@ export function ItemQuotaVoucherCreatePage() {
         managers={managers.data}
         suppliers={suppliers.data}
         onSubmit={async (payload) => {
-          const { data } = await api.post<{ id: string }>('/item-quota-vouchers', payload)
+          await api.post('/item-quota-vouchers', payload)
           toast.success(t('itemQuotaVouchers.created'))
-          navigate(`/logistics/item-quotas/${quotaId}/vouchers/${data.id}`)
+          navigate(`/logistics/item-quotas/${quotaId}/vouchers`)
         }}
       />
     </div>

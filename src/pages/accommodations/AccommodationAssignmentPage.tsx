@@ -1,10 +1,10 @@
-import { Building2, CircleOff, Eye, UserRound, UserRoundCheck, UserRoundPlus, X } from 'lucide-react'
+import { Building2, CircleOff, Eye, UserRound, UserRoundCheck, UserRoundPlus } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { AppModal } from '../../components/ui/AppModal'
 import {
   Button,
   FormField,
@@ -113,47 +113,18 @@ function AssignmentStatsCards({
 
 function ManagerDossierModal({ userId, onClose }: { userId: string; onClose: () => void }) {
   const { t } = useTranslation()
-  const dialogRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== 'Escape' || event.defaultPrevented) return
-      const dialogs = document.querySelectorAll('[role="dialog"]')
-      if (dialogs[dialogs.length - 1] !== dialogRef.current) return
-      event.preventDefault()
-      onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.close')}
-        onClick={onClose}
-      />
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="manager-dossier-title"
-        className="relative z-10 flex max-h-[min(92vh,100%)] w-full max-w-6xl flex-col overflow-hidden rounded-[22px] bg-cream-50 shadow-[0_24px_60px_rgba(20,40,40,0.18)]"
-      >
-        <div className="flex shrink-0 items-center justify-end border-b border-line bg-white px-3 py-2">
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="manager-dossier-title"
+      zClassName="z-[70]"
+      className="flex max-h-[min(92vh,100%)] w-full max-w-6xl flex-col overflow-hidden rounded-[22px] bg-cream-50 shadow-[0_24px_60px_rgba(20,40,40,0.18)]"
+    >
+        <div className="flex h-14 shrink-0 items-center border-b border-line bg-white px-3">
           <h2 id="manager-dossier-title" className="sr-only">
             {t('accommodationManagers.details')}
           </h2>
-          <Button type="button" variant="ghost" icon onClick={onClose} aria-label={t('common.close')}>
-            <X className="size-4" aria-hidden />
-          </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <RoleUserDetailPage
@@ -162,9 +133,7 @@ function ManagerDossierModal({ userId, onClose }: { userId: string; onClose: () 
             embedded
           />
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }
 
@@ -434,7 +403,7 @@ export function AccommodationAssignmentPage() {
                       <span className="mt-0.5 block text-xs text-ink-500">{name(item.province)}</span>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
+                  <td className="px-4 py-3">{name(item.type)}</td>
                   <td className="min-w-80 px-4 py-3">
                     {year != null ? (
                       <ManagerAssignSelect

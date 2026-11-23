@@ -1,11 +1,11 @@
-import { Search, X } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
 import { useQuickTools } from '../../components/layout/quick-tools-context'
+import { AppModal } from '../../components/ui/AppModal'
 import { AppForm, Button, cardClassName } from '../../components/ui/Form'
 import { FormEmptyHint } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
@@ -71,21 +71,8 @@ export function ReservationFileSearchModal({ onClose }: { onClose: () => void })
   }, [tools])
 
   useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     seqRef.current?.focus()
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -176,30 +163,20 @@ export function ReservationFileSearchModal({ onClose }: { onClose: () => void })
   const boxClass =
     'rounded-2xl border border-line bg-cream-50 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-200'
 
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.close')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="quick-tools-file-search-title"
-        className={`relative z-10 flex w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="quick-tools-file-search-title"
+      zClassName="z-[70]"
+      className={`flex w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
+    >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-2.5 pe-12">
           <h2
             id="quick-tools-file-search-title"
             className="min-w-0 text-sm font-semibold leading-6 text-ink-900"
           >
             {t('quickTools.searchFileTitle')}
           </h2>
-          <Button type="button" variant="ghost" icon onClick={onClose} aria-label={t('common.close')}>
-            <X className="size-4" aria-hidden />
-          </Button>
         </div>
         <div className="min-h-0 space-y-3 p-3 sm:p-4">
           <AppForm data-enter-immediate="" onSubmit={onSearch} autoFocusFirst={false}>
@@ -276,8 +253,6 @@ export function ReservationFileSearchModal({ onClose }: { onClose: () => void })
             </ul>
           ) : null}
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

@@ -20,11 +20,12 @@ export function useWithdrawHonoraryService() {
         try {
           await api.delete(`/honorary-servants/mine/${id}`)
           toast.success(t('honoraryServants.withdrawn'))
-          await refresh()
-          await queryClient.invalidateQueries({ queryKey: ['honorary-servants'] })
-          await queryClient.invalidateQueries({ queryKey: ['honorary-servant'] })
-          await queryClient.invalidateQueries({ queryKey: ['reservations'] })
           onDone?.()
+          await refresh()
+          queryClient.removeQueries({ queryKey: ['honorary-servant', id] })
+          void queryClient.invalidateQueries({ queryKey: ['honorary-servants'] })
+          void queryClient.invalidateQueries({ queryKey: ['honorary-servant'] })
+          void queryClient.invalidateQueries({ queryKey: ['reservations'] })
         } catch (error) {
           toast.error(getApiErrorMessage(error, t('common.error')))
         }

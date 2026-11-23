@@ -9,13 +9,12 @@ import {
   Tent,
   UserRound,
   Users,
-  X,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { Button, cardClassName } from '../../components/ui/Form'
+import { AppModal } from '../../components/ui/AppModal'
+import { cardClassName } from '../../components/ui/Form'
 import { FormEmptyHint, FormMetaChip } from '../../components/ui/FormLayout'
 import { PaginationBar } from '../../components/ui/ListControls'
 import { languageDir } from '../../i18n'
@@ -154,15 +153,8 @@ export function ReceptionMatchModal({
   }, [activeIndex])
 
   useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     function onKey(event: KeyboardEvent) {
       if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-        return
-      }
 
       const target = event.target as HTMLElement | null
 
@@ -222,11 +214,8 @@ export function ReceptionMatchModal({
       setActiveIndex(index - 1)
     }
     window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const typeCounts = useMemo(() => {
     const counts = {
@@ -276,25 +265,15 @@ export function ReceptionMatchModal({
   }, [onlyPeople, typeCounts])
   tabsListRef.current = tabs.map((item) => item.id)
 
-  return createPortal(
-    <div
-      ref={rootRef}
-      className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4"
-      data-nested-dialog
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="reception-match-title"
+      zClassName="z-[80]"
+      className={`flex max-h-[min(90vh,44rem)] w-full max-w-2xl flex-col overflow-hidden ${cardClassName}`}
     >
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reception-match-title"
-        className={`relative z-10 flex max-h-[min(90vh,44rem)] w-full max-w-2xl flex-col overflow-hidden ${cardClassName}`}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
+      <div ref={rootRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 pe-12 sm:px-6">
           <div className="min-w-0">
             <h2
               id="reception-match-title"
@@ -309,15 +288,6 @@ export function ReceptionMatchModal({
               )}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            data-pick-ignore
-            onClick={onClose}
-            aria-label={t('common.cancel')}
-          >
-            <X className="size-4" aria-hidden />
-          </Button>
         </div>
         {tabs.length > 1 ? (
         <nav
@@ -400,7 +370,7 @@ export function ReceptionMatchModal({
                       <span className="flex flex-wrap items-center gap-1.5">
                         {item.type === 'accommodation' && item.subtitle ? (
                           <span className="truncate text-xs text-ink-600">
-                            {t(`accommodationTypes.${item.subtitle}`)}
+                            {item.subtitle}
                           </span>
                         ) : item.subtitle ? (
                           <span className="truncate text-xs text-ink-600">{item.subtitle}</span>
@@ -453,7 +423,6 @@ export function ReceptionMatchModal({
           </div>
         ) : null}
       </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

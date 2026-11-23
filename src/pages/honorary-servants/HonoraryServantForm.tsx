@@ -285,7 +285,7 @@ export function HonoraryServantForm({
             ))}
           </div>
         </FormField>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-wrap items-start gap-4 sm:gap-8">
           <FormField icon={Clock} label={t('honoraryServants.startTime')} htmlFor="startTime">
             <PersianTimeField
               id="startTime"

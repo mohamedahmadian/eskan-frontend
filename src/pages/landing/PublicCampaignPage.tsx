@@ -19,6 +19,7 @@ import { useAuth } from '../../auth/AuthProvider'
 import { DateText } from '../../components/ui/DateText'
 import { LoadingState } from '../../components/ui/Form'
 import { FormEmptyHint, FormFactTile } from '../../components/ui/FormLayout'
+import { languageDir } from '../../i18n'
 import { api, getImageUrl } from '../../lib/api'
 import { withNext } from '../../lib/auth-redirect'
 import { formatGroupedNumber } from '../../lib/datetime'
@@ -32,7 +33,7 @@ export function PublicCampaignPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const query = useQuery({
-    queryKey: ['public', 'participation-campaigns', id],
+    queryKey: ['public', 'participation-campaigns', locale, id],
     enabled: Boolean(id),
     queryFn: async () => {
       const { data } = await api.get<PublicCampaign>(`/participation-campaigns/public/${id}`)
@@ -68,7 +69,11 @@ export function PublicCampaignPage() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.28),transparent_42%)]" />
               )}
               <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink-900/55 to-transparent" />
-              <h1 className="absolute inset-x-5 bottom-4 text-2xl font-semibold text-white drop-shadow sm:text-3xl">
+              <h1
+                className="absolute inset-x-5 bottom-4 text-2xl font-semibold text-white drop-shadow sm:text-3xl"
+                lang={item.contentLocale || locale}
+                dir={languageDir(item.contentLocale || locale)}
+              >
                 {item.name}
               </h1>
             </div>
@@ -80,7 +85,13 @@ export function PublicCampaignPage() {
                 <DateText value={item.endDate} />
               </p>
               {item.description ? (
-                <p className="whitespace-pre-wrap text-sm leading-8 text-ink-700">{item.description}</p>
+                <p
+                  className="whitespace-pre-wrap text-sm leading-8 text-ink-700"
+                  lang={item.contentLocale || locale}
+                  dir={languageDir(item.contentLocale || locale)}
+                >
+                  {item.description}
+                </p>
               ) : null}
 
               <CampaignProgressBar

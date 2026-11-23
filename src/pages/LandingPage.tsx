@@ -125,7 +125,7 @@ export function LandingPage() {
     },
   });
   const announcements = useQuery({
-    queryKey: ["public", "headquarters-announcements"],
+    queryKey: ["public", "headquarters-announcements", locale],
     queryFn: async () => {
       const { data } = await api.get<HeadquartersAnnouncement[]>(
         "/headquarters-announcements/published",
@@ -134,7 +134,7 @@ export function LandingPage() {
     },
   });
   const campaigns = useQuery({
-    queryKey: ["public", "participation-campaigns"],
+    queryKey: ["public", "participation-campaigns", locale],
     queryFn: async () => {
       const { data } = await api.get<PublicCampaign[]>(
         "/participation-campaigns/public",
@@ -350,10 +350,18 @@ export function LandingPage() {
                           <CalendarDays className="size-3.5" aria-hidden />
                           <DateText value={item.publishedAt} />
                         </span>
-                        <span className="mt-1 block font-semibold text-ink-900">
+                        <span
+                          className="mt-1 block font-semibold text-ink-900"
+                          lang={item.contentLocale || locale}
+                          dir={languageDir(item.contentLocale || locale)}
+                        >
                           {item.title}
                         </span>
-                        <span className="mt-0.5 line-clamp-2 text-sm leading-6 text-ink-500">
+                        <span
+                          className="mt-0.5 line-clamp-2 text-sm leading-6 text-ink-500"
+                          lang={item.contentLocale || locale}
+                          dir={languageDir(item.contentLocale || locale)}
+                        >
                           {item.body}
                         </span>
                       </span>

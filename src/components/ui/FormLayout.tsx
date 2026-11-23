@@ -1,8 +1,9 @@
 import type { LucideIcon } from 'lucide-react'
-import type { MouseEvent, ReactNode } from 'react'
+import { useContext, type MouseEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CopyableDigits, useCopyDigits } from './CopyableDigits'
 import { detailsPathFromEdit, isInteractiveDblClickTarget } from './form-shortcuts'
+import { AppModalContext } from './modal-context'
 
 export const cardClassName =
   'rounded-[22px] border border-white bg-white shadow-[0_10px_30px_rgba(20,40,40,0.05)]'
@@ -118,6 +119,7 @@ export function FormCardHeader({
   leading?: ReactNode
 }) {
   const Heading = heading
+  const inModal = useContext(AppModalContext)
   const stackAlways = stackAction === 'always'
   const stackNarrow = stackAction === true
   const titleClass =
@@ -126,16 +128,17 @@ export function FormCardHeader({
       : 'text-base font-semibold leading-snug text-ink-900'
   const subtitleClass =
     heading === 'h1' ? 'mt-1 text-sm leading-6 text-ink-500' : 'mt-1 text-xs leading-6 text-ink-600'
+  const modalClosePad = inModal ? ' pe-12' : ''
   return (
     <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
       <FormCardHeaderDecor />
       <div
         className={
-          stackAlways
+          (stackAlways
             ? 'relative flex flex-col items-stretch gap-3'
             : stackNarrow
               ? 'relative flex flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between'
-              : 'relative flex flex-wrap items-center justify-between gap-3'
+              : 'relative flex flex-wrap items-center justify-between gap-3') + modalClosePad
         }
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">

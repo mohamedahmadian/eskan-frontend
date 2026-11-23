@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import {
+  ActionsTh,
   PaginationBar,
   SearchBar,
   TableCard,
   EntityRowActions,
   SortableTh,
+  actionsColClassName,
 } from '../../components/ui/ListControls'
 import { Button, LoadingState, PageHeader, listShellClassName } from '../../components/ui/Form'
 import { DateText } from '../../components/ui/DateText'
@@ -32,9 +34,10 @@ export function CampaignsListPage() {
 }
 
 function PilgrimCampaignsBrowse() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const query = useQuery({
-    queryKey: ['public', 'participation-campaigns'],
+    queryKey: ['public', 'participation-campaigns', locale],
     queryFn: async () => {
       const { data } = await api.get<PublicCampaign[]>('/participation-campaigns/public')
       return data
@@ -133,7 +136,8 @@ function AdminCampaignsList() {
               <th className="px-4 py-3 text-start font-medium">{t('participations.participants')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('participations.purchasedShares')}</th>
               <SortableTh column="isActive" label={t('geo.isActive')} sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('participationCampaigns.availableLocales')}</th>
+              <ActionsTh />
             </tr>
           </thead>
           <tbody>
@@ -148,6 +152,22 @@ function AdminCampaignsList() {
                 <td className="px-4 py-3">{n(item.purchasedShares)} / {n(item.totalShares)}</td>
                 <td className="px-4 py-3"><GeoStatus active={item.isActive} /></td>
                 <td className="px-4 py-3">
+                  {(item.translatedLocales ?? []).length ? (
+                    <span className="inline-flex flex-wrap gap-1">
+                      {(item.translatedLocales ?? []).map((code) => (
+                        <span
+                          key={code}
+                          className="inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700"
+                        >
+                          {t(`languages.${code}`, { defaultValue: code })}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="text-ink-400">{t('participationCampaigns.fallbackPersian')}</span>
+                  )}
+                </td>
+                <td className={actionsColClassName}>
                   <EntityRowActions
                     viewTo={`/participations/campaigns/${item.id}`}
                     editTo={`/participations/campaigns/${item.id}/edit`}

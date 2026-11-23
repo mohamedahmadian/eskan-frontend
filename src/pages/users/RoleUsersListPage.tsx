@@ -27,7 +27,7 @@ import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api } from '../../lib/api'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
-import { formatRoles } from '../../lib/roles'
+import { formatRoles, unwrapRoleList } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import {
   userGenders,
@@ -38,7 +38,6 @@ import {
   type ManagedUser,
   type Paginated,
   type Province,
-  type RoleOption,
   type UserGender,
   type UserStatus,
 } from '../../types/app'
@@ -153,11 +152,11 @@ export function RoleUsersListPage({ scope }: { scope: RoleUserScope }) {
   const notesParam = personFilters ? (searchParams.get('notes') ?? '') : ''
   const keys = scope.i18nPrefix
   const roles = useQuery({
-    queryKey: ['roles'],
+    queryKey: ['roles', 'lookup'],
     enabled: Boolean(scope.showRoleFilter),
     queryFn: async () => {
-      const { data } = await api.get<RoleOption[]>('/roles')
-      return data
+      const { data } = await api.get('/roles')
+      return unwrapRoleList(data)
     },
   })
   const countries = useQuery({

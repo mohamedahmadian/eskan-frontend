@@ -1,8 +1,8 @@
 import { KeyRound, Smartphone, UserRound, UserRoundPlus } from 'lucide-react'
-import { type FormEvent, useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { AppModal } from '../../components/ui/AppModal'
 import { AppForm, FormActions, FormField, fieldClassName } from '../../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
@@ -27,22 +27,6 @@ export function OrganizationOfficerModal({
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [password, setPassword] = useState(DEFAULT_PASSWORD)
-
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !saving && !event.defaultPrevented) {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [saving, onClose])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -77,26 +61,15 @@ export function OrganizationOfficerModal({
     }
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4"
-      data-no-form-dblclick=""
+  return (
+    <AppModal
+      onClose={onClose}
+      closeDisabled={saving}
+      ariaLabel={t('governmentOrganizations.addOfficer')}
+      zClassName="z-[80]"
+      className="max-h-[min(92vh,44rem)] w-full max-w-lg"
     >
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('governmentOrganizations.cancel')}
-        disabled={saving}
-        onClick={() => {
-          if (!saving) onClose()
-        }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('governmentOrganizations.addOfficer')}
-        className="relative z-10 max-h-[min(92vh,44rem)] w-full max-w-lg overflow-y-auto"
-      >
+        <div className="overflow-y-auto">
         <FormCard
           icon={UserRoundPlus}
           title={t('governmentOrganizations.addOfficer')}
@@ -175,8 +148,7 @@ export function OrganizationOfficerModal({
             />
           </AppForm>
         </FormCard>
-      </div>
-    </div>,
-    document.body,
+        </div>
+    </AppModal>
   )
 }

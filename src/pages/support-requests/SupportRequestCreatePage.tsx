@@ -19,9 +19,9 @@ export function SupportRequestCreatePage() {
       />
       <SupportRequestForm
         onSubmit={async (payload) => {
-          const { data } = await api.post<{ id: string }>('/support-requests', payload)
+          await api.post('/support-requests', payload)
           toast.success(t('supportRequests.created'))
-          navigate(`/support-requests/${data.id}`)
+          navigate('/support-requests')
         }}
       />
     </div>

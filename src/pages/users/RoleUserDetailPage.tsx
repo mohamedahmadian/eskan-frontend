@@ -21,7 +21,6 @@ import {
   MessageCircle,
   MessageSquare,
   Phone,
-  Send,
   Share2,
   Shield,
   Tent,
@@ -181,15 +180,25 @@ export function RoleUserDetailPage({
   })
   const yearsOfCollaboration = collaborationYears(user.activityStartYear)
 
-  async function submitUserPassword(password: string) {
-    if (!user.phone) {
+  async function submitUserPassword(password: string, sendSms: boolean) {
+    if (sendSms && !user.phone) {
       toast.error(t('users.phoneRequiredForSms'))
       return
     }
     setPasswordSaving(true)
     try {
-      await api.patch(`/users/${user.id}/password`, { password })
-      toast.success(t('users.passwordChangedSmsSent'))
+      const { data } = await api.patch<{ ok: true; smsQueued: boolean }>(
+        `/users/${user.id}/password`,
+        { password, sendSms },
+      )
+      if (sendSms && data.smsQueued) {
+        toast.success(t('users.passwordChangedSmsSent'))
+      } else if (sendSms) {
+        toast.success(t('users.passwordChanged'))
+        toast.error(t('users.passwordChangedSmsFailed'))
+      } else {
+        toast.success(t('users.passwordChanged'))
+      }
       setPasswordModalOpen(false)
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
@@ -203,6 +212,7 @@ export function RoleUserDetailPage({
       {passwordModalOpen ? (
         <SetUserPasswordModal
           submitting={passwordSaving}
+          hasPhone={Boolean(user.phone)}
           onClose={() => {
             if (!passwordSaving) setPasswordModalOpen(false)
           }}
@@ -803,16 +813,10 @@ export function RoleUserDetailPage({
                     <Button
                       type="button"
                       variant="soft"
-                      onClick={() => {
-                        if (!user.phone) {
-                          toast.error(t('users.phoneRequiredForSms'))
-                          return
-                        }
-                        setPasswordModalOpen(true)
-                      }}
+                      onClick={() => setPasswordModalOpen(true)}
                     >
-                      <Send className="size-4" aria-hidden />
-                      {t('users.forgotPassword')}
+                      <KeyRound className="size-4" aria-hidden />
+                      {t('users.changePassword')}
                     </Button>
                   ) : null}
                 </>

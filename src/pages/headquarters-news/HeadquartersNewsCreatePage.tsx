@@ -17,9 +17,9 @@ export function HeadquartersNewsCreatePage() {
         title={t('headquartersNews.create')} subtitle={t('headquartersNews.createSubtitle')} />
       <HeadquartersNewsForm
         onSubmit={async (payload) => {
-          const { data } = await api.post<{ id: string }>('/headquarters-news', payload)
+          await api.post('/headquarters-news', payload)
           toast.success(t('headquartersNews.created'))
-          navigate(`/headquarters/news/${data.id}`)
+          navigate('/headquarters/news')
         }}
       />
     </div>

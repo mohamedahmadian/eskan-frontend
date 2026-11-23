@@ -1,7 +1,8 @@
-import { CircleHelp, X } from 'lucide-react'
+import { CircleHelp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { AppModal } from '../../components/ui/AppModal'
 import { Button } from '../../components/ui/Form'
 import { api } from '../../lib/api'
 import type { ReceptionSettings, ReservationType } from '../../types/app'
@@ -42,19 +43,8 @@ export function StepGuideButton({
 
   useEffect(() => {
     if (!open) return
-    panelRef.current?.querySelector<HTMLButtonElement>('[data-help-close]')?.focus()
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        if (imageOpen) {
-          setImageOpen(false)
-          return
-        }
-        setOpen(false)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, imageOpen])
+    panelRef.current?.focus()
+  }, [open])
 
   return (
     <>
@@ -68,36 +58,29 @@ export function StepGuideButton({
         {t('reservations.help')}
       </Button>
       {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/30 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => setOpen(false)}
+        <AppModal
+          onClose={() => setOpen(false)}
+          labelledBy="step-guide-title"
+          zClassName="z-50"
+          onEscape={() => {
+            if (imageOpen) {
+              setImageOpen(false)
+              return false
+            }
+          }}
+          className="flex max-h-[92vh] w-full flex-col rounded-t-[22px] border border-white bg-white p-5 shadow-[0_16px_40px_rgba(20,40,40,0.14)] sm:max-h-[85vh] sm:max-w-2xl sm:rounded-[22px]"
         >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="step-guide-title"
-            ref={panelRef}
-            className="flex max-h-[92vh] w-full flex-col rounded-t-[22px] border border-white bg-white p-5 shadow-[0_16px_40px_rgba(20,40,40,0.14)] sm:max-h-[85vh] sm:max-w-2xl sm:rounded-[22px]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-3 flex items-start justify-between gap-3">
+            <div
+              ref={panelRef}
+              tabIndex={-1}
+              className="mb-3 flex items-start justify-between gap-3 pe-12 outline-none"
+            >
               <div>
                 <h2 id="step-guide-title" className="text-base font-semibold text-ink-900">
                   {title}
                 </h2>
                 <p className="mt-1 text-sm text-ink-500">{description}</p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                icon
-                data-help-close=""
-                onClick={() => setOpen(false)}
-              >
-                <X className="size-4" aria-hidden />
-                <span className="sr-only">{t('reservations.helpClose')}</span>
-              </Button>
             </div>
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               <p className="whitespace-pre-wrap text-sm leading-7 text-ink-700">{body}</p>
@@ -116,19 +99,19 @@ export function StepGuideButton({
                 </div>
               ) : null}
             </div>
-          </div>
-        </div>
+        </AppModal>
       ) : null}
       {imageOpen && media.image ? (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-900/70 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-          onClick={() => setImageOpen(false)}
+        <AppModal
+          onClose={() => setImageOpen(false)}
+          ariaLabel={title}
+          zClassName="z-[60]"
+          overlayClassName="flex items-center justify-center p-4"
+          backdropClassName="bg-ink-900/70"
+          className="flex max-h-full max-w-full items-center justify-center pe-12"
         >
           <img src={media.image} alt="" className="max-h-full max-w-full rounded-2xl object-contain" />
-        </div>
+        </AppModal>
       ) : null}
     </>
   )

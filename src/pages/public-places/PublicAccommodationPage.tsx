@@ -2,6 +2,7 @@ import {
   AlignLeft,
   Building2,
   Download,
+  Images,
   MapPin,
   Mars,
   MessageCircle,
@@ -10,6 +11,7 @@ import {
   Route,
   Share2,
   Shirt,
+  UserRound,
   Venus,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -25,6 +27,7 @@ import { useGeoName } from '../../lib/geo'
 import { publicAccommodationUrl } from '../../lib/public-place'
 import type { PublicAccommodation } from '../../types/app'
 import { LandingShell } from '../landing/LandingShell'
+import { AccommodationImagesGallery } from '../accommodations/AccommodationImagesField'
 import { hasPublicAmenities, listPublicAmenityLabels, PublicAmenityChips } from './PublicAmenityChips'
 import { PublicPlaceCard } from './PublicPlaceCard'
 import { usePlaceCardImage } from './usePlaceCardImage'
@@ -132,7 +135,7 @@ export function PublicAccommodationPage() {
               <FormFactTile
                 icon={Building2}
                 label={t('accommodations.type')}
-                value={t(`accommodationTypes.${item.type}`)}
+                value={geoName(item.type)}
                 tone="teal"
               />
               <FormFactTile
@@ -159,6 +162,22 @@ export function PublicAccommodationPage() {
                   label={t('accommodations.phone')}
                   value={<CopyableDigits value={item.phone} />}
                   tone="mint"
+                />
+              ) : null}
+              {item.ownerName ? (
+                <FormFactTile
+                  icon={UserRound}
+                  label={t('accommodations.ownerName')}
+                  value={item.ownerName}
+                  tone="teal"
+                />
+              ) : null}
+              {item.ownerPhone ? (
+                <FormFactTile
+                  icon={Phone}
+                  label={t('accommodations.ownerPhone')}
+                  value={<CopyableDigits value={item.ownerPhone} />}
+                  tone="ink"
                 />
               ) : null}
               {item.distanceToShrineKm != null ? (
@@ -206,6 +225,16 @@ export function PublicAccommodationPage() {
               ) : null}
             </div>
           </div>
+
+          {(item.imageIds ?? []).length ? (
+            <div>
+              <FormSectionTitle icon={Images}>{t('accommodations.sectionImages')}</FormSectionTitle>
+              <AccommodationImagesGallery
+                imageIds={item.imageIds}
+                empty={t('accommodations.noImages')}
+              />
+            </div>
+          ) : null}
 
           {hasPublicAmenities(item) ? (
             <div>

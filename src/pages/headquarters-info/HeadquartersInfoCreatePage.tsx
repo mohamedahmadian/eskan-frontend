@@ -45,10 +45,10 @@ export function HeadquartersInfoCreatePage() {
       />
       <HeadquartersInfoForm
         onSubmit={async (payload) => {
-          const { data } = await api.post<{ id: string }>('/headquarters-info', payload)
+          await api.post('/headquarters-info', payload)
           await invalidateBranding()
           toast.success(t('headquartersInfo.created'))
-          navigate(`/headquarters/info/${data.id}`)
+          navigate('/headquarters/info')
         }}
       />
     </div>

@@ -1196,7 +1196,7 @@ function HousingCard({ row, current }: { row: ReceptionHousingRow; current?: boo
         <div>
           <p className="font-semibold text-ink-900">{acc.name}</p>
           <p className="mt-1 text-xs text-ink-500">
-            {t(`accommodationTypes.${acc.type}`)} · {t(`genderTypes.${acc.genderType}`)}
+            {nameOf(acc.type)} · {t(`genderTypes.${acc.genderType}`)}
             {acc.city ? ` · ${nameOf(acc.city)}` : ''}
           </p>
         </div>
@@ -1234,12 +1234,13 @@ function HousingCard({ row, current }: { row: ReceptionHousingRow; current?: boo
 function HousingHistoryRow({ row }: { row: ReceptionHousingRow }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
+  const nameOf = useGeoName()
   const acc = row.accommodation
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <p className="w-16 font-semibold text-ink-900">{formatNumber(row.year, locale)}</p>
       <p className="min-w-0 flex-1 font-medium text-ink-800">{acc.name}</p>
-      <span className="text-xs text-ink-500">{t(`accommodationTypes.${acc.type}`)}</span>
+      <span className="text-xs text-ink-500">{nameOf(acc.type)}</span>
       {row.isPrimary ? (
         <span className="text-[11px] text-teal-700">{t('reception.primaryManager')}</span>
       ) : null}

@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, HeartHandshake } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { languageDir } from '../../i18n'
 import { getImageUrl } from '../../lib/api'
 import { formatGroupedNumber, formatNumber } from '../../lib/datetime'
 import type { PublicCampaign } from '../../types/app'
@@ -64,7 +65,11 @@ export function CampaignSlider({ items }: { items: PublicCampaign[] }) {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.28),transparent_42%)]" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-ink-900/55 via-ink-900/10 to-transparent" />
-            <p className="absolute inset-x-5 bottom-5 text-2xl font-semibold text-white drop-shadow sm:text-3xl">
+            <p
+              className="absolute inset-x-5 bottom-5 text-2xl font-semibold text-white drop-shadow sm:text-3xl"
+              lang={item.contentLocale || locale}
+              dir={languageDir(item.contentLocale || locale)}
+            >
               {item.name}
             </p>
           </div>
@@ -77,13 +82,21 @@ export function CampaignSlider({ items }: { items: PublicCampaign[] }) {
               })}
             </p>
             {item.description ? (
-              <p className="line-clamp-3 text-sm leading-6 text-ink-600">{item.description}</p>
+              <p
+                className="line-clamp-3 text-sm leading-6 text-ink-600"
+                lang={item.contentLocale || locale}
+                dir={languageDir(item.contentLocale || locale)}
+              >
+                {item.description}
+              </p>
             ) : null}
             <div className="mt-auto">
               <CampaignProgressBar
                 percent={campaignProgressPercent(item.purchasedShares, item.totalShares, item.progressPercent)}
-                label={t('participations.progress')}
-                value={`${formatGroupedNumber(item.progressPercent, locale)}٪`}
+                label={t('landing.participations.progress')}
+                value={t('landing.participations.percentValue', {
+                  value: formatGroupedNumber(item.progressPercent, locale),
+                })}
               />
             </div>
             <span className="inline-flex items-center gap-2 text-sm font-medium text-teal-700">

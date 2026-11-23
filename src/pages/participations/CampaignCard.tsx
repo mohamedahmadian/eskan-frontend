@@ -2,6 +2,7 @@ import { CalendarRange, Coins, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
+import { languageDir } from '../../i18n'
 import { getImageUrl } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
 import type { PublicCampaign } from '../../types/app'
@@ -91,7 +92,11 @@ export function CampaignCard({
         <div className="absolute start-4 top-4">
           <GeoStatus active={item.isActive} />
         </div>
-        <p className="absolute inset-x-4 bottom-3 text-lg font-semibold text-white drop-shadow">
+        <p
+          className="absolute inset-x-4 bottom-3 text-lg font-semibold text-white drop-shadow"
+          lang={item.contentLocale || locale}
+          dir={languageDir(item.contentLocale || locale)}
+        >
           {item.name}
         </p>
       </div>
@@ -103,7 +108,13 @@ export function CampaignCard({
           <DateText value={item.endDate} />
         </p>
         {item.description ? (
-          <p className="line-clamp-2 text-sm leading-6 text-ink-600">{item.description}</p>
+          <p
+            className="line-clamp-2 text-sm leading-6 text-ink-600"
+            lang={item.contentLocale || locale}
+            dir={languageDir(item.contentLocale || locale)}
+          >
+            {item.description}
+          </p>
         ) : null}
         <CampaignProgressBar
           percent={campaignProgressPercent(item.purchasedShares, item.totalShares, item.progressPercent)}

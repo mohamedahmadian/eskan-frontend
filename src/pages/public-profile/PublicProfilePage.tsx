@@ -277,7 +277,7 @@ export function PublicProfilePage() {
                       <p className="mt-1 text-xs text-ink-500">
                         {formatNumber(item.year, locale)}
                         {item.accommodation.type
-                          ? ` · ${t(`accommodationTypes.${item.accommodation.type}`)}`
+                          ? ` · ${geoName(item.accommodation.type)}`
                           : ''}
                         {item.isPrimary ? ` · ${t('publicProfile.primaryAccommodation')}` : ''}
                       </p>

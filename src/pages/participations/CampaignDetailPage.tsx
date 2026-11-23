@@ -1,10 +1,12 @@
 import {
+  AlignLeft,
   CalendarRange,
   Coins,
   CreditCard,
   HandCoins,
   Hash,
   Landmark,
+  Languages,
   Megaphone,
   ToggleRight,
   Users,
@@ -26,6 +28,7 @@ import {
 import { DateText } from '../../components/ui/DateText'
 import { FormCard, FormEmptyHint, FormFactTile, FormSectionTitle } from '../../components/ui/FormLayout'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
+import { languageDir } from '../../i18n'
 import { api, getImageUrl } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
 import { isAdmin } from '../../lib/roles'
@@ -46,7 +49,7 @@ function PilgrimCampaignDetail() {
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const { id } = useParams()
   const query = useQuery({
-    queryKey: ['public', 'participation-campaigns', id],
+    queryKey: ['public', 'participation-campaigns', locale, id],
     enabled: Boolean(id),
     queryFn: async () => {
       const { data } = await api.get<PublicCampaign>(`/participation-campaigns/public/${id}`)
@@ -90,7 +93,13 @@ function PilgrimCampaignDetail() {
             />
           ) : null}
           {item.description ? (
-            <p className="whitespace-pre-wrap text-sm leading-7 text-ink-700">{item.description}</p>
+            <p
+              className="whitespace-pre-wrap text-sm leading-7 text-ink-700"
+              lang={item.contentLocale || locale}
+              dir={languageDir(item.contentLocale || locale)}
+            >
+              {item.description}
+            </p>
           ) : null}
           <FormSectionTitle icon={Coins}>{t('participations.progress')}</FormSectionTitle>
           <CampaignProgressBar
@@ -215,6 +224,7 @@ function AdminCampaignDetail() {
 
   const n = (value: number) => formatGroupedNumber(value, locale)
   const money = (value: number) => `${n(value)} ${t('participations.toman')}`
+  const translations = item.translations ?? []
 
   return (
     <div className={formShellClassName}>
@@ -232,6 +242,7 @@ function AdminCampaignDetail() {
               className="h-52 w-full rounded-2xl object-cover"
             />
           ) : null}
+          <FormSectionTitle icon={Megaphone}>{t('participationCampaigns.persianContent')}</FormSectionTitle>
           {item.description ? (
             <p className="text-sm leading-7 text-ink-700">{item.description}</p>
           ) : null}
@@ -317,6 +328,58 @@ function AdminCampaignDetail() {
               tone="ink"
             />
           </div>
+
+          <section>
+            <FormSectionTitle icon={Languages}>{t('participationCampaigns.translations')}</FormSectionTitle>
+            {translations.length ? (
+              <div className="space-y-4">
+                {translations.map((row) => (
+                  <div key={row.locale} className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                    <FormFactTile
+                      icon={Languages}
+                      label={t('participationCampaigns.availableLocales')}
+                      value={t(`languages.${row.locale}`, { defaultValue: row.locale })}
+                      tone="teal"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={Megaphone}
+                      label={t('participationCampaigns.name')}
+                      value={
+                        <span dir={languageDir(row.locale)} lang={row.locale}>
+                          {row.name}
+                        </span>
+                      }
+                      tone="mint"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={AlignLeft}
+                      label={t('participationCampaigns.description')}
+                      value={
+                        row.description ? (
+                          <span
+                            className="whitespace-pre-wrap"
+                            dir={languageDir(row.locale)}
+                            lang={row.locale}
+                          >
+                            {row.description}
+                          </span>
+                        ) : (
+                          '—'
+                        )
+                      }
+                      empty={!row.description}
+                      tone="ink"
+                      className="sm:col-span-2"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <FormEmptyHint>{t('participationCampaigns.noTranslations')}</FormEmptyHint>
+            )}
+          </section>
           <DetailActions
             editTo={`/participations/campaigns/${item.id}/edit`}
             editLabel={t('common.edit')}

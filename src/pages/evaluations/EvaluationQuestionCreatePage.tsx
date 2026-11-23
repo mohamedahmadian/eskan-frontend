@@ -15,9 +15,9 @@ export function EvaluationQuestionCreatePage() {
   const navigate = useNavigate()
 
   async function onSubmit(payload: EvaluationQuestionPayload) {
-    const { data } = await api.post<EvaluationQuestion>('/evaluation-questions', payload)
+    await api.post<EvaluationQuestion>('/evaluation-questions', payload)
     toast.success(t('evaluations.questions.created'))
-    navigate(`/evaluations/questions/${data.id}`)
+    navigate('/evaluations/questions')
   }
 
   return (

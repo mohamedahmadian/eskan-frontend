@@ -14,9 +14,12 @@ type HistoryEntry = {
   pathname: string
 }
 
-const NavigationHistoryContext = createContext<{
+type NavigationHistoryValue = {
   goBack: (fallback?: string) => void
-} | null>(null)
+  canGoBack: boolean
+}
+
+const NavigationHistoryContext = createContext<NavigationHistoryValue | null>(null)
 
 function isBlockedBackTarget(pathname: string) {
   return isPublicSessionPath(pathname)
@@ -61,6 +64,7 @@ export function NavigationHistoryProvider({ children }: { children: ReactNode })
     const canGoBack = Boolean(previous && !isBlockedBackTarget(previous.pathname))
 
     return {
+      canGoBack,
       goBack(fallback?: string) {
         if (canGoBack) {
           navigate(-1)
@@ -82,6 +86,7 @@ export function useNavigationHistory() {
   const context = useContext(NavigationHistoryContext)
   if (!context) {
     return {
+      canGoBack: false,
       goBack(fallback?: string) {
         if (fallback) window.location.assign(fallback)
       },

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LoadingState, PageHeader, userFormShellClassName } from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import type { RoleOption } from '../../types/app'
+import { unwrapRoleList } from '../../lib/roles'
 import { UserForm } from './UserForm'
 import type { RoleUserScope } from './user-scopes'
 
@@ -14,10 +14,10 @@ export function RoleUserCreatePage({ scope }: { scope: RoleUserScope }) {
   const navigate = useNavigate()
   const keys = scope.i18nPrefix
   const roles = useQuery({
-    queryKey: ['roles'],
+    queryKey: ['roles', 'lookup'],
     queryFn: async () => {
-      const { data } = await api.get<RoleOption[]>('/roles')
-      return data
+      const { data } = await api.get('/roles')
+      return unwrapRoleList(data)
     },
   })
 

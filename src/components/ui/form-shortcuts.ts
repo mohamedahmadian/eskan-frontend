@@ -36,12 +36,28 @@ export function isTextEntryTarget(target: EventTarget | null) {
   return false
 }
 
-/** دراپ‌داون، مودال یا تأیید باز — Esc نباید فرم را ترک کند. */
+/** دراپ‌داون، مودال، منو یا تأیید باز — Esc نباید صفحه را ترک کند. */
 export function shortcutBlockedByOverlay(target: EventTarget | null) {
   if (target instanceof Element && target.closest('[data-enter-ignore]')) return true
   if (document.querySelector('[role="dialog"][aria-modal="true"]')) return true
+  if (document.querySelector('[role="listbox"]')) return true
+  if (document.querySelector('[role="menu"]')) return true
+  if (document.querySelector('[data-escape-layer]')) return true
   if (document.querySelector('[data-sonner-toast] button')) return true
+  if (document.querySelector('.rmdp-calendar')) return true
+  if (document.querySelector('.leaflet-popup')) return true
   return false
+}
+
+/** دکمهٔ انصراف فرم فعال، اگر همان فرم میانبر را در اختیار دارد. */
+export function findEnabledFormCancel(target: EventTarget | null) {
+  const forms = document.querySelectorAll<HTMLFormElement>('form:not([data-enter-immediate])')
+  for (const form of forms) {
+    if (!formOwnsShortcut(form, target)) continue
+    const cancel = form.querySelector<HTMLButtonElement>('[data-form-cancel]')
+    if (cancel && !cancel.disabled) return cancel
+  }
+  return null
 }
 
 const SHORTCUT_CHARS = new Set(['s', 'S', 'س'])

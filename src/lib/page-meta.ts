@@ -43,12 +43,6 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "pilgrims.createSubtitle",
     };
   }
-  if (pathname.startsWith("/pilgrims/import")) {
-    return {
-      titleKey: "pilgrims.import",
-      subtitleKey: "pilgrims.importSubtitle",
-    };
-  }
   if (pathname.includes("/sms") && pathname.startsWith("/pilgrims/")) {
     return {
       titleKey: "pilgrims.sendSms",
@@ -1079,28 +1073,64 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "myAccommodations.subtitle",
     };
   }
-  if (pathname.startsWith("/accommodation-base-info/schools/new")) {
+  if (pathname.startsWith("/accommodation-types/new")) {
+    return {
+      titleKey: "accommodationType.create",
+      subtitleKey: "accommodationType.createSubtitle",
+    };
+  }
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/accommodation-types/")
+  ) {
+    return {
+      titleKey: "accommodationType.edit",
+      subtitleKey: "accommodationType.editSubtitle",
+    };
+  }
+  if (
+    pathname.startsWith("/accommodation-types/") &&
+    pathname !== "/accommodation-types"
+  ) {
+    return {
+      titleKey: "accommodationType.details",
+      subtitleKey: "accommodationType.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/accommodation-types")) {
+    return {
+      titleKey: "menus.accommodationTypeManagement",
+      subtitleKey: "accommodationType.subtitle",
+    };
+  }
+  if (pathname.startsWith("/school-districts/new")) {
     return {
       titleKey: "schoolDistricts.create",
       subtitleKey: "schoolDistricts.createSubtitle",
     };
   }
-  if (/^\/accommodation-base-info\/schools\/[^/]+\/edit$/.test(pathname)) {
+  if (
+    pathname.includes("/edit") &&
+    pathname.startsWith("/school-districts/")
+  ) {
     return {
       titleKey: "schoolDistricts.edit",
       subtitleKey: "schoolDistricts.editSubtitle",
     };
   }
-  if (/^\/accommodation-base-info\/schools\/[^/]+$/.test(pathname)) {
+  if (
+    pathname.startsWith("/school-districts/") &&
+    pathname !== "/school-districts"
+  ) {
     return {
       titleKey: "schoolDistricts.details",
       subtitleKey: "schoolDistricts.detailsSubtitle",
     };
   }
-  if (pathname.startsWith("/accommodation-base-info")) {
+  if (pathname.startsWith("/school-districts")) {
     return {
-      titleKey: "menus.accommodationBaseInfo",
-      subtitleKey: "accommodationBaseInfo.subtitle",
+      titleKey: "menus.schoolDistricts",
+      subtitleKey: "schoolDistricts.subtitle",
     };
   }
   if (pathname.startsWith("/accommodations/new")) {
@@ -1913,6 +1943,12 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "participationCampaigns.subtitle",
     };
   }
+  if (pathname.startsWith("/participations/in-kind")) {
+    return {
+      titleKey: "menus.participationsInKind",
+      subtitleKey: "landing.participations.inKindPageHint",
+    };
+  }
   if (pathname.startsWith("/participations/bank-accounts/new")) {
     return {
       titleKey: "bankAccounts.create",
@@ -1977,6 +2013,36 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.participationsHome",
       subtitleKey: "landing.participations.hubHint",
+    };
+  }
+  if (pathname.startsWith("/system-management/roles/new")) {
+    return {
+      titleKey: "roleAccess.create",
+      subtitleKey: "roleAccess.createSubtitle",
+    };
+  }
+  if (pathname.includes("/edit") && pathname.startsWith("/system-management/roles/")) {
+    return {
+      titleKey: "roleAccess.edit",
+      subtitleKey: "roleAccess.editSubtitle",
+    };
+  }
+  if (pathname.startsWith("/system-management/roles/")) {
+    return {
+      titleKey: "roleAccess.details",
+      subtitleKey: "roleAccess.detailsSubtitle",
+    };
+  }
+  if (pathname.startsWith("/system-management/roles")) {
+    return {
+      titleKey: "menus.roleAccess",
+      subtitleKey: "roleAccess.subtitle",
+    };
+  }
+  if (pathname.startsWith("/system-management/data-management/import")) {
+    return {
+      titleKey: "pilgrims.import",
+      subtitleKey: "pilgrims.importSubtitle",
     };
   }
   if (pathname.startsWith("/system-management/data-management")) {

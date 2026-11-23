@@ -6,6 +6,7 @@ import {
   BookOpen,
   Building2,
   Calendar,
+  CalendarDays,
   Car,
   ClipboardCheck,
   Compass,
@@ -14,6 +15,7 @@ import {
   Flame,
   HeartPulse,
   IdCard,
+  Images,
   Landmark,
   LayoutGrid,
   MapPin,
@@ -29,6 +31,7 @@ import {
   School,
   Shirt,
   Snowflake,
+  ToggleRight,
   UserCheck,
   UserCog,
   UserRound,
@@ -73,14 +76,18 @@ import { canManageAccommodations, isAccommodationManager, isAdmin } from '../../
 import type {
   Accommodation,
   AccommodationCaravanPlacement,
-  AccommodationStatus,
 } from '../../types/app'
+import { AccommodationStatusBadge } from './AccommodationStatusBadge'
 import {
   accommodationContactRoles,
   type AccommodationContactRole,
 } from './accommodationContacts'
 import { AccommodationYearAlert, managerDisplayName } from './AccommodationYearAlert'
 import { AccommodationTabNav, accommodationTabs, type AccommodationTab } from './AccommodationTabs'
+import { AccommodationImagesGallery } from './AccommodationImagesField'
+import { isSchoolAccommodationType } from '../../lib/accommodation-type'
+import { accommodationTypeDetailKind } from '../../lib/accommodation-type-details'
+import { AccommodationTypeDetailsPanel } from './AccommodationTypeDetailsFields'
 import { PilgrimNameLink } from './PilgrimNameLink'
 
 const roleIcons: Record<AccommodationContactRole, LucideIcon> = {
@@ -156,9 +163,15 @@ export function AccommodationDetailPage() {
       accommodationContactRoles.includes(contact.role as AccommodationContactRole),
     ).length ?? 0
   const placedCaravans = placementsQuery.data?.items ?? []
+  const detailKind = accommodationTypeDetailKind(item.type)
+  const visibleTabs = accommodationTabs.filter((itemTab) => {
+    if (itemTab === 'inspection' && item.inspectionStatus == null) return false
+    if (itemTab === 'typeDetails' && !detailKind) return false
+    return true
+  })
   const tabs: AccommodationTab[] = placedCaravans.length
-    ? [...accommodationTabs, 'placement']
-    : [...accommodationTabs]
+    ? [...visibleTabs, 'placement']
+    : [...visibleTabs]
   const currentYear = currentPersianYear()
   const yearContacts = [...(item.yearContacts ?? [])].sort((a, b) =>
     b.year !== a.year ? b.year - a.year : a.role.localeCompare(b.role),
@@ -189,7 +202,7 @@ export function AccommodationDetailPage() {
           title={
             <span className="inline-flex flex-wrap items-center gap-2">
               {item.name}
-              <StatusBadge status={item.status} />
+              <AccommodationStatusBadge status={item.status} />
             </span>
           }
           subtitle={t('accommodations.detailsSubtitle')}
@@ -198,7 +211,7 @@ export function AccommodationDetailPage() {
               {city ? <FormMetaChip icon={MapPin} label={city} /> : null}
               <FormMetaChip
                 icon={Landmark}
-                label={t(`accommodationTypes.${item.type}`)}
+                label={nameOf(item.type)}
               />
               <FormMetaChip icon={Users} label={t(`genderTypes.${item.genderType}`)} />
               <FormMetaChip
@@ -280,7 +293,7 @@ export function AccommodationDetailPage() {
                 <FormFactTile
                   icon={Landmark}
                   label={t('accommodations.type')}
-                  value={t(`accommodationTypes.${item.type}`)}
+                  value={nameOf(item.type)}
                   tone="mint"
                 />
                 <FormFactTile
@@ -307,6 +320,20 @@ export function AccommodationDetailPage() {
                   copyValue={item.phone}
                   empty={!item.phone}
                   tone="ink"
+                />
+                <FormFactTile
+                  icon={UserRound}
+                  label={t('accommodations.ownerName')}
+                  value={item.ownerName || empty}
+                  empty={!item.ownerName}
+                  tone="teal"
+                />
+                <FormFactTile
+                  icon={Phone}
+                  label={t('accommodations.ownerPhone')}
+                  copyValue={item.ownerPhone}
+                  empty={!item.ownerPhone}
+                  tone="mint"
                 />
                 <FormFactTile
                   icon={AlignLeft}
@@ -469,7 +496,7 @@ export function AccommodationDetailPage() {
                 {t('accommodations.sectionAmenities')}
               </FormSectionTitle>
               <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-                {item.type === 'SCHOOL' ? (
+                {isSchoolAccommodationType(item.type) ? (
                   <>
                     <FormFactTile
                       icon={School}
@@ -547,6 +574,22 @@ export function AccommodationDetailPage() {
                   tone="ink"
                 />
               </div>
+            </div>
+
+            {detailKind ? (
+              <div data-tab="typeDetails" className={panelClass('typeDetails')}>
+                <AccommodationTypeDetailsPanel kind={detailKind} item={item} />
+              </div>
+            ) : null}
+
+            <div data-tab="images" className={panelClass('images')}>
+              <FormSectionTitle icon={Images}>
+                {t('accommodations.sectionImages')}
+              </FormSectionTitle>
+              <AccommodationImagesGallery
+                imageIds={item.imageIds ?? []}
+                empty={t('accommodations.noImages')}
+              />
             </div>
 
             <div data-tab="social" className={panelClass('social')}>
@@ -670,6 +713,113 @@ export function AccommodationDetailPage() {
                 </div>
               ) : null}
             </div>
+
+            {item.inspectionStatus != null ? (
+              <div data-tab="inspection" className={panelClass('inspection')}>
+                <FormSectionTitle icon={ClipboardCheck}>
+                  {t('accommodations.sectionInspection')}
+                </FormSectionTitle>
+                <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                  <FormFactTile
+                    icon={ClipboardCheck}
+                    label={t('accommodations.inspectionStatus')}
+                    value={t(`accommodationInspectionStatuses.${item.inspectionStatus}`)}
+                    tone="teal"
+                  />
+                  <FormFactTile
+                    icon={BadgeCheck}
+                    label={t('accommodations.inspectionResult')}
+                    value={
+                      item.inspectionResult
+                        ? t(`accommodationInspectionResults.${item.inspectionResult}`)
+                        : empty
+                    }
+                    empty={!item.inspectionResult}
+                    tone="mint"
+                  />
+                  <FormFactTile
+                    icon={UserCheck}
+                    label={t('accommodations.reviewer')}
+                    value={item.reviewer?.fullName || empty}
+                    empty={!item.reviewer}
+                    tone="ink"
+                  />
+                  <FormFactTile
+                    icon={CalendarDays}
+                    label={t('accommodations.lastEvaluatedAt')}
+                    value={
+                      item.lastEvaluatedAt ? <DateText value={item.lastEvaluatedAt} /> : empty
+                    }
+                    empty={!item.lastEvaluatedAt}
+                    tone="teal"
+                  />
+                  <FormFactTile
+                    icon={ToggleRight}
+                    label={t('accommodations.operationStatus')}
+                    value={
+                      item.operationStatus
+                        ? t(`accommodationOperationStatuses.${item.operationStatus}`)
+                        : empty
+                    }
+                    empty={!item.operationStatus}
+                    tone="mint"
+                  />
+                </div>
+                <FormSectionTitle icon={CalendarDays}>
+                  {t('accommodations.evaluationHistory')}
+                </FormSectionTitle>
+                {(item.evaluations ?? []).length ? (
+                  <div className="grid gap-2 sm:gap-3">
+                    {item.evaluations.map((row) => (
+                      <article
+                        key={row.id}
+                        className={`rounded-2xl border p-4 ${formToneClass.ink.wrap}`}
+                      >
+                        <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                          <FormFactTile
+                            icon={CalendarDays}
+                            label={t('accommodations.lastEvaluatedAt')}
+                            value={row.evaluatedAt ? <DateText value={row.evaluatedAt} /> : empty}
+                            empty={!row.evaluatedAt}
+                            tone="teal"
+                            compact
+                          />
+                          <FormFactTile
+                            icon={ClipboardCheck}
+                            label={t('accommodations.inspectionStatus')}
+                            value={t(`accommodationInspectionStatuses.${row.inspectionStatus}`)}
+                            tone="mint"
+                            compact
+                          />
+                          <FormFactTile
+                            icon={BadgeCheck}
+                            label={t('accommodations.inspectionResult')}
+                            value={
+                              row.inspectionResult
+                                ? t(`accommodationInspectionResults.${row.inspectionResult}`)
+                                : empty
+                            }
+                            empty={!row.inspectionResult}
+                            tone="ink"
+                            compact
+                          />
+                          <FormFactTile
+                            icon={UserCheck}
+                            label={t('accommodations.reviewer')}
+                            value={row.reviewer?.fullName || empty}
+                            empty={!row.reviewer}
+                            tone="teal"
+                            compact
+                          />
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <FormEmptyHint>{t('accommodations.noEvaluations')}</FormEmptyHint>
+                )}
+              </div>
+            ) : null}
 
             <div data-tab="managers" className={panelClass('managers')}>
               <FormSectionTitle icon={UserRound}>
@@ -799,20 +949,3 @@ function personInitials(name: string) {
   return `${first}${last}` || '؟'
 }
 
-function StatusBadge({ status }: { status: AccommodationStatus }) {
-  const { t } = useTranslation()
-  const active = status === 'ACTIVE'
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${
-        active
-          ? 'bg-teal-500 text-white ring-teal-500'
-          : status === 'FULL'
-            ? 'bg-mint-500 text-white ring-mint-500'
-            : 'bg-white/80 text-ink-500 ring-line'
-      }`}
-    >
-      {t(`accommodationStatuses.${status}`)}
-    </span>
-  )
-}

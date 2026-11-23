@@ -107,7 +107,7 @@ export function MyAccommodationsListPage() {
                     {item.name}
                   </span>
                 </td>
-                <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
+                <td className="px-4 py-3">{nameOf(item.type)}</td>
                 <td className="px-4 py-3">{item.city ? nameOf(item.city) : '—'}</td>
                 <td className="px-4 py-3">{t(`genderTypes.${item.genderType}`)}</td>
                 <td className="px-4 py-3">

@@ -17,8 +17,7 @@ export function NewAccommodationsCard({ className = '' }: { className?: string }
     queryFn: async () => {
       const { data } = await api.get<Paginated<Accommodation>>('/accommodations', {
         params: {
-          status: 'INACTIVE',
-          introduced: true,
+          status: 'PENDING_REVIEW',
           page: 1,
           pageSize: LATEST_COUNT,
         },
@@ -30,7 +29,7 @@ export function NewAccommodationsCard({ className = '' }: { className?: string }
   return (
     <DashboardFeedCard
       className={className}
-      to="/accommodations?status=INACTIVE"
+      to="/accommodations?status=PENDING_REVIEW"
       icon={Building2}
       itemIcon={MapPin}
       title={t('dashboard.newAccommodationsTitle')}

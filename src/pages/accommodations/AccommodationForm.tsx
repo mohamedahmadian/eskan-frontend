@@ -4,10 +4,13 @@ import {
   BadgeCheck,
   Bath,
   Building2,
+  CalendarDays,
   Car,
+  ClipboardCheck,
   Droplets,
   Flag,
   Flame,
+  Images,
   Landmark,
   LayoutGrid,
   MapPin,
@@ -23,30 +26,42 @@ import {
   Snowflake,
   ToggleRight,
   UserCheck,
+  UserRound,
   Users,
   Wifi,
   BookOpen,
   Compass,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { type FormEvent, type ReactNode, useMemo, useState } from 'react'
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppForm, FormActions, FormField, ToggleField, fieldClassName } from '../../components/ui/Form'
 import { FormCard } from '../../components/ui/FormLayout'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
+import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
+import {
+  defaultAccommodationTypeId,
+  isSchoolAccommodationType,
+} from '../../lib/accommodation-type'
 import { useGeoName } from '../../lib/geo'
 import {
+  accommodationInspectionResults,
+  accommodationInspectionStatuses,
+  accommodationOperationStatuses,
   accommodationStatuses,
-  accommodationTypes,
   genderTypes,
   managementTypes,
   type Accommodation,
+  type AccommodationInspectionResult,
+  type AccommodationInspectionStatus,
+  type AccommodationOperationStatus,
   type AccommodationStatus,
   type AccommodationType,
+  type AccommodationTypeDetails,
   type Country,
   type GenderType,
   type ManagedUser,
@@ -55,6 +70,7 @@ import {
   type City,
   type SchoolDistrict,
 } from '../../types/app'
+import { AccommodationImagesField } from './AccommodationImagesField'
 import { AccommodationActivityYearFields, AccommodationManagersCard } from './AccommodationManagersCard'
 import { AccommodationTabNav, type AccommodationTab } from './AccommodationTabs'
 import { AccommodationYearAlert } from './AccommodationYearAlert'
@@ -70,16 +86,32 @@ import {
   type AccommodationContactDraft,
   type AccommodationContactRole,
 } from './accommodationContacts'
+import {
+  accommodationTypeDetailKind,
+  typeDetailFormValuesFrom,
+  typeDetailsPayloadFromForm,
+} from '../../lib/accommodation-type-details'
+import {
+  AccommodationTypeDetailsFields,
+} from './AccommodationTypeDetailsFields'
 
 export type AccommodationPayload = {
   name: string
-  type: AccommodationType
+  typeId: string
   status: AccommodationStatus
   genderType: GenderType
   managementType: ManagementType
   maleCapacity: number
   femaleCapacity: number
   overflowPercent: number
+  ownerName: string | null
+  ownerPhone: string | null
+  imageIds?: string[]
+  inspectionStatus?: AccommodationInspectionStatus
+  inspectionResult?: AccommodationInspectionResult | null
+  reviewerId?: string | null
+  lastEvaluatedAt?: string | null
+  operationStatus?: AccommodationOperationStatus
   phone: string | null
   address: string | null
   neshanAddress: string | null
@@ -111,7 +143,7 @@ export type AccommodationPayload = {
   isPrimary?: boolean
   contacts?: ReturnType<typeof toAccommodationContactPayloads>
   yearContactMode?: 'manager' | 'fromAccommodation' | 'manual'
-}
+} & AccommodationTypeDetails
 
 function emptyToNull(value: string) {
   const trimmed = value.trim()
@@ -203,13 +235,20 @@ export function AccommodationForm({
   const [tab, setTab] = useState<AccommodationTab>('general')
   const [values, setValues] = useState({
     name: initial?.name ?? '',
-    type: initial?.type ?? accommodationTypes.HOUSE,
+    typeId: initial?.typeId ?? '',
     status: initial?.status ?? accommodationStatuses.ACTIVE,
     genderType: initial?.genderType ?? genderTypes.MIXED,
     managementType: initial?.managementType ?? managementTypes.SELF_SUFFICIENT,
     maleCapacity: String(initial?.maleCapacity ?? 0),
     femaleCapacity: String(initial?.femaleCapacity ?? 0),
     overflowPercent: String(initial?.overflowPercent ?? 10),
+    ownerName: initial?.ownerName ?? '',
+    ownerPhone: initial?.ownerPhone ?? '',
+    inspectionStatus: initial?.inspectionStatus ?? accommodationInspectionStatuses.NOT_DONE,
+    inspectionResult: initial?.inspectionResult ?? '',
+    reviewerId: initial?.reviewerId ?? '',
+    lastEvaluatedAt: initial?.lastEvaluatedAt ?? '',
+    operationStatus: initial?.operationStatus ?? accommodationOperationStatuses.ACTIVE,
     phone: initial?.phone ?? '',
     address: initial?.address ?? '',
     neshanAddress: initial?.neshanAddress ?? '',
@@ -257,12 +296,41 @@ export function AccommodationForm({
   const [yearContactMode, setYearContactMode] = useState<
     'manager' | 'fromAccommodation' | 'manual'
   >('manager')
-  const isSchool = values.type === accommodationTypes.SCHOOL
+  const [imageIds, setImageIds] = useState<string[]>(initial?.imageIds ?? [])
+  const [typeDetails, setTypeDetails] = useState(() => typeDetailFormValuesFrom(initial))
+  const typeOptions = useQuery({
+    queryKey: ['accommodation-types', 'lookup'],
+    queryFn: async () => {
+      const { data } = await api.get<AccommodationType[]>('/accommodation-types', {
+        params: { activeOnly: true },
+      })
+      return data
+    },
+  })
+  const selectedType =
+    typeOptions.data?.find((item) => item.id === values.typeId) ??
+    (initial?.typeId === values.typeId ? initial.type : undefined)
+  const isSchool = isSchoolAccommodationType(selectedType)
+  const detailKind = accommodationTypeDetailKind(selectedType)
+
+  useEffect(() => {
+    if (values.typeId || !typeOptions.data?.length) return
+    set('typeId', defaultAccommodationTypeId(typeOptions.data))
+  }, [typeOptions.data, values.typeId])
   const districts = useQuery({
     queryKey: ['school-districts', 'lookup'],
     enabled: isSchool,
     queryFn: async () => {
       const { data } = await api.get<SchoolDistrict[]>('/school-districts')
+      return data
+    },
+  })
+
+  const reviewers = useQuery({
+    queryKey: ['users', 'lookup', 'accommodation-reviewers'],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data } = await api.get<ManagedUser[]>('/users')
       return data
     },
   })
@@ -275,12 +343,20 @@ export function AccommodationForm({
           'location',
           'capacity',
           'amenities',
+          ...(detailKind ? (['typeDetails'] as const) : []),
+          'images',
           'social',
           'contacts',
         ] as AccommodationTab[]
-      ).concat(isAdmin || initial?.id ? ['managers'] : []),
-    [isAdmin, initial?.id],
+      )
+        .concat(isAdmin ? ['inspection'] : [])
+        .concat(isAdmin || initial?.id ? ['managers'] : []),
+    [isAdmin, initial?.id, detailKind],
   )
+
+  useEffect(() => {
+    if (!detailKind && tab === 'typeDetails') setTab('amenities')
+  }, [detailKind, tab])
 
   function panelClass(id: AccommodationTab) {
     return `space-y-4 ${tab === id ? '' : 'hidden'}`
@@ -322,6 +398,11 @@ export function AccommodationForm({
       setTab('location')
       return
     }
+    if (!values.typeId) {
+      toast.error(t('accommodations.type'))
+      setTab('general')
+      return
+    }
     if (contactsOptional) {
       for (const role of accommodationContactRoles) {
         const draft = drafts[role]
@@ -348,14 +429,28 @@ export function AccommodationForm({
     try {
       await onSubmit({
         name: values.name.trim(),
-        type: values.type,
+        typeId: values.typeId,
         status: values.status,
         genderType: values.genderType,
         managementType: values.managementType,
         maleCapacity: maleCapacityDisabled ? 0 : toNumber(values.maleCapacity),
         femaleCapacity: femaleCapacityDisabled ? 0 : toNumber(values.femaleCapacity),
         overflowPercent: Math.min(100, Math.max(0, toNumber(values.overflowPercent, 10))),
+        ownerName: emptyToNull(values.ownerName),
+        ownerPhone: emptyToNull(values.ownerPhone),
+        imageIds,
         phone: emptyToNull(values.phone),
+        ...(isAdmin
+          ? {
+              inspectionStatus: values.inspectionStatus,
+              inspectionResult: emptyToNull(values.inspectionResult) as
+                | AccommodationInspectionResult
+                | null,
+              reviewerId: emptyToNull(values.reviewerId),
+              lastEvaluatedAt: emptyToNull(values.lastEvaluatedAt),
+              operationStatus: values.operationStatus,
+            }
+          : {}),
         address: emptyToNull(values.address),
         neshanAddress: emptyToNull(values.neshanAddress),
         latitude: parsed.latitude,
@@ -380,6 +475,7 @@ export function AccommodationForm({
         toiletCount: toOptionalNumber(values.toiletCount),
         classroomCount: isSchool ? toOptionalNumber(values.classroomCount) : null,
         schoolDistrictId: isSchool ? emptyToNull(values.schoolDistrictId) : null,
+        ...typeDetailsPayloadFromForm(detailKind, typeDetails),
         contacts: toAccommodationContactPayloads(drafts),
         ...(!isAdmin && !initial?.id ? { yearContactMode } : {}),
         ...(isAdmin && !initial?.id
@@ -443,15 +539,28 @@ export function AccommodationForm({
           />
         </FormField>
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField icon={Landmark} label={t('accommodations.type')} htmlFor="type">
+          <FormField icon={Landmark} label={t('accommodations.type')} htmlFor="typeId">
             <SearchSelect
-              id="type"
-              value={values.type}
-              onChange={(next) => set('type', next as AccommodationType)}
-              options={Object.values(accommodationTypes).map((type) => ({
-                value: type,
-                label: t(`accommodationTypes.${type}`),
-              }))}
+              id="typeId"
+              value={values.typeId}
+              placeholder={t('accommodations.type')}
+              onChange={(next) => set('typeId', next)}
+              required
+              options={(() => {
+                const items = [...(typeOptions.data ?? [])]
+                if (initial?.type && !items.some((item) => item.id === initial.type.id)) {
+                  items.unshift({
+                    ...initial.type,
+                    icon: initial.type.icon ?? 'building-2',
+                    isActive: initial.type.isActive ?? true,
+                    sortOrder: 0,
+                  })
+                }
+                return items.map((type) => ({
+                  value: type.id,
+                  label: name(type),
+                }))
+              })()}
             />
           </FormField>
           <FormField icon={Users} label={t('accommodations.genderType')} htmlFor="genderType">
@@ -503,12 +612,30 @@ export function AccommodationForm({
           <FormField icon={Phone} label={t('accommodations.phone')} htmlFor="phone">
             <input
               id="phone"
-              className={fieldClassName}
+              className={`${fieldClassName} digit-field`}
               value={values.phone}
               onChange={(e) => set('phone', e.target.value)}
             />
           </FormField>
         )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField icon={UserRound} label={t('accommodations.ownerName')} htmlFor="ownerName">
+            <input
+              id="ownerName"
+              className={fieldClassName}
+              value={values.ownerName}
+              onChange={(e) => set('ownerName', e.target.value)}
+            />
+          </FormField>
+          <FormField icon={Phone} label={t('accommodations.ownerPhone')} htmlFor="ownerPhone">
+            <input
+              id="ownerPhone"
+              className={`${fieldClassName} digit-field`}
+              value={values.ownerPhone}
+              onChange={(e) => set('ownerPhone', toLatinDigits(e.target.value))}
+            />
+          </FormField>
+        </div>
         <FormField icon={AlignLeft} label={t('accommodations.description')} htmlFor="description">
           <textarea
             id="description"
@@ -894,6 +1021,24 @@ export function AccommodationForm({
         </div>
       </div>
 
+      {detailKind ? (
+        <div data-tab="typeDetails" className={panelClass('typeDetails')}>
+          <AccommodationTypeDetailsFields
+            kind={detailKind}
+            values={typeDetails}
+            onChange={(key, value) =>
+              setTypeDetails((current) => ({ ...current, [key]: value }))
+            }
+          />
+        </div>
+      ) : null}
+
+      <div data-tab="images" className={panelClass('images')}>
+        <FormField icon={Images} label={t('accommodations.images')}>
+          <AccommodationImagesField imageIds={imageIds} onChange={setImageIds} />
+        </FormField>
+      </div>
+
       <div data-tab="social" className={panelClass('social')}>
         <FormField icon={Share2} label={t('accommodations.eitaa')} htmlFor="eitaa">
           <input
@@ -956,6 +1101,86 @@ export function AccommodationForm({
           </FormField>
         ) : null}
       </div>
+
+      {isAdmin ? (
+        <div data-tab="inspection" className={panelClass('inspection')}>
+          <FormField
+            icon={ClipboardCheck}
+            label={t('accommodations.inspectionStatus')}
+            htmlFor="inspectionStatus"
+          >
+            <SearchSelect
+              id="inspectionStatus"
+              value={values.inspectionStatus}
+              onChange={(next) => set('inspectionStatus', next as AccommodationInspectionStatus)}
+              options={Object.values(accommodationInspectionStatuses).map((status) => ({
+                value: status,
+                label: t(`accommodationInspectionStatuses.${status}`),
+              }))}
+            />
+          </FormField>
+          <FormField
+            icon={BadgeCheck}
+            label={t('accommodations.inspectionResult')}
+            htmlFor="inspectionResult"
+          >
+            <SearchSelect
+              id="inspectionResult"
+              value={values.inspectionResult}
+              placeholder={t('accommodations.inspectionResult')}
+              onChange={(next) => set('inspectionResult', next)}
+              options={[
+                { value: '', label: t('accommodations.inspectionResultNone') },
+                ...Object.values(accommodationInspectionResults).map((result) => ({
+                  value: result,
+                  label: t(`accommodationInspectionResults.${result}`),
+                })),
+              ]}
+            />
+          </FormField>
+          <FormField icon={UserCheck} label={t('accommodations.reviewer')} htmlFor="reviewerId">
+            <SearchSelect
+              id="reviewerId"
+              value={values.reviewerId}
+              placeholder={t('accommodations.selectReviewer')}
+              onChange={(next) => set('reviewerId', next)}
+              options={[
+                { value: '', label: t('accommodations.selectReviewer') },
+                ...(reviewers.data ?? []).map((user) => ({
+                  value: user.id,
+                  label: user.fullName,
+                })),
+              ]}
+            />
+          </FormField>
+          <FormField
+            icon={CalendarDays}
+            label={t('accommodations.lastEvaluatedAt')}
+            htmlFor="lastEvaluatedAt"
+          >
+            <PersianDateField
+              id="lastEvaluatedAt"
+              value={values.lastEvaluatedAt || undefined}
+              onChange={(next) => set('lastEvaluatedAt', next ?? '')}
+            />
+          </FormField>
+          <FormField
+            icon={ToggleRight}
+            label={t('accommodations.operationStatus')}
+            htmlFor="operationStatus"
+          >
+            <SearchSelect
+              id="operationStatus"
+              value={values.operationStatus}
+              onChange={(next) => set('operationStatus', next as AccommodationOperationStatus)}
+              options={Object.values(accommodationOperationStatuses).map((status) => ({
+                value: status,
+                label: t(`accommodationOperationStatuses.${status}`),
+              }))}
+            />
+          </FormField>
+        </div>
+      ) : null}
 
       {isAdmin && !initial?.id ? (
         <div data-tab="managers" className={panelClass('managers')}>

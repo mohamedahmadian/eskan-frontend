@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
+import { EscapeBackListener } from "./components/ui/EscapeBackListener";
 import { NavigationHistoryProvider } from "./lib/navigation-history";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./auth/AuthProvider";
@@ -121,7 +122,6 @@ import { PublicAccommodationIntroducePage } from "./pages/landing/PublicAccommod
 import { PublicAnnouncementPage } from "./pages/landing/PublicAnnouncementPage";
 import { PublicCampaignPage } from "./pages/landing/PublicCampaignPage";
 import { PublicContactPage } from "./pages/landing/PublicContactPage";
-import { PublicInKindPage } from "./pages/landing/PublicInKindPage";
 import { PublicNewsPage } from "./pages/landing/PublicNewsPage";
 import { PublicAccommodationPage } from "./pages/public-places/PublicAccommodationPage";
 import { PublicWalkingStationPage } from "./pages/public-places/PublicWalkingStationPage";
@@ -165,6 +165,10 @@ import { SchoolDistrictCreatePage } from "./pages/school-districts/SchoolDistric
 import { SchoolDistrictDetailPage } from "./pages/school-districts/SchoolDistrictDetailPage";
 import { SchoolDistrictEditPage } from "./pages/school-districts/SchoolDistrictEditPage";
 import { SchoolDistrictsListPage } from "./pages/school-districts/SchoolDistrictsListPage";
+import { AccommodationTypeCreatePage } from "./pages/accommodation-types/AccommodationTypeCreatePage";
+import { AccommodationTypeDetailPage } from "./pages/accommodation-types/AccommodationTypeDetailPage";
+import { AccommodationTypeEditPage } from "./pages/accommodation-types/AccommodationTypeEditPage";
+import { AccommodationTypesListPage } from "./pages/accommodation-types/AccommodationTypesListPage";
 import { AccommodationIntroduceWizardPage } from "./pages/accommodations/AccommodationIntroduceWizardPage";
 import { MyAccommodationCreatePage } from "./pages/accommodations/MyAccommodationCreatePage";
 import { IntroducedAccommodationsListPage } from "./pages/accommodations/IntroducedAccommodationsListPage";
@@ -301,9 +305,14 @@ import { HonoraryServiceTypeDetailPage } from "./pages/honorary-servants/Honorar
 import { HonoraryServiceTypeEditPage } from "./pages/honorary-servants/HonoraryServiceTypeEditPage";
 import { HonoraryServiceTypesListPage } from "./pages/honorary-servants/HonoraryServiceTypesListPage";
 import { DataManagementPage } from "./pages/system-management/DataManagementPage";
+import { RoleAccessCreatePage } from "./pages/system-management/RoleAccessCreatePage";
+import { RoleAccessDetailPage } from "./pages/system-management/RoleAccessDetailPage";
+import { RoleAccessEditPage } from "./pages/system-management/RoleAccessEditPage";
+import { RoleAccessListPage } from "./pages/system-management/RoleAccessListPage";
 import { HealthcareSectionPage } from "./pages/healthcare/HealthcareSectionPage";
 import { CampaignsEntry } from "./routes/CampaignsEntry";
 import { HomePage } from "./routes/HomePage";
+import { InKindEntry } from "./routes/InKindEntry";
 import { ParticipationsEntry } from "./routes/ParticipationsEntry";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { WelcomeRedirect } from "./routes/WelcomeRedirect";
@@ -328,6 +337,11 @@ function AppToaster() {
   );
 }
 
+function RedirectWithId({ to }: { to: string }) {
+  const { id } = useParams();
+  return <Navigate to={to.replace(":id", id ?? "")} replace />;
+}
+
 export default function App() {
   useSelectNumberOnFocus();
 
@@ -336,6 +350,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <NavigationHistoryProvider>
+          <EscapeBackListener />
           <AppToaster />
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -354,7 +369,7 @@ export default function App() {
             />
             <Route
               path="/participations/in-kind"
-              element={<PublicInKindPage />}
+              element={<InKindEntry />}
             />
             <Route
               path="/participations/:id"
@@ -415,10 +430,6 @@ export default function App() {
                 <Route element={<RequireMenuAccess path="/pilgrims" />}>
                   <Route path="/pilgrims" element={<PilgrimsListPage />} />
                   <Route path="/pilgrims/new" element={<PilgrimCreatePage />} />
-                  <Route
-                    path="/pilgrims/import"
-                    element={<PilgrimsImportPage />}
-                  />
                   <Route
                     path="/pilgrims/:id/card"
                     element={<PilgrimCardPage />}
@@ -1172,24 +1183,80 @@ export default function App() {
                 </Route>
                 <Route
                   element={
-                    <RequireMenuAccess path="/accommodation-base-info" />
+                    <RequireMenuAccess path="/accommodation-types" />
                   }
                 >
                   <Route
+                    path="/accommodation-types"
+                    element={<AccommodationTypesListPage />}
+                  />
+                  <Route
+                    path="/accommodation-types/new"
+                    element={<AccommodationTypeCreatePage />}
+                  />
+                  <Route
+                    path="/accommodation-types/:id"
+                    element={<AccommodationTypeDetailPage />}
+                  />
+                  <Route
+                    path="/accommodation-types/:id/edit"
+                    element={<AccommodationTypeEditPage />}
+                  />
+                  <Route
                     path="/accommodation-base-info"
+                    element={<Navigate to="/accommodation-types" replace />}
+                  />
+                  <Route
+                    path="/accommodation-base-info/types/new"
+                    element={<Navigate to="/accommodation-types/new" replace />}
+                  />
+                  <Route
+                    path="/accommodation-base-info/types/:id/edit"
+                    element={
+                      <RedirectWithId to="/accommodation-types/:id/edit" />
+                    }
+                  />
+                  <Route
+                    path="/accommodation-base-info/types/:id"
+                    element={<RedirectWithId to="/accommodation-types/:id" />}
+                  />
+                </Route>
+                <Route
+                  element={<RequireMenuAccess path="/school-districts" />}
+                >
+                  <Route
+                    path="/school-districts"
                     element={<SchoolDistrictsListPage />}
                   />
                   <Route
-                    path="/accommodation-base-info/schools/new"
+                    path="/school-districts/new"
                     element={<SchoolDistrictCreatePage />}
                   />
                   <Route
-                    path="/accommodation-base-info/schools/:id"
+                    path="/school-districts/:id"
                     element={<SchoolDistrictDetailPage />}
                   />
                   <Route
-                    path="/accommodation-base-info/schools/:id/edit"
+                    path="/school-districts/:id/edit"
                     element={<SchoolDistrictEditPage />}
+                  />
+                  <Route
+                    path="/accommodation-base-info/schools"
+                    element={<Navigate to="/school-districts" replace />}
+                  />
+                  <Route
+                    path="/accommodation-base-info/schools/new"
+                    element={<Navigate to="/school-districts/new" replace />}
+                  />
+                  <Route
+                    path="/accommodation-base-info/schools/:id/edit"
+                    element={
+                      <RedirectWithId to="/school-districts/:id/edit" />
+                    }
+                  />
+                  <Route
+                    path="/accommodation-base-info/schools/:id"
+                    element={<RedirectWithId to="/school-districts/:id" />}
                   />
                 </Route>
                 <Route
@@ -1378,7 +1445,7 @@ export default function App() {
                     element={
                       <IssueVoucherPage
                         titleKey="itemQuotaVouchers.create"
-                        successPath={(id) => `/logistics/vouchers/${id}`}
+                        successTo="/logistics/vouchers"
                       />
                     }
                   />
@@ -1879,6 +1946,32 @@ export default function App() {
                   <Route
                     path="/system-management/data-management"
                     element={<DataManagementPage />}
+                  />
+                  <Route
+                    path="/system-management/data-management/import"
+                    element={<PilgrimsImportPage />}
+                  />
+                </Route>
+                <Route
+                  element={
+                    <RequireMenuAccess path="/system-management/roles" />
+                  }
+                >
+                  <Route
+                    path="/system-management/roles"
+                    element={<RoleAccessListPage />}
+                  />
+                  <Route
+                    path="/system-management/roles/new"
+                    element={<RoleAccessCreatePage />}
+                  />
+                  <Route
+                    path="/system-management/roles/:id"
+                    element={<RoleAccessDetailPage />}
+                  />
+                  <Route
+                    path="/system-management/roles/:id/edit"
+                    element={<RoleAccessEditPage />}
                   />
                 </Route>
               </Route>

@@ -75,7 +75,7 @@ export function SchoolDistrictForm({
           submitLabel={t('schoolDistricts.save')}
           cancelLabel={t('schoolDistricts.cancel')}
           submitting={saving}
-          onCancel={() => navigate('/accommodation-base-info')}
+          onCancel={() => navigate('/school-districts')}
         />
       </AppForm>
     </FormCard>

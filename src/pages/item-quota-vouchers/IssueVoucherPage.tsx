@@ -11,11 +11,11 @@ import { ItemQuotaVoucherForm } from './ItemQuotaVoucherForm'
 export function IssueVoucherPage({
   titleKey = 'menus.issueVoucher',
   subtitleKey = 'itemQuotaVouchers.standaloneSubtitle',
-  successPath,
+  successTo,
 }: {
   titleKey?: string
   subtitleKey?: string
-  successPath?: (id: string, quotaId: string) => string
+  successTo?: string
 } = {}) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -58,13 +58,9 @@ export function IssueVoucherPage({
         managers={managers.data}
         suppliers={suppliers.data}
         onSubmit={async (payload) => {
-          const { data } = await api.post<{ id: string }>('/item-quota-vouchers', payload)
+          await api.post('/item-quota-vouchers', payload)
           toast.success(t('itemQuotaVouchers.created'))
-          navigate(
-            successPath
-              ? successPath(data.id, payload.quotaId)
-              : `/logistics/item-quotas/${payload.quotaId}/vouchers/${data.id}`,
-          )
+          navigate(successTo ?? `/logistics/item-quotas/${payload.quotaId}/vouchers`)
         }}
       />
     </div>

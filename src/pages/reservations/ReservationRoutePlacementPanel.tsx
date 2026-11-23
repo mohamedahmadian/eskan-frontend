@@ -12,12 +12,12 @@ import {
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
+import { AppModal } from '../../components/ui/AppModal'
 import { confirmToast } from '../../components/ui/confirmToast'
 import {
   AppForm,
@@ -682,22 +682,6 @@ function AutoReserveStationsModal({
   const [stayDate, setStayDate] = useState(reservation.walkingStartDate ?? '')
   const [mealType, setMealType] = useState<StationMeal | ''>('')
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
   const save = useMutation({
     mutationFn: async () => {
       const { data } = await api.post<ReservationRoutePlacement>(
@@ -713,20 +697,13 @@ function AutoReserveStationsModal({
     onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
-  return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="auto-reserve-title"
-        className={`relative z-10 flex max-h-[min(90vh,44rem)] w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
-      >
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="auto-reserve-title"
+      zClassName="z-[80]"
+      className={`flex max-h-[min(90vh,44rem)] w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
+    >
         <FormCardHeader
           icon={Sparkles}
           title={<span id="auto-reserve-title">{t('reservations.routePlacementAuto')}</span>}
@@ -734,11 +711,6 @@ function AutoReserveStationsModal({
             assignBy === 'date'
               ? t('reservations.routePlacementAutoHintDate')
               : t('reservations.routePlacementAutoHint')
-          }
-          action={
-            <Button type="button" variant="ghost" className="size-8 !p-0" onClick={onClose}>
-              <X className="size-4" aria-hidden />
-            </Button>
           }
         />
         <AppForm
@@ -786,8 +758,6 @@ function AutoReserveStationsModal({
             submitting={save.isPending}
           />
         </AppForm>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

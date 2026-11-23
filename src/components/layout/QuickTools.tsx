@@ -1,6 +1,5 @@
 import { Building2, CalendarDays, ClipboardList, FileSearch, LayoutDashboard, LocateFixed, ScanSearch, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
@@ -9,7 +8,8 @@ import { ReceptionDesk } from '../../pages/reception/ReceptionDesk'
 import { AccommodationSearchModal } from '../../pages/accommodations/AccommodationSearchModal'
 import { ReservationFileSearchModal } from '../../pages/reservations/ReservationFileSearchModal'
 import { hasMenuAccess, hasModuleAccess } from '../../routes/RequireMenuAccess'
-import { Button, cardClassName, cancelPendingFormEnter } from '../ui/Form'
+import { AppModal } from '../ui/AppModal'
+import { cardClassName, cancelPendingFormEnter } from '../ui/Form'
 import { QuickToolsContext } from './quick-tools-context'
 
 const DOUBLE_ENTER_MS = 500
@@ -546,7 +546,10 @@ function QuickToolsFab({
       }
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') onCloseMenu()
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      onCloseMenu()
     }
     document.addEventListener('pointerdown', onPointerDown)
     window.addEventListener('keydown', onKey)
@@ -776,54 +779,26 @@ function ReceptionSearchModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return
-      if (event.defaultPrevented) return
-      if (document.querySelector('[data-nested-dialog]')) return
-      onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.close')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="quick-tools-search-title"
-        className={`relative z-10 flex w-full flex-col overflow-hidden ${cardClassName} ${
-          expanded ? 'max-h-[min(92vh,100%)] w-[75vw] max-w-[75vw]' : 'max-w-lg'
-        }`}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="quick-tools-search-title"
+      zClassName="z-[70]"
+      className={`flex w-full flex-col overflow-hidden ${cardClassName} ${
+        expanded ? 'max-h-[min(92vh,100%)] w-[75vw] max-w-[75vw]' : 'max-w-lg'
+      }`}
+    >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-2.5 pe-12">
           <h2
             id="quick-tools-search-title"
             className="min-w-0 text-sm font-semibold leading-6 text-ink-900"
           >
             {t('quickTools.searchInfoTitle')}
           </h2>
-          <Button type="button" variant="ghost" icon onClick={onClose} aria-label={t('common.close')}>
-            <X className="size-4" aria-hidden />
-          </Button>
         </div>
         <div className={`min-h-0 p-3 sm:p-4 ${expanded ? 'flex-1 overflow-y-auto' : ''}`}>
           <ReceptionDesk variant="modal" onExpandedChange={setExpanded} onNavigateAway={onClose} />
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

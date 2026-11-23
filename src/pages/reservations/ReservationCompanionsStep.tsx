@@ -27,10 +27,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { AppModal } from "../../components/ui/AppModal";
 import {
   AppForm,
   Button,
@@ -496,46 +496,17 @@ function CompanionFormModal({
   onClose: () => void;
   children: ReactNode;
 }) {
-  const { t } = useTranslation();
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape" && !busy) onCloseRef.current();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = previous;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [busy]);
-
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t("common.cancel")}
-        disabled={busy}
-        onClick={() => {
-          if (!busy) onClose();
-        }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="companion-member-title"
-        className={`relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[22px] sm:rounded-[22px] ${
-          wide ? "sm:max-w-6xl" : "sm:max-w-3xl"
-        } ${cardClassName}`}
-      >
-        <div className="flex items-start gap-3 border-b border-line px-5 py-4">
+  return (
+    <AppModal
+      onClose={onClose}
+      closeDisabled={busy}
+      labelledBy="companion-member-title"
+      zClassName="z-50"
+      className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[22px] sm:rounded-[22px] ${
+        wide ? "sm:max-w-6xl" : "sm:max-w-3xl"
+      } ${cardClassName}`}
+    >
+        <div className="flex items-start gap-3 border-b border-line px-5 py-4 pe-12">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]">
             <Icon className="size-4" aria-hidden />
           </span>
@@ -545,21 +516,9 @@ function CompanionFormModal({
           >
             {title}
           </h2>
-          <Button
-            type="button"
-            variant="ghost"
-            icon
-            disabled={busy}
-            aria-label={t("common.cancel")}
-            onClick={onClose}
-          >
-            <X className="size-4" aria-hidden />
-          </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   );
 }
 

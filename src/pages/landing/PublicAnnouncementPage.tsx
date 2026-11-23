@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom'
 import { DateText } from '../../components/ui/DateText'
 import { LoadingState } from '../../components/ui/Form'
 import { FormEmptyHint } from '../../components/ui/FormLayout'
+import { languageDir } from '../../i18n'
 import { api } from '../../lib/api'
 import type { AnnouncementAudience, HeadquartersAnnouncement } from '../../types/app'
 import { LandingShell } from './LandingShell'
@@ -16,10 +17,11 @@ const audienceIcons: Record<AnnouncementAudience, LucideIcon> = {
 }
 
 export function PublicAnnouncementPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   const { id } = useParams()
   const query = useQuery({
-    queryKey: ['public', 'headquarters-announcements', id],
+    queryKey: ['public', 'headquarters-announcements', locale, id],
     enabled: Boolean(id),
     queryFn: async () => {
       const { data } = await api.get<HeadquartersAnnouncement>(
@@ -43,7 +45,11 @@ export function PublicAnnouncementPage() {
         {query.isLoading ? <LoadingState /> : null}
         {query.isError ? <FormEmptyHint>{t('landing.announcements.notFound')}</FormEmptyHint> : null}
         {query.data ? (
-          <div className="mt-6 rounded-[28px] border border-white bg-white p-6 shadow-[0_12px_32px_rgba(20,40,40,0.06)] sm:p-8">
+          <div
+            className="mt-6 rounded-[28px] border border-white bg-white p-6 shadow-[0_12px_32px_rgba(20,40,40,0.06)] sm:p-8"
+            lang={query.data.contentLocale || locale}
+            dir={languageDir(query.data.contentLocale || locale)}
+          >
             <p className="inline-flex flex-wrap items-center gap-2 text-xs text-ink-400">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1 font-medium text-teal-800">
                 <AudienceIcon className="size-3.5" aria-hidden />

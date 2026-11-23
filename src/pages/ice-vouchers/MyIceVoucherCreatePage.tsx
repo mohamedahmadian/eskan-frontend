@@ -51,9 +51,9 @@ export function IceVoucherCreatePage({
       <IceVoucherRequestForm
         accommodations={accommodations.data}
         onSubmit={async (payload) => {
-          const { data } = await api.post<{ id: string }>('/ice-vouchers/mine', payload)
+          await api.post('/ice-vouchers/mine', payload)
           toast.success(t('iceVouchers.created'))
-          navigate(`${basePath}/${data.id}`)
+          navigate(basePath)
         }}
       />
     </div>

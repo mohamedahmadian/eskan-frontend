@@ -18,6 +18,7 @@ import { api } from '../../lib/api'
 import { canManageAccommodations } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import type { Accommodation, Paginated } from '../../types/app'
+import { AccommodationStatusBadge } from './AccommodationStatusBadge'
 
 export function IntroducedAccommodationsListPage() {
   const { t } = useTranslation()
@@ -87,6 +88,13 @@ export function IntroducedAccommodationsListPage() {
                 sortDir={sortDir}
                 onSort={onSort}
               />
+              <SortableTh
+                column="status"
+                label={t('accommodations.status')}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <ActionsTh />
             </tr>
           </thead>
@@ -103,9 +111,12 @@ export function IntroducedAccommodationsListPage() {
                       {item.name}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
+                  <td className="px-4 py-3">{nameOf(item.type)}</td>
                   <td className="px-4 py-3">{item.city ? nameOf(item.city) : '—'}</td>
                   <td className="px-4 py-3">{t(`genderTypes.${item.genderType}`)}</td>
+                  <td className="px-4 py-3">
+                    <AccommodationStatusBadge status={item.status} />
+                  </td>
                   <td className={actionsColClassName}>
                     <EntityRowActions
                       viewTo={`/introduced-accommodations/${item.id}`}

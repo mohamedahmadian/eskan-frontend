@@ -1,10 +1,10 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { FileText, Phone, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { EitaaIcon } from '../brand/SocialBrandIcon'
+import { AppModal } from '../ui/AppModal'
 import {
   AppForm,
   Button,
@@ -40,22 +40,6 @@ export function SmsPreviewModal({
   const { t } = useTranslation()
   const [openingEitaa, setOpeningEitaa] = useState(false)
   const busy = sending || openingEitaa
-
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !busy) {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [busy, onClose])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -97,24 +81,16 @@ export function SmsPreviewModal({
     }
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        disabled={busy}
-        onClick={() => {
-          if (!busy) onClose()
-        }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="sms-preview-title"
-        className={`relative z-10 max-h-[min(92vh,44rem)] w-full max-w-lg overflow-y-auto p-6 ${cardClassName}`}
-      >
-        <h2 id="sms-preview-title" className="mb-4 text-lg font-semibold text-ink-900">
+  return (
+    <AppModal
+      onClose={onClose}
+      closeDisabled={busy}
+      labelledBy="sms-preview-title"
+      zClassName="z-[80]"
+      className={`max-h-[min(92vh,44rem)] w-full max-w-lg p-6 ${cardClassName}`}
+    >
+      <div className="max-h-[min(92vh,44rem)] overflow-y-auto">
+        <h2 id="sms-preview-title" className="mb-4 pe-12 text-lg font-semibold text-ink-900">
           {title}
         </h2>
         <AppForm onSubmit={submit} className="space-y-4">
@@ -161,7 +137,6 @@ export function SmsPreviewModal({
           </div>
         </AppForm>
       </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

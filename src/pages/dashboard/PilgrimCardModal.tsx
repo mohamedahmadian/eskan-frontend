@@ -1,10 +1,10 @@
-import { Download, IdCard, Sparkles, X } from 'lucide-react'
+import { Download, IdCard, Sparkles } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { toPng } from 'html-to-image'
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { AppModal } from '../../components/ui/AppModal'
 import { Button, LoadingState, cardClassName } from '../../components/ui/Form'
 import { api, getApiErrorMessage } from '../../lib/api'
 import type { ManagedUser } from '../../types/app'
@@ -47,19 +47,6 @@ export function PilgrimCardModal({
       ? 'dashboard.quickManagerCard'
       : 'dashboard.quickPilgrimCard'
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
   const pilgrim = user ?? query.data
 
   async function downloadCard() {
@@ -79,27 +66,17 @@ export function PilgrimCardModal({
     }
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.close')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pilgrim-card-modal-title"
-        className={`relative z-10 flex max-h-[min(92vh,100%)] w-full max-w-xl flex-col overflow-hidden ${cardClassName}`}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="pilgrim-card-modal-title"
+      zClassName="z-[80]"
+      className={`flex max-h-[min(92vh,100%)] w-full max-w-xl flex-col overflow-hidden ${cardClassName}`}
+    >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3 pe-12 sm:px-5">
           <h2 id="pilgrim-card-modal-title" className="text-base font-semibold text-ink-900">
             {t(titleKey)}
           </h2>
-          <Button type="button" variant="ghost" icon onClick={onClose} aria-label={t('common.close')}>
-            <X className="size-4" aria-hidden />
-          </Button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
@@ -155,8 +132,6 @@ export function PilgrimCardModal({
             {downloading ? t('pilgrims.cardDownloading') : t('pilgrims.downloadCard')}
           </Button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

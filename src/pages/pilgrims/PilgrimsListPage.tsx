@@ -9,7 +9,6 @@ import {
   Mars,
   MessageSquare,
   Plus,
-  Upload,
   Venus,
   UserRound,
 } from "lucide-react";
@@ -195,22 +194,13 @@ export function PilgrimsListPage() {
       <PageHeader
         icon={UserRound}
         title={t("menus.pilgrimsList")}
-        subtitle={t("pilgrims.subtitle")}
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <Link to="/pilgrims/import">
-              <Button type="button" variant="soft">
-                <Upload className="size-4" />
-                {t("pilgrims.import")}
-              </Button>
-            </Link>
-            <Link to="/pilgrims/new">
-              <Button>
-                <Plus className="size-4" />
-                {t("pilgrims.create")}
-              </Button>
-            </Link>
-          </div>
+          <Link to="/pilgrims/new">
+            <Button>
+              <Plus className="size-4" />
+              {t("pilgrims.create")}
+            </Button>
+          </Link>
         }
       />
       <SearchBar

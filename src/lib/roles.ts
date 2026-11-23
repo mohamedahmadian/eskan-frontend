@@ -121,10 +121,31 @@ export function usesDedicatedHomeDashboard(user: RoleUser) {
   )
 }
 
+export function roleLabel(
+  role: Pick<RoleOption, 'nameKey'>,
+  t: TFunction,
+) {
+  return t(role.nameKey)
+}
+
 export function formatRoles(
   roles: Pick<RoleOption, 'nameKey'>[] | undefined,
   t: TFunction,
 ) {
   if (!roles?.length) return '—'
-  return roles.map((role) => t(role.nameKey)).join('، ')
+  return roles.map((role) => roleLabel(role, t)).join('، ')
+}
+
+export function unwrapRoleList(data: unknown): RoleOption[] {
+  if (Array.isArray(data)) {
+    return data.filter((item): item is RoleOption => {
+      if (!item || typeof item !== 'object') return false
+      const role = item as Partial<RoleOption>
+      return Boolean(role.id && role.code && role.nameKey)
+    })
+  }
+  if (data && typeof data === 'object' && 'items' in data) {
+    return unwrapRoleList((data as { items: unknown }).items)
+  }
+  return []
 }

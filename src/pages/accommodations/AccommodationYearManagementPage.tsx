@@ -34,6 +34,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api, getApiErrorMessage } from '../../lib/api'
+import { useGeoName } from '../../lib/geo'
 import {
   currentPersianYear,
   formatNumber,
@@ -291,6 +292,7 @@ function managerLabel(item: Accommodation, year: number, unassigned: string) {
 
 export function AccommodationYearManagementPage() {
   const { t, i18n } = useTranslation()
+  const nameOf = useGeoName()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const queryClient = useQueryClient()
   const { q, page, term, setTerm, applySearch, setPage, searchParams, setParams } =
@@ -812,7 +814,7 @@ export function AccommodationYearManagementPage() {
                             {item.name}
                           </Link>
                         </td>
-                        <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
+                        <td className="px-4 py-3">{nameOf(item.type)}</td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -1029,7 +1031,7 @@ export function AccommodationYearManagementPage() {
                         />
                       </td>
                       <td className="px-4 py-3 font-medium text-ink-900">{item.name}</td>
-                      <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
+                      <td className="px-4 py-3">{nameOf(item.type)}</td>
                       <td className="px-4 py-3">
                         {managerLabel(
                           item,

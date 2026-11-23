@@ -1,4 +1,4 @@
-import { Database, Plus, School } from 'lucide-react'
+import { Plus, School } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -38,11 +38,11 @@ export function SchoolDistrictsListPage() {
   return (
     <div className={listShellClassName}>
       <PageHeader
-        icon={Database}
-        title={t('menus.accommodationBaseInfo')}
-        subtitle={t('accommodationBaseInfo.subtitle')}
+        icon={School}
+        title={t('menus.schoolDistricts')}
+        subtitle={t('schoolDistricts.subtitle')}
         action={
-          <Link to="/accommodation-base-info/schools/new">
+          <Link to="/school-districts/new">
             <Button>
               <Plus className="size-4" />
               {t('schoolDistricts.create')}
@@ -50,16 +50,6 @@ export function SchoolDistrictsListPage() {
           </Link>
         }
       />
-      <nav className="flex flex-wrap gap-2 rounded-2xl border border-line bg-cream-50/80 p-3">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-2xl bg-teal-500 px-3 py-2 text-sm font-medium text-white shadow-sm"
-          aria-current="page"
-        >
-          <School className="size-3.5" aria-hidden />
-          {t('accommodationBaseInfo.tabs.schools')}
-        </button>
-      </nav>
       <SearchBar
         term={term}
         onTermChange={setTerm}
@@ -101,8 +91,8 @@ export function SchoolDistrictsListPage() {
                 </td>
                 <td className={actionsColClassName}>
                   <EntityRowActions
-                    viewTo={`/accommodation-base-info/schools/${item.id}`}
-                    editTo={`/accommodation-base-info/schools/${item.id}/edit`}
+                    viewTo={`/school-districts/${item.id}`}
+                    editTo={`/school-districts/${item.id}/edit`}
                     onDelete={() =>
                       confirmDelete({
                         message: t('schoolDistricts.confirmDelete'),

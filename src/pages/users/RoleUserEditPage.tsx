@@ -11,8 +11,8 @@ import {
   userFormShellClassName,
 } from '../../components/ui/Form'
 import { api } from '../../lib/api'
-import { isAdmin } from '../../lib/roles'
-import type { ManagedUser, RoleOption } from '../../types/app'
+import { isAdmin, unwrapRoleList } from '../../lib/roles'
+import type { ManagedUser } from '../../types/app'
 import { AccommodationAssignmentsCard } from '../accommodation-managers/AccommodationAssignmentsCard'
 import { UserForm } from './UserForm'
 import type { RoleUserScope } from './user-scopes'
@@ -33,10 +33,10 @@ export function RoleUserEditPage({ scope }: { scope: RoleUserScope }) {
     },
   })
   const roles = useQuery({
-    queryKey: ['roles'],
+    queryKey: ['roles', 'lookup'],
     queryFn: async () => {
-      const { data } = await api.get<RoleOption[]>('/roles')
-      return data
+      const { data } = await api.get('/roles')
+      return unwrapRoleList(data)
     },
   })
 

@@ -10,6 +10,7 @@ import {
   MapPinned,
   Mars,
   Plus,
+  Sparkles,
   UserRound,
   Users,
   Venus,
@@ -40,13 +41,15 @@ import { useGeoName } from '../../lib/geo'
 import { hasMenuAccess } from '../../routes/RequireMenuAccess'
 import { canManageAccommodations, isAdmin } from '../../lib/roles'
 import {
+  isSchoolAccommodationType,
+  useAccommodationTypesLookup,
+} from '../../lib/accommodation-type'
+import {
   accommodationStatuses,
-  accommodationTypes,
   genderTypes,
   managementTypes,
   type AccommodationStatus,
   type Accommodation,
-  type AccommodationType,
   type City,
   type Country,
   type GenderType,
@@ -68,7 +71,7 @@ export function AccommodationsListPage() {
   const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const { confirmDelete } = useConfirmDelete()
   const [exporting, setExporting] = useState(false)
-  const type = (searchParams.get('type') ?? '') as AccommodationType | ''
+  const typeId = searchParams.get('typeId') ?? ''
   const genderType = (searchParams.get('genderType') ?? '') as GenderType | ''
   const managementType = (searchParams.get('managementType') ?? '') as ManagementType | ''
   const status = (searchParams.get('status') ?? '') as AccommodationStatus | ''
@@ -78,7 +81,9 @@ export function AccommodationsListPage() {
   const year = searchParams.get('year') ?? ''
   const hasManagerThisYear = searchParams.get('hasManagerThisYear') ?? ''
   const schoolDistrictId = searchParams.get('schoolDistrictId') ?? ''
-  const schoolTypeSelected = type === accommodationTypes.SCHOOL
+  const typeOptions = useAccommodationTypesLookup(false)
+  const selectedType = typeOptions.data?.find((item) => item.id === typeId)
+  const schoolTypeSelected = isSchoolAccommodationType(selectedType)
 
   const countries = useQuery({
     queryKey: ['countries', 'lookup'],
@@ -122,7 +127,7 @@ export function AccommodationsListPage() {
   const listParams = {
     page,
     ...(q ? { q } : {}),
-    ...(type ? { type } : {}),
+    ...(typeId ? { typeId } : {}),
     ...(genderType ? { genderType } : {}),
     ...(managementType ? { managementType } : {}),
     ...(status ? { status } : {}),
@@ -139,7 +144,7 @@ export function AccommodationsListPage() {
     queryKey: [
       'accommodations',
       q,
-      type,
+      typeId,
       genderType,
       managementType,
       status,
@@ -161,6 +166,20 @@ export function AccommodationsListPage() {
     },
   })
 
+  const pendingReview = useQuery({
+    queryKey: ['accommodations', 'pending-introductions', 'count'],
+    enabled: canManage,
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<{ id: string }>>('/accommodations', {
+        params: { status: accommodationStatuses.PENDING_REVIEW, page: 1, pageSize: 1 },
+      })
+      return data.total
+    },
+  })
+  const pendingReviewCount = pendingReview.data ?? 0
+  const pendingReviewActive = status === accommodationStatuses.PENDING_REVIEW
+  const showPendingReviewShortcut = canManage && (pendingReviewCount > 0 || pendingReviewActive)
+
   function onSearch() {
     setParams({ q: term.trim() || undefined }, { resetPage: true })
   }
@@ -171,7 +190,7 @@ export function AccommodationsListPage() {
       const { data } = await api.get<Blob>('/accommodations/export', {
         params: {
           ...(term.trim() || q ? { q: term.trim() || q } : {}),
-          ...(type ? { type } : {}),
+          ...(typeId ? { typeId } : {}),
           ...(genderType ? { genderType } : {}),
           ...(managementType ? { managementType } : {}),
           ...(status ? { status } : {}),
@@ -210,7 +229,7 @@ export function AccommodationsListPage() {
 
   const rows = query.data?.items ?? []
   const filtersActive = Boolean(
-    type ||
+    typeId ||
       genderType ||
       managementType ||
       status ||
@@ -249,6 +268,37 @@ export function AccommodationsListPage() {
         label={t('common.search')}
         placeholder={t('accommodations.searchNamePlaceholder')}
         filtersActive={filtersActive}
+        endAction={
+          showPendingReviewShortcut ? (
+            <Button
+              type="button"
+              variant={pendingReviewActive ? 'primary' : 'soft'}
+              aria-pressed={pendingReviewActive}
+              onClick={() =>
+                setParams(
+                  {
+                    status: pendingReviewActive
+                      ? undefined
+                      : accommodationStatuses.PENDING_REVIEW,
+                  },
+                  { resetPage: true },
+                )
+              }
+            >
+              <Sparkles className="size-4" aria-hidden />
+              {t('accommodations.showPendingReview')}
+              {pendingReviewCount > 0 ? (
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-4 ${
+                    pendingReviewActive ? 'bg-white text-teal-700' : 'bg-white/90 text-teal-700'
+                  }`}
+                >
+                  {formatNumber(pendingReviewCount, locale)}
+                </span>
+              ) : null}
+            </Button>
+          ) : undefined
+        }
         extra={
           <>
             <FilterPair columns={3}>
@@ -327,23 +377,26 @@ export function AccommodationsListPage() {
               <FormField icon={Landmark} label={t('accommodations.type')} htmlFor="accommodation-type">
                 <SearchSelect
                   id="accommodation-type"
-                  value={type}
+                  value={typeId}
                   placeholder={t('accommodations.allTypes')}
                   onChange={(next) =>
                     setParams(
                       {
-                        type: next || undefined,
-                        schoolDistrictId:
-                          next === accommodationTypes.SCHOOL ? schoolDistrictId || undefined : undefined,
+                        typeId: next || undefined,
+                        schoolDistrictId: isSchoolAccommodationType(
+                          typeOptions.data?.find((item) => item.id === next),
+                        )
+                          ? schoolDistrictId || undefined
+                          : undefined,
                       },
                       { resetPage: true },
                     )
                   }
                   options={[
                     { value: '', label: t('accommodations.allTypes') },
-                    ...Object.values(accommodationTypes).map((value) => ({
-                      value,
-                      label: t(`accommodationTypes.${value}`),
+                    ...(typeOptions.data ?? []).map((item) => ({
+                      value: item.id,
+                      label: name(item),
                     })),
                   ]}
                 />
@@ -495,7 +548,7 @@ export function AccommodationsListPage() {
                 <td className="px-4 py-3">{item.country ? name(item.country) : '—'}</td>
                 <td className="px-4 py-3">{item.province ? name(item.province) : '—'}</td>
                 <td className="px-4 py-3">{item.city ? name(item.city) : '—'}</td>
-                <td className="px-4 py-3">{t(`accommodationTypes.${item.type}`)}</td>
+                <td className="px-4 py-3">{name(item.type)}</td>
                 <td className="px-4 py-3">{t(`managementTypes.${item.managementType}`)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-1">

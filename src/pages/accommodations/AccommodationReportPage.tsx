@@ -32,12 +32,11 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
 import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber, persianYearOptions } from '../../lib/datetime'
+import { useGeoName } from '../../lib/geo'
 import {
-  accommodationTypes,
   genderTypes,
   managementTypes,
   type AccommodationReport,
-  type AccommodationType,
   type GenderType,
   type ManagementType,
 } from '../../types/app'
@@ -54,14 +53,7 @@ const managementOrder: ManagementType[] = [
   managementTypes.NON_SELF_SUFFICIENT,
 ]
 
-const typeOrder: AccommodationType[] = [
-  accommodationTypes.SCHOOL,
-  accommodationTypes.MOSQUE,
-  accommodationTypes.HUSSEINIEH,
-  accommodationTypes.HALL,
-  accommodationTypes.HOUSE,
-  accommodationTypes.OTHER,
-]
+const typePalette = ['#148f8a', '#2ebdb6', '#5ed4ce', '#e8b83a', '#f5cd6a', '#7a756c', '#3f3a34']
 
 const genderColors: Record<GenderType, string> = {
   FEMALE: '#2ebdb6',
@@ -73,15 +65,6 @@ const managementColors: Record<ManagementType, string> = {
   SELF_SUFFICIENT: '#148f8a',
   SEMI_SELF_SUFFICIENT: '#5ed4ce',
   NON_SELF_SUFFICIENT: '#f5cd6a',
-}
-
-const typeColors: Record<AccommodationType, string> = {
-  SCHOOL: '#148f8a',
-  MOSQUE: '#2ebdb6',
-  HUSSEINIEH: '#5ed4ce',
-  HALL: '#e8b83a',
-  HOUSE: '#f5cd6a',
-  OTHER: '#7a756c',
 }
 
 const chartAxisTick = { fill: '#7a756c', fontSize: 12 }
@@ -106,6 +89,7 @@ function parseYear(raw: string | null, fallback: number) {
 export function AccommodationReportPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
+  const nameOf = useGeoName()
   const { searchParams, setParams } = useListParams()
   const currentYear = currentPersianYear()
   const yearFromUrl = searchParams.get('year')
@@ -128,9 +112,6 @@ export function AccommodationReportPage() {
   })
 
   const report = query.data
-  const typeCounts = Object.fromEntries(
-    (report?.byType ?? []).map((row) => [row.type, row.count]),
-  ) as Record<AccommodationType, number>
   const genderCounts = Object.fromEntries(
     (report?.byGenderType ?? []).map((row) => [row.genderType, row.count]),
   ) as Record<GenderType, number>
@@ -179,10 +160,10 @@ export function AccommodationReportPage() {
     },
   ]
 
-  const typeBarData = typeOrder.map((type) => ({
-    name: t(`accommodationTypes.${type}`),
-    value: typeCounts[type] ?? 0,
-    fill: typeColors[type],
+  const typeBarData = (report?.byType ?? []).map((row, index) => ({
+    name: nameOf(row.type),
+    value: row.count,
+    fill: typePalette[index % typePalette.length],
   }))
   const genderPieData = genderOrder.map((genderType) => ({
     name: t(`genderTypes.${genderType}`),

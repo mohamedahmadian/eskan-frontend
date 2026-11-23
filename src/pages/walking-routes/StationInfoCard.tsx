@@ -28,11 +28,12 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AppModal, isModalEscapeBlocked } from '../../components/ui/AppModal'
 import { DateText } from '../../components/ui/DateText'
 import { Button } from '../../components/ui/Form'
+import { AppModalContext } from '../../components/ui/modal-context'
 import { FormEmptyHint, FormFactTile, FormMetaChip, FormSectionTitle } from '../../components/ui/FormLayout'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { languageDir } from '../../i18n'
@@ -89,6 +90,7 @@ export function StationInfoCard({
   className?: string
 }) {
   const { t } = useTranslation()
+  const inModal = useContext(AppModalContext)
   const [tab, setTab] = useState<StationInfoTab>('info')
   const name = useGeoName()
   const coords = stageCoordinates(stage)
@@ -107,13 +109,14 @@ export function StationInfoCard({
     hasText(stage.managerWhatsapp) ||
     hasText(stage.managerEitaa)
   const hasStay = Boolean(stay)
-  const hasActions = Boolean(headerAction || onClose)
+  const showCardClose = Boolean(onClose) && !inModal
+  const hasActions = Boolean(headerAction || showCardClose)
 
   return (
     <article
       className={`flex h-full min-h-0 flex-col overflow-hidden rounded-[22px] border border-teal-100 bg-white shadow-[0_18px_40px_rgba(20,40,40,0.16)]${className ? ` ${className}` : ''}`}
     >
-      <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-4 py-3.5 sm:px-5">
+      <header className={`relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-4 py-3.5 sm:px-5${inModal ? ' pe-12' : ''}`}>
         <div
           className="pointer-events-none absolute -start-8 -top-10 size-28 rounded-full bg-teal-200/30"
           aria-hidden
@@ -185,7 +188,7 @@ export function StationInfoCard({
           {hasActions ? (
             <div className={`flex shrink-0 items-center gap-2 ${hasStay ? 'sm:justify-self-end' : ''}`}>
               {headerAction ? <div className="min-w-0 flex-1 sm:flex-none">{headerAction}</div> : null}
-              {onClose ? (
+              {showCardClose ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -481,16 +484,29 @@ export function StationDetailsOverlay({
   locale: string
   onClose: () => void
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (isModalEscapeBlocked(event, dialogRef.current)) return
+      event.preventDefault()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   return (
     <div
       className="absolute inset-0 z-20 flex items-center justify-center bg-ink-900/25 p-3"
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         dir={languageDir(locale)}
         role="dialog"
         aria-modal="true"
-        className="h-[80%] w-[80%]"
+        className="relative h-[80%] w-[80%]"
         onClick={(event) => event.stopPropagation()}
       >
         <StationInfoCard stage={stage} locale={locale} onClose={onClose} />
@@ -510,34 +526,15 @@ export function StationDetailsModal({
   onClose: () => void
   headerAction?: ReactNode
 }) {
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-ink-900/25 p-3"
-      onClick={onClose}
+  return (
+    <AppModal
+      onClose={onClose}
+      zClassName="z-[70]"
+      overlayClassName="flex items-center justify-center p-3"
+      backdropClassName="bg-ink-900/25"
+      className="h-[80%] w-[min(100%,42rem)] max-w-4xl sm:w-[80%]"
     >
-      <div
-        dir={languageDir(locale)}
-        role="dialog"
-        aria-modal="true"
-        className="h-[80%] w-[min(100%,42rem)] max-w-4xl sm:w-[80%]"
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div dir={languageDir(locale)} className="h-full w-full">
         <StationInfoCard
           stage={stage}
           locale={locale}
@@ -545,7 +542,6 @@ export function StationDetailsModal({
           headerAction={headerAction}
         />
       </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

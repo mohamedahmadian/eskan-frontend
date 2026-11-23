@@ -19,9 +19,9 @@ export function HeadquartersAnnouncementCreatePage() {
       />
       <HeadquartersAnnouncementForm
         onSubmit={async (payload) => {
-          const { data } = await api.post<{ id: string }>('/headquarters-announcements', payload)
+          await api.post('/headquarters-announcements', payload)
           toast.success(t('headquartersAnnouncements.created'))
-          navigate(`/headquarters/announcements/${data.id}`)
+          navigate('/headquarters/announcements')
         }}
       />
     </div>

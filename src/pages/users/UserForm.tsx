@@ -25,7 +25,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
-import { QuickRoleToggles, isQuickRoleCode } from '../../components/users/QuickRoleToggles'
+import { QuickRoleToggles } from '../../components/users/QuickRoleToggles'
 import { FileDropField } from '../../components/ui/FileDropField'
 import { CheckboxField } from '../../components/ui/CheckboxField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
@@ -52,7 +52,7 @@ import {
   USERNAME_ENGLISH_PATTERN,
 } from '../../lib/identity'
 import { isValidIranianNationalId, normalizeNationalId, normalizePassportNumber } from '../../lib/national-id'
-import { isAdmin } from '../../lib/roles'
+import { isAdmin, unwrapRoleList } from '../../lib/roles'
 import {
   religions,
   userGenders,
@@ -69,7 +69,7 @@ import {
 } from '../../types/app'
 import { showUserActivityStartYear } from './user-scopes'
 
-const tabs = ['personal', 'account', 'location', 'documents', 'social', 'other'] as const
+const tabs = ['personal', 'roles', 'account', 'location', 'documents', 'social', 'other'] as const
 
 export type UserFormExtraTab = {
   id: string
@@ -132,7 +132,7 @@ export type UserPayload = {
 
 export function UserForm({
   initial,
-  roles,
+  roles: rolesProp,
   lockedRoleCodes = [],
   hideRoles = false,
   hidePassword = false,
@@ -165,6 +165,14 @@ export function UserForm({
   const { user: actor, refresh } = useAuth()
   const uiLocale = i18n.language.split('-')[0] ?? 'fa'
   const geoName = useGeoName()
+  const roles = useMemo(() => {
+    const byId = new Map<string, RoleOption>()
+    for (const role of unwrapRoleList(rolesProp)) byId.set(role.id, role)
+    for (const role of initial?.roles ?? []) {
+      if (role.id) byId.set(role.id, role)
+    }
+    return [...byId.values()]
+  }, [initial?.roles, rolesProp])
   const quickAssignable = Boolean(initial?.id) && isAdmin(actor)
   const lockedIds = useMemo(
     () => roles.filter((role) => lockedRoleCodes.includes(role.code)).map((role) => role.id),
@@ -211,9 +219,6 @@ export function UserForm({
     [...new Set([...(initial?.roleIds ?? initial?.roles?.map((role) => role.id) ?? []), ...lockedIds])],
   )
   const roleIdsRef = useRef(roleIds)
-  const quickRoleIdsRef = useRef(
-    new Set(roles.filter((role) => isQuickRoleCode(role.code)).map((role) => role.id)),
-  )
   const [knownRoles, setKnownRoles] = useState<RoleOption[]>(roles)
   function commitRoleIds(next: string[]) {
     roleIdsRef.current = next
@@ -345,27 +350,20 @@ export function UserForm({
   }
 
   function syncQuickRoles(nextRoles: RoleOption[]) {
-    for (const role of nextRoles) {
-      if (isQuickRoleCode(role.code)) quickRoleIdsRef.current.add(role.id)
-    }
-    const kept = roleIdsRef.current.filter((id) => !quickRoleIdsRef.current.has(id))
-    const granted = nextRoles.filter((role) => isQuickRoleCode(role.code)).map((role) => role.id)
-    const lockedKept = lockedIds.filter((id) => !quickRoleIdsRef.current.has(id))
-    commitRoleIds([...new Set([...kept, ...granted, ...lockedKept])])
+    const nextIds = nextRoles.map((role) => role.id)
+    commitRoleIds([...new Set([...nextIds, ...lockedIds])])
     setKnownRoles((current) => {
       const byId = new Map(current.map((role) => [role.id, role]))
       for (const role of nextRoles) byId.set(role.id, role)
       return [...byId.values()]
     })
-    if (selfProfile) void refresh()
+    if (selfProfile || actor?.id === initial?.id) void refresh()
   }
 
-  const assignedQuickCodes = knownRoles
-    .filter((role) => isQuickRoleCode(role.code) && roleIds.includes(role.id))
+  const assignedRoleCodes = knownRoles
+    .filter((role) => roleIds.includes(role.id) || lockedIds.includes(role.id))
     .map((role) => role.code)
-  const listedRoles = quickAssignable
-    ? roles.filter((role) => !isQuickRoleCode(role.code))
-    : roles
+  const listedRoles = hideRoles || quickAssignable ? [] : roles
 
   async function uploadImage(file: File, field: 'photo' | 'nationalCard' | 'passport') {
     const body = new FormData()
@@ -635,11 +633,7 @@ export function UserForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const lockedKeptIds = lockedIds.filter((id) => {
-      const role = roles.find((item) => item.id === id)
-      return !role || !isQuickRoleCode(role.code)
-    })
-    const nextRoleIds = [...new Set([...roleIdsRef.current, ...lockedKeptIds])]
+    const nextRoleIds = [...new Set([...roleIdsRef.current, ...lockedIds])]
     const identityValue = identityIsPassport
       ? normalizePassportNumber(nationalId)
       : normalizeNationalId(nationalId)
@@ -675,7 +669,7 @@ export function UserForm({
       return
     }
     if (!nextRoleIds.length && isCreate) {
-      failField('account', 'roles', t('users.rolesRequired'))
+      failField('roles', 'roles', t('users.rolesRequired'))
       return
     }
     if (showIssuingOrganization && !issuingOrganizationId) {
@@ -789,7 +783,8 @@ export function UserForm({
   }
 
   const extraTab = extraTabs?.find((item) => item.id === tab)
-  const allTabs = [...tabs, ...(extraTabs?.map((item) => item.id) ?? [])]
+  const visibleTabs = hideRoles ? tabs.filter((item) => item !== 'roles') : tabs
+  const allTabs = [...visibleTabs, ...(extraTabs?.map((item) => item.id) ?? [])]
   const isEdit = Boolean(initial?.id)
   const displayName =
     initial?.fullName?.trim() ||
@@ -1024,6 +1019,44 @@ export function UserForm({
         </div>
       </div>
 
+      {hideRoles ? null : (
+      <div className={`space-y-4 ${tab === 'roles' ? '' : 'hidden'}`}>
+        {quickAssignable && initial?.id ? (
+          <QuickRoleToggles
+            userId={initial.id}
+            roleCodes={assignedRoleCodes}
+            roles={roles}
+            lockedCodes={lockedRoleCodes}
+            onChanged={syncQuickRoles}
+          />
+        ) : null}
+        {listedRoles.length === 0 ? null : (
+          <FormField icon={Shield} label={t('users.roles')} error={fieldErrors.roles}>
+            <div id="roles" tabIndex={-1} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {listedRoles.map((role) => {
+                const locked = lockedIds.includes(role.id)
+                const checked = roleIds.includes(role.id) || locked
+                return (
+                  <CheckboxField
+                    key={role.id}
+                    checked={checked}
+                    disabled={locked}
+                    onChange={(on) => {
+                      if (on !== checked) {
+                        toggleRole(role.id)
+                        clearError('roles')
+                      }
+                    }}
+                    label={t(role.nameKey)}
+                  />
+                )
+              })}
+            </div>
+          </FormField>
+        )}
+      </div>
+      )}
+
       <div className={`space-y-4 ${tab === 'account' ? '' : 'hidden'}`}>
         <FormField
           icon={UserRoundPlus}
@@ -1060,38 +1093,6 @@ export function UserForm({
             title={t('users.usernameEnglish')}
           />
         </FormField>
-        {quickAssignable && initial?.id ? (
-          <QuickRoleToggles
-            userId={initial.id}
-            roleCodes={assignedQuickCodes}
-            lockedCodes={lockedRoleCodes}
-            onChanged={syncQuickRoles}
-          />
-        ) : null}
-        {hideRoles || listedRoles.length === 0 ? null : (
-          <FormField icon={Shield} label={t('users.roles')} error={fieldErrors.roles}>
-            <div id="roles" tabIndex={-1} className="space-y-2">
-              {listedRoles.map((role) => {
-                const locked = lockedIds.includes(role.id)
-                const checked = roleIds.includes(role.id) || locked
-                return (
-                  <CheckboxField
-                    key={role.id}
-                    checked={checked}
-                    disabled={locked}
-                    onChange={(on) => {
-                      if (on !== checked) {
-                        toggleRole(role.id)
-                        clearError('roles')
-                      }
-                    }}
-                    label={t(role.nameKey)}
-                  />
-                )
-              })}
-            </div>
-          </FormField>
-        )}
         {showIssuingOrganization ? (
           <FormField
             icon={Building}

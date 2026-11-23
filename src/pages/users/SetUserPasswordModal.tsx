@@ -1,9 +1,11 @@
-import { KeyRound, Send, X } from 'lucide-react'
+import { KeyRound, MessageSquare } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AppModal } from '../../components/ui/AppModal'
+import { CheckboxField } from '../../components/ui/CheckboxField'
 import {
   AppForm,
-  Button,
+  FormActions,
   FormField,
   cardClassName,
   fieldClassName,
@@ -12,15 +14,18 @@ import { generateRepeatingDigitPassword } from '../../lib/password'
 
 export function SetUserPasswordModal({
   submitting,
+  hasPhone,
   onClose,
   onSubmit,
 }: {
   submitting: boolean
+  hasPhone: boolean
   onClose: () => void
-  onSubmit: (password: string) => Promise<void>
+  onSubmit: (password: string, sendSms: boolean) => Promise<void>
 }) {
   const { t } = useTranslation()
   const [password, setPassword] = useState(generateRepeatingDigitPassword)
+  const [sendSms, setSendSms] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -32,29 +37,23 @@ export function SetUserPasswordModal({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    await onSubmit(password)
+    await onSubmit(password, sendSms)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        onClick={onClose}
-        disabled={submitting}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="set-user-password-title"
-        className={`relative z-10 w-full max-w-md p-6 ${cardClassName}`}
-      >
+    <AppModal
+      onClose={onClose}
+      closeDisabled={submitting}
+      labelledBy="set-user-password-title"
+      zClassName="z-50"
+      overlayClassName="flex items-center justify-center px-4"
+      className={`w-full max-w-md p-6 ${cardClassName}`}
+    >
         <h2
           id="set-user-password-title"
-          className="mb-4 text-lg font-semibold text-ink-900"
+          className="mb-4 pe-12 text-lg font-semibold text-ink-900"
         >
-          {t('users.forgotPassword')}
+          {t('users.changePassword')}
         </h2>
         <AppForm onSubmit={submit} className="space-y-4">
           <FormField
@@ -75,18 +74,26 @@ export function SetUserPasswordModal({
               dir="ltr"
             />
           </FormField>
-          <div className="flex flex-wrap gap-3" dir="ltr">
-            <Button type="submit" disabled={submitting}>
-              <Send className="size-4" aria-hidden />
-              {t('users.changeAndSendPassword')}
-            </Button>
-            <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
-              <X className="size-4" aria-hidden />
-              {t('common.cancel')}
-            </Button>
-          </div>
+          <FormField icon={MessageSquare} label={t('sms.send')}>
+            <CheckboxField
+              id="send-user-password-sms"
+              checked={sendSms}
+              disabled={!hasPhone}
+              onChange={setSendSms}
+              label={
+                hasPhone
+                  ? t('users.sendPasswordSms')
+                  : t('users.phoneRequiredForSms')
+              }
+            />
+          </FormField>
+          <FormActions
+            submitLabel={t('users.changePassword')}
+            cancelLabel={t('common.cancel')}
+            submitting={submitting}
+            onCancel={onClose}
+          />
         </AppForm>
-      </div>
-    </div>
+    </AppModal>
   )
 }

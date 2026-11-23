@@ -235,7 +235,10 @@ export function PilgrimsImportPage() {
     <div className={formShellClassName}>
       <PageHeader
         icon={UserRound}
-        title={t('pilgrims.import')} subtitle={t('pilgrims.importSubtitle')} />
+        title={t('pilgrims.import')}
+        subtitle={t('pilgrims.importSubtitle')}
+        backTo="/system-management/data-management"
+      />
 
       <AppForm onSubmit={onSubmit} className="flex w-full flex-col gap-5">
         <FormField icon={Upload} label={t('pilgrims.importFile')} htmlFor="pilgrims-import-file">
@@ -302,7 +305,7 @@ export function PilgrimsImportPage() {
             submitLabel={t('pilgrims.importSubmit')}
             cancelLabel={t('common.cancel')}
             submitting={submitting || !canSubmit}
-            onCancel={() => navigate('/pilgrims')}
+            onCancel={() => navigate('/system-management/data-management')}
           />
         )}
       </AppForm>

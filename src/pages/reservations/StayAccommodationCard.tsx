@@ -13,11 +13,10 @@ import {
   Smartphone,
   UserRoundCog,
   Venus,
-  X,
 } from 'lucide-react'
-import { useEffect, useId, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AppModal } from '../../components/ui/AppModal'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { Button, cardClassName } from '../../components/ui/Form'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
@@ -426,39 +425,13 @@ export function StayAccommodationDetailsModal({
   const hasPoint =
     lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4"
-      data-nested-dialog
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy={titleId}
+      zClassName="z-[80]"
+      className={`flex max-h-[min(90vh,44rem)] w-full max-w-2xl flex-col overflow-hidden ${cardClassName}`}
     >
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className={`relative z-10 flex max-h-[min(90vh,44rem)] w-full max-w-2xl flex-col overflow-hidden ${cardClassName}`}
-      >
         <div className="sr-only" id={titleId}>
           {name}
         </div>
@@ -466,11 +439,6 @@ export function StayAccommodationDetailsModal({
           icon={Building2}
           title={name}
           subtitle={t('accommodations.details')}
-          action={
-            <Button type="button" variant="ghost" onClick={onClose} aria-label={t('common.cancel')}>
-              <X className="size-4" aria-hidden />
-            </Button>
-          }
         />
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="grid gap-2 p-4 sm:grid-cols-2 sm:gap-3 sm:p-5">
@@ -534,9 +502,7 @@ export function StayAccommodationDetailsModal({
             pendingLabel={t('reservations.placementMapPending')}
           />
         </div>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }
 

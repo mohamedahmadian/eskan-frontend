@@ -15,7 +15,6 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
@@ -29,6 +28,7 @@ import {
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
+import { AppModal } from '../../components/ui/AppModal'
 import { cardClassName } from '../../components/ui/FormLayout'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { parseDigitString } from '../../lib/datetime'
@@ -544,36 +544,15 @@ function ContactPersonModal({
 }) {
   const { t } = useTranslation()
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('caravans.cancel')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="contact-person-title"
-        className={`relative z-10 max-h-[min(92vh,44rem)] w-full max-w-lg overflow-y-auto p-6 ${cardClassName}`}
-      >
-        <h2 id="contact-person-title" className="text-lg font-semibold text-ink-900">
+  return (
+    <AppModal
+      onClose={onClose}
+      labelledBy="contact-person-title"
+      zClassName="z-[70]"
+      className={`flex max-h-[min(92vh,44rem)] w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
+    >
+      <div className="overflow-y-auto p-6">
+        <h2 id="contact-person-title" className="pe-12 text-lg font-semibold text-ink-900">
           {t('caravanRegister.contactModalTitle', { role: roleLabel })}
         </h2>
         <p className="mt-2 text-sm leading-6 text-ink-600">
@@ -643,7 +622,6 @@ function ContactPersonModal({
           />
         </AppForm>
       </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

@@ -1,9 +1,9 @@
-import { HandHeart, Trash2, UserRound, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { HandHeart, Trash2, UserRound } from 'lucide-react'
+import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { AppModal } from '../../components/ui/AppModal'
 import {
   AppForm,
   Button,
@@ -129,22 +129,6 @@ export function ReservationHonoraryAssignModal({
   const [serviceTypeId, setServiceTypeId] = useState('')
   const [userId, setUserId] = useState('')
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
   const typesQuery = useQuery({
     queryKey: ['honorary-service-types', 'lookup'],
     queryFn: async () => {
@@ -198,29 +182,17 @@ export function ReservationHonoraryAssignModal({
     onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
-  return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-ink-900/30"
-        aria-label={t('common.cancel')}
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('reservations.honoraryPickerTitle')}
-        className={`relative z-10 flex max-h-[min(90vh,44rem)] w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
-      >
+  return (
+    <AppModal
+      onClose={onClose}
+      ariaLabel={t('reservations.honoraryPickerTitle')}
+      zClassName="z-[80]"
+      className={`flex max-h-[min(90vh,44rem)] w-full max-w-lg flex-col overflow-hidden ${cardClassName}`}
+    >
         <FormCardHeader
           icon={HandHeart}
           title={t('reservations.honoraryPickerTitle')}
           subtitle={t('reservations.honoraryPickerHint')}
-          action={
-            <Button type="button" variant="ghost" className="size-8 !p-0" onClick={onClose}>
-              <X className="size-4" aria-hidden />
-            </Button>
-          }
         />
         <AppForm
           className={formCardBodyClassName}
@@ -289,8 +261,6 @@ export function ReservationHonoraryAssignModal({
             submitting={save.isPending}
           />
         </AppForm>
-      </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

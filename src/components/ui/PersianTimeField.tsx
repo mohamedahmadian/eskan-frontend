@@ -52,9 +52,11 @@ export function PersianTimeField({
       <label className="sr-only" htmlFor={id ? `${id}-minute` : undefined}>
         {t('honoraryServants.minute')}
       </label>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2" dir="ltr">
+      <div className="flex w-fit items-center gap-1.5" dir="ltr">
         <SearchSelect
           id={id}
+          className="w-[5.25rem]"
+          menuMinWidth={176}
           value={hour}
           required={required}
           options={hours}
@@ -66,6 +68,8 @@ export function PersianTimeField({
         </span>
         <SearchSelect
           id={id ? `${id}-minute` : undefined}
+          className="w-[5.25rem]"
+          menuMinWidth={176}
           value={minute}
           required={required}
           options={minutes}

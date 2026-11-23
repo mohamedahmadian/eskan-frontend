@@ -7,12 +7,11 @@ import {
   Route,
   Search,
   Table2,
-  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { AppModal } from '../../components/ui/AppModal'
 import { AppForm, Button } from '../../components/ui/Form'
 import { FormEmptyHint } from '../../components/ui/FormLayout'
 import { TableCard } from '../../components/ui/ListControls'
@@ -131,18 +130,7 @@ export function WalkingRouteStationsModal({
   )
 
   useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        if (selectedId) {
-          setSelectedId(null)
-          return
-        }
-        onClose()
-        return
-      }
       if (tab !== 'steps') return
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
       event.preventDefault()
@@ -155,11 +143,8 @@ export function WalkingRouteStationsModal({
       })
     }
     window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = previous
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [locale, onClose, selectedId, stationStages.length, tab])
+    return () => window.removeEventListener('keydown', onKey)
+  }, [locale, stationStages.length, tab])
 
   useEffect(() => {
     if (selectedId && !filtered.some((stage) => stageKey(stage) === selectedId)) {
@@ -248,15 +233,24 @@ export function WalkingRouteStationsModal({
 
   const emptyFiltered = Boolean(term.trim()) && filtered.length === 0
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[70] flex flex-col bg-cream-50"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="walking-route-stations-title"
+  return (
+    <AppModal
+      onClose={onClose}
+      closeOnOverlay={false}
+      labelledBy="walking-route-stations-title"
+      zClassName="z-[70]"
+      overlayClassName="flex flex-col p-0"
+      backdropClassName="bg-transparent"
+      className="flex h-full min-h-0 w-full flex-1 flex-col bg-cream-50"
+      onEscape={() => {
+        if (selectedId) {
+          setSelectedId(null)
+          return false
+        }
+      }}
     >
       <header className="shrink-0 border-b border-line bg-white/95 px-4 py-3 shadow-[0_8px_24px_rgba(20,40,40,0.04)] sm:px-6">
-        <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-3">
+        <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-3 pe-12">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
               <Route className="size-5" aria-hidden />
@@ -276,10 +270,6 @@ export function WalkingRouteStationsModal({
               </p>
             </div>
           </div>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            <X className="size-4" aria-hidden />
-            {t('walkingRoutes.stationsModalClose')}
-          </Button>
         </div>
       </header>
 
@@ -499,7 +489,6 @@ export function WalkingRouteStationsModal({
           ) : null}
         </div>
       </div>
-    </div>,
-    document.body,
+    </AppModal>
   )
 }

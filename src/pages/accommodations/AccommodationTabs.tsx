@@ -7,8 +7,11 @@ export const accommodationTabs = [
   'location',
   'capacity',
   'amenities',
+  'typeDetails',
+  'images',
   'social',
   'contacts',
+  'inspection',
   'managers',
 ] as const
 

@@ -152,130 +152,6 @@ function insertAfterMenu(
   return [...menus.slice(0, index + 1), ...extra, ...menus.slice(index + 1)];
 }
 
-const HONORARY_SERVICE_MENUS: SidebarNavMenu[] = [
-  {
-    code: "honorary-service.apply",
-    nameKey: "menus.honoraryApply",
-    path: "/honorary-apply",
-    icon: "hand-heart",
-    sortOrder: 1,
-  },
-  {
-    code: "honorary-service.history",
-    nameKey: "menus.honoraryHistory",
-    path: "/honorary-history",
-    icon: "history",
-    sortOrder: 2,
-  },
-];
-
-function isHonoraryServiceModule(mod: NavModule) {
-  return mod.code === "honorary-service" || mod.nameKey === "modules.honoraryService";
-}
-
-const PILGRIM_CAMPAIGNS_MENU: SidebarNavMenu = {
-  code: "participations.campaigns",
-  nameKey: "menus.participationCampaigns",
-  path: "/participations/campaigns",
-  icon: "megaphone",
-  sortOrder: 2,
-};
-
-function isParticipationsModule(mod: NavModule) {
-  return mod.code === "participations" || mod.nameKey === "modules.participations";
-}
-
-function withPilgrimCampaignsNav(
-  modules: NavModule[],
-  user: { roles?: { code: string }[] } | null | undefined,
-): NavModule[] {
-  if (!isPilgrim(user) || isAdmin(user)) return modules;
-  const existing = modules.find(isParticipationsModule);
-  const campaignMenu =
-    existing?.menus.find(
-      (item) =>
-        item.code === "participations.campaigns" ||
-        item.path === "/participations/campaigns",
-    ) ?? PILGRIM_CAMPAIGNS_MENU;
-  const otherMenus = (existing?.menus ?? []).filter(
-    (item) =>
-      item.code !== "participations.campaigns" &&
-      item.path !== "/participations/campaigns",
-  );
-  const rest = modules.filter((mod) => !isParticipationsModule(mod));
-  return [
-    ...rest,
-    {
-      code: existing?.code ?? "participations",
-      nameKey: existing?.nameKey ?? "modules.participations",
-      icon: existing?.icon ?? "heart-handshake",
-      sortOrder: existing?.sortOrder ?? 8,
-      menus: [...otherMenus, campaignMenu].sort(
-        (a, b) => a.sortOrder - b.sortOrder,
-      ),
-    },
-  ].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-function isLegacyHonoraryApplyMenu(item: SidebarNavMenu) {
-  return (
-    item.code === "dashboard.honorary-apply" ||
-    item.path === "/honorary-apply" ||
-    item.nameKey === "menus.honoraryApply"
-  );
-}
-
-function withHonoraryServiceNav(modules: NavModule[]): NavModule[] {
-  const stripped = modules
-    .map((mod) => {
-      if (mod.code !== "dashboard") return mod;
-      return {
-        ...mod,
-        menus: mod.menus.filter(
-          (item) =>
-            item.code !== "dashboard.honorary-apply" &&
-            item.path !== "/honorary-apply",
-        ),
-      };
-    })
-    .filter((mod) => mod.menus.length > 0);
-
-  const existing = stripped.find(isHonoraryServiceModule);
-  if (existing) {
-    const missing = HONORARY_SERVICE_MENUS.filter(
-      (extra) =>
-        !existing.menus.some(
-          (item) => item.code === extra.code || item.path === extra.path,
-        ),
-    );
-    if (!missing.length) return stripped;
-    return stripped.map((mod) =>
-      isHonoraryServiceModule(mod)
-        ? {
-            ...mod,
-            menus: [...mod.menus, ...missing].sort((a, b) => a.sortOrder - b.sortOrder),
-          }
-        : mod,
-    );
-  }
-
-  const withoutLegacyApply = stripped.map((mod) => ({
-    ...mod,
-    menus: mod.menus.filter((item) => !isLegacyHonoraryApplyMenu(item)),
-  })).filter((mod) => mod.menus.length > 0);
-
-  return [
-    ...withoutLegacyApply,
-    {
-      code: "honorary-service",
-      nameKey: "modules.honoraryService",
-      icon: "hand-heart",
-      sortOrder: 10,
-      menus: HONORARY_SERVICE_MENUS,
-    },
-  ].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
 function isAccommodationsDirectoryMenu(item: { path: string; code: string }) {
   return item.path === "/accommodations" || item.code === "accommodation.list";
 }
@@ -284,24 +160,11 @@ function withAccommodationsDirectoryMenu(
   mod: NavModule,
   allowed: boolean,
 ): NavModule {
-  if (mod.code !== "accommodation") return mod;
-  const hasList = mod.menus.some(isAccommodationsDirectoryMenu);
-  if (!allowed) {
-    if (!hasList) return mod;
-    return {
-      ...mod,
-      menus: mod.menus.filter((item) => !isAccommodationsDirectoryMenu(item)),
-    };
-  }
-  if (hasList) return mod;
-  const extra: SidebarNavMenu = {
-    code: "accommodation.list",
-    nameKey: "menus.accommodations",
-    path: "/accommodations",
-    icon: "building-2",
-    sortOrder: 1,
+  if (mod.code !== "accommodation" || allowed) return mod;
+  return {
+    ...mod,
+    menus: mod.menus.filter((item) => !isAccommodationsDirectoryMenu(item)),
   };
-  return { ...mod, menus: [extra, ...mod.menus] };
 }
 
 function isLogisticsModule(mod: NavModule) {
@@ -615,7 +478,7 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
     enabled: isAdmin(user),
     queryFn: async () => {
       const { data } = await api.get<Paginated<{ id: string }>>("/accommodations", {
-        params: { status: "INACTIVE", introduced: true, page: 1, pageSize: 1 },
+        params: { status: "PENDING_REVIEW", page: 1, pageSize: 1 },
       });
       return data.total;
     },
@@ -666,6 +529,7 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
           (item) =>
             item.code !== "base-info.medical-centers" &&
             item.code !== "base-info.red-crescents" &&
+            item.code !== "dashboard.honorary-apply" &&
             item.nameKey !== "menus.medicalCenters" &&
             item.nameKey !== "menus.redCrescents" &&
             (item.code !== "groups.mine" || showMyGroups) &&
@@ -687,10 +551,7 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
         };
       })
       .filter((mod) => mod.menus.length > 0);
-    return filterSidebarModules(
-      withPilgrimCampaignsNav(withHonoraryServiceNav(next), user),
-      user,
-    );
+    return filterSidebarModules(next, user);
   }, [pilgrimageYearMenus, user]);
 
   const modules = useMemo(() => {

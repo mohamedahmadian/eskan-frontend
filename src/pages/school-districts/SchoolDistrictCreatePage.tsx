@@ -20,9 +20,9 @@ export function SchoolDistrictCreatePage() {
       />
       <SchoolDistrictForm
         onSubmit={async (payload) => {
-          const { data } = await api.post<SchoolDistrict>('/school-districts', payload)
+          await api.post<SchoolDistrict>('/school-districts', payload)
           toast.success(t('schoolDistricts.created'))
-          navigate(`/accommodation-base-info/schools/${data.id}`)
+          navigate('/school-districts')
         }}
       />
     </div>

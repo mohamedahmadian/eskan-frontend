@@ -32,9 +32,19 @@ export function UserMenu() {
         setOpen(false)
       }
     }
+    function onKey(event: KeyboardEvent) {
+      if (!open || event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      setOpen(false)
+    }
     document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [])
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
 
   return (
     <div className="relative" ref={ref}>
@@ -43,6 +53,7 @@ export function UserMenu() {
         className="flex cursor-pointer items-center gap-2 rounded-2xl border border-line bg-white px-3 py-2 text-sm shadow-sm sm:min-w-[16.5rem]"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
+        aria-haspopup="menu"
       >
         {photoSrc ? (
           <img
@@ -65,10 +76,14 @@ export function UserMenu() {
         <ChevronDown className="size-4 shrink-0 text-ink-400" />
       </button>
       {open ? (
-        <div className="absolute end-0 top-full z-50 mt-2 w-56 min-w-full overflow-hidden rounded-2xl border border-line bg-white shadow-lg">
+        <div
+          role="menu"
+          className="absolute end-0 top-full z-50 mt-2 w-56 min-w-full overflow-hidden rounded-2xl border border-line bg-white shadow-lg"
+        >
           {user?.impersonating ? (
             <button
               type="button"
+              role="menuitem"
               className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
               onClick={() => {
                 setOpen(false)
@@ -82,6 +97,7 @@ export function UserMenu() {
             <>
               <Link
                 to="/account"
+                role="menuitem"
                 className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                 onClick={() => setOpen(false)}
               >
@@ -91,6 +107,7 @@ export function UserMenu() {
               {user?.id ? (
                 <button
                   type="button"
+                  role="menuitem"
                   className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                   onClick={() => {
                     setOpen(false)
@@ -103,6 +120,7 @@ export function UserMenu() {
               ) : null}
               <Link
                 to="/settings/password"
+                role="menuitem"
                 className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                 onClick={() => setOpen(false)}
               >
@@ -112,6 +130,7 @@ export function UserMenu() {
               {pilgrim ? (
                 <Link
                   to="/settings/password"
+                  role="menuitem"
                   className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                   onClick={() => setOpen(false)}
                 >
@@ -121,6 +140,7 @@ export function UserMenu() {
               ) : null}
               <Link
                 to="/settings"
+                role="menuitem"
                 className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-cream-50"
                 onClick={() => setOpen(false)}
               >
@@ -129,6 +149,7 @@ export function UserMenu() {
               </Link>
               <button
                 type="button"
+                role="menuitem"
                 className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
                 onClick={() => {
                   logout()

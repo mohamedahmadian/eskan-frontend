@@ -21,19 +21,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { Button, fieldClassName } from '../../components/ui/Form'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { OsmMapPicker, type MapOverlayLine, type MapOverlayMarker } from '../../components/ui/OsmMapPicker'
 import { api, getApiErrorMessage } from '../../lib/api'
+import { useNavigationHistory } from '../../lib/navigation-history'
 import { currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
 import { geoName, haversineKm } from '../../lib/geo'
 import { IMAM_REZA_SHRINE, formatShrineDistanceValue } from '../../lib/shrine'
 
 type SolverGender = 'men' | 'women'
-type SolverPlaceType = 'SCHOOL' | 'MOSQUE' | 'HUSSEINIEH' | 'HALL' | 'HOUSE' | 'OTHER'
 
 type SolverCaravan = {
   id: string
@@ -57,7 +57,9 @@ type SolverAccommodation = {
   id: string
   name: string
   type: SolverGender
-  placeType: SolverPlaceType
+  placeType: string
+  placeTypeNameFa: string
+  placeTypeNameEn: string
   capacity: number
   latitude: number
   longitude: number
@@ -114,23 +116,35 @@ function svgIcon(body: string) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`
 }
 
-const placeTypeIcons: Record<SolverPlaceType, string> = {
-  SCHOOL: svgIcon(
+const placeTypeIcons: Record<string, string> = {
+  school: svgIcon(
     '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
   ),
-  MOSQUE: svgIcon(
+  mosque: svgIcon(
     '<path d="M4 22h16"/><path d="M6 22V11"/><path d="M18 22V11"/><path d="M6 11a6 6 0 0 1 12 0"/><path d="M12 5V2"/><path d="M10.5 2h3"/>',
   ),
-  HUSSEINIEH: svgIcon(
+  husseinieh: svgIcon(
     '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
   ),
-  HALL: svgIcon(
+  'sports-hall': svgIcon(
     '<path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/>',
   ),
-  HOUSE: svgIcon(
+  'assembly-hall': svgIcon(
+    '<path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/>',
+  ),
+  lodging: svgIcon(
     '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   ),
-  OTHER: svgIcon(
+  tent: svgIcon(
+    '<path d="M3.5 21 14 3"/><path d="M20.5 21 10 3"/><path d="M15.5 21 12 15l-3.5 6"/><path d="M2 21h20"/>',
+  ),
+  boarding: svgIcon(
+    '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
+  ),
+  medical: svgIcon(
+    '<path d="M12 6v4"/><path d="M14 14h-4"/><path d="M14 18h-4"/><path d="M14 8h-4"/><path d="M18 12h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/><path d="M18 22V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v18"/>',
+  ),
+  other: svgIcon(
     '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
   ),
 }
@@ -185,7 +199,7 @@ export function PlacementSystemPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const n = useCallback((value: number) => formatNumber(value, locale), [locale])
-  const navigate = useNavigate()
+  const { goBack } = useNavigationHistory()
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const year = Number(searchParams.get('year')) || currentPersianYear()
@@ -216,16 +230,6 @@ export function PlacementSystemPage() {
   })
 
   const running = status.data?.phase === 'running'
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return
-      if (document.querySelector('.leaflet-popup')) return
-      navigate('/placements')
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [navigate])
-
   useEffect(() => {
     if (!running) return
     const id = window.setInterval(() => setNow(Date.now()), 1000)
@@ -280,9 +284,12 @@ export function PlacementSystemPage() {
         (row) => !caravanFilter || row.caravan.id === caravanFilter,
       )
       const genderLabel = t(place.type === 'men' ? 'placements.systemMen' : 'placements.systemWomen')
-      const placeType = place.placeType && place.placeType in placeTypeIcons ? place.placeType : 'OTHER'
+      const placeType = place.placeType && place.placeType in placeTypeIcons ? place.placeType : 'other'
       const icon = placeTypeIcons[placeType]
-      const typeLabel = t(`accommodationTypes.${placeType}`)
+      const typeLabel = geoName(
+        { nameFa: place.placeTypeNameFa, nameEn: place.placeTypeNameEn },
+        locale,
+      )
       const missing = t('placements.systemNotSet')
       const managerName = place.managerName?.trim() || missing
       const managerPhone = place.managerPhone?.trim()
@@ -552,8 +559,9 @@ export function PlacementSystemPage() {
         <div className="flex flex-nowrap items-center gap-3 overflow-x-auto px-4 py-3">
         <button
           type="button"
+          data-page-back=""
           className="cursor-pointer rounded-xl p-2 text-ink-700 hover:bg-teal-50"
-          onClick={() => navigate('/placements')}
+          onClick={() => goBack('/placements')}
           aria-label={t('placements.systemBack')}
         >
           <ArrowRight className="size-5 ltr:rotate-180" aria-hidden />

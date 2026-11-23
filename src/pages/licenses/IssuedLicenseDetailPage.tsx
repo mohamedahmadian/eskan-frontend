@@ -13,7 +13,6 @@ import {
   Phone,
   Tent,
   UserRound,
-  X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -21,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
+import { AppModal } from '../../components/ui/AppModal'
 import { DateText } from '../../components/ui/DateText'
 import {
   Button,
@@ -405,30 +405,14 @@ function LicenseFilePreview({
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-ink-900/55"
-            aria-label={t('common.close')}
-            onClick={() => setOpen(false)}
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('licenses.file')}
-            className="relative z-10 flex max-h-[92vh] w-full max-w-[min(96vw,100%)] flex-col items-center gap-3"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              icon
-              className="absolute -top-1 end-0 z-10 bg-white/95 shadow-sm"
-              aria-label={t('common.close')}
-              onClick={() => setOpen(false)}
-            >
-              <X className="size-4" aria-hidden />
-            </Button>
+        <AppModal
+          onClose={() => setOpen(false)}
+          ariaLabel={t('licenses.file')}
+          zClassName="z-50"
+          overlayClassName="flex items-center justify-center p-4"
+          backdropClassName="bg-ink-900/55"
+          className="flex max-h-[92vh] w-full max-w-[min(96vw,100%)] flex-col items-center gap-3 pe-12"
+        >
             <div className="max-h-[82vh] max-w-full overflow-auto rounded-2xl border border-line bg-white p-3 shadow-[0_20px_50px_rgba(20,40,40,0.28)]">
               <img src={url} alt="" className="h-auto w-auto max-w-none" />
             </div>
@@ -441,8 +425,7 @@ function LicenseFilePreview({
               <Download className="size-4" aria-hidden />
               {t('licenses.downloadFile')}
             </Button>
-          </div>
-        </div>
+        </AppModal>
       ) : null}
     </>
   )

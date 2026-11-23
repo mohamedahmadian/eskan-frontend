@@ -4,6 +4,7 @@ import {
   Coins,
   ImagePlus,
   Landmark,
+  Languages,
   Megaphone,
   ToggleRight,
   Wallet,
@@ -13,13 +14,21 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { FileDropField } from '../../components/ui/FileDropField'
 import { AppForm, FormActions, FormField, ToggleField, fieldClassName } from '../../components/ui/Form'
-import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
+import { FormCard, FormSectionTitle, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
+import { languageDir, languages, type AppLanguage } from '../../i18n'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { formatGroupedNumber } from '../../lib/datetime'
 import { optimizeImageFile } from '../../lib/optimize-image'
-import type { BankAccount, CryptoWallet, ParticipationCampaign } from '../../types/app'
+import type {
+  BankAccount,
+  CryptoWallet,
+  ParticipationCampaign,
+  ParticipationCampaignTranslation,
+} from '../../types/app'
+
+export type CampaignTranslationLocale = Exclude<AppLanguage, 'fa'>
 
 export type CampaignPayload = {
   name: string
@@ -32,6 +41,44 @@ export type CampaignPayload = {
   sharePrice: number
   bankAccountId: string | null
   cryptoWalletId: string | null
+  translations: ParticipationCampaignTranslation[]
+}
+
+type TranslationDraft = {
+  name: string
+  description: string
+}
+
+const emptyDraft = (): TranslationDraft => ({ name: '', description: '' })
+
+export const campaignTranslationLocales = (Object.keys(languages) as AppLanguage[]).filter(
+  (code): code is CampaignTranslationLocale => code !== 'fa',
+)
+
+function draftsFromInitial(
+  translations?: ParticipationCampaignTranslation[],
+): Record<CampaignTranslationLocale, TranslationDraft> {
+  const next = Object.fromEntries(
+    campaignTranslationLocales.map((locale) => [locale, emptyDraft()]),
+  ) as Record<CampaignTranslationLocale, TranslationDraft>
+  for (const item of translations ?? []) {
+    if (!campaignTranslationLocales.includes(item.locale as CampaignTranslationLocale)) {
+      continue
+    }
+    next[item.locale as CampaignTranslationLocale] = {
+      name: item.name ?? '',
+      description: item.description ?? '',
+    }
+  }
+  return next
+}
+
+function isFilled(draft: TranslationDraft) {
+  return Boolean(draft.name.trim() || draft.description.trim())
+}
+
+function isComplete(draft: TranslationDraft) {
+  return draft.name.trim().length >= 2
 }
 
 function emptyToNull(value: string) {
@@ -66,6 +113,8 @@ export function CampaignForm({
     bankAccountId: initial?.bankAccountId ?? '',
     cryptoWalletId: initial?.cryptoWalletId ?? '',
   })
+  const [localeTab, setLocaleTab] = useState<CampaignTranslationLocale>('ar')
+  const [translations, setTranslations] = useState(() => draftsFromInitial(initial?.translations))
 
   const shareCount = useMemo(() => {
     const total = Number(values.totalAmount)
@@ -79,6 +128,31 @@ export function CampaignForm({
   function set<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({ ...current, [key]: value }))
   }
+
+  function setTranslation(
+    locale: CampaignTranslationLocale,
+    key: keyof TranslationDraft,
+    value: string,
+  ) {
+    setTranslations((current) => ({
+      ...current,
+      [locale]: { ...current[locale], [key]: value },
+    }))
+  }
+
+  const payloadTranslations = useMemo(() => {
+    return campaignTranslationLocales.flatMap((locale) => {
+      const draft = translations[locale]
+      if (!isFilled(draft)) return []
+      return [
+        {
+          locale,
+          name: draft.name.trim(),
+          description: draft.description.trim() || null,
+        },
+      ]
+    })
+  }, [translations])
 
   async function uploadImage(file: File) {
     setUploading(true)
@@ -111,6 +185,15 @@ export function CampaignForm({
       toast.error(t('participationCampaigns.shareCountInvalid'))
       return
     }
+    const incomplete = campaignTranslationLocales.find((locale) => {
+      const draft = translations[locale]
+      return isFilled(draft) && !isComplete(draft)
+    })
+    if (incomplete) {
+      setLocaleTab(incomplete)
+      toast.error(t('participationCampaigns.translationIncomplete'))
+      return
+    }
     setSaving(true)
     try {
       await onSubmit({
@@ -124,6 +207,7 @@ export function CampaignForm({
         sharePrice,
         bankAccountId: emptyToNull(values.bankAccountId),
         cryptoWalletId: emptyToNull(values.cryptoWalletId),
+        translations: payloadTranslations,
       })
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
@@ -139,6 +223,8 @@ export function CampaignForm({
       subtitle={initial ? undefined : t('participationCampaigns.createSubtitle')}
     >
       <AppForm onSubmit={submit} className={formCardBodyClassName}>
+        <FormSectionTitle icon={Megaphone}>{t('participationCampaigns.persianContent')}</FormSectionTitle>
+        <p className="-mt-2 text-xs leading-6 text-ink-500">{t('participationCampaigns.persianHint')}</p>
         <FormField icon={Megaphone} label={t('participationCampaigns.name')} htmlFor="name">
           <input
             id="name"
@@ -149,6 +235,74 @@ export function CampaignForm({
             minLength={2}
           />
         </FormField>
+        <FormField icon={AlignLeft} label={t('participationCampaigns.description')} htmlFor="description">
+          <textarea
+            id="description"
+            className={fieldClassName}
+            rows={4}
+            value={values.description}
+            onChange={(e) => set('description', e.target.value)}
+          />
+        </FormField>
+
+        <FormSectionTitle icon={Languages}>{t('participationCampaigns.translations')}</FormSectionTitle>
+        <p className="-mt-2 text-xs leading-6 text-ink-500">{t('participationCampaigns.translationsHint')}</p>
+        <nav className="flex flex-wrap gap-2 rounded-2xl border border-line bg-cream-50/80 p-3">
+          {campaignTranslationLocales.map((locale) => {
+            const active = localeTab === locale
+            const filled = isComplete(translations[locale])
+            return (
+              <button
+                key={locale}
+                type="button"
+                onClick={() => setLocaleTab(locale)}
+                className={`inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium transition ${
+                  active
+                    ? 'bg-teal-500 text-white shadow-[0_8px_16px_rgba(46,189,182,0.28)]'
+                    : 'bg-white text-ink-700 hover:bg-cream-100'
+                }`}
+              >
+                {t(`languages.${locale}`)}
+                {filled ? (
+                  <span
+                    className={`size-1.5 rounded-full ${active ? 'bg-white' : 'bg-mint-500'}`}
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+            )
+          })}
+        </nav>
+        <FormField
+          icon={Megaphone}
+          label={t('participationCampaigns.name')}
+          htmlFor={`name-${localeTab}`}
+        >
+          <input
+            id={`name-${localeTab}`}
+            className={fieldClassName}
+            dir={languageDir(localeTab)}
+            lang={localeTab}
+            value={translations[localeTab].name}
+            onChange={(e) => setTranslation(localeTab, 'name', e.target.value)}
+          />
+        </FormField>
+        <FormField
+          icon={AlignLeft}
+          label={t('participationCampaigns.description')}
+          htmlFor={`description-${localeTab}`}
+        >
+          <textarea
+            id={`description-${localeTab}`}
+            className={fieldClassName}
+            dir={languageDir(localeTab)}
+            lang={localeTab}
+            rows={4}
+            value={translations[localeTab].description}
+            onChange={(e) => setTranslation(localeTab, 'description', e.target.value)}
+          />
+        </FormField>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField icon={CalendarRange} label={t('participationCampaigns.startDate')} htmlFor="startDate">
             <PersianDateField
@@ -165,15 +319,6 @@ export function CampaignForm({
             />
           </FormField>
         </div>
-        <FormField icon={AlignLeft} label={t('participationCampaigns.description')} htmlFor="description">
-          <textarea
-            id="description"
-            className={fieldClassName}
-            rows={4}
-            value={values.description}
-            onChange={(e) => set('description', e.target.value)}
-          />
-        </FormField>
         <FormField icon={ImagePlus} label={t('participationCampaigns.image')} htmlFor="campaign-image">
           <FileDropField
             id="campaign-image"

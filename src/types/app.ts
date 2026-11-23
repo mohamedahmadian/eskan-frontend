@@ -22,26 +22,451 @@ export const religions = {
 
 export type Religion = (typeof religions)[keyof typeof religions];
 
-export const accommodationTypes = {
-  SCHOOL: "SCHOOL",
-  MOSQUE: "MOSQUE",
-  HUSSEINIEH: "HUSSEINIEH",
-  HALL: "HALL",
-  HOUSE: "HOUSE",
-  OTHER: "OTHER",
-} as const;
+export type AccommodationType = GeoName & {
+  id: string;
+  code: string;
+  icon: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: { accommodations: number };
+};
 
-export type AccommodationType =
-  (typeof accommodationTypes)[keyof typeof accommodationTypes];
+export type AccommodationTypeRef = GeoName & {
+  id: string;
+  code: string;
+  icon?: string;
+  isActive?: boolean;
+};
 
 export const accommodationStatuses = {
   ACTIVE: "ACTIVE",
-  INACTIVE: "INACTIVE",
+  PENDING_REVIEW: "PENDING_REVIEW",
   FULL: "FULL",
+  INACTIVE: "INACTIVE",
 } as const;
 
 export type AccommodationStatus =
   (typeof accommodationStatuses)[keyof typeof accommodationStatuses];
+
+export const accommodationInspectionStatuses = {
+  NOT_DONE: "NOT_DONE",
+  PENDING: "PENDING",
+  DONE: "DONE",
+} as const;
+
+export type AccommodationInspectionStatus =
+  (typeof accommodationInspectionStatuses)[keyof typeof accommodationInspectionStatuses];
+
+export const accommodationInspectionResults = {
+  APPROVED: "APPROVED",
+  CONDITIONAL: "CONDITIONAL",
+  REJECTED: "REJECTED",
+} as const;
+
+export type AccommodationInspectionResult =
+  (typeof accommodationInspectionResults)[keyof typeof accommodationInspectionResults];
+
+export const accommodationOperationStatuses = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  EMERGENCY: "EMERGENCY",
+  OUT_OF_CYCLE: "OUT_OF_CYCLE",
+} as const;
+
+export type AccommodationOperationStatus =
+  (typeof accommodationOperationStatuses)[keyof typeof accommodationOperationStatuses];
+
+export const medicalActivityStatuses = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  PARTIALLY_ACTIVE: "PARTIALLY_ACTIVE",
+} as const;
+
+export type MedicalActivityStatus =
+  (typeof medicalActivityStatuses)[keyof typeof medicalActivityStatuses];
+
+export const boardingCenterKinds = {
+  BOARDING: "BOARDING",
+  STUDENT_DORM: "STUDENT_DORM",
+  EDUCATIONAL_CENTER: "EDUCATIONAL_CENTER",
+} as const;
+
+export type BoardingCenterKind =
+  (typeof boardingCenterKinds)[keyof typeof boardingCenterKinds];
+
+export const tentStructureKinds = {
+  TENT: "TENT",
+  TEMPORARY_STRUCTURE: "TEMPORARY_STRUCTURE",
+  CONTAINER: "CONTAINER",
+  OTHER: "OTHER",
+} as const;
+
+export type TentStructureKind =
+  (typeof tentStructureKinds)[keyof typeof tentStructureKinds];
+
+export const tentFlooringKinds = {
+  SOIL: "SOIL",
+  ASPHALT: "ASPHALT",
+  CONCRETE: "CONCRETE",
+  COVERING: "COVERING",
+  OTHER: "OTHER",
+} as const;
+
+export type TentFlooringKind =
+  (typeof tentFlooringKinds)[keyof typeof tentFlooringKinds];
+
+export const drainageStatuses = {
+  SUITABLE: "SUITABLE",
+  UNSUITABLE: "UNSUITABLE",
+  NEEDS_REVIEW: "NEEDS_REVIEW",
+} as const;
+
+export type DrainageStatus =
+  (typeof drainageStatuses)[keyof typeof drainageStatuses];
+
+export const windResistanceStatuses = {
+  NEEDS_ASSESSMENT: "NEEDS_ASSESSMENT",
+  APPROVED: "APPROVED",
+  UNSUITABLE: "UNSUITABLE",
+} as const;
+
+export type WindResistanceStatus =
+  (typeof windResistanceStatuses)[keyof typeof windResistanceStatuses];
+
+export const waterSourceKinds = {
+  NETWORK: "NETWORK",
+  TANK: "TANK",
+  OTHER: "OTHER",
+} as const;
+
+export type WaterSourceKind =
+  (typeof waterSourceKinds)[keyof typeof waterSourceKinds];
+
+export const lightingStatuses = {
+  SUITABLE: "SUITABLE",
+  UNSUITABLE: "UNSUITABLE",
+} as const;
+
+export type LightingStatus =
+  (typeof lightingStatuses)[keyof typeof lightingStatuses];
+
+export const lodgingCenterKinds = {
+  GUESTHOUSE: "GUESTHOUSE",
+  DORMITORY: "DORMITORY",
+  LODGING: "LODGING",
+  OTHER: "OTHER",
+} as const;
+
+export type LodgingCenterKind =
+  (typeof lodgingCenterKinds)[keyof typeof lodgingCenterKinds];
+
+export const linenSupplyStatuses = {
+  SUFFICIENT: "SUFFICIENT",
+  INSUFFICIENT: "INSUFFICIENT",
+  NEEDS_SUPPLY: "NEEDS_SUPPLY",
+} as const;
+
+export type LinenSupplyStatus =
+  (typeof linenSupplyStatuses)[keyof typeof linenSupplyStatuses];
+
+export const cleaningServiceKinds = {
+  INTERNAL: "INTERNAL",
+  ORGANIZATION: "ORGANIZATION",
+  CONTRACTOR: "CONTRACTOR",
+} as const;
+
+export type CleaningServiceKind =
+  (typeof cleaningServiceKinds)[keyof typeof cleaningServiceKinds];
+
+export const assemblyCenterKinds = {
+  CULTURAL: "CULTURAL",
+  CONFERENCE: "CONFERENCE",
+  ASSEMBLY: "ASSEMBLY",
+  MULTIPURPOSE: "MULTIPURPOSE",
+} as const;
+
+export type AssemblyCenterKind =
+  (typeof assemblyCenterKinds)[keyof typeof assemblyCenterKinds];
+
+export const conditionStatuses = {
+  SUITABLE: "SUITABLE",
+  CONDITIONAL: "CONDITIONAL",
+  UNSUITABLE: "UNSUITABLE",
+} as const;
+
+export type ConditionStatus =
+  (typeof conditionStatuses)[keyof typeof conditionStatuses];
+
+export const sportsComplexKinds = {
+  SPORTS: "SPORTS",
+  MULTIPURPOSE: "MULTIPURPOSE",
+  OTHER: "OTHER",
+} as const;
+
+export type SportsComplexKind =
+  (typeof sportsComplexKinds)[keyof typeof sportsComplexKinds];
+
+export const approvalTriStates = {
+  YES: "YES",
+  NO: "NO",
+  NEEDS_APPROVAL: "NEEDS_APPROVAL",
+} as const;
+
+export type ApprovalTriState =
+  (typeof approvalTriStates)[keyof typeof approvalTriStates];
+
+export const emergencyExitStatuses = {
+  SUITABLE: "SUITABLE",
+  NEEDS_FIX: "NEEDS_FIX",
+  UNSUITABLE: "UNSUITABLE",
+} as const;
+
+export type EmergencyExitStatus =
+  (typeof emergencyExitStatuses)[keyof typeof emergencyExitStatuses];
+
+export const flooringConditions = {
+  SOUND: "SOUND",
+  DAMAGED: "DAMAGED",
+  SLIPPERY: "SLIPPERY",
+} as const;
+
+export type FlooringCondition =
+  (typeof flooringConditions)[keyof typeof flooringConditions];
+
+export const unknownSuitabilityStatuses = {
+  SUITABLE: "SUITABLE",
+  UNSUITABLE: "UNSUITABLE",
+  UNKNOWN: "UNKNOWN",
+} as const;
+
+export type UnknownSuitabilityStatus =
+  (typeof unknownSuitabilityStatuses)[keyof typeof unknownSuitabilityStatuses];
+
+export const kitchenStatuses = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  DISTRIBUTION_ONLY: "DISTRIBUTION_ONLY",
+} as const;
+
+export type KitchenStatus =
+  (typeof kitchenStatuses)[keyof typeof kitchenStatuses];
+
+export const mosqueManagerLocationKinds = {
+  OFFICE: "OFFICE",
+  PRAYER_HALL: "PRAYER_HALL",
+  SIDE_ROOM: "SIDE_ROOM",
+  STORAGE: "STORAGE",
+  OTHER: "OTHER",
+} as const;
+
+export type MosqueManagerLocationKind =
+  (typeof mosqueManagerLocationKinds)[keyof typeof mosqueManagerLocationKinds];
+
+export const schoolKinds = {
+  PUBLIC: "PUBLIC",
+  PRIVATE: "PRIVATE",
+  VOCATIONAL: "VOCATIONAL",
+  OTHER: "OTHER",
+} as const;
+
+export type SchoolKind = (typeof schoolKinds)[keyof typeof schoolKinds];
+
+export const accommodationTypeDetailKinds = [
+  "medical",
+  "boarding",
+  "tent",
+  "lodging",
+  "assembly-hall",
+  "sports-hall",
+  "husseinieh",
+  "mosque",
+  "school",
+] as const;
+
+export type AccommodationTypeDetailKind =
+  (typeof accommodationTypeDetailKinds)[number];
+
+export type RoomCapacityRow = {
+  label: string;
+  capacity: number | null;
+};
+
+export type TimeRangeRow = {
+  title: string;
+  startTime: string;
+  endTime: string;
+};
+
+export type AccommodationTypeDetails = {
+  medicalActivityStatus: MedicalActivityStatus | null;
+  medicalAllowedSections: string | null;
+  medicalForbiddenSections: string | null;
+  medicalWrittenApprovalImageId: string | null;
+  medicalHygieneSafetyStatus: string | null;
+  medicalApprovedCapacity: number | null;
+  medicalSanitaryFacilities: string | null;
+  medicalSpecializedRestrictions: string | null;
+  medicalApproverName: string | null;
+  boardingCenterKind: BoardingCenterKind | null;
+  boardingBlockCount: number | null;
+  boardingRoomCount: number | null;
+  boardingFixedBedCount: number | null;
+  boardingUsableBedCount: number | null;
+  boardingPrivateBathroomRoomCount: number | null;
+  boardingSharedBathToiletCount: number | null;
+  boardingHasDiningHall: boolean | null;
+  boardingHasKitchen: boolean | null;
+  boardingHasLaundry: boolean | null;
+  boardingHasStudyOrHall: boolean | null;
+  boardingAccessControl: string | null;
+  boardingPersonalStorage: string | null;
+  boardingCanAssignFully: boolean | null;
+  boardingUnassignableSections: string | null;
+  boardingApprovedCapacity: number | null;
+  boardingRepresentativeName: string | null;
+  tentStructureKind: TentStructureKind | null;
+  tentInstalledCount: number | null;
+  tentIntactCount: number | null;
+  tentApprovedCapacityEach: number | null;
+  tentAreaEach: number | null;
+  tentFlooringKind: TentFlooringKind | null;
+  tentDrainageStatus: DrainageStatus | null;
+  tentWindResistanceStatus: WindResistanceStatus | null;
+  tentHvacStatus: string | null;
+  tentWaterSource: WaterSourceKind | null;
+  tentWaterHealthStatus: string | null;
+  tentToiletCount: number | null;
+  tentWasteLocation: string | null;
+  tentPublicLighting: LightingStatus | null;
+  tentExitPathLighting: LightingStatus | null;
+  tentEmergencyVehicleAccess: boolean | null;
+  tentSafeAssemblyPoint: string | null;
+  tentFireEquipment: string | null;
+  tentMaintenanceManager: string | null;
+  tentFinalApprovedCapacity: number | null;
+  lodgingCenterKind: LodgingCenterKind | null;
+  lodgingBuildingCount: number | null;
+  lodgingFloorCount: number | null;
+  lodgingRoomCount: number | null;
+  lodgingFixedBedCount: number | null;
+  lodgingUsableBedCount: number | null;
+  lodgingSingleRoomCount: number | null;
+  lodgingMultiRoomCount: number | null;
+  lodgingRoomCapacities: RoomCapacityRow[] | null;
+  lodgingAssignableRoomCount: number | null;
+  lodgingOutOfServiceRoomCount: number | null;
+  lodgingPrivateBathroomCount: number | null;
+  lodgingSharedBathroomCount: number | null;
+  lodgingBathCount: number | null;
+  lodgingLinenStatus: LinenSupplyStatus | null;
+  lodgingCanWashLinen: boolean | null;
+  lodgingHvacStatus: string | null;
+  lodgingElevatorCount: number | null;
+  lodgingElevatorStatus: string | null;
+  lodgingStepFreeAccess: boolean | null;
+  lodgingLuggageStorage: string | null;
+  lodgingCleaningService: CleaningServiceKind | null;
+  lodgingNightReception: boolean | null;
+  lodgingLockStatus: string | null;
+  lodgingOperationTerms: string | null;
+  lodgingRoomEquipment: string | null;
+  lodgingFinalApprovedCapacity: number | null;
+  assemblyCenterKind: AssemblyCenterKind | null;
+  assemblyMainHallArea: number | null;
+  assemblySideHallCount: number | null;
+  assemblyFixedSeatCount: number | null;
+  assemblySeatsRemovable: boolean | null;
+  assemblyUsableAreaAfterRemoval: number | null;
+  assemblySideRoomCount: number | null;
+  assemblyHasStage: boolean | null;
+  assemblyHasBackstage: boolean | null;
+  assemblyToiletCount: number | null;
+  assemblyAvSystem: string | null;
+  assemblyVentilationStatus: ConditionStatus | null;
+  assemblyAvStorage: string | null;
+  assemblyEventSchedule: string | null;
+  assemblyCanSplitSpace: boolean | null;
+  assemblyFinalApprovedCapacity: number | null;
+  assemblyOperatorRestrictions: string | null;
+  sportsComplexKind: SportsComplexKind | null;
+  sportsOperatorName: string | null;
+  sportsMainFloorArea: number | null;
+  sportsIndependentHallCount: number | null;
+  sportsSpectatorSeatCount: number | null;
+  sportsSpectatorStayUse: ApprovalTriState | null;
+  sportsShowerCount: number | null;
+  sportsToiletCount: number | null;
+  sportsEntryExitCount: number | null;
+  sportsEmergencyExitStatus: EmergencyExitStatus | null;
+  sportsFlooringCondition: FlooringCondition | null;
+  sportsFloorCovering: string | null;
+  sportsHasEquipmentStorage: boolean | null;
+  sportsVentilation: string | null;
+  sportsHvacStatus: string | null;
+  sportsEmergencyLighting: UnknownSuitabilityStatus | null;
+  sportsFireStatus: string | null;
+  sportsProposedCapacity: number | null;
+  sportsFinalApprovedCapacity: number | null;
+  sportsHasReceptionDesk: boolean | null;
+  husseiniehManagerName: string | null;
+  husseiniehMainHallArea: number | null;
+  husseiniehSideHallCount: number | null;
+  husseiniehSideHallAreas: string | null;
+  husseiniehFloorCount: number | null;
+  husseiniehBalconyCount: number | null;
+  husseiniehBalconyStayUse: ApprovalTriState | null;
+  husseiniehMainHallCapacity: number | null;
+  husseiniehSideRoomCount: number | null;
+  husseiniehHasStaffRoom: boolean | null;
+  husseiniehHasStorage: boolean | null;
+  husseiniehHasKitchen: boolean | null;
+  husseiniehKitchenStatus: KitchenStatus | null;
+  husseiniehAudioStatus: ConditionStatus | null;
+  husseiniehCeremonyHours: TimeRangeRow[] | null;
+  husseiniehGenderSeparation: string | null;
+  husseiniehToiletStatus: string | null;
+  husseiniehVentilationStatus: ConditionStatus | null;
+  husseiniehCanBringSupplies: boolean | null;
+  husseiniehTrusteeRestrictions: string | null;
+  mosqueTrusteeName: string | null;
+  mosqueHallCount: number | null;
+  mosqueFloorCount: number | null;
+  mosqueAssignableArea: number | null;
+  mosqueHallApprovedCapacity: number | null;
+  mosqueHasSistersSpace: boolean | null;
+  mosqueHasBrothersSpace: boolean | null;
+  mosqueBanHours: TimeRangeRow[] | null;
+  mosqueReligiousSchedule: string | null;
+  mosqueToiletCount: number | null;
+  mosqueAblutionCount: number | null;
+  mosqueHotWaterStatus: UnknownSuitabilityStatus | null;
+  mosqueHasShoeStorage: boolean | null;
+  mosqueHasStorage: boolean | null;
+  mosqueKitchenRestriction: string | null;
+  mosqueSpeakerRestriction: string | null;
+  mosqueTrusteeRules: string | null;
+  mosqueManagerLocationKind: MosqueManagerLocationKind | null;
+  mosqueManagerLocationText: string | null;
+  schoolKind: SchoolKind | null;
+  schoolFloorCount: number | null;
+  schoolBuildingCount: number | null;
+  schoolTotalClassroomCount: number | null;
+  schoolUsableClassroomCount: number | null;
+  schoolUsableHallCount: number | null;
+  schoolPrayerRoomCount: number | null;
+  schoolAssignableOfficeCount: number | null;
+  schoolClassroomApprovedCapacity: number | null;
+  schoolAllowedStayFloors: number | null;
+  schoolToiletCount: number | null;
+  schoolWashStatus: ConditionStatus | null;
+  schoolHvacStatus: ConditionStatus | null;
+  schoolManagerUserId: string | null;
+  schoolManagerName: string | null;
+  schoolEquipmentHandoverImageId: string | null;
+  schoolFinalHandoverImageId: string | null;
+};
 
 export const genderTypes = {
   MALE: "MALE",
@@ -130,6 +555,36 @@ export type RoleOption = {
   id: string;
   code: string;
   nameKey: string;
+};
+
+export type NavMenuCatalogItem = {
+  id: string;
+  code: string;
+  nameKey: string;
+  path: string;
+  icon: string;
+  sortOrder: number;
+};
+
+export type NavModuleCatalog = {
+  id: string;
+  code: string;
+  nameKey: string;
+  icon: string;
+  sortOrder: number;
+  menus: NavMenuCatalogItem[];
+};
+
+export type RoleAccessListItem = RoleOption & {
+  createdAt?: string;
+  isSystem?: boolean;
+  userCount?: number;
+  menuCount?: number;
+};
+
+export type RoleAccess = RoleAccessListItem & {
+  menuIds: string[];
+  lockedMenuIds: string[];
 };
 
 export type AuthUser = {
@@ -560,7 +1015,7 @@ export type ManagedAccommodationLink = {
   accommodation: {
     id: string;
     name: string;
-    type?: AccommodationType;
+    type?: AccommodationTypeRef;
     status?: AccommodationStatus;
   };
 };
@@ -688,7 +1143,7 @@ export type PublicProfileAccommodation = {
   accommodation: {
     id: string;
     name: string;
-    type?: AccommodationType;
+    type?: AccommodationTypeRef;
     status?: AccommodationStatus;
   };
 };
@@ -717,12 +1172,16 @@ export type PublicProfile = {
 export type PublicAccommodation = {
   id: string;
   name: string;
-  type: AccommodationType;
+  typeId?: string;
+  type: AccommodationTypeRef;
   status: AccommodationStatus;
   genderType: GenderType;
   managementType: ManagementType;
   maleCapacity: number;
   femaleCapacity: number;
+  ownerName: string | null;
+  ownerPhone: string | null;
+  imageIds: string[];
   phone: string | null;
   address: string | null;
   neshanAddress: string | null;
@@ -965,10 +1424,11 @@ export type AccommodationYearContactLink = AccommodationContactLink & {
   year: number;
 };
 
-export type Accommodation = {
+export type Accommodation = AccommodationTypeDetails & {
   id: string;
   name: string;
-  type: AccommodationType;
+  typeId: string;
+  type: AccommodationTypeRef;
   status: AccommodationStatus;
   genderType: GenderType;
   managementType: ManagementType;
@@ -977,6 +1437,8 @@ export type Accommodation = {
   overflowPercent: number;
   assignedMaleCapacity: number;
   assignedFemaleCapacity: number;
+  ownerName: string | null;
+  ownerPhone: string | null;
   phone: string | null;
   address: string | null;
   neshanAddress: string | null;
@@ -1006,11 +1468,30 @@ export type Accommodation = {
   classroomCount: number | null;
   schoolDistrictId: string | null;
   schoolDistrict: { id: string; name: string } | null;
+  schoolManagerUser?: { id: string; username: string; fullName: string } | null;
+  imageIds: string[];
+  inspectionStatus: AccommodationInspectionStatus;
+  inspectionResult: AccommodationInspectionResult | null;
+  reviewerId: string | null;
+  reviewer: { id: string; username: string; fullName: string } | null;
+  lastEvaluatedAt: string | null;
+  operationStatus: AccommodationOperationStatus;
+  evaluations: AccommodationEvaluation[];
   managers: AccommodationManagerLink[];
   contacts?: AccommodationContactLink[];
   yearContacts?: AccommodationYearContactLink[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type AccommodationEvaluation = {
+  id: string;
+  inspectionStatus: AccommodationInspectionStatus;
+  inspectionResult: AccommodationInspectionResult | null;
+  reviewerId: string | null;
+  reviewer: { id: string; username: string; fullName: string } | null;
+  evaluatedAt: string | null;
+  createdAt: string;
 };
 
 export type AccommodationReport = {
@@ -1024,7 +1505,7 @@ export type AccommodationReport = {
     active: number;
     inactive: number;
   };
-  byType: { type: AccommodationType; count: number }[];
+  byType: { type: AccommodationTypeRef; count: number }[];
   byGenderType: { genderType: GenderType; count: number }[];
   byManagementType: { managementType: ManagementType; count: number }[];
   byCombination: {
@@ -1051,7 +1532,7 @@ export type AccommodationAssignmentStats = {
 export type AccommodationAssignmentRow = {
   id: string;
   name: string;
-  type: AccommodationType;
+  type: AccommodationTypeRef;
   city: (GeoName & { id: string }) | null;
   province: (GeoName & { id: string }) | null;
   managerUserId: string | null;
@@ -1797,6 +2278,12 @@ export const announcementAudiences = {
 export type AnnouncementAudience =
   (typeof announcementAudiences)[keyof typeof announcementAudiences];
 
+export type HeadquartersAnnouncementTranslation = {
+  locale: string;
+  title: string;
+  body: string;
+};
+
 export type HeadquartersAnnouncement = {
   id: string;
   title: string;
@@ -1804,6 +2291,9 @@ export type HeadquartersAnnouncement = {
   audience: AnnouncementAudience;
   publishedAt: string;
   isPublished: boolean;
+  translations?: HeadquartersAnnouncementTranslation[];
+  translatedLocales?: string[];
+  contentLocale?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -3067,7 +3557,7 @@ export type ReceptionCaravanSummary = {
 export type ReceptionAccommodationSummary = {
   id: string;
   name: string;
-  type: AccommodationType;
+  type: AccommodationTypeRef;
   status: AccommodationStatus;
   genderType: GenderType;
   phone: string | null;
@@ -3373,6 +3863,12 @@ export type CampaignReport = {
   topByProgress: CampaignReportNamedRow[];
 };
 
+export type ParticipationCampaignTranslation = {
+  locale: string;
+  name: string;
+  description: string | null;
+};
+
 export type ParticipationCampaign = {
   id: string;
   name: string;
@@ -3381,6 +3877,8 @@ export type ParticipationCampaign = {
   description: string | null;
   imageId: string | null;
   isActive: boolean;
+  translations?: ParticipationCampaignTranslation[];
+  translatedLocales?: string[];
   totalAmount: number;
   sharePrice: number;
   bankAccountId: string | null;
@@ -3423,6 +3921,7 @@ export type PublicCampaign = {
   startDate: string;
   endDate: string;
   description: string | null;
+  contentLocale?: string;
   imageId: string | null;
   isActive: boolean;
   totalAmount: number;

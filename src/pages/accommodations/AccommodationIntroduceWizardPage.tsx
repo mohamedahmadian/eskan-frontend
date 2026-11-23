@@ -14,6 +14,7 @@ import {
   Eye,
   Flag,
   Flame,
+  Images,
   Landmark,
   LayoutGrid,
   LogIn,
@@ -52,15 +53,24 @@ import {
 import {
   FormCard,
   FormFactTile,
+  FormSectionTitle,
   formCardBodyClassName,
 } from '../../components/ui/FormLayout'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber, toLatinDigits } from '../../lib/datetime'
+import {
+  defaultAccommodationTypeId,
+  isSchoolAccommodationType,
+} from '../../lib/accommodation-type'
+import {
+  accommodationTypeDetailKind,
+  emptyTypeDetailFormValues,
+  typeDetailsPayloadFromForm,
+} from '../../lib/accommodation-type-details'
 import { useGeoName } from '../../lib/geo'
 import {
-  accommodationTypes,
   genderTypes,
   managementTypes,
   type Accommodation,
@@ -72,8 +82,10 @@ import {
   type Province,
   type SchoolDistrict,
 } from '../../types/app'
+import { AccommodationImagesField } from './AccommodationImagesField'
+import { AccommodationTypeDetailsFields } from './AccommodationTypeDetailsFields'
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
 type IntroduceVariant = 'panel' | 'public'
 
 type IntroducedAccommodation = {
@@ -147,13 +159,17 @@ export function AccommodationIntroduceWizardPage({
   const locationStep = (isPublic ? 3 : 2) as Step
   const capacityStep = (isPublic ? 4 : 3) as Step
   const amenitiesStep = (isPublic ? 5 : 4) as Step
-  const doneStep = (isPublic ? 6 : 5) as Step
-  const [type, setType] = useState<AccommodationType>(accommodationTypes.HOUSE)
+  const imagesStep = (isPublic ? 6 : 5) as Step
+  const doneStep = (isPublic ? 7 : 6) as Step
+  const [typeId, setTypeId] = useState('')
   const [genderType, setGenderType] = useState<GenderType>(genderTypes.MIXED)
   const [managementType, setManagementType] = useState<ManagementType>(
     managementTypes.SELF_SUFFICIENT,
   )
+  const [ownerName, setOwnerName] = useState('')
+  const [ownerPhone, setOwnerPhone] = useState('')
   const [phone, setPhone] = useState('')
+  const [imageIds, setImageIds] = useState<string[]>([])
   const [description, setDescription] = useState('')
   const [isPrimary, setIsPrimary] = useState(true)
   const [countryId, setCountryId] = useState(user?.countryId ?? '')
@@ -175,7 +191,24 @@ export function AccommodationIntroduceWizardPage({
   const [toiletCount, setToiletCount] = useState('')
   const [classroomCount, setClassroomCount] = useState('')
   const [schoolDistrictId, setSchoolDistrictId] = useState('')
-  const isSchool = type === accommodationTypes.SCHOOL
+  const [typeDetails, setTypeDetails] = useState(() => emptyTypeDetailFormValues())
+  const typeOptions = useQuery({
+    queryKey: ['accommodation-types', 'lookup'],
+    queryFn: async () => {
+      const { data } = await api.get<AccommodationType[]>('/accommodation-types', {
+        params: { activeOnly: true },
+      })
+      return data
+    },
+  })
+  const selectedType = typeOptions.data?.find((item) => item.id === typeId)
+  const isSchool = isSchoolAccommodationType(selectedType)
+  const detailKind = accommodationTypeDetailKind(selectedType)
+
+  useEffect(() => {
+    if (typeId || !typeOptions.data?.length) return
+    setTypeId(defaultAccommodationTypeId(typeOptions.data))
+  }, [typeId, typeOptions.data])
   const [done, setDone] = useState<IntroducedAccommodation | null>(null)
 
   const schoolDistricts = useQuery({
@@ -268,7 +301,7 @@ export function AccommodationIntroduceWizardPage({
   async function submit(event: FormEvent) {
     event.preventDefault()
     const parsed = parseCoordinates(coordinates)
-    if (parsed === 'invalid' || !cityId || name.trim().length < 2) {
+    if (parsed === 'invalid' || !cityId || name.trim().length < 2 || !typeId) {
       toast.error(t('accommodationIntroduce.stepIncomplete'))
       setStep(parsed === 'invalid' || !cityId ? locationStep : generalStep)
       return
@@ -278,11 +311,14 @@ export function AccommodationIntroduceWizardPage({
     const female = femaleDisabled ? 0 : toNumber(femaleCapacity)
     const payload = {
       name: name.trim(),
-      type,
+      typeId,
       genderType,
       managementType,
       maleCapacity: male,
       femaleCapacity: female,
+      ownerName: emptyToNull(ownerName),
+      ownerPhone: emptyToNull(ownerPhone),
+      imageIds,
       phone: emptyToNull(phone),
       address: emptyToNull(address),
       neshanAddress: emptyToNull(neshanAddress),
@@ -303,6 +339,7 @@ export function AccommodationIntroduceWizardPage({
       toiletCount: toOptionalNumber(toiletCount),
       classroomCount: isSchool ? toOptionalNumber(classroomCount) : null,
       schoolDistrictId: isSchool ? emptyToNull(schoolDistrictId) : null,
+      ...typeDetailsPayloadFromForm(detailKind, typeDetails),
       isPrimary,
     }
     setSaving(true)
@@ -346,7 +383,7 @@ export function AccommodationIntroduceWizardPage({
     }
   }
 
-  if (!countries.data || (!isPublic && !user)) {
+  if (!countries.data || !typeOptions.data || (!isPublic && !user)) {
     return <LoadingState />
   }
 
@@ -461,11 +498,13 @@ export function AccommodationIntroduceWizardPage({
               <FormField icon={Landmark} label={t('accommodations.type')} htmlFor="introduce-type">
                 <SearchSelect
                   id="introduce-type"
-                  value={type}
-                  onChange={(next) => setType(next as AccommodationType)}
-                  options={Object.values(accommodationTypes).map((item) => ({
-                    value: item,
-                    label: t(`accommodationTypes.${item}`),
+                  value={typeId}
+                  placeholder={t('accommodations.type')}
+                  required
+                  onChange={setTypeId}
+                  options={(typeOptions.data ?? []).map((item) => ({
+                    value: item.id,
+                    label: nameOf(item),
                   }))}
                 />
               </FormField>
@@ -481,29 +520,65 @@ export function AccommodationIntroduceWizardPage({
                 />
               </FormField>
             </div>
-            <FormField
-              icon={BadgeCheck}
-              label={t('accommodations.managementType')}
-              htmlFor="introduce-management"
-            >
-              <SearchSelect
-                id="introduce-management"
-                value={managementType}
-                onChange={(next) => setManagementType(next as ManagementType)}
-                options={Object.values(managementTypes).map((item) => ({
-                  value: item,
-                  label: t(`managementTypes.${item}`),
-                }))}
-              />
-            </FormField>
-            <FormField icon={Phone} label={t('accommodations.phone')} htmlFor="introduce-phone">
-              <input
-                id="introduce-phone"
-                className={`${fieldClassName} digit-field`}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </FormField>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField
+                icon={BadgeCheck}
+                label={t('accommodations.managementType')}
+                htmlFor="introduce-management"
+              >
+                <SearchSelect
+                  id="introduce-management"
+                  value={managementType}
+                  onChange={(next) => setManagementType(next as ManagementType)}
+                  options={Object.values(managementTypes).map((item) => ({
+                    value: item,
+                    label: t(`managementTypes.${item}`),
+                  }))}
+                />
+              </FormField>
+              <FormField icon={Phone} label={t('accommodations.phone')} htmlFor="introduce-phone">
+                <input
+                  id="introduce-phone"
+                  className={`${fieldClassName} digit-field`}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </FormField>
+              <FormField icon={UserCheck} label={t('accommodations.isPrimary')}>
+                <ToggleField
+                  checked={isPrimary}
+                  onChange={setIsPrimary}
+                  onLabel={t('common.yes')}
+                  offLabel={t('common.no')}
+                />
+              </FormField>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                icon={UserRound}
+                label={t('accommodations.ownerName')}
+                htmlFor="introduce-owner-name"
+              >
+                <input
+                  id="introduce-owner-name"
+                  className={fieldClassName}
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                />
+              </FormField>
+              <FormField
+                icon={Phone}
+                label={t('accommodations.ownerPhone')}
+                htmlFor="introduce-owner-contact"
+              >
+                <input
+                  id="introduce-owner-contact"
+                  className={`${fieldClassName} digit-field`}
+                  value={ownerPhone}
+                  onChange={(e) => setOwnerPhone(toLatinDigits(e.target.value))}
+                />
+              </FormField>
+            </div>
             <FormField icon={AlignLeft} label={t('accommodations.description')} htmlFor="introduce-description">
               <textarea
                 id="introduce-description"
@@ -511,14 +586,6 @@ export function AccommodationIntroduceWizardPage({
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-              />
-            </FormField>
-            <FormField icon={UserCheck} label={t('accommodations.isPrimary')}>
-              <ToggleField
-                checked={isPrimary}
-                onChange={setIsPrimary}
-                onLabel={t('common.yes')}
-                offLabel={t('common.no')}
               />
             </FormField>
             <WizardStepActions
@@ -543,91 +610,95 @@ export function AccommodationIntroduceWizardPage({
             onSubmit={(event) => goNext(event, capacityStep)}
             className={formCardBodyClassName}
           >
-            <FormField icon={Flag} label={t('geo.country')} htmlFor="introduce-country">
-              <SearchSelect
-                id="introduce-country"
-                value={selectedCountryId}
-                placeholder={t('geo.selectCountry')}
-                onChange={(next) => {
-                  setCountryId(next)
-                  setProvinceId('')
-                  setCityId('')
-                }}
-                options={[
-                  { value: '', label: t('geo.selectCountry') },
-                  ...countries.data.map((country) => ({
-                    value: country.id,
-                    label: nameOf(country),
-                  })),
-                ]}
-              />
-            </FormField>
-            <FormField icon={MapPinned} label={t('geo.province')} htmlFor="introduce-province">
-              <SearchSelect
-                id="introduce-province"
-                value={provinceId}
-                disabled={!selectedCountryId}
-                placeholder={t('geo.selectProvince')}
-                onChange={(next) => {
-                  setProvinceId(next)
-                  setCityId('')
-                }}
-                options={[
-                  { value: '', label: t('geo.selectProvince') },
-                  ...(provinces.data ?? []).map((province) => ({
-                    value: province.id,
-                    label: nameOf(province),
-                  })),
-                ]}
-              />
-            </FormField>
-            <FormField icon={MapPin} label={t('geo.city')} htmlFor="introduce-city">
-              <SearchSelect
-                id="introduce-city"
-                value={cityId}
-                disabled={!provinceId}
-                placeholder={t('geo.selectCity')}
-                onChange={setCityId}
-                options={[
-                  { value: '', label: t('geo.selectCity') },
-                  ...(cities.data ?? []).map((city) => ({
-                    value: city.id,
-                    label: nameOf(city),
-                  })),
-                ]}
-              />
-            </FormField>
-            <FormField icon={MapPin} label={t('accommodations.address')} htmlFor="introduce-address">
-              <textarea
-                id="introduce-address"
-                className={fieldClassName}
-                rows={3}
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </FormField>
-            <FormField
-              icon={Navigation}
-              label={t('accommodations.neshanAddress')}
-              htmlFor="introduce-neshan"
-            >
-              <input
-                id="introduce-neshan"
-                className={fieldClassName}
-                value={neshanAddress}
-                onChange={(e) => setNeshanAddress(e.target.value)}
-              />
-            </FormField>
-            <FormField icon={Compass} label={t('accommodations.coordinates')} htmlFor="introduce-coordinates">
-              <input
-                id="introduce-coordinates"
-                className={`${fieldClassName} digit-field`}
-                inputMode="decimal"
-                placeholder={t('accommodations.coordinatesPlaceholder')}
-                value={coordinates}
-                onChange={(e) => setCoordinates(toLatinDigits(e.target.value))}
-              />
-            </FormField>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField icon={Flag} label={t('geo.country')} htmlFor="introduce-country">
+                <SearchSelect
+                  id="introduce-country"
+                  value={selectedCountryId}
+                  placeholder={t('geo.selectCountry')}
+                  onChange={(next) => {
+                    setCountryId(next)
+                    setProvinceId('')
+                    setCityId('')
+                  }}
+                  options={[
+                    { value: '', label: t('geo.selectCountry') },
+                    ...countries.data.map((country) => ({
+                      value: country.id,
+                      label: nameOf(country),
+                    })),
+                  ]}
+                />
+              </FormField>
+              <FormField icon={MapPinned} label={t('geo.province')} htmlFor="introduce-province">
+                <SearchSelect
+                  id="introduce-province"
+                  value={provinceId}
+                  disabled={!selectedCountryId}
+                  placeholder={t('geo.selectProvince')}
+                  onChange={(next) => {
+                    setProvinceId(next)
+                    setCityId('')
+                  }}
+                  options={[
+                    { value: '', label: t('geo.selectProvince') },
+                    ...(provinces.data ?? []).map((province) => ({
+                      value: province.id,
+                      label: nameOf(province),
+                    })),
+                  ]}
+                />
+              </FormField>
+              <FormField icon={MapPin} label={t('geo.city')} htmlFor="introduce-city">
+                <SearchSelect
+                  id="introduce-city"
+                  value={cityId}
+                  disabled={!provinceId}
+                  placeholder={t('geo.selectCity')}
+                  onChange={setCityId}
+                  options={[
+                    { value: '', label: t('geo.selectCity') },
+                    ...(cities.data ?? []).map((city) => ({
+                      value: city.id,
+                      label: nameOf(city),
+                    })),
+                  ]}
+                />
+              </FormField>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField icon={MapPin} label={t('accommodations.address')} htmlFor="introduce-address">
+                <input
+                  id="introduce-address"
+                  className={fieldClassName}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </FormField>
+              <FormField
+                icon={Navigation}
+                label={t('accommodations.neshanAddress')}
+                htmlFor="introduce-neshan"
+              >
+                <input
+                  id="introduce-neshan"
+                  className={`${fieldClassName} latin-field`}
+                  dir="ltr"
+                  value={neshanAddress}
+                  onChange={(e) => setNeshanAddress(e.target.value)}
+                />
+              </FormField>
+              <FormField icon={Compass} label={t('accommodations.coordinates')} htmlFor="introduce-coordinates">
+                <input
+                  id="introduce-coordinates"
+                  className={`${fieldClassName} digit-field`}
+                  inputMode="decimal"
+                  placeholder={t('accommodations.coordinatesPlaceholder')}
+                  value={coordinates}
+                  onChange={(e) => setCoordinates(toLatinDigits(e.target.value))}
+                />
+              </FormField>
+            </div>
             <OsmMapPicker
               latitude={mapCoordinates.latitude}
               longitude={mapCoordinates.longitude}
@@ -699,7 +770,11 @@ export function AccommodationIntroduceWizardPage({
           title={t('accommodations.tabs.amenities')}
           subtitle={t('accommodationIntroduce.amenitiesHint')}
         >
-          <AppForm autoFocusFirst={false} onSubmit={submit} className={formCardBodyClassName}>
+          <AppForm
+            autoFocusFirst={false}
+            onSubmit={(event) => goNext(event, imagesStep)}
+            className={formCardBodyClassName}
+          >
             {isSchool ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
@@ -819,10 +894,49 @@ export function AccommodationIntroduceWizardPage({
                 />
               </FormField>
             </div>
+            {detailKind ? (
+              <>
+                <FormSectionTitle icon={Sparkles}>
+                  {t('accommodations.sectionTypeDetails')}
+                </FormSectionTitle>
+                <AccommodationTypeDetailsFields
+                  kind={detailKind}
+                  values={typeDetails}
+                  onChange={(key, value) =>
+                    setTypeDetails((current) => ({ ...current, [key]: value }))
+                  }
+                  uploadPath={isPublic ? '/public/images' : '/images'}
+                  idPrefix="introduce-type-detail"
+                />
+              </>
+            ) : null}
+            <WizardStepActions
+              submitLabel={t('accommodationIntroduce.next')}
+              backLabel={t('accommodationIntroduce.back')}
+              onBack={() => setStep(capacityStep)}
+              submitIcon="next"
+              backIcon="previous"
+            />
+          </AppForm>
+        </FormCard>
+      ) : null}
+
+      {step === imagesStep ? (
+        <FormCard
+          icon={Images}
+          title={t('accommodationIntroduce.stepImages')}
+          subtitle={t('accommodationIntroduce.imagesHint')}
+        >
+          <AppForm autoFocusFirst={false} onSubmit={submit} className={formCardBodyClassName}>
+            <AccommodationImagesField
+              imageIds={imageIds}
+              onChange={setImageIds}
+              uploadPath={isPublic ? '/public/images' : '/images'}
+            />
             <WizardStepActions
               submitLabel={t('accommodationIntroduce.submit')}
               backLabel={t('accommodationIntroduce.back')}
-              onBack={() => setStep(capacityStep)}
+              onBack={() => setStep(amenitiesStep)}
               submitting={saving}
               submitIcon="check"
               backIcon="previous"
@@ -966,11 +1080,12 @@ function IntroduceSteps({
     { n: (isPublic ? 3 : 2) as Step, label: t('accommodations.tabs.location') },
     { n: (isPublic ? 4 : 3) as Step, label: t('accommodationIntroduce.stepCapacity') },
     { n: (isPublic ? 5 : 4) as Step, label: t('accommodations.tabs.amenities') },
+    { n: (isPublic ? 6 : 5) as Step, label: t('accommodationIntroduce.stepImages') },
     { n: doneStep, label: t('accommodationIntroduce.stepDone') },
   ]
 
   return (
-    <ol className={`mb-4 grid grid-cols-3 gap-2 ${isPublic ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
+    <ol className={`mb-4 grid grid-cols-3 gap-2 ${isPublic ? 'sm:grid-cols-7' : 'sm:grid-cols-6'}`}>
       {items.map((item) => {
         const complete = item.n < step || step === doneStep
         const active = item.n === step && step !== doneStep

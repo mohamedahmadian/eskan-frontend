@@ -8,7 +8,6 @@ import {
   canManageAccommodations,
   isAdmin,
   isHonoraryServant,
-  isPilgrim,
 } from '../lib/roles'
 
 export function hasMenuAccess(path: string, modules: { menus: { path: string }[] }[]) {
@@ -37,8 +36,20 @@ export function canAccessParticipationCampaigns(
     | undefined,
 ) {
   if (!user) return false
-  if (hasMenuAccess('/participations/campaigns', user.modules ?? [])) return true
-  return isPilgrim(user)
+  return hasMenuAccess('/participations/campaigns', user.modules ?? [])
+}
+
+export function canAccessParticipationInKind(
+  user:
+    | {
+        roles?: { code: string }[]
+        modules?: { menus: { path: string }[] }[]
+      }
+    | null
+    | undefined,
+) {
+  if (!user) return false
+  return hasMenuAccess('/participations/in-kind', user.modules ?? [])
 }
 
 export function RequireMenuAccess({
@@ -54,7 +65,6 @@ export function RequireMenuAccess({
     user &&
       (hasMenuAccess(path, user.modules) ||
         (allowModule ? hasModuleAccess(allowModule, user.modules) : false) ||
-        (path === '/participations/campaigns' && isPilgrim(user)) ||
         (path === '/my-reservations' && isHonoraryServant(user))),
   )
 

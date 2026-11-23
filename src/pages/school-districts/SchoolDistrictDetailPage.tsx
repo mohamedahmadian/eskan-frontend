@@ -59,7 +59,7 @@ export function SchoolDistrictDetailPage() {
             />
           </div>
           <DetailActions
-            editTo={`/accommodation-base-info/schools/${item.id}/edit`}
+            editTo={`/school-districts/${item.id}/edit`}
             editLabel={t('common.edit')}
             deleteLabel={t('schoolDistricts.delete')}
             onDelete={() =>
@@ -68,7 +68,7 @@ export function SchoolDistrictDetailPage() {
                 successMessage: t('schoolDistricts.deleted'),
                 path: `/school-districts/${item.id}`,
                 queryKey: ['school-districts'],
-                onDeleted: () => navigate('/accommodation-base-info'),
+                onDeleted: () => navigate('/school-districts'),
               })
             }
           />

@@ -1,7 +1,8 @@
-import { Link2, MessageCircle, Send, Share2, X } from 'lucide-react'
+import { Link2, MessageCircle, Send, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { AppModal } from '../ui/AppModal'
 import {
   canUseNativeShare,
   copyText,
@@ -71,27 +72,18 @@ export function VoucherShareButton({
         </>
       )}
       {open ? (
-        <div className="fixed inset-0 z-50">
-          <button
-            type="button"
-            className="absolute inset-0 bg-ink-900/30"
-            aria-label={t('common.cancel')}
-            onClick={() => setOpen(false)}
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="voucher-share-title"
-            className="absolute inset-x-0 bottom-0 rounded-t-[28px] border border-line bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-18px_40px_rgba(15,110,106,0.08)] lg:inset-auto lg:left-1/2 lg:top-1/2 lg:w-full lg:max-w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[28px] lg:pb-4 lg:shadow-[0_18px_40px_rgba(15,110,106,0.12)]"
-          >
+        <AppModal
+          onClose={() => setOpen(false)}
+          labelledBy="voucher-share-title"
+          zClassName="z-50"
+          overlayClassName="flex items-end justify-center p-0 lg:items-center lg:p-4"
+          className="w-full rounded-t-[28px] border border-line bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-18px_40px_rgba(15,110,106,0.08)] lg:max-w-md lg:rounded-[28px] lg:pb-4 lg:shadow-[0_18px_40px_rgba(15,110,106,0.12)]"
+        >
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line lg:hidden" />
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-3 flex items-center justify-between gap-3 pe-12">
               <h2 id="voucher-share-title" className="text-base font-semibold text-ink-900">
                 {t('common.shareCard')}
               </h2>
-              <Button type="button" variant="ghost" icon onClick={() => setOpen(false)} aria-label={t('common.cancel')}>
-                <X className="size-4" aria-hidden />
-              </Button>
             </div>
             <div className="mx-auto grid max-w-3xl gap-2">
               <ShareOption
@@ -133,8 +125,7 @@ export function VoucherShareButton({
             {canUseNativeShare() ? null : (
               <p className="mx-auto mt-3 max-w-3xl text-xs text-ink-400">{t('common.shareImageHint')}</p>
             )}
-          </div>
-        </div>
+        </AppModal>
       ) : null}
     </>
   )

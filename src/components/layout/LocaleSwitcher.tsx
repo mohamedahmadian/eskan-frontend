@@ -93,7 +93,10 @@ function LocaleMenu({ tone }: { tone: 'light' | 'onDark' }) {
       setOpen(false)
     }
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      setOpen(false)
     }
     function onReposition() {
       placeMenu()
