@@ -86,7 +86,12 @@ export function isShortcutExcludedText(target: EventTarget | null) {
   if (!(target instanceof Element)) return false
   const field = target.closest('input')
   if (!(field instanceof HTMLInputElement)) return false
-  return field.type === 'password' || field.type === 'email' || field.type === 'url'
+  return (
+    field.type === 'password' ||
+    field.type === 'email' ||
+    field.type === 'url' ||
+    field.hasAttribute('data-password-field')
+  )
 }
 
 export function formOwnsShortcut(form: HTMLFormElement, target: EventTarget | null) {

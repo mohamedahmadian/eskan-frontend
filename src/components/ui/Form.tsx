@@ -1,8 +1,10 @@
-import { ArrowRight, Check, type LucideIcon, Pencil, Trash2, X } from 'lucide-react'
+import { ArrowRight, Check, Eye, EyeOff, type LucideIcon, Pencil, Trash2, X } from 'lucide-react'
 import {
   useEffect,
   useRef,
+  useState,
   type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type FormHTMLAttributes,
@@ -100,6 +102,34 @@ export const fieldErrorClassName =
 
 export function inputClassName(error?: boolean) {
   return error ? `${fieldClassName} ${fieldErrorClassName}` : fieldClassName
+}
+
+export function PasswordInput({
+  className = fieldClassName,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const { t } = useTranslation()
+  const [visible, setVisible] = useState(false)
+  return (
+    <div className="relative">
+      <input
+        {...props}
+        type={visible ? 'text' : 'password'}
+        className={`${className} pe-11`}
+        data-password-field=""
+      />
+      <button
+        type="button"
+        className="absolute inset-y-0 end-0 z-10 flex w-11 cursor-pointer items-center justify-center rounded-e-2xl text-ink-500 transition hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setVisible((open) => !open)}
+        aria-label={visible ? t('auth.hidePassword') : t('auth.showPassword')}
+        aria-pressed={visible}
+      >
+        {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+      </button>
+    </div>
+  )
 }
 
 export function ToggleField({

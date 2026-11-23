@@ -84,8 +84,14 @@ function VolunteerInviteCard({ to }: { to: string }) {
         <h2 className="mt-1.5 text-2xl font-semibold leading-8">
           {t("landing.volunteer.inviteTitle")}
         </h2>
+        <p className="mt-2 text-sm font-medium leading-6 text-gold-400">
+          {t("landing.volunteer.inviteLead")}
+        </p>
         <p className="mt-2 text-sm leading-6 text-white/80">
           {t("landing.volunteer.inviteHint")}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-white/80">
+          {t("landing.volunteer.inviteBody")}
         </p>
         <Link
           to={to}
@@ -185,13 +191,6 @@ export function LandingPage() {
                       year: pilgrimageYear,
                     })}
                   </Link>
-                  <Link
-                    to="/introduce-accommodation"
-                    className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-mint-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(20,40,40,0.16)] transition hover:-translate-y-0.5 hover:bg-mint-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                  >
-                    <Building2 className="size-4" aria-hidden />
-                    {t("landing.introduceAccommodation.action")}
-                  </Link>
                 </div>
               </div>
               <div className="hidden justify-self-center lg:block">
@@ -203,32 +202,6 @@ export function LandingPage() {
               </div>
             </div>
           </div>
-        </section>
-
-        <section className="mx-auto w-full max-w-6xl px-4 sm:px-8">
-          <Link
-            to="/introduce-accommodation"
-            className="group flex flex-col gap-3 rounded-[24px] border border-white bg-white p-4 shadow-[0_12px_32px_rgba(20,40,40,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(46,189,182,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:flex-row sm:items-center sm:px-5 sm:py-4"
-          >
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
-              <Building2 className="size-7" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="text-xs font-medium text-teal-700">
-                {t("landing.introduceAccommodation.eyebrow")}
-              </span>
-              <span className="mt-1 block text-lg font-semibold text-ink-900">
-                {t("landing.introduceAccommodation.title")}
-              </span>
-              <span className="mt-0.5 block text-sm leading-6 text-ink-500">
-                {t("landing.introduceAccommodation.hint")}
-              </span>
-            </span>
-            <span className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-mint-500 px-4 py-2.5 text-sm font-semibold text-white transition group-hover:bg-mint-400">
-              {t("landing.introduceAccommodation.action")}
-              <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
-            </span>
-          </Link>
         </section>
 
         {news.data?.length ? (
@@ -376,6 +349,32 @@ export function LandingPage() {
             </div>
             <VolunteerInviteCard to={volunteerTo} />
           </div>
+        </section>
+
+        <section className="mx-auto w-full max-w-6xl px-4 sm:px-8">
+          <Link
+            to="/introduce-accommodation"
+            className="group flex flex-col gap-3 rounded-[24px] border border-white bg-white p-4 shadow-[0_12px_32px_rgba(20,40,40,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(46,189,182,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 sm:flex-row sm:items-center sm:px-5 sm:py-4"
+          >
+            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)]">
+              <Building2 className="size-7" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-xs font-medium text-teal-700">
+                {t("landing.introduceAccommodation.eyebrow")}
+              </span>
+              <span className="mt-1 block text-lg font-semibold text-ink-900">
+                {t("landing.introduceAccommodation.title")}
+              </span>
+              <span className="mt-0.5 block text-sm leading-6 text-ink-500">
+                {t("landing.introduceAccommodation.hint")}
+              </span>
+            </span>
+            <span className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-mint-500 px-4 py-2.5 text-sm font-semibold text-white transition group-hover:bg-mint-400">
+              {t("landing.introduceAccommodation.action")}
+              <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
+            </span>
+          </Link>
         </section>
 
         {campaigns.data?.length ? (

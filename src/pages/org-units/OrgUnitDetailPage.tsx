@@ -1,4 +1,4 @@
-import { AlignLeft, Building, MessageCircle, Phone, Send, UserRound, Users } from 'lucide-react'
+import { AlignLeft, Building, Languages, MessageCircle, Phone, Send, UserRound, Users } from 'lucide-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -14,10 +14,12 @@ import {
 } from '../../components/ui/Form'
 import {
   FormCard,
+  FormEmptyHint,
   FormFactTile,
   FormSectionTitle,
 } from '../../components/ui/FormLayout'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
+import { languageDir } from '../../i18n'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
 import type { OrgUnit } from '../../types/app'
@@ -62,6 +64,7 @@ export function OrgUnitDetailPage() {
     return <LoadingState />
   }
 
+  const translations = item.translations ?? []
   const canInvite =
     Boolean(item.eitaaChannel || item.telegramChannel) &&
     item.accommodationLiaisonCount + item.caravanLiaisonCount > 0
@@ -154,6 +157,57 @@ export function OrgUnitDetailPage() {
                 className="sm:col-span-2"
               />
             </div>
+          </section>
+
+          <section>
+            <FormSectionTitle icon={Languages}>{t('orgUnits.translations')}</FormSectionTitle>
+            {translations.length ? (
+              <div className="space-y-4">
+                {translations.map((row) => (
+                  <div key={row.locale} className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                    <FormFactTile
+                      icon={Languages}
+                      label={t('orgUnits.availableLocales')}
+                      value={t(`languages.${row.locale}`, { defaultValue: row.locale })}
+                      tone="teal"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={Building}
+                      label={t('orgUnits.name')}
+                      value={
+                        <span dir={languageDir(row.locale)} lang={row.locale}>
+                          {row.name}
+                        </span>
+                      }
+                      tone="mint"
+                    />
+                    <FormFactTile
+                      icon={AlignLeft}
+                      label={t('orgUnits.description')}
+                      value={
+                        row.description ? (
+                          <span
+                            className="whitespace-pre-wrap"
+                            dir={languageDir(row.locale)}
+                            lang={row.locale}
+                          >
+                            {row.description}
+                          </span>
+                        ) : (
+                          '—'
+                        )
+                      }
+                      empty={!row.description}
+                      tone="teal"
+                      className="sm:col-span-2"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <FormEmptyHint>{t('orgUnits.noTranslations')}</FormEmptyHint>
+            )}
           </section>
 
           <DetailActions

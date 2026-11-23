@@ -2199,6 +2199,14 @@ export type HeadquartersPhone = {
   updatedAt: string;
 };
 
+export type HeadquartersInfoTranslation = {
+  locale: string;
+  name: string;
+  title: string | null;
+  description: string | null;
+  address: string | null;
+};
+
 export type HeadquartersInfo = {
   id: string;
   name: string;
@@ -2217,6 +2225,8 @@ export type HeadquartersInfo = {
   logoId: string | null;
   phoneCount: number;
   phones?: HeadquartersPhone[];
+  translations?: HeadquartersInfoTranslation[];
+  translatedLocales?: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -2321,6 +2331,12 @@ export type PublicOrgUnit = {
   manager: PublicOrgUnitManager | null;
 };
 
+export type OrgUnitTranslation = {
+  locale: string;
+  name: string;
+  description: string | null;
+};
+
 export type OrgUnit = {
   id: string;
   name: string;
@@ -2332,6 +2348,8 @@ export type OrgUnit = {
   manager: OrgUnitManager | null;
   accommodationLiaisonCount: number;
   caravanLiaisonCount: number;
+  translations?: OrgUnitTranslation[];
+  translatedLocales?: string[];
   createdAt: string;
   updatedAt: string;
 };

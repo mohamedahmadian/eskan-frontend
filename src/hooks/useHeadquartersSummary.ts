@@ -13,8 +13,10 @@ export async function invalidateHeadquartersBranding(queryClient: QueryClient) {
 }
 
 export function useHeadquartersSummary() {
+  const { i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0] ?? 'fa'
   return useQuery({
-    queryKey: headquartersSummaryQueryKey,
+    queryKey: [...headquartersSummaryQueryKey, locale],
     queryFn: async () => {
       const { data } = await api.get<HeadquartersServiceSummary>('/headquarters-info/summary')
       return data

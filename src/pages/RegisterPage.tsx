@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthProvider'
 import { AuthBackButton, AuthGuestLayout } from '../components/auth/AuthGuestLayout'
 import { SearchSelect } from '../components/ui/SearchSelect'
-import { AppForm, Button, FormField, ToggleField, fieldClassName, inputClassName } from '../components/ui/Form'
+import { AppForm, Button, FormField, PasswordInput, ToggleField, fieldClassName, inputClassName } from '../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
 import { UniqueFieldWrap, type UniqueCheckStatus } from '../components/ui/UniqueFieldStatus'
 import { usePreferredLocale } from '../hooks/usePreferredLocale'
@@ -24,6 +24,10 @@ import {
   USERNAME_ENGLISH_PATTERN,
 } from '../lib/identity'
 import { isValidIranianNationalId, normalizePassportNumber } from '../lib/national-id'
+import {
+  REGISTER_OTHER_COUNTRY,
+  registerLocaleFromCountryIso2,
+} from '../lib/register-locale'
 import { type Country, userGenders, type UserGender } from '../types/app'
 
 type CheckStatus = UniqueCheckStatus
@@ -53,7 +57,7 @@ export function RegisterPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const geoName = useGeoName()
-  const { setLocale } = usePreferredLocale()
+  const { locale, setLocale } = usePreferredLocale()
   const [params] = useSearchParams()
   const next = params.get('next')
   const afterAuth = afterAuthPath(next)
@@ -101,12 +105,32 @@ export function RegisterPage() {
     },
   })
   const iranCountryId = countries.data?.find((country) => country.iso2 === 'IR')?.id ?? ''
+  const iraqCountryId = countries.data?.find((country) => country.iso2 === 'IQ')?.id ?? ''
+  const localeCountryRef = useRef('')
+  const countryPickedByUserRef = useRef(false)
 
   useEffect(() => {
     if (!countryId && iranCountryId) {
       setCountryId(iranCountryId)
     }
   }, [countryId, iranCountryId])
+
+  useEffect(() => {
+    if (!countryId || countryId === localeCountryRef.current) return
+    const iso2 =
+      countryId === REGISTER_OTHER_COUNTRY
+        ? null
+        : countryId === iranCountryId
+          ? 'IR'
+          : countryId === iraqCountryId
+            ? 'IQ'
+            : (countries.data?.find((country) => country.id === countryId)?.iso2 ?? null)
+    if (countryId !== REGISTER_OTHER_COUNTRY && !iso2) return
+    localeCountryRef.current = countryId
+    // پیش‌فرض ایران فقط وقتی زبان فارسی است زبان را عوض می‌کند
+    if (!countryPickedByUserRef.current && locale !== 'fa') return
+    setLocale(registerLocaleFromCountryIso2(iso2))
+  }, [countryId, countries.data, iranCountryId, iraqCountryId, locale, setLocale])
 
   useEffect(() => {
     return () => {
@@ -116,7 +140,7 @@ export function RegisterPage() {
     }
   }, [])
 
-  const isIranian = !countryId || countryId === iranCountryId
+  const isIranian = countryId !== REGISTER_OTHER_COUNTRY && (!countryId || countryId === iranCountryId)
   const phoneRequired = isIranian
   const phoneDigits = parseDigitString(phone)
   const passportValue = normalizePassportNumber(passportNumber)
@@ -302,6 +326,7 @@ export function RegisterPage() {
         password: passwordValue,
         gender,
         countryId: countryId || undefined,
+        ...(isAppLanguage(i18n.language) ? { locale: i18n.language } : {}),
         loginUrl: `${window.location.origin}/login`,
         ...(phoneDigits ? { phone: phoneDigits } : {}),
         ...(!isIranian && passportValue ? { passportNumber: passportValue } : {}),
@@ -432,9 +457,8 @@ export function RegisterPage() {
                 />
               </FormField>
               <FormField icon={Lock} label={t('users.password')} htmlFor="password">
-                <input
+                <PasswordInput
                   id="password"
-                  type="password"
                   className={fieldClassName}
                   value={password}
                   onChange={(e) => setPassword(toLatinDigits(e.target.value))}
@@ -507,12 +531,18 @@ export function RegisterPage() {
               <SearchSelect
                 id="countryId"
                 value={countryId}
-                onChange={setCountryId}
+                onChange={(value) => {
+                  countryPickedByUserRef.current = true
+                  setCountryId(value)
+                }}
                 placeholder={t('geo.selectCountry')}
-                options={(countries.data ?? []).map((country) => ({
-                  value: country.id,
-                  label: geoName(country),
-                }))}
+                options={[
+                  ...(countries.data ?? []).map((country) => ({
+                    value: country.id,
+                    label: geoName(country),
+                  })),
+                  { value: REGISTER_OTHER_COUNTRY, label: t('geo.otherCountry') },
+                ]}
               />
             </FormField>
             <Button type="submit" className="w-full" disabled={submitting}>

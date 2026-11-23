@@ -2,7 +2,7 @@ import { Building2, CalendarRange, MessageCircle, Phone, Send, UserRound } from 
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { LoadingState } from "../../components/ui/Form";
-import { FormEmptyHint, FormMetaChip } from "../../components/ui/FormLayout";
+import { FormCardHeaderDecor, FormEmptyHint, FormMetaChip } from "../../components/ui/FormLayout";
 import { useBrandDisplay } from "../../hooks/useHeadquartersSummary";
 import { api, getImageUrl } from "../../lib/api";
 import {
@@ -18,9 +18,9 @@ import { LandingShell } from "./LandingShell";
 export function PublicAboutPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
-  const { title: brandTitle, name: brandName, branding } = useBrandDisplay();
+  const { title: brandTitle, branding } = useBrandDisplay();
   const query = useQuery({
-    queryKey: ["public", "org-units"],
+    queryKey: ["public", "org-units", locale],
     queryFn: async () => {
       const { data } = await api.get<PublicOrgUnit[]>("/org-units/public");
       return data;
@@ -38,17 +38,13 @@ export function PublicAboutPage() {
           <LandingPageHeader
             icon={Building2}
             eyebrow={t("landing.about.eyebrow")}
-            title={t("landing.about.title")}
+            title={brandTitle}
             subtitle={
-              <>
-                <p className="text-base font-medium text-ink-800">{brandTitle}</p>
-                {brandName && brandName !== brandTitle ? (
-                  <p className="mt-0.5 text-sm text-ink-500">{brandName}</p>
-                ) : null}
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-8 text-ink-600">
-                  {intro || t("landing.about.hint")}
+              intro ? (
+                <p className="whitespace-pre-wrap text-sm leading-8 text-ink-600">
+                  {intro}
                 </p>
-              </>
+              ) : undefined
             }
             chips={
               years != null ? (
@@ -127,25 +123,26 @@ function UnitSection({
       id={`unit-${unit.id}`}
       className="scroll-mt-24 overflow-hidden rounded-[32px] border border-white bg-white shadow-[0_12px_32px_rgba(20,40,40,0.06)]"
     >
-      <div
-        className={`flex items-center gap-3 px-5 py-4 sm:px-7 ${
-          mint
-            ? "bg-gradient-to-e from-mint-500 to-teal-400"
-            : "bg-gradient-to-e from-teal-500 to-mint-400"
-        }`}
-      >
-        <span className="flex size-11 items-center justify-center rounded-2xl bg-white/18 text-white ring-1 ring-white/25">
-          <Building2 className="size-5" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium text-white/80">
-            {t("landing.about.unitLabel", {
-              n: formatNumber(index + 1, locale),
-            })}
-          </p>
-          <h3 className="truncate text-lg font-semibold text-white">
-            {unit.name}
-          </h3>
+      <div className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-4 sm:px-7">
+        <FormCardHeaderDecor />
+        <div className="relative flex items-center gap-3">
+          <span
+            className={`flex size-11 items-center justify-center rounded-2xl text-white shadow-[0_10px_22px_rgba(46,189,182,0.32)] ${
+              mint ? "bg-mint-500" : "bg-teal-500"
+            }`}
+          >
+            <Building2 className="size-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium text-teal-700">
+              {t("landing.about.unitLabel", {
+                n: formatNumber(index + 1, locale),
+              })}
+            </p>
+            <h3 className="break-words text-lg font-semibold text-ink-900">
+              {unit.name}
+            </h3>
+          </div>
         </div>
       </div>
       <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1fr_18rem]">
@@ -220,9 +217,6 @@ function UnitSection({
               <div className="min-w-0">
                 <p className="font-semibold text-ink-900">
                   {unit.manager.fullName}
-                </p>
-                <p className="mt-0.5 text-xs text-ink-400">
-                  {t("landing.about.managerRole")}
                 </p>
               </div>
             </div>

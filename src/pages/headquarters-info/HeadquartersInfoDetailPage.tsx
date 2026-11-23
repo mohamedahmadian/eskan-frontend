@@ -3,6 +3,7 @@ import {
   Calendar,
   Globe,
   Landmark,
+  Languages,
   MapPin,
   MapPinned,
   MessageCircle,
@@ -30,6 +31,7 @@ import {
 } from '../../components/ui/FormLayout'
 import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
+import { languageDir } from '../../i18n'
 import { api } from '../../lib/api'
 import { formatNumber, localizeDigits } from '../../lib/datetime'
 import type { HeadquartersInfo } from '../../types/app'
@@ -55,6 +57,7 @@ export function HeadquartersInfoDetailPage() {
   }
 
   const phones = item.phones ?? []
+  const translations = item.translations ?? []
 
   return (
     <div className={formShellClassName}>
@@ -84,6 +87,20 @@ export function HeadquartersInfoDetailPage() {
                 value={item.title || '—'}
                 empty={!item.title}
                 tone="mint"
+              />
+              <FormFactTile
+                icon={AlignLeft}
+                label={t('headquartersInfo.description')}
+                value={
+                  item.description ? (
+                    <span className="whitespace-pre-wrap">{item.description}</span>
+                  ) : (
+                    '—'
+                  )
+                }
+                empty={!item.description}
+                tone="teal"
+                className="sm:col-span-2"
               />
               <FormFactTile
                 icon={Calendar}
@@ -158,21 +175,93 @@ export function HeadquartersInfoDetailPage() {
                 value={formatNumber(item.phoneCount, locale)}
                 tone="mint"
               />
-              <FormFactTile
-                icon={AlignLeft}
-                label={t('headquartersInfo.description')}
-                value={
-                  item.description ? (
-                    <span className="whitespace-pre-wrap">{item.description}</span>
-                  ) : (
-                    '—'
-                  )
-                }
-                empty={!item.description}
-                tone="teal"
-                className="sm:col-span-2"
-              />
             </div>
+          </section>
+
+          <section>
+            <FormSectionTitle icon={Languages}>{t('headquartersInfo.translations')}</FormSectionTitle>
+            {translations.length ? (
+              <div className="space-y-4">
+                {translations.map((row) => (
+                  <div key={row.locale} className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                    <FormFactTile
+                      icon={Languages}
+                      label={t('headquartersInfo.availableLocales')}
+                      value={t(`languages.${row.locale}`, { defaultValue: row.locale })}
+                      tone="teal"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={Landmark}
+                      label={t('headquartersInfo.name')}
+                      value={
+                        <span dir={languageDir(row.locale)} lang={row.locale}>
+                          {row.name}
+                        </span>
+                      }
+                      tone="mint"
+                    />
+                    <FormFactTile
+                      icon={Type}
+                      label={t('headquartersInfo.titleLabel')}
+                      value={
+                        row.title ? (
+                          <span dir={languageDir(row.locale)} lang={row.locale}>
+                            {row.title}
+                          </span>
+                        ) : (
+                          '—'
+                        )
+                      }
+                      empty={!row.title}
+                      tone="teal"
+                    />
+                    <FormFactTile
+                      icon={AlignLeft}
+                      label={t('headquartersInfo.description')}
+                      value={
+                        row.description ? (
+                          <span
+                            className="whitespace-pre-wrap"
+                            dir={languageDir(row.locale)}
+                            lang={row.locale}
+                          >
+                            {row.description}
+                          </span>
+                        ) : (
+                          '—'
+                        )
+                      }
+                      empty={!row.description}
+                      tone="mint"
+                      className="sm:col-span-2"
+                    />
+                    <FormFactTile
+                      icon={MapPin}
+                      label={t('headquartersInfo.address')}
+                      value={
+                        row.address ? (
+                          <span
+                            className="whitespace-pre-wrap"
+                            dir={languageDir(row.locale)}
+                            lang={row.locale}
+                          >
+                            {row.address}
+                          </span>
+                        ) : (
+                          '—'
+                        )
+                      }
+                      empty={!row.address}
+                      tone="teal"
+                      className="sm:col-span-2"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <FormEmptyHint>{t('headquartersInfo.noTranslations')}</FormEmptyHint>
+            )}
           </section>
 
           <section>

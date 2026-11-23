@@ -5,7 +5,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthProvider'
 import { AuthBackButton, AuthGuestLayout } from '../components/auth/AuthGuestLayout'
-import { AppForm, Button, FormField, fieldClassName } from '../components/ui/Form'
+import { AppForm, Button, FormField, PasswordInput, fieldClassName } from '../components/ui/Form'
 import { FormCard, formCardBodyClassName } from '../components/ui/FormLayout'
 import { isApiServerError } from '../lib/api'
 import { afterAuthPath, withNext } from '../lib/auth-redirect'
@@ -61,9 +61,8 @@ export function LoginPage() {
             />
           </FormField>
           <FormField icon={Lock} label={t('auth.password')} htmlFor="password">
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               className={fieldClassName}
               value={password}
               onChange={(e) => setPassword(toLatinDigits(e.target.value))}
@@ -74,7 +73,7 @@ export function LoginPage() {
           </FormField>
           <Button type="submit" className="w-full" disabled={submitting}>
             <KeyRound className="size-4" />
-            {t('auth.login')}
+            {t('auth.enterSystem')}
           </Button>
           <Link
             to="/forgot-password"

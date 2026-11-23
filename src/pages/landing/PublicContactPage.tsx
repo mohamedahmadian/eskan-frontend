@@ -33,7 +33,6 @@ export function PublicContactPage() {
         <section className="mx-auto w-full max-w-6xl px-4 sm:px-8">
           <LandingPageHeader
             icon={Phone}
-            eyebrow={t("landing.contact.eyebrow")}
             title={t("landing.contact.title")}
           />
         </section>
@@ -98,7 +97,7 @@ export function PublicContactPage() {
               <h2 className="text-xl font-semibold text-ink-900">
                 {t("landing.contact.phonesTitle")}
               </h2>
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3">
                 {phones.map((item) => {
                   const latin = parseDigitString(item.phone);
                   const phoneLabel = localizeDigits(item.phone, locale);
@@ -107,13 +106,13 @@ export function PublicContactPage() {
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 ring-1 ring-teal-100">
                         <Phone className="size-4" aria-hidden />
                       </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-xs font-medium text-teal-700">
+                      <span className="min-w-0 flex-1">
+                        <span className="block break-words text-xs font-medium text-teal-700">
                           {item.department || t("headquartersPhones.phone")}
                         </span>
                         <span
                           dir="ltr"
-                          className="mt-0.5 block truncate text-sm font-semibold text-ink-900"
+                          className="mt-0.5 block break-all text-sm font-semibold text-ink-900"
                         >
                           {phoneLabel}
                         </span>
@@ -148,7 +147,7 @@ export function PublicContactPage() {
               <h2 className="text-xl font-semibold text-ink-900">
                 {t("landing.contact.socialsTitle")}
               </h2>
-              <div className="mt-4 grid grid-flow-col auto-cols-fr gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3">
                 {links.map((item) => {
                   const Icon = item.Icon;
                   return (
@@ -165,14 +164,14 @@ export function PublicContactPage() {
                       >
                         <Icon className="size-4" />
                       </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-ink-900">
+                      <span className="min-w-0 flex-1">
+                        <span className="block break-words text-sm font-semibold text-ink-900">
                           {t(item.labelKey)}
                         </span>
                         {item.display ? (
                           <span
                             dir="ltr"
-                            className="mt-0.5 block truncate text-xs text-ink-500"
+                            className="mt-0.5 block break-all text-xs text-ink-500"
                           >
                             {item.display}
                           </span>
