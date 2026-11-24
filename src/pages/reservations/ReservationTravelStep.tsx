@@ -72,9 +72,6 @@ export function ReservationTravelStep({
       ? {
           id: reservation.caravan.id,
           name: reservation.caravan.name,
-          maleCount: reservation.caravan.maleCount ?? 0,
-          femaleCount: reservation.caravan.femaleCount ?? 0,
-          totalCount: reservation.caravan.totalCount ?? 0,
           city: reservation.caravan.city,
         }
       : reservation.type === 'GROUP' && reservation.group
@@ -479,14 +476,8 @@ export function ReservationTravelStep({
               : undefined
           }
         />
-        <div className="flex flex-wrap items-center gap-3 pt-2">
-          {stepIndex > 0 ? (
-            <Button type="button" onClick={goPrev} disabled={submit.isPending}>
-              <ChevronRight className="size-4" aria-hidden />
-              {t('reservations.prevStep')}
-            </Button>
-          ) : null}
-          <Button type="submit" className="ms-auto" disabled={submit.isPending}>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <Button type="submit" disabled={submit.isPending}>
             {lastStep ? (
               <>
                 <Check className="size-4" aria-hidden />
@@ -499,6 +490,12 @@ export function ReservationTravelStep({
               </>
             )}
           </Button>
+          {stepIndex > 0 ? (
+            <Button type="button" onClick={goPrev} disabled={submit.isPending}>
+              <ChevronRight className="size-4" aria-hidden />
+              {t('reservations.prevStep')}
+            </Button>
+          ) : null}
         </div>
       </AppForm>
     </div>

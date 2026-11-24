@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { localizeDigits } from '../../lib/datetime'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { confirmToast } from '../../components/ui/confirmToast'
 import { Button, FormField, fieldClassName } from '../../components/ui/Form'
 import { PaginationBar, TableCard } from '../../components/ui/ListControls'
 import { api, getApiErrorMessage } from '../../lib/api'
@@ -118,6 +119,16 @@ export function CaravanManagerPicker({
     closeSearch()
   }
 
+  function requestClearManager() {
+    confirmToast({
+      title: t('caravans.confirmRemoveManager', { name: value?.fullName ?? '' }),
+      confirmLabel: t('common.yesDelete'),
+      cancelLabel: t('common.cancel'),
+      confirmVariant: 'danger',
+      onConfirm: clearManager,
+    })
+  }
+
   function chooseManager(user: ManagedUser) {
     onChange(toChoice(user))
     closeSearch()
@@ -206,7 +217,11 @@ export function CaravanManagerPicker({
                     type="button"
                     variant="danger"
                     className="!h-8 !px-2.5 !py-1 !text-xs"
-                    onClick={clearManager}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      requestClearManager()
+                    }}
                   >
                     <Trash2 className="size-3.5" aria-hidden />
                     {t('common.delete')}

@@ -2,9 +2,9 @@ import { MapPinned } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { placementTabClassName } from '../../components/ui/placementTab'
 
-export const caravanTabs = ['basic', 'contacts', 'extra', 'license', 'social', 'years'] as const
+export const caravanTabs = ['basic', 'extra', 'license', 'social'] as const
 
-export type CaravanTab = (typeof caravanTabs)[number] | 'placement'
+export type CaravanTab = (typeof caravanTabs)[number] | 'placement' | 'files'
 
 export function CaravanTabNav({
   tab,

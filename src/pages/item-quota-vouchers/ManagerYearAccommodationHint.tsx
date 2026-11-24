@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, Building2, MapPin, Mars, Venus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../lib/api'
-import { currentPersianYear, formatNumber } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import type { Accommodation } from '../../types/app'
 
 function CapacityChip({
@@ -28,13 +28,12 @@ function CapacityChip({
 export function ManagerYearAccommodationHint({ managerId }: { managerId: string }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
-  const year = currentPersianYear()
   const query = useQuery({
-    queryKey: ['accommodations', 'for-manager', managerId, year],
+    queryKey: ['accommodations', 'for-manager', managerId],
     enabled: Boolean(managerId),
     queryFn: async () => {
       const { data } = await api.get<Accommodation[]>('/accommodations', {
-        params: { year, managerUserId: managerId },
+        params: { managerUserId: managerId },
       })
       return data
     },

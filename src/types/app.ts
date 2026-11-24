@@ -47,6 +47,15 @@ export const accommodationStatuses = {
   INACTIVE: "INACTIVE",
 } as const;
 
+export const caravanStatuses = {
+  ACTIVE: "ACTIVE",
+  PENDING_REVIEW: "PENDING_REVIEW",
+  INACTIVE: "INACTIVE",
+} as const;
+
+export type CaravanStatus =
+  (typeof caravanStatuses)[keyof typeof caravanStatuses];
+
 export type AccommodationStatus =
   (typeof accommodationStatuses)[keyof typeof accommodationStatuses];
 
@@ -639,12 +648,8 @@ export type Caravan = {
       };
     };
   } | null;
-  walkingRouteId: string | null;
-  walkingRoute?: {
-    id: string;
-    name: string;
-  } | null;
   licenseImageId: string | null;
+  licenseImageIds?: string[];
   managerUserId: string | null;
   manager?: {
     id: string;
@@ -656,46 +661,14 @@ export type Caravan = {
     birthDate?: string | null;
     status: UserStatus;
   } | null;
-  contacts?: Array<{
-    id: string;
-    role: "DEPUTY" | "CLERIC" | "CULTURAL" | "SECURITY" | "RECEPTION";
-    userId: string;
-    user: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      fullName: string;
-      nationalId: string | null;
-      phone: string | null;
-      birthDate?: string | null;
-      status: UserStatus;
-    };
-  }>;
   eitaa: string | null;
   bale: string | null;
   telegram: string | null;
   instagram: string | null;
-  totalCount: number;
-  maleCount: number;
-  femaleCount: number;
+  status: CaravanStatus;
   isActive: boolean;
   createdAt: string;
   managerReused?: boolean;
-  years?: CaravanYearLink[];
-};
-
-export type CaravanYearLink = {
-  id: string;
-  year: number;
-  managerUserId: string | null;
-  maleCount: number;
-  femaleCount: number;
-  manager?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    fullName: string;
-  } | null;
 };
 
 export const caravanGenderKinds = {
@@ -716,13 +689,6 @@ export const caravanOrigins = {
 export type CaravanOrigin =
   (typeof caravanOrigins)[keyof typeof caravanOrigins];
 
-export type CaravanYearStats = {
-  year: number;
-  total: number;
-  active: number;
-  inactive: number;
-};
-
 export type CaravanReport = {
   year: number;
   total: number;
@@ -742,11 +708,6 @@ export type CaravanReport = {
   byOrigin: {
     iranian: number;
     international: number;
-  };
-  byContactStatus: {
-    complete: number;
-    partial: number;
-    none: number;
   };
   byGenderType: { genderType: CaravanGenderKind; count: number }[];
   byWalkingRoute: { id: string | null; name: string; count: number }[];
@@ -920,20 +881,6 @@ export type ProvincialMonitoringCityDetail = {
   groups: ProvincialMonitoringGroup[];
 };
 
-export type CaravanYearRow = Caravan & {
-  activeInYear: boolean;
-};
-
-export type CaravanYearTransferResult = {
-  sourceYear: number;
-  targetYear: number;
-  copyManagers: boolean;
-  requested: number;
-  transferred: number;
-  skipped: number;
-  errors: { caravanId: string; message: string }[];
-};
-
 export type Group = {
   id: string;
   name: string;
@@ -1010,7 +957,6 @@ export type UserLocationHistoryList = Paginated<UserLocationHistoryItem> & {
 export type ManagedAccommodationLink = {
   id: string;
   isPrimary: boolean;
-  year: number;
   createdAt: string;
   accommodation: {
     id: string;
@@ -1023,7 +969,9 @@ export type ManagedAccommodationLink = {
 export type ManagedCaravan = {
   id: string;
   name: string;
+  status?: CaravanStatus;
   isActive: boolean;
+  foundedYear?: number | null;
   licenseNumber?: string | null;
   totalCount?: number;
   city?: (GeoName & { id: string; provinceId: string }) | null;
@@ -1138,7 +1086,6 @@ export type PublicProfilePilgrimage = {
 
 export type PublicProfileAccommodation = {
   id: string;
-  year: number;
   isPrimary: boolean;
   accommodation: {
     id: string;
@@ -1325,11 +1272,8 @@ export type EntryBorder = {
 
 export type AccommodationManagerLink = {
   id: string;
-  userId: string | null;
+  userId: string;
   isPrimary: boolean;
-  year: number;
-  maleCapacity: number;
-  femaleCapacity: number;
   createdAt: string;
   user: { id: string; username: string; fullName: string } | null;
 };
@@ -1420,10 +1364,6 @@ export type AccommodationContactLink = {
   user: AccommodationContactPerson;
 };
 
-export type AccommodationYearContactLink = AccommodationContactLink & {
-  year: number;
-};
-
 export type Accommodation = AccommodationTypeDetails & {
   id: string;
   name: string;
@@ -1479,7 +1419,6 @@ export type Accommodation = AccommodationTypeDetails & {
   evaluations: AccommodationEvaluation[];
   managers: AccommodationManagerLink[];
   contacts?: AccommodationContactLink[];
-  yearContacts?: AccommodationYearContactLink[];
   createdAt: string;
   updatedAt: string;
 };
@@ -1505,6 +1444,10 @@ export type AccommodationReport = {
     active: number;
     inactive: number;
   };
+  occupancy?: {
+    year: number;
+    occupied: number;
+  };
   byType: { type: AccommodationTypeRef; count: number }[];
   byGenderType: { genderType: GenderType; count: number }[];
   byManagementType: { managementType: ManagementType; count: number }[];
@@ -1515,15 +1458,7 @@ export type AccommodationReport = {
   }[];
 };
 
-export type AccommodationYearStats = {
-  year: number;
-  total: number;
-  active: number;
-  inactive: number;
-};
-
 export type AccommodationAssignmentStats = {
-  year: number;
   total: number;
   withManager: number;
   withoutManager: number;
@@ -1536,28 +1471,13 @@ export type AccommodationAssignmentRow = {
   city: (GeoName & { id: string }) | null;
   province: (GeoName & { id: string }) | null;
   managerUserId: string | null;
+  managerAssignmentId: string | null;
   managerName: string | null;
   maleCapacity: number;
   femaleCapacity: number;
 };
 
-export type AccommodationAssignmentList = Paginated<AccommodationAssignmentRow> & {
-  year: number;
-};
-
-export type AccommodationYearRow = Accommodation & {
-  activeInYear: boolean;
-};
-
-export type AccommodationYearTransferResult = {
-  sourceYear: number;
-  targetYear: number;
-  copyManagers: boolean;
-  requested: number;
-  transferred: number;
-  skipped: number;
-  errors: { accommodationId: string; message: string }[];
-};
+export type AccommodationAssignmentList = Paginated<AccommodationAssignmentRow>;
 
 export type PilgrimReportNamedCount = {
   id: string;
@@ -2390,10 +2310,8 @@ export type IssuedLicenseCaravan = {
   officePhone: string | null;
   licenseNumber: string | null;
   foundedYear: number | null;
+  status?: CaravanStatus;
   isActive: boolean;
-  maleCount: number;
-  femaleCount: number;
-  totalCount: number;
   city: {
     id: string;
     nameFa: string;
@@ -3233,9 +3151,8 @@ export type Reservation = ReservationListItem & {
 
 export type ReservationStayManager = {
   id: string;
-  userId: string | null;
+  userId: string;
   isPrimary: boolean;
-  year: number;
   user: { id: string; fullName: string; phone?: string | null } | null;
 };
 
@@ -3369,7 +3286,6 @@ export type ReceptionSettings = {
   caravanFemaleCapacity: number;
   caravanAutoApprove: boolean;
   caravanAutoApproveLicenses: boolean;
-  caravanMaxPerNationalId: number;
   caravanNewMaxHeadcount: number;
   caravanCreateInReception: boolean;
   caravanPlacementMode: PlacementMode;
@@ -3458,6 +3374,7 @@ export type UserHomeReservationTotals = {
 export type UserHomeCaravan = {
   id: string;
   name: string;
+  status?: CaravanStatus;
   isActive: boolean;
   city: GeoName & { id: string; provinceId: string };
 };
@@ -3563,6 +3480,7 @@ export type ReceptionVisitStay = {
 export type ReceptionCaravanSummary = {
   id: string;
   name: string;
+  status?: CaravanStatus;
   isActive: boolean;
   licenseNumber: string | null;
   officePhone: string | null;

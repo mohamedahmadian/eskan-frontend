@@ -51,14 +51,10 @@ export function toNeshanMapLink(raw: string | null | undefined) {
   return value
 }
 
-function stayManagerName(accommodation: ReservationStayAccommodation | undefined, year: number) {
+function stayManagerName(accommodation: ReservationStayAccommodation | undefined, _year?: number) {
   const managers = accommodation?.managers ?? []
   if (!managers.length) return ''
-  const ranked = [...managers].sort((a, b) => {
-    if (a.year === year && b.year !== year) return -1
-    if (b.year === year && a.year !== year) return 1
-    return Number(b.isPrimary) - Number(a.isPrimary)
-  })
+  const ranked = [...managers].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
   return ranked[0]?.user?.fullName?.trim() || ''
 }
 

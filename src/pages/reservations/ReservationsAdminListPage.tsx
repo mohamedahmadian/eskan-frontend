@@ -8,7 +8,6 @@ import {
   Phone,
   Plus,
   Tent,
-  Trash2,
   UserRound,
   Ticket,
 } from "lucide-react";
@@ -16,7 +15,6 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, Link } from "react-router-dom";
-import { toast } from "sonner";
 import {
   FilterPair,
   PaginationBar,
@@ -30,13 +28,12 @@ import {
   PageHeader,
   fullWidthShellClassName,
 } from "../../components/ui/Form";
-import { confirmToast } from "../../components/ui/confirmToast";
 import { FormMetaChip } from "../../components/ui/FormLayout";
 import { PersianDateField } from "../../components/ui/PersianDateField";
 import { SearchSelect } from "../../components/ui/SearchSelect";
 import { useListParams } from "../../hooks/useListParams";
 import { useListSort } from "../../hooks/useListSort";
-import { api, getApiErrorMessage } from "../../lib/api";
+import { api } from "../../lib/api";
 import {
   addDaysIso,
   currentPersianYear,
@@ -80,9 +77,7 @@ export function ReservationsAdminListPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [purging, setPurging] = useState(false);
   const n = (value: number) => formatNumber(value, locale);
   const nameOf = useGeoName();
   const {
@@ -99,33 +94,6 @@ export function ReservationsAdminListPage() {
     searchParams,
     setParams,
   );
-
-  function purgeAllReservations() {
-    confirmToast({
-      title: t("reservations.confirmPurgeAll"),
-      confirmLabel: t("common.yesDelete"),
-      cancelLabel: t("common.cancel"),
-      confirmVariant: "danger",
-      onConfirm: async () => {
-        setPurging(true);
-        try {
-          const { data } = await api.delete<{ deleted: number }>(
-            "/reservations/purge-all",
-          );
-          toast.success(
-            t("reservations.purgedAll", {
-              count: formatNumber(data.deleted, locale),
-            }),
-          );
-          void queryClient.invalidateQueries({ queryKey: ["reservations"] });
-        } catch (error) {
-          toast.error(getApiErrorMessage(error, t("common.error")));
-        } finally {
-          setPurging(false);
-        }
-      },
-    });
-  }
 
   const currentYear = String(currentPersianYear());
   const year = searchParams.get("year") || currentYear;
@@ -271,23 +239,12 @@ export function ReservationsAdminListPage() {
         subtitle={t("reservations.adminSubtitle")}
         className="mb-3 sm:gap-2"
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" onClick={() => setPickerOpen(true)}>
-              <Plus className="size-4" aria-hidden />
-              {t("reservations.createYear", {
-                year: formatNumber(currentPersianYear(), locale),
-              })}
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              disabled={purging}
-              onClick={purgeAllReservations}
-            >
-              <Trash2 className="size-4" aria-hidden />
-              {t("reservations.purgeAllTemp")}
-            </Button>
-          </div>
+          <Button type="button" onClick={() => setPickerOpen(true)}>
+            <Plus className="size-4" aria-hidden />
+            {t("reservations.createYear", {
+              year: formatNumber(currentPersianYear(), locale),
+            })}
+          </Button>
         }
       />
       {pickerOpen ? (

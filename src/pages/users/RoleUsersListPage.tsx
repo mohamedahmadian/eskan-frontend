@@ -30,8 +30,10 @@ import { formatNumber, localizeDigits } from '../../lib/datetime'
 import { formatRoles, unwrapRoleList } from '../../lib/roles'
 import { useGeoName } from '../../lib/geo'
 import {
+  caravanStatuses,
   userGenders,
   userStatuses,
+  type CaravanStatus,
   type City,
   type Country,
   type ManagedCaravan,
@@ -42,20 +44,25 @@ import {
   type UserStatus,
 } from '../../types/app'
 import type { RoleUserScope } from './user-scopes'
+import { resolveCaravanStatus } from '../caravans/CaravanStatusBadge'
 
 const LIST_CARAVAN_BADGE_LIMIT = 2
 
-function caravanBadgeClass(active: boolean) {
-  return active
-    ? 'bg-teal-50 text-teal-800 ring-teal-100'
-    : 'bg-cream-100 text-ink-500 ring-line'
+function caravanBadgeClass(status: CaravanStatus) {
+  if (status === caravanStatuses.PENDING_REVIEW) {
+    return 'bg-amber-50 text-amber-900 ring-amber-200'
+  }
+  if (status === caravanStatuses.ACTIVE) {
+    return 'bg-teal-50 text-teal-800 ring-teal-100'
+  }
+  return 'bg-cream-100 text-ink-500 ring-line'
 }
 
 function CaravanNameBadges({
   caravans,
   locale,
 }: {
-  caravans: Pick<ManagedCaravan, 'id' | 'name' | 'isActive'>[]
+  caravans: Pick<ManagedCaravan, 'id' | 'name' | 'isActive' | 'status'>[]
   locale: string
 }) {
   const { t } = useTranslation()
@@ -69,7 +76,7 @@ function CaravanNameBadges({
       {shown.map((item) => (
         <span
           key={item.id}
-          className={`inline-flex max-w-[8.5rem] truncate rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${caravanBadgeClass(item.isActive)}`}
+          className={`inline-flex max-w-[8.5rem] truncate rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${caravanBadgeClass(resolveCaravanStatus(item))}`}
         >
           {item.name}
         </span>
@@ -91,11 +98,15 @@ function CaravanNameBadges({
                 {hidden.map((item) => (
                   <li key={item.id}>
                     <span
-                      className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${caravanBadgeClass(item.isActive)}`}
+                      className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${caravanBadgeClass(resolveCaravanStatus(item))}`}
                     >
                       <span
                         className={`size-1.5 shrink-0 rounded-full ${
-                          item.isActive ? 'bg-teal-500' : 'bg-ink-400'
+                          resolveCaravanStatus(item) === caravanStatuses.ACTIVE
+                            ? 'bg-teal-500'
+                            : resolveCaravanStatus(item) === caravanStatuses.PENDING_REVIEW
+                              ? 'bg-amber-500'
+                              : 'bg-ink-400'
                         }`}
                         aria-hidden
                       />

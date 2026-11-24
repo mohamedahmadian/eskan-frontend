@@ -29,6 +29,7 @@ import {
   PilgrimCardModelSwitch,
   type PilgrimCardModel,
 } from '../pilgrims/PilgrimCard'
+import { CaravanStatusBadge } from '../caravans/CaravanStatusBadge'
 import { PublicProfileCard } from './PublicProfileCard'
 
 const pngOptions = {
@@ -235,18 +236,14 @@ export function PublicProfilePage() {
                     </span>
                     <div className="min-w-0">
                       <p className="font-semibold text-ink-900">{caravan.name}</p>
-                      <p className="mt-1 text-xs text-ink-500">
-                        {caravan.city ? geoName(caravan.city) : ''}
-                        {caravan.city ? ' · ' : ''}
-                        {caravan.isActive ? t('geo.active') : t('geo.inactive')}
+                      <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-500">
+                        {caravan.city ? <span>{geoName(caravan.city)}</span> : null}
+                        <CaravanStatusBadge status={caravan.status} isActive={caravan.isActive} />
                       </p>
                       {caravan.licenseNumber ? (
                         <p className="mt-1 text-xs text-ink-500">
                           {t('publicProfile.licenseNumber')}: {caravan.licenseNumber}
                         </p>
-                      ) : null}
-                      {caravan.walkingRoute ? (
-                        <p className="mt-1 text-xs text-ink-500">{caravan.walkingRoute.name}</p>
                       ) : null}
                     </div>
                   </div>
@@ -275,11 +272,12 @@ export function PublicProfilePage() {
                     <div className="min-w-0">
                       <p className="font-semibold text-ink-900">{item.accommodation.name}</p>
                       <p className="mt-1 text-xs text-ink-500">
-                        {formatNumber(item.year, locale)}
-                        {item.accommodation.type
-                          ? ` · ${geoName(item.accommodation.type)}`
-                          : ''}
-                        {item.isPrimary ? ` · ${t('publicProfile.primaryAccommodation')}` : ''}
+                        {[
+                          item.accommodation.type ? geoName(item.accommodation.type) : '',
+                          item.isPrimary ? t('publicProfile.primaryAccommodation') : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
                     </div>
                   </div>

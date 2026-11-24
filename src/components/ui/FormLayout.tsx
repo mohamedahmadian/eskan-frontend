@@ -158,8 +158,8 @@ export function FormCardHeader({
               stackAlways
                 ? 'flex w-full justify-end'
                 : stackNarrow
-                  ? 'w-full md:w-auto md:shrink-0'
-                  : 'shrink-0'
+                  ? 'flex w-full justify-end md:w-auto md:shrink-0'
+                  : 'flex shrink-0 justify-end'
             }`}
           >
             {action}

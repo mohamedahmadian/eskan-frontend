@@ -724,9 +724,6 @@ export function ReservationCreatePage() {
     }
     if (skipParty && soleCaravan && !nextValues.caravanId) {
       nextValues.caravanId = soleCaravan.id
-      if (soleCaravan.walkingRouteId && !nextValues.walkingRouteId) {
-        nextValues.walkingRouteId = soleCaravan.walkingRouteId
-      }
       const soleCounts = countsFromParty(soleCaravan)
       if (
         soleCounts &&
@@ -810,7 +807,6 @@ export function ReservationCreatePage() {
           caravanId: soleCaravan.id,
           groupId: '',
           ...(counts ?? {}),
-          ...(soleCaravan.walkingRouteId ? { walkingRouteId: soleCaravan.walkingRouteId } : {}),
         }
       })
     }
@@ -1078,9 +1074,8 @@ export function ReservationCreatePage() {
           caravanId: sole.id,
           groupId: '',
           ...(countsFromParty(sole) ?? {}),
-          ...(sole.walkingRouteId ? { walkingRouteId: sole.walkingRouteId } : {}),
         }
-        applyParty(sole, sole.walkingRouteId ?? undefined)
+        applyParty(sole)
         nextStep = 'count'
         skipParty = true
       }
@@ -1731,9 +1726,6 @@ export function ReservationCreatePage() {
                 ? {
                     id: draftQuery.data.caravan.id,
                     name: draftQuery.data.caravan.name,
-                    maleCount: draftQuery.data.caravan.maleCount ?? 0,
-                    femaleCount: draftQuery.data.caravan.femaleCount ?? 0,
-                    totalCount: draftQuery.data.caravan.totalCount ?? 0,
                     city: draftQuery.data.caravan.city,
                   }
                 : draftQuery.data?.group && partyKind === 'GROUP'
@@ -1822,16 +1814,9 @@ export function ReservationCreatePage() {
           />
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-3 pt-6">
-          {stepIndex > 0 && step !== 'count' ? (
-            <Button type="button" onClick={goBack} disabled={submitting}>
-              <ChevronRight className="size-4" aria-hidden />
-              {t('reservations.prevStep')}
-            </Button>
-          ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
           <Button
             type="submit"
-            className="ms-auto"
             disabled={submitting || (step === 'type' && !type) || (lastStep && awaitingManagerProfile)}
           >
             {lastStep
@@ -1843,6 +1828,12 @@ export function ReservationCreatePage() {
               : t('reservations.nextStep')}
             {lastStep ? <Check className="size-4" aria-hidden /> : <ChevronLeft className="size-4" aria-hidden />}
           </Button>
+          {stepIndex > 0 && step !== 'count' ? (
+            <Button type="button" onClick={goBack} disabled={submitting}>
+              <ChevronRight className="size-4" aria-hidden />
+              {t('reservations.prevStep')}
+            </Button>
+          ) : null}
         </div>
         {step === 'dates' ? <OccasionStayHint /> : null}
         {draftId && !isAdminCreate ? (

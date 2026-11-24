@@ -57,7 +57,6 @@ import type {
 import { ReceptionKindChips } from './ReceptionKindChips'
 import { ReceptionMatchModal } from './ReceptionMatchModal'
 import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
-import { QuickRoleToggles } from '../../components/users/QuickRoleToggles'
 import {
   ReservationStatusBadge,
   ReservationTypeBadge,
@@ -67,6 +66,7 @@ import {
   StayTextOrLink,
   stayManager,
 } from '../reservations/StayAccommodationCard'
+import { CaravanStatusBadge } from '../caravans/CaravanStatusBadge'
 import {
   isReservationCodeQuery,
   normalizeReservationCode,
@@ -225,15 +225,6 @@ export function ReceptionDesk({
       toast.error(getApiErrorMessage(error, t('common.error')))
     } finally {
       setLoadingProfile(false)
-    }
-  }
-
-  async function refreshProfile(id: string) {
-    try {
-      const { data } = await api.get<ReceptionProfile>(`/reception/people/${id}`)
-      setProfile(data)
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, t('common.error')))
     }
   }
 
@@ -609,21 +600,6 @@ export function ReceptionDesk({
                   />
                 </div>
               </div>
-              <QuickRoleToggles
-                userId={profile.person.id}
-                roleCodes={profile.person.roles.map((role) => role.code)}
-                onChanged={(nextRoles) => {
-                  setProfile((current) =>
-                    current
-                      ? {
-                          ...current,
-                          person: { ...current.person, roles: nextRoles },
-                        }
-                      : current,
-                  )
-                  void refreshProfile(profile.person.id)
-                }}
-              />
               <div className="flex flex-wrap justify-end gap-2">
                 <Link
                   to={personPath(profile.person)}
@@ -679,15 +655,7 @@ export function ReceptionDesk({
                         >
                           {caravan.name}
                         </Link>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            caravan.isActive
-                              ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-100'
-                              : 'bg-cream-100 text-ink-500 ring-1 ring-line'
-                          }`}
-                        >
-                          {caravan.isActive ? t('geo.active') : t('geo.inactive')}
-                        </span>
+                        <CaravanStatusBadge status={caravan.status} isActive={caravan.isActive} />
                         <span className="text-xs text-ink-500">
                           {nameOf(caravan.city)}
                           {caravan.licenseNumber
@@ -788,9 +756,10 @@ export function ReceptionDesk({
 }
 
 function personPath(person: ReceptionPerson) {
-  if (person.kinds.includes('pilgrim')) return `/pilgrims/${person.id}`
-  if (person.kinds.includes('caravanManager')) return `/caravan-managers/${person.id}`
-  if (person.kinds.includes('accommodationManager')) {
+  const codes = new Set(person.roles.map((role) => role.code))
+  if (codes.has('PILGRIM')) return `/pilgrims/${person.id}`
+  if (codes.has('CARAVAN_MANAGER')) return `/caravan-managers/${person.id}`
+  if (codes.has('ACCOMMODATION_MANAGER')) {
     return `/accommodation-managers/${person.id}`
   }
   return `/users/${person.id}`

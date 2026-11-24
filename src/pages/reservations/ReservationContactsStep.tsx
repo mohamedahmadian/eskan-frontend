@@ -2,7 +2,6 @@ import {
   BookOpen,
   Check,
   ClipboardCheck,
-  Copy,
   Landmark,
   Pencil,
   Shield,
@@ -61,9 +60,6 @@ const toneClass: Record<Tone, { wrap: string; icon: string }> = {
   },
 }
 
-/** Caravan contacts are prefilled once per file per session so a deliberate "remove all" sticks. */
-const autoLoadedReservations = new Set<string>()
-
 const roleIcons: Record<ContactRole, LucideIcon> = {
   DEPUTY: UserCog,
   CLERIC: BookOpen,
@@ -95,17 +91,6 @@ export function ReservationContactsStep({
     reservation.status !== 'REJECTED'
   const prevStep = neighborFlowStep(reservation.type, 'contacts', -1, reservation)
   const nextStep = neighborFlowStep(reservation.type, 'contacts', 1, reservation)
-  const shouldAutoLoad =
-    canSeeContacts && showNav && !contacts.length && Boolean(reservation.caravanId)
-
-  useEffect(() => {
-    if (!shouldAutoLoad || autoLoadedReservations.has(reservation.id)) return
-    autoLoadedReservations.add(reservation.id)
-    api
-      .post(`/reservations/${reservation.id}/contacts/from-caravan`)
-      .then(() => onChanged())
-      .catch(() => undefined)
-  }, [shouldAutoLoad, reservation.id, onChanged])
 
   const assignSelf = useMutation({
     mutationFn: async () => {
@@ -125,17 +110,6 @@ export function ReservationContactsStep({
       toast.error(
         error instanceof Error ? error.message : getApiErrorMessage(error, t('common.error')),
       ),
-  })
-
-  const copyFromCaravan = useMutation({
-    mutationFn: async () => {
-      await api.post(`/reservations/${reservation.id}/contacts/from-caravan`)
-    },
-    onSuccess: () => {
-      toast.success(t('reservations.caravanContactsLoaded'))
-      onChanged()
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
   const removeAll = useMutation({
@@ -208,21 +182,6 @@ export function ReservationContactsStep({
             {t('reservations.assignMyself')}
           </Button>
         ) : null}
-        <Button
-          type="button"
-          disabled={!reservation.caravanId || copyFromCaravan.isPending}
-          onClick={() =>
-            confirmToast({
-              title: t('reservations.confirmUseCaravanContacts'),
-              confirmLabel: t('common.yes'),
-              cancelLabel: t('common.cancel'),
-              onConfirm: () => copyFromCaravan.mutate(),
-            })
-          }
-        >
-          <Copy className="size-4" aria-hidden />
-          {t('reservations.useCaravanContacts')}
-        </Button>
         {contacts.length ? (
           <Button
             type="button"

@@ -100,8 +100,16 @@ export function partyDraftError(
 export async function createReservationParty(
   type: PartyKind,
   draft: PartyDraft,
-  year?: number,
+  _year?: number,
 ) {
+  if (type === 'CARAVAN') {
+    const { data } = await api.post<Caravan>('/caravans', {
+      name: draft.name.trim(),
+      cityId: draft.cityId || undefined,
+      managerUserId: draft.managerUserId || undefined,
+    })
+    return { id: data.id }
+  }
   const payload: {
     name: string
     maleCount: number
@@ -109,7 +117,6 @@ export async function createReservationParty(
     cityId?: string
     walkingRouteId?: string | null
     managerUserId?: string
-    year?: number
   } = {
     name: draft.name.trim(),
     maleCount: 0,
@@ -117,23 +124,19 @@ export async function createReservationParty(
     cityId: draft.cityId || undefined,
     walkingRouteId: draft.walkingRouteId || null,
   }
-  if (type === 'CARAVAN' && year != null) {
-    payload.year = year
-  }
   if (draft.managerUserId) {
     payload.managerUserId = draft.managerUserId
   }
-  const url = type === 'CARAVAN' ? '/caravans' : '/groups'
-  const { data } = await api.post<Group | Caravan>(url, payload)
+  const { data } = await api.post<Group>('/groups', payload)
   return { id: data.id }
 }
 
 type PartyItem = {
   id: string
   name: string
-  maleCount: number
-  femaleCount: number
-  totalCount: number
+  maleCount?: number
+  femaleCount?: number
+  totalCount?: number
   city?: Group['city']
 }
 
@@ -199,7 +202,6 @@ export function ReservationPartyFields({
   const quotaManagerId = admin ? draft.managerUserId || undefined : undefined
   const quota = useCaravanCreateQuota({
     enabled: isCaravan && (!admin || Boolean(quotaManagerId)),
-    year,
     managerUserId: quotaManagerId,
   })
   const createBlocked = isCaravan && Boolean(quota.data && !quota.data.allowed)
@@ -209,7 +211,6 @@ export function ReservationPartyFields({
       <p className="rounded-[22px] border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm leading-7 text-ink-700">
         {t('caravans.maxPerNationalIdReached', {
           max: formatNumber(quota.data.max, locale),
-          year: formatNumber(quota.data.year, locale),
         })}
       </p>
     ) : null
@@ -248,9 +249,9 @@ export function ReservationPartyFields({
       return {
         id: data.id,
         name: data.name,
-        maleCount: data.maleCount ?? 0,
-        femaleCount: data.femaleCount ?? 0,
-        totalCount: data.totalCount ?? (data.maleCount ?? 0) + (data.femaleCount ?? 0),
+        maleCount: data.maleCount,
+        femaleCount: data.femaleCount,
+        totalCount: data.totalCount,
         city: data.city,
       } satisfies PartyItem
     },
@@ -504,11 +505,13 @@ function PartyChoiceCard({
           ) : null}
         </div>
       </div>
+      {!isCaravan ? (
       <div className="mt-3 grid grid-cols-3 gap-1.5">
-        <PartyCountChip icon={Mars} label={t('reservations.male')} value={n(item.maleCount)} tone="teal" />
-        <PartyCountChip icon={Venus} label={t('reservations.female')} value={n(item.femaleCount)} tone="mint" />
-        <PartyCountChip icon={Users} label={t('reservations.totalCount')} value={n(item.totalCount)} tone="ink" />
+        <PartyCountChip icon={Mars} label={t('reservations.male')} value={n(item.maleCount ?? 0)} tone="teal" />
+        <PartyCountChip icon={Venus} label={t('reservations.female')} value={n(item.femaleCount ?? 0)} tone="mint" />
+        <PartyCountChip icon={Users} label={t('reservations.totalCount')} value={n(item.totalCount ?? 0)} tone="ink" />
       </div>
+      ) : null}
     </button>
   )
 }

@@ -13,14 +13,10 @@ import type {
   UserGender,
 } from '../../types/app'
 
-function stayManager(accommodation: ReservationStayAccommodation | undefined, year: number) {
+function stayManager(accommodation: ReservationStayAccommodation | undefined, _year?: number) {
   const managers = accommodation?.managers ?? []
   if (!managers.length) return null
-  const ranked = [...managers].sort((a, b) => {
-    if (a.year === year && b.year !== year) return -1
-    if (b.year === year && a.year !== year) return 1
-    return Number(b.isPrimary) - Number(a.isPrimary)
-  })
+  const ranked = [...managers].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
   const user = ranked[0]?.user
   const name = user?.fullName?.trim() || null
   const phone = user?.phone?.trim() || null

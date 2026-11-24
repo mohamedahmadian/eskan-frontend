@@ -254,6 +254,13 @@ export function SmsRecipientPicker({
               </>
             }
             filtersActive={filtersActive}
+            onClearFilters={() => {
+              setCountryId('')
+              setProvinceId('')
+              setCityId('')
+              setRoleCodes(ROLE_FILTERS.map((role) => role.code))
+              setPage(1)
+            }}
             extraClassName="sm:grid-cols-1"
           />
           {selectedCount > 0 ? (

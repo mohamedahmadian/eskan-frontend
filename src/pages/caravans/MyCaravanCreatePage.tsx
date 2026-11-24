@@ -69,7 +69,6 @@ export function MyCaravanCreatePage() {
         <p className="rounded-[22px] border border-teal-100 bg-white px-5 py-4 text-sm leading-7 text-ink-700 shadow-[0_8px_20px_rgba(20,40,40,0.04)]">
           {t('caravans.maxPerNationalIdReached', {
             max: formatNumber(quota.data.max, locale),
-            year: formatNumber(quota.data.year, locale),
           })}
         </p>
       </div>

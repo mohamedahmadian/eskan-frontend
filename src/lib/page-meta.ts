@@ -917,12 +917,6 @@ export function getPageMeta(pathname: string): {
       subtitleKey: "caravanRegister.subtitle",
     };
   }
-  if (pathname.startsWith("/caravan-year-management")) {
-    return {
-      titleKey: "menus.caravanYearManagement",
-      subtitleKey: "caravanYearManagement.subtitle",
-    };
-  }
   if (pathname.startsWith("/caravan-report")) {
     return {
       titleKey: "menus.caravanReport",
@@ -1008,12 +1002,6 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.accommodationAssignment",
       subtitleKey: "accommodationAssignment.subtitle",
-    };
-  }
-  if (pathname.startsWith("/accommodation-year-management")) {
-    return {
-      titleKey: "menus.accommodationYearManagement",
-      subtitleKey: "accommodationYearManagement.subtitle",
     };
   }
   if (pathname.startsWith("/accommodation-report")) {
@@ -2037,6 +2025,12 @@ export function getPageMeta(pathname: string): {
     return {
       titleKey: "menus.roleAccess",
       subtitleKey: "roleAccess.subtitle",
+    };
+  }
+  if (pathname.startsWith("/system-management/data-management/import-caravans")) {
+    return {
+      titleKey: "caravans.import",
+      subtitleKey: "caravans.importSubtitle",
     };
   }
   if (pathname.startsWith("/system-management/data-management/import")) {

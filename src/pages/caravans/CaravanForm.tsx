@@ -8,16 +8,11 @@ import {
   MapPinned,
   MessageCircle,
   Phone,
-  Route,
   Share2,
   Tent,
   ToggleRight,
-  UserPlus,
-  UserRound,
-  Users,
 } from 'lucide-react'
-import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '../../auth/AuthProvider'
@@ -25,33 +20,26 @@ import {
   AppForm,
   FormActions,
   FormField,
-  ToggleField,
   fieldClassName,
 } from '../../components/ui/Form'
 import { FormCard } from '../../components/ui/FormLayout'
-import { FileDropField } from '../../components/ui/FileDropField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
-import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
-import { currentPersianYear, toLatinDigits } from '../../lib/datetime'
+import { getApiErrorMessage } from '../../lib/api'
+import { AccommodationImagesField } from '../accommodations/AccommodationImagesField'
 import { useGeoName } from '../../lib/geo'
-import type { Caravan, City, Country, Paginated, Province, WalkingRoute } from '../../types/app'
-import { CaravanContactsPanel, firstIncompleteContactRole } from './CaravanContactsPanel'
+import {
+  caravanStatuses,
+  type Caravan,
+  type CaravanStatus,
+  type City,
+  type Country,
+  type Province,
+} from '../../types/app'
 import {
   CaravanManagerPicker,
   type CaravanManagerChoice,
 } from './CaravanManagerPicker'
-import {
-  caravanContactRoles,
-  contactDraftsFromInitial,
-  isContactIncomplete,
-  toContactPayloads,
-  type CaravanContactDraft,
-  type CaravanContactPayload,
-  type CaravanContactRole,
-} from './caravanContacts'
 import { CaravanTabNav, caravanTabs, type CaravanTab } from './CaravanTabs'
-import { CaravanYearAlert } from './CaravanYearAlert'
-import { CaravanActivityYearField, CaravanYearsCard } from './CaravanYearsCard'
 
 export type CaravanPayload = {
   name: string
@@ -60,20 +48,14 @@ export type CaravanPayload = {
   officePhone: string | null
   foundedYear: number | null
   cityId: string
-  walkingRouteId: string | null
   licenseNumber: string | null
-  licenseImageId: string | null
+  licenseImageIds: string[]
   managerUserId?: string | null
-  year?: number
-  totalCount: number
-  maleCount: number
-  femaleCount: number
   eitaa: string | null
   bale: string | null
   telegram: string | null
   instagram: string | null
-  isActive: boolean
-  contacts: CaravanContactPayload[]
+  status: CaravanStatus
 }
 
 type ManagerOption = CaravanManagerChoice
@@ -81,30 +63,6 @@ type ManagerOption = CaravanManagerChoice
 function emptyToNull(value: string) {
   const trimmed = value.trim()
   return trimmed.length ? trimmed : null
-}
-
-function toCount(value: string) {
-  if (value.trim() === '') return 0
-  const parsed = Number(value)
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0
-}
-
-function initialContactDrafts(initial?: Caravan) {
-  return contactDraftsFromInitial(
-    initial?.contacts as
-      | Array<{
-          role: CaravanContactRole
-          user: {
-            id: string
-            firstName: string
-            lastName: string
-            nationalId: string | null
-            phone: string | null
-            birthDate?: string | null
-          }
-        }>
-      | undefined,
-  )
 }
 
 function toOptionalYear(value: string) {
@@ -176,7 +134,6 @@ export function CaravanForm({
   const nameInputRef = useRef<HTMLInputElement>(null)
   const [tab, setTab] = useState<CaravanTab>('basic')
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const [nameTouched, setNameTouched] = useState(Boolean(initial?.name))
   const [name, setName] = useState(() =>
     initial?.name ??
@@ -195,45 +152,28 @@ export function CaravanForm({
     initial?.city?.provinceId ?? initialProvinceId,
   )
   const [cityId, setCityId] = useState(initial?.cityId ?? '')
-  const [walkingRouteId, setWalkingRouteId] = useState(initial?.walkingRouteId ?? '')
   const [licenseNumber, setLicenseNumber] = useState(initial?.licenseNumber ?? '')
-  const [licenseImageId, setLicenseImageId] = useState(initial?.licenseImageId ?? '')
+  const [licenseImageIds, setLicenseImageIds] = useState<string[]>(() =>
+    initial?.licenseImageIds?.length
+      ? initial.licenseImageIds
+      : initial?.licenseImageId
+        ? [initial.licenseImageId]
+        : [],
+  )
   const [managerUserId, setManagerUserId] = useState(
     initial?.managerUserId ?? (selectManager ? '' : (currentUserId ?? '')),
   )
   const [selectedManager, setSelectedManager] = useState<ManagerOption | null>(() =>
     initial?.manager ? toManagerOption(initial.manager) : null,
   )
-  const [activityYear, setActivityYear] = useState(String(currentPersianYear()))
-  const [maleCount, setMaleCount] = useState(String(initial?.maleCount ?? 0))
-  const [femaleCount, setFemaleCount] = useState(String(initial?.femaleCount ?? 0))
   const [eitaa, setEitaa] = useState(initial?.eitaa ?? '')
   const [bale, setBale] = useState(initial?.bale ?? '')
   const [telegram, setTelegram] = useState(initial?.telegram ?? '')
   const [instagram, setInstagram] = useState(initial?.instagram ?? '')
-  const [isActive, setIsActive] = useState(initial?.isActive ?? true)
-  const [contactDrafts, setContactDrafts] = useState<
-    Record<CaravanContactRole, CaravanContactDraft>
-  >(() => initialContactDrafts(initial))
-  const [activeContactRole, setActiveContactRole] = useState<CaravanContactRole>(() =>
-    firstIncompleteContactRole(initialContactDrafts(initial)),
+  const [status, setStatus] = useState<CaravanStatus>(
+    initial?.status ?? caravanStatuses.ACTIVE,
   )
   const geoTouchedRef = useRef(Boolean(initial?.cityId))
-
-  const totalCountValue = toCount(maleCount) + toCount(femaleCount)
-
-  const walkingRoutes = useQuery({
-    queryKey: ['walking-routes', 'lookup', countryId],
-    queryFn: async () => {
-      const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
-        params: {
-          pageSize: 100,
-          originCountryId: countryId || undefined,
-        },
-      })
-      return data.items
-    },
-  })
 
   function applyGeoFromProfile(
     nextCountryId?: string | null,
@@ -285,49 +225,13 @@ export function CaravanForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- apply once from profile defaults
   }, [initial, selectManager, defaultCountryId, defaultProvinceId, defaultCityId])
 
-  const tabs = useMemo(
-    () =>
-      (selectManager || initial?.id
-        ? caravanTabs
-        : caravanTabs.filter((item) => item !== 'years')) as CaravanTab[],
-    [selectManager, initial?.id],
-  )
-  const editYears = Boolean(selectManager && initial?.id)
-
   function panelClass(id: CaravanTab) {
     return `space-y-4 ${tab === id ? '' : 'hidden'}`
-  }
-
-  async function uploadLicense(file: File) {
-    const body = new FormData()
-    body.append('file', file)
-    setUploading(true)
-    try {
-      const { data } = await api.post<{ id: string }>('/images', body)
-      setLicenseImageId(data.id)
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, t('common.error')))
-    } finally {
-      setUploading(false)
-    }
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     const resolvedManagerId = selectManager ? managerUserId : (currentUserId ?? managerUserId)
-
-    for (const role of caravanContactRoles) {
-      if (isContactIncomplete(contactDrafts[role])) {
-        toast.error(
-          t('caravans.contactIncomplete', {
-            role: t(`caravans.contactRoles.${role}`),
-          }),
-        )
-        setTab('contacts')
-        setActiveContactRole(role)
-        return
-      }
-    }
 
     setSaving(true)
     try {
@@ -338,24 +242,20 @@ export function CaravanForm({
         officePhone: emptyToNull(officePhone),
         foundedYear: toOptionalYear(foundedYear),
         cityId,
-        walkingRouteId: emptyToNull(walkingRouteId),
         licenseNumber: emptyToNull(licenseNumber),
-        licenseImageId: emptyToNull(licenseImageId),
-        totalCount: totalCountValue,
-        maleCount: toCount(maleCount),
-        femaleCount: toCount(femaleCount),
+        licenseImageIds,
         eitaa: emptyToNull(eitaa),
         bale: emptyToNull(bale),
         telegram: emptyToNull(telegram),
         instagram: emptyToNull(instagram),
-        isActive,
-        contacts: toContactPayloads(contactDrafts),
+        status,
         ...(!initial
           ? {
               managerUserId: resolvedManagerId || null,
-              year: Number(toLatinDigits(activityYear)) || currentPersianYear(),
             }
-          : {}),
+          : selectManager
+            ? { managerUserId: resolvedManagerId || null }
+            : {}),
       })
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('common.error')))
@@ -366,17 +266,13 @@ export function CaravanForm({
 
   return (
     <div className="space-y-4">
-      {initial ? <CaravanYearAlert caravan={initial} /> : null}
     <FormCard
       icon={Tent}
       title={initial ? initial.name || t('caravans.edit') : t('caravans.create')}
       subtitle={initial ? undefined : t('caravans.createSubtitle')}
     >
     <div className="space-y-4 p-5 sm:p-6">
-      <CaravanTabNav tab={tab} tabs={tabs} onChange={setTab} />
-      {tab === 'years' && initial ? (
-        <CaravanYearsCard caravan={initial} canAssign={editYears} />
-      ) : (
+      <CaravanTabNav tab={tab} tabs={[...caravanTabs]} onChange={setTab} />
       <AppForm
         onSubmit={submit}
         onInvalid={(event) => {
@@ -414,7 +310,6 @@ export function CaravanForm({
                   setCountryId(next)
                   setProvinceId('')
                   setCityId('')
-                  setWalkingRouteId('')
                   geoTouchedRef.current = true
                   onCountryChange(next)
                   onProvinceChange('')
@@ -475,74 +370,31 @@ export function CaravanForm({
             </FormField>
           </div>
 
-          <FormField icon={Route} label={t('caravans.walkingRoute')} htmlFor="walkingRouteId">
-            <SearchSelect
-              id="walkingRouteId"
-              value={walkingRouteId}
-              onChange={setWalkingRouteId}
-              placeholder={t('caravans.walkingRoute')}
-              options={[
-                { value: '', label: t('caravans.walkingRouteNone') },
-                ...(walkingRoutes.data ?? []).map((route) => ({
-                  value: route.id,
-                  label: route.name,
-                })),
-                ...(walkingRouteId &&
-                initial?.walkingRoute &&
-                initial.walkingRoute.id === walkingRouteId &&
-                !(walkingRoutes.data ?? []).some((route) => route.id === walkingRouteId)
-                  ? [
-                      {
-                        value: initial.walkingRoute.id,
-                        label: initial.walkingRoute.name,
-                      },
-                    ]
-                  : []),
-              ]}
+          {selectManager ? (
+            <CaravanManagerPicker
+              value={selectedManager}
+              onChange={(next) => {
+                setSelectedManager(next)
+                setManagerUserId(next?.id ?? '')
+                if (next?.provinceId && next?.cityId) {
+                  applyGeoFromProfile(next.countryId, next.provinceId, next.cityId)
+                  geoTouchedRef.current = true
+                }
+              }}
+              emptyLabel={t('caravans.withoutManager')}
             />
-          </FormField>
+          ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <FormField icon={UserRound} label={t('caravans.maleCount')} htmlFor="maleCount">
-              <input
-                id="maleCount"
-                type="number"
-                min={0}
-                className={fieldClassName}
-                value={maleCount}
-                onChange={(e) => setMaleCount(e.target.value)}
-              />
-            </FormField>
-            <FormField icon={UserPlus} label={t('caravans.femaleCount')} htmlFor="femaleCount">
-              <input
-                id="femaleCount"
-                type="number"
-                min={0}
-                className={fieldClassName}
-                value={femaleCount}
-                onChange={(e) => setFemaleCount(e.target.value)}
-              />
-            </FormField>
-            <FormField icon={Users} label={t('caravans.totalCount')} htmlFor="totalCount">
-              <input
-                id="totalCount"
-                type="number"
-                className={`${fieldClassName} bg-cream-50 text-ink-700`}
-                value={totalCountValue}
-                readOnly
-                tabIndex={-1}
-              />
-            </FormField>
-          </div>
-
-          {initial && selectManager ? (
-            <FormField icon={ToggleRight} label={t('caravans.status')} htmlFor="isActive">
-              <ToggleField
-                id="isActive"
-                checked={isActive}
-                onChange={setIsActive}
-                onLabel={t('geo.active')}
-                offLabel={t('geo.inactive')}
+          {initial ? (
+            <FormField icon={ToggleRight} label={t('caravans.status')} htmlFor="status">
+              <SearchSelect
+                id="status"
+                value={status}
+                onChange={(next) => setStatus(next as CaravanStatus)}
+                options={Object.values(caravanStatuses).map((item) => ({
+                  value: item,
+                  label: t(`caravanStatuses.${item}`),
+                }))}
               />
             </FormField>
           ) : null}
@@ -576,25 +428,6 @@ export function CaravanForm({
               onChange={(e) => setFoundedYear(e.target.value)}
             />
           </FormField>
-          <FormField icon={AlignLeft} label={t('caravans.description')} htmlFor="description">
-            <textarea
-              id="description"
-              className={`${fieldClassName} min-h-24`}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </FormField>
-        </div>
-
-        <div data-tab="contacts" className={panelClass('contacts')}>
-          <CaravanContactsPanel
-            drafts={contactDrafts}
-            activeRole={activeContactRole}
-            onActiveRoleChange={setActiveContactRole}
-            onDraftChange={(role, next) =>
-              setContactDrafts((current) => ({ ...current, [role]: next }))
-            }
-          />
         </div>
 
         <div data-tab="license" className={panelClass('license')}>
@@ -606,16 +439,22 @@ export function CaravanForm({
               onChange={(e) => setLicenseNumber(e.target.value)}
             />
           </FormField>
-
-          <FormField icon={FileImage} label={t('caravans.licenseImage')} htmlFor="licenseImage">
-            <FileDropField
-              id="licenseImage"
-              accept="image/*"
+          <FormField icon={AlignLeft} label={t('caravans.description')} htmlFor="description">
+            <textarea
+              id="description"
+              className={`${fieldClassName} min-h-24`}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </FormField>
+          <FormField icon={FileImage} label={t('caravans.licenseImages')} htmlFor="licenseImages">
+            <AccommodationImagesField
+              imageIds={licenseImageIds}
+              onChange={setLicenseImageIds}
+              maxImages={8}
               capture="environment"
-              previewUrl={licenseImageId ? getImageUrl(licenseImageId) : undefined}
-              uploading={uploading}
-              onFile={(file) => void uploadLicense(file)}
-              onClear={() => setLicenseImageId('')}
+              emptyLabel={t('caravans.noLicenseImages')}
+              limitLabel={t('caravans.licenseImagesLimit')}
             />
           </FormField>
         </div>
@@ -659,61 +498,15 @@ export function CaravanForm({
           </FormField>
         </div>
 
-        {selectManager && !initial ? (
-          <div data-tab="years" className={panelClass('years')}>
-            <p className="text-sm leading-6 text-ink-600">{t('caravans.activityYearsHint')}</p>
-            <CaravanActivityYearField
-              year={activityYear}
-              onYearChange={setActivityYear}
-              inputId="create-caravan-activity-year"
-            />
-            <CaravanManagerPicker
-              value={selectedManager}
-              onChange={(next) => {
-                setSelectedManager(next)
-                setManagerUserId(next?.id ?? '')
-                if (next?.provinceId && next?.cityId) {
-                  applyGeoFromProfile(next.countryId, next.provinceId, next.cityId)
-                  geoTouchedRef.current = true
-                }
-              }}
-              emptyLabel={t('caravans.withoutManager')}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField icon={UserRound} label={t('caravans.maleCount')} htmlFor="create-year-maleCount">
-                <input
-                  id="create-year-maleCount"
-                  type="number"
-                  min={0}
-                  className={fieldClassName}
-                  value={maleCount}
-                  onChange={(e) => setMaleCount(e.target.value)}
-                />
-              </FormField>
-              <FormField icon={UserPlus} label={t('caravans.femaleCount')} htmlFor="create-year-femaleCount">
-                <input
-                  id="create-year-femaleCount"
-                  type="number"
-                  min={0}
-                  className={fieldClassName}
-                  value={femaleCount}
-                  onChange={(e) => setFemaleCount(e.target.value)}
-                />
-              </FormField>
-            </div>
-          </div>
-        ) : null}
-
         <div>
           <FormActions
             submitLabel={t('caravans.save')}
             cancelLabel={t('caravans.cancel')}
-            submitting={saving || uploading}
+            submitting={saving}
             onCancel={() => history.back()}
           />
         </div>
       </AppForm>
-      )}
     </div>
     </FormCard>
     </div>

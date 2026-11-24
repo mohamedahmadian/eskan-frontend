@@ -147,7 +147,7 @@ export function ReceptionRulesModal({
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-3 border-t border-line px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4 sm:px-6">
           <Button type="button" disabled={submitting} onClick={onConfirm}>
             <Check className="size-4" aria-hidden />
             {t('reservations.createAndSubmit')}

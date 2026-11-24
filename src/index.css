@@ -1567,14 +1567,22 @@ th {
 }
 
 .pilgrim-id-card__meta-value {
+  display: block;
   margin: 0;
   overflow: hidden;
   font-size: 7px;
   font-weight: 700;
   line-height: 1.2;
   color: #2c2a26;
+  text-align: start;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pilgrim-id-card__meta-value > [dir='ltr'] {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 .pilgrim-id-card__facts {
@@ -1600,12 +1608,24 @@ th {
   grid-template-columns: 1fr;
 }
 
+.pilgrim-id-card__row--trio {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .pilgrim-id-card__row-cell {
   min-width: 0;
 }
 
-.pilgrim-id-card__row-cell > .pilgrim-id-card__fact {
+.pilgrim-id-card__row-cell > .pilgrim-id-card__fact,
+.pilgrim-id-card__row-cell > .pilgrim-id-card__meta {
   height: 100%;
+}
+
+.pilgrim-id-card__row-cell > .pilgrim-id-card__meta {
+  margin: 0;
+  padding: 2px 3px;
+  border-radius: 6px;
+  background: #ffffff;
 }
 
 .pilgrim-id-card--classic .pilgrim-id-card__facts {
@@ -1621,7 +1641,9 @@ th {
   padding: 2px 4px;
 }
 
-.pilgrim-id-card--pocket .pilgrim-id-card__facts--trip .pilgrim-id-card__fact-label {
+.pilgrim-id-card--pocket .pilgrim-id-card__facts--trip .pilgrim-id-card__fact-label,
+.pilgrim-id-card--pocket .pilgrim-id-card__row--trio .pilgrim-id-card__meta-label,
+.pilgrim-id-card--pocket .pilgrim-id-card__row--trio .pilgrim-id-card__fact-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1747,9 +1769,16 @@ th {
   font-weight: 700;
   color: #2c2a26;
   line-height: 1.25;
+  text-align: start;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.pilgrim-id-card__fact-value > [dir='ltr'] {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 .pilgrim-id-card--classic .pilgrim-id-card__fact-value {

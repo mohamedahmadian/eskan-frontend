@@ -17,6 +17,14 @@ export type RoleUserScope = {
   showHeadquartersAreas?: boolean
   showPilgrimCard?: boolean
   hideDelete?: boolean
+  allowRevokeLockedRole?: boolean
+}
+
+export function hasLostLockedRole(
+  lockedRoleCodes: string[],
+  roles: { code: string }[],
+) {
+  return lockedRoleCodes.some((code) => !roles.some((role) => role.code === code))
 }
 
 export function showUserActivityStartYear(
@@ -76,6 +84,7 @@ export const userScopes: Record<string, RoleUserScope> = {
     showPlacement: true,
     hideDelete: true,
     showPersonFilters: true,
+    allowRevokeLockedRole: true,
   },
   headquartersRepresentative: {
     queryKey: 'headquarters-representatives',

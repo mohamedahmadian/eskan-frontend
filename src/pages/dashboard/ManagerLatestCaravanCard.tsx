@@ -143,8 +143,8 @@ export function ManagerLatestCaravanCard({
   const city = caravan?.city ? geoName(caravan.city) : ''
   const managerName = caravan?.manager?.fullName?.trim() || reservation?.caravanManager?.fullName || ''
   const managerPhone = caravan?.manager?.phone || reservation?.caravanManager?.phone || ''
-  const male = reservation?.maleCount ?? caravan?.maleCount ?? 0
-  const female = reservation?.femaleCount ?? caravan?.femaleCount ?? 0
+  const male = reservation?.maleCount ?? 0
+  const female = reservation?.femaleCount ?? 0
   const total = reservation?.totalCount ?? male + female
   const detailPath = `/my-caravans/${caravanId}`
 

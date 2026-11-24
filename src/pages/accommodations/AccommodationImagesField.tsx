@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { FileDropField } from '../../components/ui/FileDropField'
-import { Button } from '../../components/ui/Form'
+import { Button, fileRemoveButtonClassName } from '../../components/ui/Form'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
 import { optimizeImageFile } from '../../lib/optimize-image'
 
@@ -13,18 +13,28 @@ export function AccommodationImagesField({
   imageIds,
   onChange,
   uploadPath = '/images',
+  maxImages = MAX_ACCOMMODATION_IMAGES,
+  emptyLabel,
+  limitLabel,
+  capture,
 }: {
   imageIds: string[]
   onChange: (imageIds: string[]) => void
   uploadPath?: string
+  maxImages?: number
+  emptyLabel?: string
+  limitLabel?: string
+  capture?: 'user' | 'environment'
 }) {
   const { t } = useTranslation()
   const [uploading, setUploading] = useState(false)
-  const atLimit = imageIds.length >= MAX_ACCOMMODATION_IMAGES
+  const emptyText = emptyLabel ?? t('accommodations.noImages')
+  const limitText = limitLabel ?? t('accommodations.imagesLimit')
+  const atLimit = imageIds.length >= maxImages
 
   async function uploadImage(file: File) {
     if (atLimit) {
-      toast.error(t('accommodations.imagesLimit'))
+      toast.error(limitText)
       return
     }
     setUploading(true)
@@ -59,11 +69,11 @@ export function AccommodationImagesField({
               </a>
               <Button
                 type="button"
-                variant="ghost"
-                className="absolute start-2 top-2"
+                variant="pink"
+                className={`absolute start-2 top-2 ${fileRemoveButtonClassName}`}
                 onClick={() => onChange(imageIds.filter((item) => item !== id))}
               >
-                <Trash2 className="size-4" aria-hidden />
+                <Trash2 className="size-3" aria-hidden />
                 {t('common.removeFile')}
               </Button>
             </li>
@@ -71,14 +81,15 @@ export function AccommodationImagesField({
         </ul>
       ) : (
         <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-500">
-          {t('accommodations.noImages')}
+          {emptyText}
         </p>
       )}
       {atLimit ? (
-        <p className="text-sm text-ink-500">{t('accommodations.imagesLimit')}</p>
+        <p className="text-sm text-ink-500">{limitText}</p>
       ) : (
         <FileDropField
           accept="image/*"
+          capture={capture}
           uploading={uploading}
           onFile={(file) => void uploadImage(file)}
         />

@@ -13,10 +13,10 @@ export function NewCaravansCard({ className = '' }: { className?: string }) {
   const locale = i18n.language.split('-')[0] ?? 'fa'
 
   const query = useQuery({
-    queryKey: ['caravans', 'list', 'dashboard-latest'],
+    queryKey: ['caravans', 'pending-review', 'latest'],
     queryFn: async () => {
       const { data } = await api.get<Paginated<Caravan>>('/caravans', {
-        params: { page: 1, pageSize: LATEST_COUNT },
+        params: { status: 'PENDING_REVIEW', page: 1, pageSize: LATEST_COUNT },
       })
       return data
     },
@@ -25,7 +25,7 @@ export function NewCaravansCard({ className = '' }: { className?: string }) {
   return (
     <DashboardFeedCard
       className={className}
-      to="/caravans"
+      to="/caravans?status=PENDING_REVIEW"
       icon={Tent}
       itemIcon={Footprints}
       title={t('dashboard.newCaravansTitle')}

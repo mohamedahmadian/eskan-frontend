@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, Trash2 } from 'lucide-react'
+import { Building2, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,12 +10,10 @@ import {
   FormActions,
   FormField,
   cardClassName,
-  fieldClassName,
 } from '../../components/ui/Form'
-import { TableCard } from '../../components/ui/ListControls'
+import { TableCard, actionsColClassName, ActionsTh } from '../../components/ui/ListControls'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
 import type { Accommodation, ManagedUser } from '../../types/app'
 
 export function AccommodationAssignmentsCard({
@@ -27,11 +25,9 @@ export function AccommodationAssignmentsCard({
   queryKey: string
   apiBase: string
 }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language.split('-')[0] ?? 'fa'
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [accommodationId, setAccommodationId] = useState('')
-  const [year, setYear] = useState(String(currentPersianYear()))
 
   const accommodations = useQuery({
     queryKey: ['accommodations', 'lookup'],
@@ -41,10 +37,9 @@ export function AccommodationAssignmentsCard({
     },
   })
 
-  const rows = [...(user.accommodations ?? [])].sort((a, b) => {
-    if (b.year !== a.year) return b.year - a.year
-    return a.accommodation.name.localeCompare(b.accommodation.name, 'fa')
-  })
+  const rows = [...(user.accommodations ?? [])].sort((a, b) =>
+    a.accommodation.name.localeCompare(b.accommodation.name, 'fa'),
+  )
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: [queryKey] })
@@ -54,7 +49,6 @@ export function AccommodationAssignmentsCard({
     mutationFn: async () =>
       api.post(`${apiBase}/${user.id}/accommodations`, {
         accommodationId,
-        year: Number(toLatinDigits(year)),
       }),
     onSuccess: async () => {
       setAccommodationId('')
@@ -92,7 +86,7 @@ export function AccommodationAssignmentsCard({
             event.preventDefault()
             assign.mutate()
           }}
-          className="grid gap-4 sm:grid-cols-[1fr_8rem_auto] sm:items-end"
+          className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end"
         >
           <FormField
             icon={Building2}
@@ -111,18 +105,6 @@ export function AccommodationAssignmentsCard({
               }))}
             />
           </FormField>
-          <FormField icon={CalendarDays} label={t('accommodationManagers.year')} htmlFor="assign-year">
-            <input
-              id="assign-year"
-              className={fieldClassName}
-              inputMode="numeric"
-              min={1300}
-              max={1600}
-              required
-              value={year}
-              onChange={(event) => setYear(toLatinDigits(event.target.value))}
-            />
-          </FormField>
           <FormActions
             submitLabel={t('accommodationManagers.assign')}
             submitting={assign.isPending}
@@ -137,17 +119,15 @@ export function AccommodationAssignmentsCard({
         <table className="w-full text-sm">
           <thead className="bg-cream-50 text-ink-700">
             <tr>
-              <th className="px-4 py-3 text-start font-medium">{t('accommodationManagers.year')}</th>
               <th className="px-4 py-3 text-start font-medium">{t('accommodations.name')}</th>
-              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+              <ActionsTh />
             </tr>
           </thead>
           <tbody>
             {rows.map((item) => (
               <tr key={item.id} className="border-t border-line">
-                <td className="px-4 py-3">{formatNumber(item.year, locale)}</td>
                 <td className="px-4 py-3">{item.accommodation.name}</td>
-                <td className="px-4 py-3">
+                <td className={actionsColClassName}>
                   <Button
                     type="button"
                     variant="ghost"

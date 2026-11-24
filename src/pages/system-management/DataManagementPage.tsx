@@ -1,4 +1,4 @@
-import { FileBadge2, HandCoins, LayoutDashboard, Package, Trash2, Upload } from 'lucide-react'
+import { FileBadge2, HandCoins, LayoutDashboard, Package, Tent, Trash2, Upload, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { TableCard } from '../../components/ui/ListControls'
 import { Button, PageHeader, listShellClassName } from '../../components/ui/Form'
+import { FormCard, formCardBodyClassName } from '../../components/ui/FormLayout'
 import { confirmToast } from '../../components/ui/confirmToast'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { formatNumber } from '../../lib/datetime'
@@ -86,15 +87,30 @@ export function DataManagementPage() {
         icon={LayoutDashboard}
         title={t('menus.dataManagement')}
         subtitle={t('dataManagement.subtitle')}
-        action={
-          <Link to="/system-management/data-management/import">
-            <Button type="button" variant="soft">
-              <Upload className="size-4" aria-hidden />
-              {t('pilgrims.import')}
-            </Button>
-          </Link>
-        }
       />
+      <FormCard
+        icon={Upload}
+        title={t('dataManagement.importTitle')}
+        subtitle={t('dataManagement.importSubtitle')}
+        className="mb-6"
+      >
+        <div className={formCardBodyClassName}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/system-management/data-management/import-caravans">
+              <Button type="button" variant="soft">
+                <Tent className="size-4" aria-hidden />
+                {t('caravans.import')}
+              </Button>
+            </Link>
+            <Link to="/system-management/data-management/import">
+              <Button type="button" variant="ghost">
+                <UserRound className="size-4" aria-hidden />
+                {t('pilgrims.import')}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </FormCard>
       <TableCard
         loading={query.isLoading}
         empty={t('dataManagement.empty')}

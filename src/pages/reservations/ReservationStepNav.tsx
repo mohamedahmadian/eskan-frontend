@@ -61,23 +61,10 @@ export function ReservationStepNav({
 
   return (
     <div className="space-y-3 border-t border-line px-5 py-4 sm:px-6">
-      <div className="flex flex-wrap items-center gap-3">
-        {onPrev ? (
-          <Button
-            type="button"
-            onClick={() => {
-              scrollPageToTop()
-              onPrev()
-            }}
-          >
-            <ChevronRight className="size-4" aria-hidden />
-            {t('reservations.prevStep')}
-          </Button>
-        ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {onNext ? (
           <Button
             type="button"
-            className="ms-auto"
             disabled={disabled}
             aria-describedby={showReason ? 'step-next-blocked-reason' : undefined}
             onClick={() => {
@@ -92,6 +79,18 @@ export function ReservationStepNav({
             ) : (
               <ChevronLeft className="size-4" aria-hidden />
             )}
+          </Button>
+        ) : null}
+        {onPrev ? (
+          <Button
+            type="button"
+            onClick={() => {
+              scrollPageToTop()
+              onPrev()
+            }}
+          >
+            <ChevronRight className="size-4" aria-hidden />
+            {t('reservations.prevStep')}
           </Button>
         ) : null}
       </div>

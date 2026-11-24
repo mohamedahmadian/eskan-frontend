@@ -9,6 +9,8 @@ import {
   TableCard,
   EntityRowActions,
   SortableTh,
+  ActionsTh,
+  actionsColClassName,
 } from '../../components/ui/ListControls'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
@@ -17,6 +19,7 @@ import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import type { Caravan, Paginated } from '../../types/app'
 import { useCaravanCreateQuota } from './caravan-create-quota'
+import { CaravanStatusBadge } from './CaravanStatusBadge'
 
 export function MyCaravansListPage() {
   const { t, i18n } = useTranslation()
@@ -59,7 +62,6 @@ export function MyCaravansListPage() {
         <p className="rounded-[22px] border border-teal-100 bg-white px-4 py-3 text-sm leading-7 text-ink-700 shadow-[0_8px_20px_rgba(20,40,40,0.04)]">
           {t('caravans.maxPerNationalIdReached', {
             max: formatNumber(quota.data.max, locale),
-            year: formatNumber(quota.data.year, locale),
           })}
         </p>
       ) : null}
@@ -93,20 +95,13 @@ export function MyCaravansListPage() {
                 onSort={onSort}
               />
               <SortableTh
-                column="walkingRoute"
-                label={t('caravans.walkingRoute')}
-                sortBy={sortBy}
-                sortDir={sortDir}
-                onSort={onSort}
-              />
-              <SortableTh
-                column="isActive"
+                column="status"
                 label={t('caravans.status')}
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={onSort}
               />
-              <th className="px-4 py-3 text-start font-medium">{t('common.actions')}</th>
+              <ActionsTh />
             </tr>
           </thead>
           <tbody>
@@ -114,11 +109,10 @@ export function MyCaravansListPage() {
               <tr key={caravan.id} className="border-t border-line">
                 <td className="px-4 py-3">{caravan.name}</td>
                 <td className="px-4 py-3">{caravan.city ? nameOf(caravan.city) : '—'}</td>
-                <td className="px-4 py-3">{caravan.walkingRoute?.name ?? '—'}</td>
                 <td className="px-4 py-3">
-                  {caravan.isActive ? t('geo.active') : t('geo.inactive')}
+                  <CaravanStatusBadge status={caravan.status} isActive={caravan.isActive} />
                 </td>
-                <td className="px-4 py-3">
+                <td className={actionsColClassName}>
                   <EntityRowActions
                     viewTo={`/my-caravans/${caravan.id}`}
                     extra={

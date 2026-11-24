@@ -27,7 +27,7 @@ export function RoleUserProfileHeader({
   return (
     <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
       <FormCardHeaderDecor />
-      <div className="relative flex flex-wrap items-start gap-3">
+      <div className="relative flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <UserAvatar user={user} />
           <div className="min-w-0 flex-1">
@@ -52,7 +52,7 @@ export function RoleUserProfileHeader({
             </div>
           </div>
         </div>
-        {action ? <div className="relative z-10 shrink-0">{action}</div> : null}
+        {action ? <div className="relative z-10 flex shrink-0 justify-end">{action}</div> : null}
       </div>
     </header>
   )

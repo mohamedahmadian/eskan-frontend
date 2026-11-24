@@ -1043,6 +1043,11 @@ function WizardStepActions({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
+      <Button type="submit" disabled={submitting}>
+        {submitIcon === 'check' ? <Check className="size-4" aria-hidden /> : null}
+        {submitLabel}
+        {submitIcon === 'next' ? <ChevronLeft className="size-4" aria-hidden /> : null}
+      </Button>
       <Button type="button" data-form-cancel="" onClick={onBack}>
         {backIcon === 'previous' ? (
           <ChevronRight className="size-4" aria-hidden />
@@ -1050,11 +1055,6 @@ function WizardStepActions({
           <X className="size-4" aria-hidden />
         )}
         {backLabel}
-      </Button>
-      <Button type="submit" disabled={submitting}>
-        {submitIcon === 'check' ? <Check className="size-4" aria-hidden /> : null}
-        {submitLabel}
-        {submitIcon === 'next' ? <ChevronLeft className="size-4" aria-hidden /> : null}
       </Button>
     </div>
   )

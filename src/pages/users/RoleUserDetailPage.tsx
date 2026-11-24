@@ -49,8 +49,7 @@ import { EntityRowActions, TableCard } from '../../components/ui/ListControls'
 import { placementPanelClassName, placementTabClassName } from '../../components/ui/placementTab'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
 import { languages, type AppLanguage } from '../../i18n'
-import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
-import { toast } from 'sonner'
+import { api, getImageUrl } from '../../lib/api'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
 import { FormCard } from '../../components/ui/FormLayout'
 import { collaborationYears, currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
@@ -59,12 +58,12 @@ import { formatRoles, isAccommodationManager, isAdmin, isCaravanManager } from '
 import { useGeoName } from '../../lib/geo'
 import type { CaravanManagerStayPlacement, ManagedUser } from '../../types/app'
 import { HeadquartersAreasCard } from '../headquarters-representatives/HeadquartersAreasCard'
-import { showUserActivityStartYear, type RoleUserScope } from './user-scopes'
+import { hasLostLockedRole, showUserActivityStartYear, type RoleUserScope } from './user-scopes'
+import { RoleUserCaravansTab } from './RoleUserCaravansTab'
 import { RoleUserProfileHeader } from './RoleUserProfileHeader'
-import { SetUserPasswordModal } from './SetUserPasswordModal'
+import { RoleUserQuickActions } from './RoleUserQuickActions'
 import { OpenUserPanelButton } from '../../components/auth/OpenUserPanelButton'
 import { QuickRoleToggles } from '../../components/users/QuickRoleToggles'
-import { PilgrimCardModal } from '../dashboard/PilgrimCardModal'
 
 const baseTabs = ['personal', 'account', 'location', 'documents', 'social', 'other'] as const
 type UserDetailTab = (typeof baseTabs)[number] | 'accommodations' | 'caravans' | 'areas' | 'placement'
@@ -119,12 +118,10 @@ export function RoleUserDetailPage({
   const { confirmDelete } = useConfirmDelete()
   const keys = scope.i18nPrefix
   const [tab, setTab] = useState<UserDetailTab>('personal')
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
-  const [passwordSaving, setPasswordSaving] = useState(false)
-  const [managerCardOpen, setManagerCardOpen] = useState(false)
+  const [leftAfterRevoke, setLeftAfterRevoke] = useState(false)
   const query = useQuery({
     queryKey: [scope.queryKey, id],
-    enabled: Boolean(id),
+    enabled: Boolean(id) && !leftAfterRevoke,
     queryFn: async () => {
       const { data } = await api.get<ManagedUser>(`${scope.apiBase}/${id}`)
       return data
@@ -132,7 +129,7 @@ export function RoleUserDetailPage({
   })
   const placementsQuery = useQuery({
     queryKey: [scope.queryKey, id, 'placements'],
-    enabled: Boolean(id) && Boolean(scope.showPlacement),
+    enabled: Boolean(id) && Boolean(scope.showPlacement) && !leftAfterRevoke,
     queryFn: async () => {
       const { data } = await api.get<{ year: number; items: CaravanManagerStayPlacement[] }>(
         `${scope.apiBase}/${id}/placements`,
@@ -180,48 +177,8 @@ export function RoleUserDetailPage({
   })
   const yearsOfCollaboration = collaborationYears(user.activityStartYear)
 
-  async function submitUserPassword(password: string, sendSms: boolean) {
-    if (sendSms && !user.phone) {
-      toast.error(t('users.phoneRequiredForSms'))
-      return
-    }
-    setPasswordSaving(true)
-    try {
-      const { data } = await api.patch<{ ok: true; smsQueued: boolean }>(
-        `/users/${user.id}/password`,
-        { password, sendSms },
-      )
-      if (sendSms && data.smsQueued) {
-        toast.success(t('users.passwordChangedSmsSent'))
-      } else if (sendSms) {
-        toast.success(t('users.passwordChanged'))
-        toast.error(t('users.passwordChangedSmsFailed'))
-      } else {
-        toast.success(t('users.passwordChanged'))
-      }
-      setPasswordModalOpen(false)
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, t('common.error')))
-    } finally {
-      setPasswordSaving(false)
-    }
-  }
-
   return (
     <div className={userFormShellClassName}>
-      {passwordModalOpen ? (
-        <SetUserPasswordModal
-          submitting={passwordSaving}
-          hasPhone={Boolean(user.phone)}
-          onClose={() => {
-            if (!passwordSaving) setPasswordModalOpen(false)
-          }}
-          onSubmit={submitUserPassword}
-        />
-      ) : null}
-      {managerCardOpen ? (
-        <PilgrimCardModal variant="manager" user={user} onClose={() => setManagerCardOpen(false)} />
-      ) : null}
       <PageHeader
         icon={UserRound}
         title={t(`${keys}.details`)}
@@ -394,66 +351,7 @@ export function RoleUserDetailPage({
           ) : null}
 
           {scope.showCaravans && tab === 'caravans' ? (
-            <section>
-              <SectionTitle icon={Tent}>{t('users.tabs.caravans')}</SectionTitle>
-              <TableCard
-                empty={t('caravanManagers.noCaravans')}
-                hasRows={Boolean(user.caravans?.length)}
-              >
-                <table className="w-full text-sm">
-                  <thead className="bg-cream-50 text-ink-700">
-                    <tr>
-                      <th className="px-4 py-3 text-start font-medium">
-                        {t('caravans.name')}
-                      </th>
-                      <th className="px-4 py-3 text-start font-medium">
-                        {t('caravans.city')}
-                      </th>
-                      <th className="px-4 py-3 text-start font-medium">
-                        {t('caravans.status')}
-                      </th>
-                      <th className="px-4 py-3 text-start font-medium">
-                        {t('caravans.totalCount')}
-                      </th>
-                      <th className="px-4 py-3 text-start font-medium">
-                        {t('common.actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(user.caravans ?? []).map((caravan) => (
-                      <tr key={caravan.id} className="border-t border-line">
-                        <td className="px-4 py-3">{caravan.name}</td>
-                        <td className="px-4 py-3">
-                          {caravan.city ? geoName(caravan.city) : '—'}
-                        </td>
-                        <td className="px-4 py-3">
-                          {caravan.isActive ? t('geo.active') : t('geo.inactive')}
-                        </td>
-                        <td className="px-4 py-3">
-                          {t('caravans.peopleCount', {
-                            count: formatNumber(caravan.totalCount ?? 0, uiLocale),
-                          })}
-                        </td>
-                        <td className="px-4 py-3">
-                          <EntityRowActions
-                            viewTo={`/caravans/${caravan.id}`}
-                            extra={
-                              <Link to={`/caravans/${caravan.id}/pilgrimage-history`}>
-                                <Button type="button" variant="soft">
-                                  <History className="size-4" aria-hidden />
-                                  {t('caravanPilgrimageHistory.open')}
-                                </Button>
-                              </Link>
-                            }
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableCard>
-            </section>
+            <RoleUserCaravansTab user={user} />
           ) : null}
 
           {tab === 'account' ? (
@@ -463,8 +361,21 @@ export function RoleUserDetailPage({
                 <QuickRoleToggles
                   userId={user.id}
                   roleCodes={user.roles.map((role) => role.code)}
-                  lockedCodes={scope.lockedRoleCodes}
+                  lockedCodes={scope.allowRevokeLockedRole ? [] : scope.lockedRoleCodes}
                   onChanged={(nextRoles) => {
+                    if (
+                      scope.allowRevokeLockedRole &&
+                      hasLostLockedRole(scope.lockedRoleCodes, nextRoles)
+                    ) {
+                      setLeftAfterRevoke(true)
+                      void queryClient.cancelQueries({ queryKey: [scope.queryKey, user.id] })
+                      void queryClient.invalidateQueries({
+                        queryKey: [scope.queryKey],
+                        predicate: (query) => query.queryKey[1] !== user.id,
+                      })
+                      navigate(scope.listPath, { replace: true })
+                      return
+                    }
                     queryClient.setQueryData([scope.queryKey, user.id], (current: ManagedUser | undefined) =>
                       current ? { ...current, roles: nextRoles } : current,
                     )
@@ -728,18 +639,16 @@ export function RoleUserDetailPage({
                 <table className="w-full text-sm">
                   <thead className="bg-cream-50 text-ink-700">
                     <tr>
-                      <th className="px-4 py-3 text-start font-medium">
-                        {t('accommodationManagers.year')}
-                      </th>
                       <th className="px-4 py-3 text-start font-medium">{t('accommodations.name')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {[...(user.accommodations ?? [])]
-                      .sort((a, b) => (b.year !== a.year ? b.year - a.year : 0))
+                      .sort((a, b) =>
+                        a.accommodation.name.localeCompare(b.accommodation.name, 'fa'),
+                      )
                       .map((item) => (
                         <tr key={item.id} className="border-t border-line">
-                          <td className="px-4 py-3">{formatNumber(item.year, uiLocale)}</td>
                           <td className="px-4 py-3">
                             <Link
                               className="text-teal-700 hover:underline"
@@ -790,12 +699,11 @@ export function RoleUserDetailPage({
             extra={
               scope.showPilgrimCard ? undefined : (
                 <>
-                  {isManagerUser ? (
-                    <Button type="button" variant="soft" onClick={() => setManagerCardOpen(true)}>
-                      <IdCard className="size-4" aria-hidden />
-                      {t('pilgrims.managerCardTitle')}
-                    </Button>
-                  ) : (
+                  <RoleUserQuickActions
+                    user={user}
+                    showManagerCard={isManagerUser}
+                  />
+                  {isManagerUser ? null : (
                     <Link to={publicProfilePath(user.id)}>
                       <Button type="button" variant="soft">
                         <IdCard className="size-4" aria-hidden />
@@ -809,16 +717,6 @@ export function RoleUserDetailPage({
                       {t('location.register')}
                     </Button>
                   </Link>
-                  {scope.i18nPrefix === 'users' ? (
-                    <Button
-                      type="button"
-                      variant="soft"
-                      onClick={() => setPasswordModalOpen(true)}
-                    >
-                      <KeyRound className="size-4" aria-hidden />
-                      {t('users.changePassword')}
-                    </Button>
-                  ) : null}
                 </>
               )
             }

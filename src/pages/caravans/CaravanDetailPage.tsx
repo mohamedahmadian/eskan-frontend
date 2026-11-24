@@ -1,35 +1,28 @@
 import {
+  AlignLeft,
   BadgeCheck,
-  BookOpen,
   Building2,
   Calendar,
-  ClipboardCheck,
   FileImage,
   Flag,
   History,
   IdCard,
-  Landmark,
   MapPin,
   MapPinned,
-  Mars,
   MessageCircle,
   Phone,
-  Route,
   Share2,
-  Shield,
   Tent,
-  UserCog,
+  Ticket,
   UserRound,
-  Users,
-  Venus,
   type LucideIcon,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { DateText } from '../../components/ui/DateText'
 import { CopyableDigits } from '../../components/ui/CopyableDigits'
+import { DateText, YearEquivalents } from '../../components/ui/DateText'
 import {
   Button,
   EntityNameSubtitle,
@@ -40,18 +33,40 @@ import {
   listShellClassName,
 } from '../../components/ui/Form'
 import { FormCardHeaderDecor } from '../../components/ui/FormLayout'
-import { EntityRowActions } from '../../components/ui/ListControls'
+import {
+  ActionsTh,
+  EntityRowActions,
+  PaginationBar,
+  SortableTh,
+  TableCard,
+  actionsColClassName,
+} from '../../components/ui/ListControls'
 import { placementPanelClassName } from '../../components/ui/placementTab'
 import { useConfirmDelete } from '../../hooks/useConfirmDelete'
+import { useListParams } from '../../hooks/useListParams'
+import { useListSort } from '../../hooks/useListSort'
 import { useAuth } from '../../auth/AuthProvider'
-import { api, getImageUrl } from '../../lib/api'
+import { api } from '../../lib/api'
 import { currentPersianYear, formatNumber, localizeDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { isAdmin } from '../../lib/roles'
-import type { Caravan, CaravanStayPlacement } from '../../types/app'
-import { caravanContactRoles, type CaravanContactRole } from './caravanContacts'
+import type {
+  Caravan,
+  CaravanPilgrimageHistoryItem,
+  CaravanStayPlacement,
+  Paginated,
+} from '../../types/app'
+import { AccommodationImagesGallery } from '../accommodations/AccommodationImagesField'
+import { HeadcountPills } from '../reservations/HeadcountPills'
+import { ReservationCodeBadge } from '../reservations/ReservationCodeBadge'
+import { ReservationStatusBadge } from '../reservations/ReservationStatusBadge'
+import {
+  createWizardPath,
+  isOwnerCreateDraft,
+  listHeadcount,
+} from '../reservations/reservation-steps'
+import { CaravanStatusBadge } from './CaravanStatusBadge'
 import { CaravanTabNav, caravanTabs, type CaravanTab } from './CaravanTabs'
-import { CaravanYearAlert } from './CaravanYearAlert'
 
 type Tone = 'teal' | 'mint' | 'ink'
 
@@ -70,14 +85,6 @@ const toneClass: Record<Tone, { wrap: string; icon: string }> = {
   },
 }
 
-const roleIcons: Record<CaravanContactRole, LucideIcon> = {
-  DEPUTY: UserCog,
-  CLERIC: BookOpen,
-  CULTURAL: Landmark,
-  SECURITY: Shield,
-  RECEPTION: ClipboardCheck,
-}
-
 export function CaravanDetailPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
@@ -89,7 +96,10 @@ export function CaravanDetailPage() {
   const { confirmDelete } = useConfirmDelete()
   const fromMine = useLocation().pathname.startsWith('/my-caravans')
   const listPath = fromMine ? '/my-caravans' : '/caravans'
+  const reservationBase = fromMine ? '/my-reservations' : '/reservations'
   const [tab, setTab] = useState<CaravanTab>('basic')
+  const { page, setPage, searchParams, setParams } = useListParams()
+  const { sortBy, sortDir, sortParams, onSort } = useListSort(searchParams, setParams)
   const query = useQuery({
     queryKey: ['caravan', id],
     enabled: Boolean(id),
@@ -109,6 +119,19 @@ export function CaravanDetailPage() {
     },
   })
   const stays = placementsQuery.data?.items ?? []
+  const filesQuery = useQuery({
+    queryKey: ['caravan', id, 'pilgrimage-history', page, sortBy, sortDir],
+    enabled: Boolean(id) && tab === 'files',
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<CaravanPilgrimageHistoryItem>>(
+        `/caravans/${id}/pilgrimage-history`,
+        { params: { page, ...sortParams } },
+      )
+      return data
+    },
+  })
+  const files = filesQuery.data?.items ?? []
 
   const caravan = query.data
   if (!caravan) {
@@ -121,11 +144,14 @@ export function CaravanDetailPage() {
   const province = caravan.city?.province ? nameOf(caravan.city.province) : ''
   const city = caravan.city ? nameOf(caravan.city) : ''
   const empty = '—'
-  const tabs: CaravanTab[] = stays.length ? [...caravanTabs, 'placement'] : [...caravanTabs]
-  const filledContacts =
-    caravan.contacts?.filter((item) =>
-      caravanContactRoles.includes(item.role as CaravanContactRole),
-    ).length ?? 0
+  const licenseImageIds = caravan.licenseImageIds?.length
+    ? caravan.licenseImageIds
+    : caravan.licenseImageId
+      ? [caravan.licenseImageId]
+      : []
+  const tabs: CaravanTab[] = stays.length
+    ? [...caravanTabs, 'files', 'placement']
+    : [...caravanTabs, 'files']
 
   return (
     <div className={listShellClassName}>
@@ -136,8 +162,6 @@ export function CaravanDetailPage() {
       />
 
       <div className="space-y-4">
-      <CaravanYearAlert caravan={caravan} />
-
       <section className={`${cardClassName} overflow-hidden`}>
         <header className="relative overflow-hidden bg-gradient-to-e from-mint-50 via-white to-teal-50 px-5 py-5 sm:px-6">
           <FormCardHeaderDecor />
@@ -148,7 +172,7 @@ export function CaravanDetailPage() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-semibold text-ink-900">{caravan.name}</h2>
-                <StatusBadge active={caravan.isActive} />
+                <CaravanStatusBadge status={caravan.status} isActive={caravan.isActive} />
               </div>
               <p className="mt-1 text-xs leading-6 text-ink-600">
                 {t('caravans.detailsSubtitle')}
@@ -157,17 +181,9 @@ export function CaravanDetailPage() {
                 {city ? (
                   <MetaChip icon={MapPin} label={city} />
                 ) : null}
-                <MetaChip
-                  icon={Users}
-                  label={t('caravans.peopleCount', { count: n(caravan.totalCount) })}
-                />
-                <MetaChip
-                  icon={UserCog}
-                  label={t('caravans.contactsProgress', {
-                    filled: n(filledContacts),
-                    total: n(caravanContactRoles.length),
-                  })}
-                />
+                {caravan.manager ? (
+                  <MetaChip icon={UserRound} label={caravan.manager.fullName} />
+                ) : null}
               </div>
             </div>
           </div>
@@ -234,33 +250,6 @@ export function CaravanDetailPage() {
           {tab === 'basic' ? (
           <>
           <section>
-            <SectionTitle icon={Users}>{t('caravans.sectionCounts')}</SectionTitle>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <MetricTile
-                icon={Mars}
-                label={t('caravans.maleCount')}
-                value={n(caravan.maleCount)}
-                unit={t('caravans.people')}
-                tone="teal"
-              />
-              <MetricTile
-                icon={Venus}
-                label={t('caravans.femaleCount')}
-                value={n(caravan.femaleCount)}
-                unit={t('caravans.people')}
-                tone="mint"
-              />
-              <MetricTile
-                icon={Users}
-                label={t('caravans.totalCount')}
-                value={n(caravan.totalCount)}
-                unit={t('caravans.people')}
-                tone="ink"
-              />
-            </div>
-          </section>
-
-          <section>
             <SectionTitle icon={MapPin}>{t('caravans.sectionLocation')}</SectionTitle>
             <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
               <FactTile
@@ -283,15 +272,6 @@ export function CaravanDetailPage() {
                 value={city || empty}
                 empty={!city}
                 tone="ink"
-              />
-            </div>
-            <div className="mt-2 sm:mt-3">
-              <FactTile
-                icon={Route}
-                label={t('caravans.walkingRoute')}
-                value={caravan.walkingRoute?.name || empty}
-                empty={!caravan.walkingRoute}
-                tone="teal"
               />
             </div>
           </section>
@@ -334,114 +314,8 @@ export function CaravanDetailPage() {
           </>
           ) : null}
 
-          {tab === 'years' ? (
-          <section>
-            <SectionTitle icon={Calendar}>{t('caravans.sectionYears')}</SectionTitle>
-            {caravan.years?.length ? (
-              <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-                {[...caravan.years]
-                  .sort((a, b) => b.year - a.year)
-                  .map((row) => (
-                    <article
-                      key={row.id}
-                      className={`rounded-2xl border p-4 ${
-                        row.year === currentPersianYear()
-                          ? toneClass.teal.wrap
-                          : toneClass.ink.wrap
-                      }`}
-                    >
-                      <p className="text-sm font-semibold text-ink-900">
-                        {n(row.year)}
-                      </p>
-                      <p className="mt-1 text-sm text-ink-700">
-                        {row.manager?.fullName || t('caravans.unassignedManager')}
-                      </p>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <FactTile
-                          icon={Mars}
-                          label={t('caravans.maleCount')}
-                          value={n(row.maleCount ?? 0)}
-                          tone="teal"
-                        />
-                        <FactTile
-                          icon={Venus}
-                          label={t('caravans.femaleCount')}
-                          value={n(row.femaleCount ?? 0)}
-                          tone="mint"
-                        />
-                      </div>
-                    </article>
-                  ))}
-              </div>
-            ) : (
-              <EmptyHint>{t('caravans.noActivityYears')}</EmptyHint>
-            )}
-          </section>
-          ) : null}
-
-          {tab === 'contacts' ? (
-          <section>
-            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-              <SectionTitle icon={UserCog} className="mb-0">
-                {t('caravans.sectionContacts')}
-              </SectionTitle>
-              <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-[11px] font-semibold text-teal-800">
-                {t('caravans.contactsProgress', {
-                  filled: n(filledContacts),
-                  total: n(caravanContactRoles.length),
-                })}
-              </span>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-              {caravanContactRoles.map((role) => {
-                const contact = caravan.contacts?.find((item) => item.role === role)
-                const Icon = roleIcons[role]
-                return (
-                  <article
-                    key={role}
-                    className="rounded-2xl border border-teal-100 bg-gradient-to-b from-white to-teal-50/40 p-3.5"
-                  >
-                    <div className="mb-2.5 flex items-center gap-2">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white shadow-[0_6px_14px_rgba(46,189,182,0.24)]">
-                        <Icon className="size-4" aria-hidden />
-                      </span>
-                      <p className="text-xs font-semibold text-teal-900">
-                        {t(`caravans.contactRoles.${role}`)}
-                      </p>
-                    </div>
-                    {contact ? (
-                      <div className="space-y-1.5 text-sm">
-                        <p className="font-semibold text-ink-900">
-                          {contact.user.fullName ||
-                            `${contact.user.firstName} ${contact.user.lastName}`.trim()}
-                        </p>
-                        <p className="flex items-center gap-1.5 text-xs text-ink-600">
-                          <IdCard className="size-3.5 shrink-0 text-teal-600" aria-hidden />
-                          <CopyableDigits value={contact.user.nationalId} empty={empty} />
-                        </p>
-                        <p className="flex items-center gap-1.5 text-xs text-ink-600">
-                          <Phone className="size-3.5 shrink-0 text-teal-600" aria-hidden />
-                          <CopyableDigits value={contact.user.phone} empty={empty} />
-                        </p>
-                        {contact.user.birthDate ? (
-                          <p className="flex items-center gap-1.5 text-xs text-ink-600">
-                            <Calendar className="size-3.5 shrink-0 text-teal-600" aria-hidden />
-                            <DateText value={contact.user.birthDate} />
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-ink-400">{t('caravans.contactEmpty')}</p>
-                    )}
-                  </article>
-                )
-              })}
-            </div>
-          </section>
-          ) : null}
-
           {tab === 'license' ? (
-          <section>
+          <section className="space-y-4">
             <SectionTitle icon={BadgeCheck}>{t('caravans.sectionLicense')}</SectionTitle>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
               <FactTile
@@ -454,29 +328,141 @@ export function CaravanDetailPage() {
                 }
                 empty={!caravan.licenseNumber}
                 tone="teal"
+                className="sm:col-span-2"
               />
               <FactTile
-                icon={FileImage}
-                label={t('caravans.licenseImage')}
+                icon={AlignLeft}
+                label={t('caravans.description')}
                 value={
-                  caravan.licenseImageId ? (
-                    <a
-                      href={getImageUrl(caravan.licenseImageId)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-teal-700 hover:underline"
-                    >
-                      {t('common.view')}
-                    </a>
+                  caravan.description ? (
+                    <span className="whitespace-pre-wrap">{caravan.description}</span>
                   ) : (
                     empty
                   )
                 }
-                empty={!caravan.licenseImageId}
+                empty={!caravan.description}
                 tone="mint"
+                className="sm:col-span-2"
+              />
+            </div>
+            <div>
+              <SectionTitle icon={FileImage}>{t('caravans.licenseImages')}</SectionTitle>
+              <AccommodationImagesGallery
+                imageIds={licenseImageIds}
+                empty={t('caravans.noLicenseImages')}
               />
             </div>
           </section>
+          ) : null}
+
+          {tab === 'files' ? (
+            <section className="space-y-4">
+              <SectionTitle icon={Ticket}>{t('caravans.tabs.files')}</SectionTitle>
+              <TableCard
+                loading={filesQuery.isLoading}
+                empty={t('caravans.filesEmpty')}
+                hasRows={files.length > 0}
+              >
+                <table className="w-full text-sm">
+                  <thead className="bg-cream-50 text-ink-700">
+                    <tr>
+                      <SortableTh
+                        column="code"
+                        label={t('reservations.code')}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                      />
+                      <SortableTh
+                        column="year"
+                        label={t('reservations.year')}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                        align="center"
+                      />
+                      <SortableTh
+                        column="stayStartDate"
+                        label={t('reservations.stayStartDateShort')}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                      />
+                      <SortableTh
+                        column="totalCount"
+                        label={t('reservations.totalCount')}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                      />
+                      <SortableTh
+                        column="status"
+                        label={t('reservations.status')}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                      />
+                      <ActionsTh />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {files.map((item) => {
+                      const headcount = listHeadcount(item)
+                      const viewTo = isOwnerCreateDraft(item)
+                        ? createWizardPath(item.id, reservationBase)
+                        : `${reservationBase}/${item.id}`
+                      return (
+                        <tr key={item.id} className="border-t border-line">
+                          <td className="px-4 py-3">
+                            <ReservationCodeBadge code={item.code} size="md" />
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="space-y-0.5">
+                              <div>{n(item.year)}</div>
+                              <YearEquivalents year={item.year} stacked />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.stayStartDate ? (
+                              <DateText value={item.stayStartDate} />
+                            ) : (
+                              empty
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <HeadcountPills
+                              type={item.type}
+                              male={headcount.male}
+                              female={headcount.female}
+                              total={headcount.total}
+                              format={n}
+                              maleLabel={t('caravans.countMale')}
+                              femaleLabel={t('caravans.countFemale')}
+                              totalLabel={t('reservations.countTotal')}
+                              stacked
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <ReservationStatusBadge status={item.status} />
+                          </td>
+                          <td className={actionsColClassName}>
+                            <EntityRowActions viewTo={viewTo} />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </TableCard>
+              {filesQuery.data ? (
+                <PaginationBar
+                  page={filesQuery.data.page}
+                  pageSize={filesQuery.data.pageSize}
+                  total={filesQuery.data.total}
+                  onPageChange={setPage}
+                />
+              ) : null}
+            </section>
           ) : null}
 
           {tab === 'extra' ? (
@@ -511,17 +497,6 @@ export function CaravanDetailPage() {
                 tone="ink"
                 className="sm:col-span-2"
               />
-              {caravan.description ? (
-                <FactTile
-                  icon={Tent}
-                  label={t('caravans.description')}
-                  value={
-                    <span className="whitespace-pre-wrap">{caravan.description}</span>
-                  }
-                  tone="teal"
-                  className="sm:col-span-2"
-                />
-              ) : null}
             </div>
           </section>
           ) : null}
@@ -603,21 +578,6 @@ function personInitials(firstName: string, lastName: string) {
   return `${first}${last}` || '؟'
 }
 
-function StatusBadge({ active }: { active: boolean }) {
-  const { t } = useTranslation()
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${
-        active
-          ? 'bg-teal-500 text-white ring-teal-500'
-          : 'bg-white/80 text-ink-500 ring-line'
-      }`}
-    >
-      {active ? t('geo.active') : t('geo.inactive')}
-    </span>
-  )
-}
-
 function MetaChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-700 shadow-[0_4px_10px_rgba(20,40,40,0.05)] ring-1 ring-teal-100">
@@ -645,36 +605,6 @@ function SectionTitle({
       </span>
       {children}
     </h3>
-  )
-}
-
-function MetricTile({
-  icon: Icon,
-  label,
-  value,
-  unit,
-  tone,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  unit: string
-  tone: Tone
-}) {
-  const colors = toneClass[tone]
-  return (
-    <article
-      className={`flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-center ${colors.wrap}`}
-    >
-      <span
-        className={`flex size-9 items-center justify-center rounded-xl ${colors.icon}`}
-      >
-        <Icon className="size-4" aria-hidden />
-      </span>
-      <p className="text-[11px] font-medium text-ink-500">{label}</p>
-      <p className="text-lg font-bold leading-none text-ink-900">{value}</p>
-      <p className="text-[10px] text-ink-400">{unit}</p>
-    </article>
   )
 }
 

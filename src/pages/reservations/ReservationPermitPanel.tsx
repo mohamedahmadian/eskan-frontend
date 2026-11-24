@@ -153,7 +153,7 @@ export function ReservationPermitPanel({
             allowConfirmed={admin}
             onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
           />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Button
               type="button"
               disabled={busy}

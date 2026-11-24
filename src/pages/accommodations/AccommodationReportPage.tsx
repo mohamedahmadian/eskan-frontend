@@ -213,12 +213,20 @@ export function AccommodationReportPage() {
         <p className={`${cardClassName} px-5 py-4 text-sm text-red-700`}>{t('common.error')}</p>
       ) : (
         <div className={`space-y-6 ${query.isFetching ? 'opacity-70' : ''}`}>
-          <KpiCard
-            icon={Building2}
-            tone="bg-teal-50 text-teal-700"
-            label={t('accommodations.reportTotal')}
-            value={formatNumber(total, locale)}
-          />
+          <section className="grid gap-4 sm:grid-cols-2">
+            <KpiCard
+              icon={Building2}
+              tone="bg-teal-50 text-teal-700"
+              label={t('accommodations.reportTotal')}
+              value={formatNumber(total, locale)}
+            />
+            <KpiCard
+              icon={Building2}
+              tone="bg-mint-50 text-mint-800"
+              label={t('accommodations.reportOccupied')}
+              value={formatNumber(report.occupancy?.occupied ?? 0, locale)}
+            />
+          </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
             <DonutCard

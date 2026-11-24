@@ -22,7 +22,7 @@ import { SearchSelect } from '../../components/ui/SearchSelect'
 import { useListParams } from '../../hooks/useListParams'
 import { useListSort } from '../../hooks/useListSort'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear, formatNumber } from '../../lib/datetime'
+import { formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { isAccommodationManager } from '../../lib/roles'
 import type {
@@ -139,12 +139,10 @@ function ManagerDossierModal({ userId, onClose }: { userId: string; onClose: () 
 
 function ManagerAssignSelect({
   item,
-  year,
   users,
   usersLoading,
 }: {
   item: AccommodationAssignmentRow
-  year: number
   users: ManagedUser[]
   usersLoading: boolean
 }) {
@@ -160,16 +158,14 @@ function ManagerAssignSelect({
 
   const assign = useMutation({
     mutationFn: async (next: string) => {
-      await api.post(`/accommodations/${item.id}/managers`, {
-        userId: next || null,
-        year,
-        ...(next
-          ? {}
-          : {
-              maleCapacity: item.maleCapacity,
-              femaleCapacity: item.femaleCapacity,
-            }),
-      })
+      if (next && item.managerAssignmentId && item.managerUserId && item.managerUserId !== next) {
+        await api.delete(`/accommodations/${item.id}/managers/${item.managerAssignmentId}`)
+      }
+      if (next) {
+        await api.post(`/accommodations/${item.id}/managers`, { userId: next })
+      } else if (item.managerAssignmentId) {
+        await api.delete(`/accommodations/${item.id}/managers/${item.managerAssignmentId}`)
+      }
       return next
     },
     onSuccess: async (next) => {
@@ -291,8 +287,6 @@ export function AccommodationAssignmentPage() {
   const rows = listQuery.data?.items ?? []
   const total = listQuery.data?.total ?? 0
   const pageSize = listQuery.data?.pageSize ?? 10
-  const year = listQuery.data?.year ?? statsQuery.data?.year
-
   function setManagerStatus(next: ManagerFilter) {
     setParams({ managerStatus: next || undefined }, { resetPage: true })
   }
@@ -309,9 +303,7 @@ export function AccommodationAssignmentPage() {
       <PageHeader
         icon={UserRoundPlus}
         title={t('menus.accommodationAssignment')}
-        subtitle={t('accommodationAssignment.subtitle', {
-          year: formatNumber(statsQuery.data?.year ?? currentPersianYear(), locale),
-        })}
+        subtitle={t('accommodationAssignment.subtitle')}
       />
 
       <AssignmentStatsCards
@@ -405,14 +397,11 @@ export function AccommodationAssignmentPage() {
                   </td>
                   <td className="px-4 py-3">{name(item.type)}</td>
                   <td className="min-w-80 px-4 py-3">
-                    {year != null ? (
-                      <ManagerAssignSelect
-                        item={item}
-                        year={year}
-                        users={managers}
-                        usersLoading={usersQuery.isLoading}
-                      />
-                    ) : null}
+                    <ManagerAssignSelect
+                      item={item}
+                      users={managers}
+                      usersLoading={usersQuery.isLoading}
+                    />
                   </td>
                 </tr>
               ))}

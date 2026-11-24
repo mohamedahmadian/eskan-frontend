@@ -15,7 +15,6 @@ import { CaravanImportPage } from "./pages/caravans/CaravanImportPage";
 import { CaravanPilgrimageHistoryPage } from "./pages/caravans/CaravanPilgrimageHistoryPage";
 import { CaravanRegisterWizardPage } from "./pages/caravans/CaravanRegisterWizardPage";
 import { CaravanReportPage } from "./pages/caravans/CaravanReportPage";
-import { CaravanYearManagementPage } from "./pages/caravans/CaravanYearManagementPage";
 import { CaravansListPage } from "./pages/caravans/CaravansListPage";
 import { MyCaravanCreatePage } from "./pages/caravans/MyCaravanCreatePage";
 import { MyCaravansListPage } from "./pages/caravans/MyCaravansListPage";
@@ -154,7 +153,6 @@ import { AccommodationCreatePage } from "./pages/accommodations/AccommodationCre
 import { AccommodationDetailPage } from "./pages/accommodations/AccommodationDetailPage";
 import { AccommodationEditPage } from "./pages/accommodations/AccommodationEditPage";
 import { AccommodationAssignmentPage } from "./pages/accommodations/AccommodationAssignmentPage";
-import { AccommodationYearManagementPage } from "./pages/accommodations/AccommodationYearManagementPage";
 import { AccommodationReportPage } from "./pages/accommodations/AccommodationReportPage";
 import { PlacementsListPage } from "./pages/placements/PlacementsListPage";
 import { PlacementDetailPage } from "./pages/placements/PlacementDetailPage";
@@ -469,7 +467,15 @@ export default function App() {
                 <Route element={<RequireMenuAccess path="/caravans" />}>
                   <Route path="/caravans" element={<CaravansListPage />} />
                   <Route path="/caravans/new" element={<CaravanCreatePage />} />
-                  <Route path="/caravans/import" element={<CaravanImportPage />} />
+                  <Route
+                    path="/caravans/import"
+                    element={
+                      <Navigate
+                        to="/system-management/data-management/import-caravans"
+                        replace
+                      />
+                    }
+                  />
                   <Route
                     path="/caravans/:id/pilgrimage-history"
                     element={<CaravanPilgrimageHistoryPage />}
@@ -479,16 +485,6 @@ export default function App() {
                     element={<CaravanEditPage />}
                   />
                   <Route path="/caravans/:id" element={<CaravanDetailPage />} />
-                </Route>
-                <Route
-                  element={
-                    <RequireMenuAccess path="/caravan-year-management" />
-                  }
-                >
-                  <Route
-                    path="/caravan-year-management"
-                    element={<CaravanYearManagementPage />}
-                  />
                 </Route>
                 <Route element={<RequireMenuAccess path="/caravan-report" />}>
                   <Route
@@ -1308,16 +1304,6 @@ export default function App() {
                   />
                 </Route>
                 <Route
-                  element={
-                    <RequireMenuAccess path="/accommodation-year-management" />
-                  }
-                >
-                  <Route
-                    path="/accommodation-year-management"
-                    element={<AccommodationYearManagementPage />}
-                  />
-                </Route>
-                <Route
                   element={<RequireMenuAccess path="/accommodation-report" />}
                 >
                   <Route
@@ -1946,6 +1932,10 @@ export default function App() {
                   <Route
                     path="/system-management/data-management"
                     element={<DataManagementPage />}
+                  />
+                  <Route
+                    path="/system-management/data-management/import-caravans"
+                    element={<CaravanImportPage />}
                   />
                   <Route
                     path="/system-management/data-management/import"

@@ -3,16 +3,19 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
   Eye,
+  FileImage,
   Flag,
   MapPin,
   MapPinned,
-  Route,
+  MessageCircle,
+  Share2,
   Tent,
-  UserPlus,
   UserRound,
-  Users,
+  X,
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useEffect, useState } from 'react'
@@ -23,7 +26,6 @@ import { useAuth } from '../../auth/AuthProvider'
 import {
   AppForm,
   Button,
-  FormActions,
   FormField,
   LoadingState,
   PageHeader,
@@ -39,19 +41,12 @@ import {
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
 import { isAdmin } from '../../lib/roles'
-import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
+import { formatNumber, toLatinDigits } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
-import type { Caravan, City, Country, Paginated, Province, WalkingRoute } from '../../types/app'
-import { CaravanContactsPanel, firstIncompleteContactRole } from './CaravanContactsPanel'
+import type { Caravan, City, Country, Province } from '../../types/app'
+import { AccommodationImagesField } from '../accommodations/AccommodationImagesField'
 import { CaravanManagerPicker, type CaravanManagerChoice } from './CaravanManagerPicker'
-import {
-  caravanContactRoles,
-  contactDraftsFromInitial,
-  isContactComplete,
-  toContactPayloads,
-  type CaravanContactDraft,
-  type CaravanContactRole,
-} from './caravanContacts'
+import { CaravanStatusBadge } from './CaravanStatusBadge'
 
 type Step = 1 | 2 | 3
 
@@ -62,16 +57,14 @@ type RegisteredCaravan = {
   cityName: string
 }
 
+function emptyToNull(value: string) {
+  const trimmed = value.trim()
+  return trimmed.length ? trimmed : null
+}
+
 function toYear(value: string) {
   const parsed = Number(toLatinDigits(value))
   if (!Number.isInteger(parsed) || parsed < 1300 || parsed > 1600) return null
-  return parsed
-}
-
-function toCount(value: string) {
-  if (value.trim() === '') return null
-  const parsed = Number(toLatinDigits(value))
-  if (!Number.isInteger(parsed) || parsed < 0) return null
   return parsed
 }
 
@@ -91,16 +84,12 @@ export function CaravanRegisterWizardPage() {
   const [countryId, setCountryId] = useState('')
   const [provinceId, setProvinceId] = useState('')
   const [cityId, setCityId] = useState('')
-  const [walkingRouteId, setWalkingRouteId] = useState('')
-  const [maleCount, setMaleCount] = useState('')
-  const [femaleCount, setFemaleCount] = useState('')
+  const [licenseImageIds, setLicenseImageIds] = useState<string[]>([])
   const [manager, setManager] = useState<CaravanManagerChoice | null>(null)
-  const [contactDrafts, setContactDrafts] = useState<
-    Record<CaravanContactRole, CaravanContactDraft>
-  >(() => contactDraftsFromInitial())
-  const [activeRole, setActiveRole] = useState<CaravanContactRole>(() =>
-    firstIncompleteContactRole(contactDraftsFromInitial()),
-  )
+  const [eitaa, setEitaa] = useState('')
+  const [bale, setBale] = useState('')
+  const [telegram, setTelegram] = useState('')
+  const [instagram, setInstagram] = useState('')
   const [done, setDone] = useState<RegisteredCaravan | null>(null)
 
   const countries = useQuery({
@@ -139,35 +128,11 @@ export function CaravanRegisterWizardPage() {
     },
   })
 
-  const walkingRoutes = useQuery({
-    queryKey: ['walking-routes', 'lookup', countryId],
-    enabled: Boolean(countryId),
-    queryFn: async () => {
-      const { data } = await api.get<Paginated<WalkingRoute>>('/walking-routes', {
-        params: { pageSize: 100, originCountryId: countryId || undefined },
-      })
-      return data.items
-    },
-  })
-
-  const totalCount = (toCount(maleCount) ?? 0) + (toCount(femaleCount) ?? 0)
-
-  function applyManager(next: CaravanManagerChoice | null) {
-    setManager(next)
-    if (!next?.provinceId || !next.cityId) return
-    if (next.countryId) setCountryId(next.countryId)
-    setProvinceId(next.provinceId)
-    setCityId(next.cityId)
-  }
-
-  function goToContacts(event: FormEvent) {
+  function goToLicenseStep(event: FormEvent) {
     event.preventDefault()
-    if (admin && !manager) {
-      toast.error(t('caravans.managerRequired'))
-      return
-    }
-    if (toYear(foundedYear) == null) {
-      toast.error(t('caravanRegister.foundedYearInvalid'))
+    const year = toYear(foundedYear)
+    if (!name.trim() || year == null || !cityId) {
+      toast.error(t('caravanRegister.stepIncomplete'))
       return
     }
     setStep(2)
@@ -175,29 +140,17 @@ export function CaravanRegisterWizardPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    for (const role of caravanContactRoles) {
-      if (!isContactComplete(contactDrafts[role])) {
-        toast.error(
-          t('caravans.contactIncomplete', {
-            role: t(`caravans.contactRoles.${role}`),
-          }),
-        )
-        setActiveRole(role)
-        return
-      }
+    if (admin && !manager) {
+      toast.error(t('caravans.managerRequired'))
+      return
     }
-
     const year = toYear(foundedYear)
-    const male = toCount(maleCount)
-    const female = toCount(femaleCount)
-    if (year == null || male == null || female == null || !cityId || (admin && !manager)) {
+    if (year == null || !cityId) {
       toast.error(t('caravanRegister.stepIncomplete'))
-      setStep(1)
       return
     }
     if (admin && !manager?.phone?.trim()) {
       toast.error(t('caravanRegister.managerPhoneRequired'))
-      setStep(1)
       return
     }
 
@@ -210,20 +163,13 @@ export function CaravanRegisterWizardPage() {
         officePhone: null,
         foundedYear: year,
         cityId,
-        walkingRouteId: walkingRouteId || null,
         licenseNumber: licenseNumber.trim() || null,
-        licenseImageId: null,
+        licenseImageIds,
         managerUserId: admin ? manager?.id ?? null : null,
-        year: currentPersianYear(),
-        totalCount: male + female,
-        maleCount: male,
-        femaleCount: female,
-        eitaa: null,
-        bale: null,
-        telegram: null,
-        instagram: null,
-        isActive: false,
-        contacts: toContactPayloads(contactDrafts),
+        eitaa: emptyToNull(eitaa),
+        bale: emptyToNull(bale),
+        telegram: emptyToNull(telegram),
+        instagram: emptyToNull(instagram),
       })
       await queryClient.invalidateQueries({ queryKey: ['caravans'] })
       await refresh()
@@ -262,7 +208,7 @@ export function CaravanRegisterWizardPage() {
           title={t('caravanRegister.stepInfo')}
           subtitle={t('caravanRegister.infoHint')}
         >
-          <AppForm autoFocusFirst onSubmit={goToContacts} className={formCardBodyClassName}>
+          <AppForm autoFocusFirst onSubmit={goToLicenseStep} className={formCardBodyClassName}>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField icon={Tent} label={t('caravans.name')} htmlFor="register-name">
                 <input
@@ -311,7 +257,6 @@ export function CaravanRegisterWizardPage() {
                     setCountryId(next)
                     setProvinceId('')
                     setCityId('')
-                    setWalkingRouteId('')
                   }}
                   placeholder={t('geo.selectCountry')}
                   options={[
@@ -362,74 +307,12 @@ export function CaravanRegisterWizardPage() {
               </FormField>
             </div>
 
-            <FormField icon={Route} label={t('caravans.walkingRoute')} htmlFor="register-walkingRouteId">
-              <SearchSelect
-                id="register-walkingRouteId"
-                value={walkingRouteId}
-                onChange={setWalkingRouteId}
-                placeholder={t('caravans.walkingRoute')}
-                options={[
-                  { value: '', label: t('caravans.walkingRouteNone') },
-                  ...(walkingRoutes.data ?? []).map((route) => ({
-                    value: route.id,
-                    label: route.name,
-                  })),
-                ]}
-              />
-            </FormField>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormField icon={UserRound} label={t('caravans.maleCount')} htmlFor="register-maleCount">
-                <input
-                  id="register-maleCount"
-                  type="number"
-                  min={0}
-                  step={1}
-                  className={fieldClassName}
-                  value={maleCount}
-                  required
-                  onChange={(e) => setMaleCount(e.target.value)}
-                />
-              </FormField>
-              <FormField icon={UserPlus} label={t('caravans.femaleCount')} htmlFor="register-femaleCount">
-                <input
-                  id="register-femaleCount"
-                  type="number"
-                  min={0}
-                  step={1}
-                  className={fieldClassName}
-                  value={femaleCount}
-                  required
-                  onChange={(e) => setFemaleCount(e.target.value)}
-                />
-              </FormField>
-              <FormField icon={Users} label={t('caravans.totalCount')} htmlFor="register-totalCount">
-                <input
-                  id="register-totalCount"
-                  type="number"
-                  className={`${fieldClassName} bg-cream-50 text-ink-700`}
-                  value={totalCount}
-                  readOnly
-                  tabIndex={-1}
-                />
-              </FormField>
-            </div>
-
-            {admin ? (
-              <>
-                <FormSectionTitle icon={UserRound}>{t('caravans.manager')}</FormSectionTitle>
-                <CaravanManagerPicker
-                  value={manager}
-                  onChange={applyManager}
-                  emptyLabel={t('caravans.managerRequired')}
-                />
-              </>
-            ) : null}
-
-            <FormActions
+            <WizardStepActions
               submitLabel={t('caravanRegister.next')}
-              cancelLabel={t('caravans.cancel')}
-              onCancel={() => navigate('/my-caravans')}
+              backLabel={t('caravans.cancel')}
+              onBack={() => navigate('/my-caravans')}
+              submitIcon="next"
+              backIcon="cancel"
             />
           </AppForm>
         </FormCard>
@@ -437,25 +320,86 @@ export function CaravanRegisterWizardPage() {
 
       {step === 2 ? (
         <FormCard
-          icon={Users}
-          title={t('caravans.sectionContacts')}
-          subtitle={t('caravanRegister.contactsHint')}
+          icon={FileImage}
+          title={t('caravanRegister.stepLicense')}
+          subtitle={t('caravanRegister.licenseHint')}
         >
           <AppForm autoFocusFirst={false} onSubmit={submit} className={formCardBodyClassName}>
-            <CaravanContactsPanel
-              drafts={contactDrafts}
-              activeRole={activeRole}
-              onActiveRoleChange={setActiveRole}
-              onDraftChange={(role, next) =>
-                setContactDrafts((current) => ({ ...current, [role]: next }))
-              }
-              newPersonInModal
-            />
-            <FormActions
+            <FormSectionTitle icon={FileImage}>{t('caravans.licenseImages')}</FormSectionTitle>
+            <FormField icon={FileImage} label={t('caravans.licenseImages')} htmlFor="register-licenseImages">
+              <AccommodationImagesField
+                imageIds={licenseImageIds}
+                onChange={setLicenseImageIds}
+                maxImages={8}
+                capture="environment"
+                emptyLabel={t('caravans.noLicenseImages')}
+                limitLabel={t('caravans.licenseImagesLimit')}
+              />
+            </FormField>
+
+            <FormSectionTitle icon={UserRound}>{t('caravans.manager')}</FormSectionTitle>
+            {admin ? (
+              <CaravanManagerPicker
+                value={manager}
+                onChange={setManager}
+                emptyLabel={t('caravans.managerRequired')}
+              />
+            ) : (
+              <FormFactTile
+                icon={UserRound}
+                label={t('caravans.manager')}
+                value={user?.fullName || t('caravanRegister.selfManagerHint')}
+                tone="teal"
+              />
+            )}
+
+            <FormSectionTitle icon={Share2}>{t('caravans.sectionSocial')}</FormSectionTitle>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField icon={Share2} label={t('caravans.eitaa')} htmlFor="register-eitaa">
+                <input
+                  id="register-eitaa"
+                  className={fieldClassName}
+                  value={eitaa}
+                  onChange={(e) => setEitaa(e.target.value)}
+                  dir="ltr"
+                />
+              </FormField>
+              <FormField icon={MessageCircle} label={t('caravans.bale')} htmlFor="register-bale">
+                <input
+                  id="register-bale"
+                  className={fieldClassName}
+                  value={bale}
+                  onChange={(e) => setBale(e.target.value)}
+                  dir="ltr"
+                />
+              </FormField>
+              <FormField icon={MessageCircle} label={t('caravans.telegram')} htmlFor="register-telegram">
+                <input
+                  id="register-telegram"
+                  className={fieldClassName}
+                  value={telegram}
+                  onChange={(e) => setTelegram(e.target.value)}
+                  dir="ltr"
+                />
+              </FormField>
+              <FormField icon={Share2} label={t('caravans.instagram')} htmlFor="register-instagram">
+                <input
+                  id="register-instagram"
+                  className={fieldClassName}
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  dir="ltr"
+                />
+              </FormField>
+            </div>
+
+            <WizardStepActions
               submitLabel={t('caravanRegister.submit')}
-              cancelLabel={t('caravanRegister.back')}
+              backLabel={t('caravanRegister.back')}
+              onBack={() => setStep(1)}
               submitting={saving}
-              onCancel={() => setStep(1)}
+              submitIcon="check"
+              backIcon="previous"
             />
           </AppForm>
         </FormCard>
@@ -495,7 +439,7 @@ export function CaravanRegisterWizardPage() {
               <FormFactTile
                 icon={ClipboardCheck}
                 label={t('caravans.status')}
-                value={t('caravanRegister.statusPending')}
+                value={<CaravanStatusBadge status="PENDING_REVIEW" />}
                 tone="mint"
               />
             </div>
@@ -510,19 +454,53 @@ export function CaravanRegisterWizardPage() {
   )
 }
 
+function WizardStepActions({
+  submitLabel,
+  backLabel,
+  onBack,
+  submitting = false,
+  submitIcon,
+  backIcon,
+}: {
+  submitLabel: string
+  backLabel: string
+  onBack: () => void
+  submitting?: boolean
+  submitIcon: 'next' | 'check'
+  backIcon: 'previous' | 'cancel'
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <Button type="submit" disabled={submitting}>
+        {submitIcon === 'check' ? <Check className="size-4" aria-hidden /> : null}
+        {submitLabel}
+        {submitIcon === 'next' ? <ChevronLeft className="size-4" aria-hidden /> : null}
+      </Button>
+      <Button type="button" variant="ghost" data-form-cancel="" onClick={onBack}>
+        {backIcon === 'previous' ? (
+          <ChevronRight className="size-4" aria-hidden />
+        ) : (
+          <X className="size-4" aria-hidden />
+        )}
+        {backLabel}
+      </Button>
+    </div>
+  )
+}
+
 function RegisterSteps({ step }: { step: Step }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language.split('-')[0] ?? 'fa'
   const items = [
     { n: 1 as const, label: t('caravanRegister.stepInfo') },
-    { n: 2 as const, label: t('caravanRegister.stepContacts') },
+    { n: 2 as const, label: t('caravanRegister.stepLicense') },
     { n: 3 as const, label: t('caravanRegister.stepDone') },
   ]
 
   return (
     <ol className="mb-4 grid grid-cols-3 gap-2">
       {items.map((item) => {
-        const done = item.n < step || step === 3
+        const complete = item.n < step || step === 3
         const active = item.n === step && step < 3
         return (
           <li
@@ -531,17 +509,17 @@ function RegisterSteps({ step }: { step: Step }) {
             className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-2.5 text-center ${
               active
                 ? 'border-teal-400 bg-white shadow-[0_8px_20px_rgba(46,189,182,0.12)]'
-                : done
+                : complete
                   ? 'border-teal-100 bg-teal-50'
                   : 'border-line bg-white'
             }`}
           >
             <span
               className={`flex size-7 items-center justify-center rounded-full text-xs font-semibold ${
-                done || active ? 'bg-teal-500 text-white' : 'bg-cream-100 text-ink-500'
+                complete || active ? 'bg-teal-500 text-white' : 'bg-cream-100 text-ink-500'
               }`}
             >
-              {done ? <Check className="size-3.5" aria-hidden /> : formatNumber(item.n, locale)}
+              {complete ? <Check className="size-3.5" aria-hidden /> : formatNumber(item.n, locale)}
             </span>
             <span className="text-xs font-medium text-ink-800">{item.label}</span>
           </li>

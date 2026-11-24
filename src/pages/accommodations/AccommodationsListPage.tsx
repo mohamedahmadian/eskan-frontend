@@ -79,7 +79,7 @@ export function AccommodationsListPage() {
   const provinceId = searchParams.get('provinceId') ?? ''
   const cityId = searchParams.get('cityId') ?? ''
   const year = searchParams.get('year') ?? ''
-  const hasManagerThisYear = searchParams.get('hasManagerThisYear') ?? ''
+  const hasManager = searchParams.get('hasManager') ?? ''
   const schoolDistrictId = searchParams.get('schoolDistrictId') ?? ''
   const typeOptions = useAccommodationTypesLookup(false)
   const selectedType = typeOptions.data?.find((item) => item.id === typeId)
@@ -135,7 +135,7 @@ export function AccommodationsListPage() {
     ...(provinceId ? { provinceId } : {}),
     ...(cityId ? { cityId } : {}),
     ...(year ? { year } : {}),
-    ...(hasManagerThisYear ? { hasManagerThisYear } : {}),
+    ...(hasManager ? { hasManager } : {}),
     ...(schoolTypeSelected && schoolDistrictId ? { schoolDistrictId } : {}),
     ...sortParams,
   }
@@ -152,7 +152,7 @@ export function AccommodationsListPage() {
       provinceId,
       cityId,
       year,
-      hasManagerThisYear,
+      hasManager,
       schoolDistrictId,
       sortBy,
       sortDir,
@@ -198,7 +198,7 @@ export function AccommodationsListPage() {
           ...(provinceId ? { provinceId } : {}),
           ...(cityId ? { cityId } : {}),
           ...(year ? { year } : {}),
-          ...(hasManagerThisYear ? { hasManagerThisYear } : {}),
+          ...(hasManager ? { hasManager } : {}),
           ...(schoolTypeSelected && schoolDistrictId ? { schoolDistrictId } : {}),
           ...sortParams,
         },
@@ -237,7 +237,7 @@ export function AccommodationsListPage() {
       provinceId ||
       cityId ||
       year ||
-      hasManagerThisYear ||
+      hasManager ||
       (schoolTypeSelected && schoolDistrictId),
   )
   const emptyMessage =
@@ -362,7 +362,7 @@ export function AccommodationsListPage() {
               </FormField>
             </FilterPair>
             <FilterPair columns={schoolTypeSelected ? 4 : 3}>
-              <FormField icon={CalendarDays} label={t('accommodations.year')} htmlFor="accommodation-year">
+              <FormField icon={CalendarDays} label={t('accommodations.occupancyYear')} htmlFor="accommodation-year">
                 <SearchSelect
                   id="accommodation-year"
                   value={year}
@@ -463,10 +463,10 @@ export function AccommodationsListPage() {
               >
                 <SearchSelect
                   id="accommodation-current-year-manager"
-                  value={hasManagerThisYear}
+                  value={hasManager}
                   placeholder={t('accommodations.allManagerStatuses')}
                   onChange={(next) =>
-                    setParams({ hasManagerThisYear: next || undefined }, { resetPage: true })
+                    setParams({ hasManager: next || undefined }, { resetPage: true })
                   }
                   options={[
                     { value: '', label: t('accommodations.allManagerStatuses') },

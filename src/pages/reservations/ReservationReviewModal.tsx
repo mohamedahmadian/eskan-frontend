@@ -506,21 +506,21 @@ export function ReservationReviewModal({
               </>
             )}
 
-            <div className="flex flex-wrap items-center gap-2">
-              {permitReview ? (
-                <Button type="button" variant="ghost" onClick={() => setStep('permit')} disabled={busy}>
-                  <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
-                  {t('reservations.reviewStepPermit')}
-                </Button>
-              ) : null}
-              <div className="ms-auto flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button type="submit" variant={rejecting ? 'danger' : 'primary'} disabled={busy}>
+                {rejecting ? <X className="size-4" aria-hidden /> : <Check className="size-4" aria-hidden />}
+                {confirmLabel}
+              </Button>
+              <div className="flex flex-wrap gap-2">
+                {permitReview ? (
+                  <Button type="button" variant="ghost" onClick={() => setStep('permit')} disabled={busy}>
+                    <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
+                    {t('reservations.reviewStepPermit')}
+                  </Button>
+                ) : null}
                 <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>
                   <X className="size-4" aria-hidden />
                   {t('common.cancel')}
-                </Button>
-                <Button type="submit" variant={rejecting ? 'danger' : 'primary'} disabled={busy}>
-                  {rejecting ? <X className="size-4" aria-hidden /> : <Check className="size-4" aria-hidden />}
-                  {confirmLabel}
                 </Button>
               </div>
             </div>

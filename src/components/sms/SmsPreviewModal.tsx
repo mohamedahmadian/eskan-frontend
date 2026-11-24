@@ -115,22 +115,18 @@ export function SmsPreviewModal({
               required
             />
           </FormField>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" disabled={busy}>
-              <Send className="size-4" aria-hidden />
-              {t('sms.send')}
-            </Button>
-            <Button type="button" variant="soft" disabled={busy} onClick={() => void openEitaa()}>
-              <EitaaIcon className="size-4" aria-hidden />
-              {t('sms.sendEitaa')}
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              className="ms-auto"
-              onClick={onClose}
-              disabled={busy}
-            >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-3">
+              <Button type="submit" disabled={busy}>
+                <Send className="size-4" aria-hidden />
+                {t('sms.send')}
+              </Button>
+              <Button type="button" variant="soft" disabled={busy} onClick={() => void openEitaa()}>
+                <EitaaIcon className="size-4" aria-hidden />
+                {t('sms.sendEitaa')}
+              </Button>
+            </div>
+            <Button type="button" variant="danger" onClick={onClose} disabled={busy}>
               <X className="size-4" aria-hidden />
               {t('common.cancel')}
             </Button>

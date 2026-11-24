@@ -49,7 +49,7 @@ export function ReservationSectionHeader({
             {chips ? <div className="mt-3 flex flex-wrap gap-1.5">{chips}</div> : null}
           </div>
         </div>
-        {action ? <div className="relative z-10 shrink-0">{action}</div> : null}
+        {action ? <div className="relative z-10 flex shrink-0 justify-end">{action}</div> : null}
       </div>
     </header>
   )

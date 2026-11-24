@@ -36,6 +36,7 @@ import {
   ToggleField,
   Button,
   fieldClassName,
+  formCardExtraActionsClassName,
   inputClassName,
 } from '../../components/ui/Form'
 import { FormCard } from '../../components/ui/FormLayout'
@@ -75,6 +76,20 @@ export type UserFormExtraTab = {
   id: string
   labelKey: string
   content: ReactNode
+  after?: string
+}
+
+function mergeFormTabs(visibleTabs: readonly string[], extraTabs?: UserFormExtraTab[]) {
+  const result = [...visibleTabs]
+  for (const extra of extraTabs ?? []) {
+    const afterIndex = extra.after ? result.indexOf(extra.after) : -1
+    if (afterIndex >= 0) {
+      result.splice(afterIndex + 1, 0, extra.id)
+    } else {
+      result.push(extra.id)
+    }
+  }
+  return result
 }
 
 function emptyToNull(value: string) {
@@ -134,31 +149,39 @@ export function UserForm({
   initial,
   roles: rolesProp,
   lockedRoleCodes = [],
+  allowRevokeLockedRole = false,
   hideRoles = false,
   hidePassword = false,
   hideStatus = false,
   requirePassword,
   defaultPassword = '',
   extraTabs,
+  headerAction,
+  footerActions,
   identityCheckPath = '/users/identity-check',
   i18nPrefix = 'users',
   selfProfile = false,
   onCancel,
+  onRolesChanged,
   onSubmit,
 }: {
   initial?: Partial<ManagedUser> & { roleIds?: string[] }
   roles: RoleOption[]
   lockedRoleCodes?: string[]
+  allowRevokeLockedRole?: boolean
   hideRoles?: boolean
   hidePassword?: boolean
   hideStatus?: boolean
   requirePassword: boolean
   defaultPassword?: string
   extraTabs?: UserFormExtraTab[]
+  headerAction?: ReactNode
+  footerActions?: ReactNode
   identityCheckPath?: string
   i18nPrefix?: 'users' | 'pilgrims' | 'accommodationManagers' | 'caravanManagers' | 'headquartersRepresentatives'
   selfProfile?: boolean
   onCancel?: () => void
+  onRolesChanged?: (roles: RoleOption[]) => void
   onSubmit: (payload: UserPayload) => Promise<void>
 }) {
   const { t, i18n } = useTranslation()
@@ -242,7 +265,11 @@ export function UserForm({
     ? t('users.linkedOrganizationRequired')
     : t('users.issuingOrganizationRequired')
   const selectedRoleCodes = knownRoles
-    .filter((role) => roleIds.includes(role.id) || lockedIds.includes(role.id))
+    .filter(
+      (role) =>
+        roleIds.includes(role.id) ||
+        (!allowRevokeLockedRole && lockedIds.includes(role.id)),
+    )
     .map((role) => role.code)
   const showActivityStart = showUserActivityStartYear(i18nPrefix, {
     lockedRoleCodes,
@@ -344,14 +371,18 @@ export function UserForm({
   })
 
   function toggleRole(id: string) {
-    if (lockedIds.includes(id)) return
+    if (!allowRevokeLockedRole && lockedIds.includes(id)) return
     const current = roleIdsRef.current
     commitRoleIds(current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   }
 
   function syncQuickRoles(nextRoles: RoleOption[]) {
+    onRolesChanged?.(nextRoles)
     const nextIds = nextRoles.map((role) => role.id)
-    commitRoleIds([...new Set([...nextIds, ...lockedIds])])
+    const preservedLocked = allowRevokeLockedRole
+      ? lockedIds.filter((id) => nextIds.includes(id))
+      : lockedIds
+    commitRoleIds([...new Set([...nextIds, ...preservedLocked])])
     setKnownRoles((current) => {
       const byId = new Map(current.map((role) => [role.id, role]))
       for (const role of nextRoles) byId.set(role.id, role)
@@ -361,7 +392,11 @@ export function UserForm({
   }
 
   const assignedRoleCodes = knownRoles
-    .filter((role) => roleIds.includes(role.id) || lockedIds.includes(role.id))
+    .filter(
+      (role) =>
+        roleIds.includes(role.id) ||
+        (!allowRevokeLockedRole && lockedIds.includes(role.id)),
+    )
     .map((role) => role.code)
   const listedRoles = hideRoles || quickAssignable ? [] : roles
 
@@ -633,7 +668,10 @@ export function UserForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const nextRoleIds = [...new Set([...roleIdsRef.current, ...lockedIds])]
+    const preservedLocked = allowRevokeLockedRole
+      ? lockedIds.filter((id) => roleIdsRef.current.includes(id))
+      : lockedIds
+    const nextRoleIds = [...new Set([...roleIdsRef.current, ...preservedLocked])]
     const identityValue = identityIsPassport
       ? normalizePassportNumber(nationalId)
       : normalizeNationalId(nationalId)
@@ -784,7 +822,7 @@ export function UserForm({
 
   const extraTab = extraTabs?.find((item) => item.id === tab)
   const visibleTabs = hideRoles ? tabs.filter((item) => item !== 'roles') : tabs
-  const allTabs = [...visibleTabs, ...(extraTabs?.map((item) => item.id) ?? [])]
+  const allTabs = mergeFormTabs(visibleTabs, extraTabs)
   const isEdit = Boolean(initial?.id)
   const displayName =
     initial?.fullName?.trim() ||
@@ -795,6 +833,7 @@ export function UserForm({
       icon={UserRound}
       title={isEdit ? displayName || t(`${i18nPrefix}.edit`) : t(`${i18nPrefix}.create`)}
       subtitle={isEdit ? undefined : t(`${i18nPrefix}.createSubtitle`)}
+      action={headerAction}
     >
     <div className="space-y-4 p-5 sm:p-6">
       <nav className="flex flex-wrap gap-2 rounded-2xl border border-line bg-cream-50/80 p-3">
@@ -1026,7 +1065,7 @@ export function UserForm({
             userId={initial.id}
             roleCodes={assignedRoleCodes}
             roles={roles}
-            lockedCodes={lockedRoleCodes}
+            lockedCodes={allowRevokeLockedRole ? [] : lockedRoleCodes}
             onChanged={syncQuickRoles}
           />
         ) : null}
@@ -1034,7 +1073,7 @@ export function UserForm({
           <FormField icon={Shield} label={t('users.roles')} error={fieldErrors.roles}>
             <div id="roles" tabIndex={-1} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {listedRoles.map((role) => {
-                const locked = lockedIds.includes(role.id)
+                const locked = !allowRevokeLockedRole && lockedIds.includes(role.id)
                 const checked = roleIds.includes(role.id) || locked
                 return (
                   <CheckboxField
@@ -1405,6 +1444,11 @@ export function UserForm({
         </AppForm>
       )}
     </div>
+    {footerActions ? (
+      <div className="border-t border-line px-5 py-4 sm:px-6">
+        <div className={formCardExtraActionsClassName}>{footerActions}</div>
+      </div>
+    ) : null}
     </FormCard>
   )
 }

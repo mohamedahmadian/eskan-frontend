@@ -59,7 +59,11 @@ function filterRecords(records: ReceptionRecord[], tab: PickTab) {
     )
   }
   if (tab === 'honorary') {
-    return records.filter((item) => item.type === 'person' && item.person?.hasHonoraryService)
+    return records.filter(
+      (item) =>
+        item.type === 'person' &&
+        item.person?.roles.some((role) => role.code === 'HONORARY_SERVANT'),
+    )
   }
   return records.filter((item) => item.type === tab)
 }
@@ -238,7 +242,10 @@ export function ReceptionMatchModal({
       if (item.type === 'person' && item.person?.kinds.includes('accommodationManager')) {
         counts.accommodationManager += 1
       }
-      if (item.type === 'person' && item.person?.hasHonoraryService) {
+      if (
+        item.type === 'person' &&
+        item.person?.roles.some((role) => role.code === 'HONORARY_SERVANT')
+      ) {
         counts.honorary += 1
       }
     }

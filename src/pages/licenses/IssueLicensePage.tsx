@@ -6,12 +6,10 @@ import {
   FileImage,
   IdCard,
   MapPin,
-  Mars,
   Phone,
   Search,
   Tent,
   UserRound,
-  Venus,
 } from 'lucide-react'
 import { DateObject } from 'react-multi-date-picker'
 import gregorian from 'react-date-object/calendars/gregorian'
@@ -39,11 +37,12 @@ import { FileDropField } from '../../components/ui/FileDropField'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage, getImageUrl } from '../../lib/api'
-import { formatNumber, localizeDigits, toIsoDateOnly } from '../../lib/datetime'
+import { localizeDigits, toIsoDateOnly } from '../../lib/datetime'
 import { optimizeImageFile } from '../../lib/optimize-image'
 import { useGeoName } from '../../lib/geo'
 import { isValidIranianNationalId, normalizeNationalId } from '../../lib/national-id'
 import type { CaravanManagerLookup, IssuedLicenseCaravan } from '../../types/app'
+import { CaravanStatusBadge } from '../caravans/CaravanStatusBadge'
 
 function emptyToNull(value: string) {
   const trimmed = value.trim()
@@ -59,6 +58,7 @@ export function IssueLicensePage() {
   const navigate = useNavigate()
   const nameOf = useGeoName()
   const [nationalId, setNationalId] = useState('')
+  const [caravanName, setCaravanName] = useState('')
   const [lookup, setLookup] = useState<CaravanManagerLookup | null>(null)
   const [looking, setLooking] = useState(false)
   const [caravanId, setCaravanId] = useState('')
@@ -73,8 +73,13 @@ export function IssueLicensePage() {
 
   async function onLookup(event: FormEvent) {
     event.preventDefault()
-    const id = normalizeNationalId(nationalId)
-    if (!isValidIranianNationalId(id)) {
+    const id = nationalId.trim() ? normalizeNationalId(nationalId) : ''
+    const name = caravanName.trim()
+    if (!id && !name) {
+      toast.error(t('licenses.lookupRequired'))
+      return
+    }
+    if (id && !isValidIranianNationalId(id)) {
       toast.error(t('licenses.nationalIdInvalid'))
       return
     }
@@ -83,7 +88,10 @@ export function IssueLicensePage() {
     setCaravanId('')
     try {
       const { data } = await api.get<CaravanManagerLookup>('/issued-licenses/lookup', {
-        params: { nationalId: id },
+        params: {
+          ...(id ? { nationalId: id } : {}),
+          ...(name ? { caravanName: name } : {}),
+        },
       })
       setLookup(data)
       if (data.caravans.length === 1) {
@@ -121,7 +129,6 @@ export function IssueLicensePage() {
     setSaving(true)
     try {
       const { data } = await api.post<{ id: string }>('/issued-licenses', {
-        managerUserId: lookup.manager.id,
         caravanId,
         issuedAt,
         description: emptyToNull(description),
@@ -154,8 +161,19 @@ export function IssueLicensePage() {
                 setLookup(null)
                 setCaravanId('')
               }}
-              required
               inputMode="numeric"
+            />
+          </FormField>
+          <FormField icon={Tent} label={t('caravans.name')} htmlFor="license-caravanName">
+            <input
+              id="license-caravanName"
+              className={fieldClassName}
+              value={caravanName}
+              onChange={(e) => {
+                setCaravanName(e.target.value)
+                setLookup(null)
+                setCaravanId('')
+              }}
             />
           </FormField>
           <FormActions
@@ -355,18 +373,6 @@ function CaravanSummary({ caravan }: { caravan: IssuedLicenseCaravan }) {
         <FormFactTile icon={Tent} label={t('caravans.name')} value={caravan.name} tone="teal" />
         <FormFactTile icon={MapPin} label={t('geo.city')} value={cityLabel} tone="mint" />
         <FormFactTile
-          icon={Mars}
-          label={t('licenses.maleCapacity')}
-          value={formatNumber(caravan.maleCount, locale)}
-          tone="teal"
-        />
-        <FormFactTile
-          icon={Venus}
-          label={t('licenses.femaleCapacity')}
-          value={formatNumber(caravan.femaleCount, locale)}
-          tone="mint"
-        />
-        <FormFactTile
           icon={Phone}
           label={t('caravans.officePhone')}
           value={
@@ -395,8 +401,8 @@ function CaravanSummary({ caravan }: { caravan: IssuedLicenseCaravan }) {
         <FormFactTile
           icon={Building2}
           label={t('users.status')}
-          value={caravan.isActive ? t('geo.active') : t('geo.inactive')}
-          tone={caravan.isActive ? 'teal' : 'ink'}
+          value={<CaravanStatusBadge status={caravan.status} isActive={caravan.isActive} />}
+          tone={caravan.status === 'PENDING_REVIEW' ? 'ink' : caravan.isActive ? 'teal' : 'ink'}
         />
       </div>
     </div>

@@ -135,9 +135,6 @@ export function CaravanReportPage() {
   const inactiveInYear = report?.byYearActivity?.inactive ?? 0
   const iranian = report?.byOrigin?.iranian ?? 0
   const international = report?.byOrigin?.international ?? 0
-  const contactsComplete = report?.byContactStatus?.complete ?? 0
-  const contactsPartial = report?.byContactStatus?.partial ?? 0
-  const contactsNone = report?.byContactStatus?.none ?? 0
   const total = report?.total ?? 0
   const capacityTotal = report?.capacity?.total ?? 0
   const capacityMale = report?.capacity?.male ?? 0
@@ -190,27 +187,6 @@ export function CaravanReportPage() {
       name: t('caravans.reportInternational'),
       value: international,
       fill: originColors.INTERNATIONAL,
-    },
-  ]
-
-  const contactStatusData = [
-    {
-      key: 'complete',
-      name: t('caravans.reportContactsComplete'),
-      value: contactsComplete,
-      fill: '#148f8a',
-    },
-    {
-      key: 'partial',
-      name: t('caravans.reportContactsPartial'),
-      value: contactsPartial,
-      fill: '#e8b83a',
-    },
-    {
-      key: 'none',
-      name: t('caravans.reportContactsNone'),
-      value: contactsNone,
-      fill: '#7a756c',
     },
   ]
 
@@ -423,13 +399,6 @@ export function CaravanReportPage() {
               </section>
 
               <section className="grid gap-4 lg:grid-cols-2">
-                <DonutCard
-                  title={t('caravans.reportByContactStatus')}
-                  data={contactStatusData}
-                  total={total}
-                  locale={locale}
-                  centerLabel={t('caravans.reportTotal')}
-                />
                 <article className={`${cardClassName} p-5`}>
                   <h2 className="mb-4 text-sm font-medium text-ink-500">
                     {t('caravans.reportByProvince')}

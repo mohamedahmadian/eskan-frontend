@@ -44,8 +44,6 @@ type ImportResult = {
   managersReused: number
   caravansCreated: number
   caravansReused: number
-  yearsAdded: number
-  yearsSkipped: number
   invalid: number
   invalidRows: IssueImportRow[]
   adjusted: number
@@ -245,7 +243,10 @@ export function CaravanImportPage() {
     <div className={formShellClassName}>
       <PageHeader
         icon={Tent}
-        title={t('caravans.import')} subtitle={t('caravans.importSubtitle')} />
+        title={t('caravans.import')}
+        subtitle={t('caravans.importSubtitle')}
+        backTo="/system-management/data-management"
+      />
 
       <div className={formShellClassName}>
         <FormCard
@@ -288,10 +289,6 @@ export function CaravanImportPage() {
                 <p>{t('caravans.importResultManagersReused', { count: n(result.managersReused) })}</p>
                 <p>{t('caravans.importResultCaravansCreated', { count: n(result.caravansCreated) })}</p>
                 <p>{t('caravans.importResultCaravansReused', { count: n(result.caravansReused) })}</p>
-                <p>{t('caravans.importResultYearsAdded', { count: n(result.yearsAdded) })}</p>
-                {result.yearsSkipped > 0 ? (
-                  <p>{t('caravans.importResultYearsSkipped', { count: n(result.yearsSkipped) })}</p>
-                ) : null}
                 {result.invalid > 0 ? (
                   <p className="text-ink-500">
                     {t('caravans.importInvalidCount', { count: n(result.invalid) })}
@@ -308,7 +305,7 @@ export function CaravanImportPage() {
                 submitLabel={t('caravans.importSubmit')}
                 cancelLabel={t('common.cancel')}
                 submitting={submitting || !canSubmit}
-                onCancel={() => navigate('/caravans')}
+                onCancel={() => navigate('/system-management/data-management')}
               />
             )}
           </AppForm>

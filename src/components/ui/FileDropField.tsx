@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button } from './Form'
+import { Button, fileRemoveButtonClassName } from './Form'
 import { LoadingSpinner } from './LoadingState'
 
 const defaultMaxBytes = 8 * 1024 * 1024
@@ -181,7 +181,8 @@ export function FileDropField({
         {hasFile && onClear ? (
           <Button
             type="button"
-            variant="ghost"
+            variant="pink"
+            className={fileRemoveButtonClassName}
             disabled={uploading}
             onClick={() => {
               if (localPreview) URL.revokeObjectURL(localPreview)
@@ -190,7 +191,7 @@ export function FileDropField({
               onClear()
             }}
           >
-            <Trash2 className="size-4" aria-hidden />
+            <Trash2 className="size-3" aria-hidden />
             {t('common.removeFile')}
           </Button>
         ) : null}

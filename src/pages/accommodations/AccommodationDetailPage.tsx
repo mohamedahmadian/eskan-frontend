@@ -82,7 +82,7 @@ import {
   accommodationContactRoles,
   type AccommodationContactRole,
 } from './accommodationContacts'
-import { AccommodationYearAlert, managerDisplayName } from './AccommodationYearAlert'
+import { managerDisplayName } from './AccommodationManagersCard'
 import { AccommodationTabNav, accommodationTabs, type AccommodationTab } from './AccommodationTabs'
 import { AccommodationImagesGallery } from './AccommodationImagesField'
 import { isSchoolAccommodationType } from '../../lib/accommodation-type'
@@ -173,11 +173,8 @@ export function AccommodationDetailPage() {
     ? [...visibleTabs, 'placement']
     : [...visibleTabs]
   const currentYear = currentPersianYear()
-  const yearContacts = [...(item.yearContacts ?? [])].sort((a, b) =>
-    b.year !== a.year ? b.year - a.year : a.role.localeCompare(b.role),
-  )
   const managers = [...item.managers].sort((a, b) =>
-    b.year !== a.year ? b.year - a.year : Number(b.isPrimary) - Number(a.isPrimary),
+    Number(b.isPrimary) - Number(a.isPrimary),
   )
 
   function panelClass(id: AccommodationTab) {
@@ -196,7 +193,6 @@ export function AccommodationDetailPage() {
         subtitle={<EntityNameSubtitle name={item.name} icon={Building2} />}
       />
       <div className="space-y-4">
-        {canManage ? <AccommodationYearAlert accommodation={item} /> : null}
         <FormCard
           icon={Building2}
           title={
@@ -686,32 +682,6 @@ export function AccommodationDetailPage() {
                   )
                 })}
               </div>
-              {yearContacts.length ? (
-                <div className="space-y-2.5">
-                  <FormSectionTitle icon={Calendar}>
-                    {t('accommodations.sectionYearContacts')}
-                  </FormSectionTitle>
-                  <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-                    {yearContacts.map((contact) => (
-                      <FormFactTile
-                        key={contact.id}
-                        icon={roleIcons[contact.role as AccommodationContactRole] ?? UserCog}
-                        label={`${t(`accommodations.contactRoles.${contact.role}`)} — ${n(contact.year)}`}
-                        value={
-                          <PilgrimNameLink
-                            id={contact.user.id || contact.userId}
-                            name={
-                              contact.user.fullName ||
-                              `${contact.user.firstName} ${contact.user.lastName}`.trim()
-                            }
-                          />
-                        }
-                        tone="mint"
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : null}
             </div>
 
             {item.inspectionStatus != null ? (
@@ -832,19 +802,14 @@ export function AccommodationDetailPage() {
                       manager,
                       t('accommodations.unassignedManager'),
                     )
-                    const current = manager.year === currentYear
                     return (
                       <article
                         key={manager.id}
-                        className={`rounded-2xl border p-4 ${
-                          current ? formToneClass.teal.wrap : formToneClass.ink.wrap
-                        }`}
+                        className={`rounded-2xl border p-4 ${formToneClass.teal.wrap}`}
                       >
                         <div className="flex items-start gap-3">
                           <span
-                            className={`flex size-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${
-                              current ? formToneClass.teal.icon : formToneClass.ink.icon
-                            }`}
+                            className={`flex size-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${formToneClass.teal.icon}`}
                           >
                             {personInitials(display)}
                           </span>
@@ -856,29 +821,6 @@ export function AccommodationDetailPage() {
                                   {t('accommodations.primaryManager')}
                                 </span>
                               ) : null}
-                            </div>
-                            <div className="grid gap-2 sm:grid-cols-3">
-                              <FormFactTile
-                                icon={Calendar}
-                                label={t('accommodations.year')}
-                                value={n(manager.year)}
-                                tone={current ? 'teal' : 'ink'}
-                                compact
-                              />
-                              <FormFactTile
-                                icon={Mars}
-                                label={t('accommodations.yearMaleCount')}
-                                value={n(manager.maleCapacity)}
-                                tone={current ? 'teal' : 'mint'}
-                                compact
-                              />
-                              <FormFactTile
-                                icon={Venus}
-                                label={t('accommodations.yearFemaleCount')}
-                                value={n(manager.femaleCapacity)}
-                                tone={current ? 'mint' : 'ink'}
-                                compact
-                              />
                             </div>
                           </div>
                         </div>

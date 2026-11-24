@@ -156,6 +156,10 @@ function isAccommodationsDirectoryMenu(item: { path: string; code: string }) {
   return item.path === "/accommodations" || item.code === "accommodation.list";
 }
 
+function isCaravansListMenu(item: { path: string; code: string }) {
+  return item.path === "/caravans" || item.code === "caravans.list";
+}
+
 function withAccommodationsDirectoryMenu(
   mod: NavModule,
   allowed: boolean,
@@ -478,6 +482,16 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
     enabled: isAdmin(user),
     queryFn: async () => {
       const { data } = await api.get<Paginated<{ id: string }>>("/accommodations", {
+        params: { status: "PENDING_REVIEW", page: 1, pageSize: 1 },
+      });
+      return data.total;
+    },
+  });
+  const pendingCaravans = useQuery({
+    queryKey: ["caravans", "pending-review", "count"],
+    enabled: isAdmin(user),
+    queryFn: async () => {
+      const { data } = await api.get<Paginated<{ id: string }>>("/caravans", {
         params: { status: "PENDING_REVIEW", page: 1, pageSize: 1 },
       });
       return data.total;
@@ -865,9 +879,18 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                           item={item}
                           allMenuPaths={allMenuPaths}
                           badge={
-                            isAccommodationsDirectoryMenu(item)
-                              ? pendingIntroductions.data
-                              : undefined
+                            isCaravansListMenu(item)
+                              ? pendingCaravans.data
+                              : isAccommodationsDirectoryMenu(item)
+                                ? pendingIntroductions.data
+                                : undefined
+                          }
+                          badgeLabelKey={
+                            isCaravansListMenu(item)
+                              ? "caravans.pendingReview"
+                              : isAccommodationsDirectoryMenu(item)
+                                ? "accommodations.pendingIntroductions"
+                                : undefined
                           }
                           highlighted={highlightedMenu?.code === item.code}
                           onHighlight={() => highlightMenu(item.code)}
@@ -897,9 +920,18 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
                                   item={item}
                                   allMenuPaths={allMenuPaths}
                                   badge={
-                                    isAccommodationsDirectoryMenu(item)
-                                      ? pendingIntroductions.data
-                                      : undefined
+                                    isCaravansListMenu(item)
+                                      ? pendingCaravans.data
+                                      : isAccommodationsDirectoryMenu(item)
+                                        ? pendingIntroductions.data
+                                        : undefined
+                                  }
+                                  badgeLabelKey={
+                                    isCaravansListMenu(item)
+                                      ? "caravans.pendingReview"
+                                      : isAccommodationsDirectoryMenu(item)
+                                        ? "accommodations.pendingIntroductions"
+                                        : undefined
                                   }
                                   highlighted={highlightedMenu?.code === item.code}
                                   onHighlight={() => highlightMenu(item.code)}
@@ -1000,6 +1032,7 @@ function SidebarMenuLink({
   highlighted = false,
   onHighlight,
   badge,
+  badgeLabelKey,
 }: {
   item: SidebarNavMenu;
   allMenuPaths: string[];
@@ -1007,6 +1040,7 @@ function SidebarMenuLink({
   highlighted?: boolean;
   onHighlight?: () => void;
   badge?: number;
+  badgeLabelKey?: string;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.split("-")[0] ?? "fa";
@@ -1046,7 +1080,7 @@ function SidebarMenuLink({
           className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-4 ${
             isActive ? "bg-white text-teal-700" : "bg-teal-500 text-white"
           }`}
-          aria-label={t("accommodations.pendingIntroductions", {
+          aria-label={t(badgeLabelKey ?? "accommodations.pendingIntroductions", {
             count: formatNumber(badgeCount, locale),
           })}
         >

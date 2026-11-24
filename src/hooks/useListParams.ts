@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+const listPersistentQueryKeys = ['q', 'sortBy', 'sortDir'] as const
+
+/** Drops extra list filters; keeps search and column sort. Page resets to 1. */
+export function withoutListFilters(searchParams: URLSearchParams) {
+  const next = new URLSearchParams()
+  for (const key of listPersistentQueryKeys) {
+    const value = searchParams.get(key)
+    if (value) next.set(key, value)
+  }
+  return next
+}
+
 export function useListParams() {
   const [searchParams, setSearchParams] = useSearchParams()
   const q = searchParams.get('q') ?? ''
@@ -38,5 +50,9 @@ export function useListParams() {
     setParams({ page: String(Math.max(1, nextPage)) })
   }
 
-  return { q, page, term, setTerm, applySearch, setPage, searchParams, setParams }
+  function clearFilters() {
+    setSearchParams(withoutListFilters(searchParams))
+  }
+
+  return { q, page, term, setTerm, applySearch, setPage, searchParams, setParams, clearFilters }
 }

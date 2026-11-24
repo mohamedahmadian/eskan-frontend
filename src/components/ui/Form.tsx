@@ -32,8 +32,12 @@ const variants = {
   soft: 'bg-mint-500 text-white hover:bg-mint-600 disabled:opacity-60 shadow-sm',
   ghost:
     'cursor-pointer bg-white text-ink-700 hover:bg-teal-50 border border-teal-400 shadow-[0_4px_12px_rgba(46,189,182,0.16)]',
+  pink: 'bg-pink-100 text-pink-700 hover:bg-pink-200 border border-pink-200 shadow-none',
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:opacity-60',
 }
+
+/** Compact size for file/image remove in FileDropField and image galleries. */
+export const fileRemoveButtonClassName = '!h-7 !min-h-0 !gap-1 !px-2 !py-1 !text-xs'
 
 const pageShellClassName = 'mx-auto w-full min-w-0 wide:max-w-6xl'
 export const listShellClassName = pageShellClassName
@@ -161,7 +165,7 @@ export function ToggleField({
       id={id}
       data-toggle
       role="group"
-      className="inline-flex rounded-2xl border border-line bg-cream-50 p-1"
+      className="inline-flex w-fit max-w-full rounded-2xl border border-line bg-cream-50 p-1"
     >
       <button
         type="button"
@@ -519,6 +523,9 @@ export function AppForm({
   )
 }
 
+/** Extra operation buttons at the bottom of a form card — left in RTL (`inline-end`). */
+export const formCardExtraActionsClassName = 'flex flex-wrap justify-end gap-3'
+
 export function FormActions({
   submitLabel,
   cancelLabel,
@@ -532,13 +539,16 @@ export function FormActions({
   onCancel?: () => void
   className?: string
 }) {
+  const hasCancel = Boolean(onCancel && cancelLabel)
   return (
-    <div className={`flex flex-wrap gap-3 ${className}`.trim()}>
+    <div
+      className={`flex flex-wrap items-center gap-3 ${hasCancel ? 'justify-between' : ''} ${className}`.trim()}
+    >
       <Button type="submit" disabled={submitting}>
         <Check className="size-4" aria-hidden />
         {submitLabel}
       </Button>
-      {onCancel && cancelLabel ? (
+      {hasCancel ? (
         <Button type="button" variant="ghost" data-form-cancel="" onClick={onCancel}>
           <X className="size-4" aria-hidden />
           {cancelLabel}
@@ -613,7 +623,7 @@ export function DetailActions({
           </Button>
         ) : null}
       </div>
-      {extra ? <div className="flex flex-wrap gap-3">{extra}</div> : null}
+      {extra ? <div className={formCardExtraActionsClassName}>{extra}</div> : null}
     </div>
   )
 }

@@ -370,7 +370,15 @@ export function WalkingRouteStationsModal({
                 <div className="min-h-0 flex-1">
                   <StationInfoCard stage={wizardStage} locale={locale} />
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-3">
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+                  <Button
+                    type="button"
+                    disabled={wizardIndex >= stationStages.length - 1}
+                    onClick={() => goWizard(1)}
+                  >
+                    {t('walkingRoutes.nextStage')}
+                    <ChevronLeft className="size-4 ltr:rotate-180" aria-hidden />
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -379,15 +387,6 @@ export function WalkingRouteStationsModal({
                   >
                     <ChevronRight className="size-4 ltr:rotate-180" aria-hidden />
                     {t('walkingRoutes.prevStage')}
-                  </Button>
-                  <Button
-                    type="button"
-                    className="ms-auto"
-                    disabled={wizardIndex >= stationStages.length - 1}
-                    onClick={() => goWizard(1)}
-                  >
-                    {t('walkingRoutes.nextStage')}
-                    <ChevronLeft className="size-4 ltr:rotate-180" aria-hidden />
                   </Button>
                 </div>
               </div>

@@ -10,6 +10,7 @@ import {
   Search,
   SlidersHorizontal,
   Trash2,
+  X,
 } from 'lucide-react'
 import {
   type FormEvent,
@@ -21,7 +22,8 @@ import {
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { withoutListFilters } from '../../hooks/useListParams'
 import { formatNumber } from '../../lib/datetime'
 import { AppForm, Button, cardClassName, fieldClassName } from './Form'
 import { LoadingState } from './LoadingState'
@@ -182,6 +184,7 @@ export function SearchBar({
   autoFocus = true,
   hideSubmit = false,
   bare = false,
+  onClearFilters,
 }: {
   term: string
   onTermChange: (value: string) => void
@@ -199,13 +202,24 @@ export function SearchBar({
   autoFocus?: boolean
   hideSubmit?: boolean
   bare?: boolean
+  /** Local-state filters must pass this; URL lists clear extra query params by default. */
+  onClearFilters?: () => void
 }) {
   const { t } = useTranslation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(() => filtersOpenById.get(inputId) ?? false)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     onSubmit()
+  }
+
+  function handleClearFilters() {
+    if (onClearFilters) {
+      onClearFilters()
+      return
+    }
+    setSearchParams(withoutListFilters(searchParams))
   }
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -248,15 +262,29 @@ export function SearchBar({
     </Button>
   )
   const filterButton = extra ? (
-    <Button type="button" variant="ghost" aria-expanded={filtersOpen} onClick={toggleFilters}>
-      <SlidersHorizontal className="size-4" aria-hidden />
-      {t('common.filters')}
-      {filtersActive ? <span className="size-2 rounded-full bg-teal-500" aria-hidden /> : null}
-      <ChevronDown
-        className={`size-4 transition ${filtersOpen ? 'rotate-180' : ''}`}
-        aria-hidden
-      />
-    </Button>
+    <div className="flex items-center gap-1.5">
+      <Button type="button" variant="ghost" aria-expanded={filtersOpen} onClick={toggleFilters}>
+        <SlidersHorizontal className="size-4" aria-hidden />
+        {t('common.filters')}
+        {filtersActive ? <span className="size-2 rounded-full bg-teal-500" aria-hidden /> : null}
+        <ChevronDown
+          className={`size-4 transition ${filtersOpen ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </Button>
+      {filtersActive ? (
+        <Button
+          type="button"
+          variant="ghost"
+          icon
+          onClick={handleClearFilters}
+          aria-label={t('common.clearFilters')}
+          title={t('common.clearFilters')}
+        >
+          <X className="size-4" aria-hidden />
+        </Button>
+      ) : null}
+    </div>
   ) : null
 
   return (

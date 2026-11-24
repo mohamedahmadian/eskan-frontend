@@ -255,7 +255,11 @@ export function ReservationReviewPermitStep({
                 disabled={busy}
               />
             </FormField>
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button type="submit" variant="danger" disabled={busy}>
+                <X className="size-4" aria-hidden />
+                {t(reRejectable ? 'reservations.reRejectPermit' : 'reservations.rejectPermit')}
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -267,10 +271,6 @@ export function ReservationReviewPermitStep({
               >
                 <X className="size-4" aria-hidden />
                 {t('common.cancel')}
-              </Button>
-              <Button type="submit" variant="danger" disabled={busy}>
-                <X className="size-4" aria-hidden />
-                {t(reRejectable ? 'reservations.reRejectPermit' : 'reservations.rejectPermit')}
               </Button>
             </div>
           </AppForm>
@@ -301,14 +301,14 @@ function StepFooter({
 }) {
   const { t } = useTranslation()
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      <Button type="button" variant="ghost" onClick={onCancel}>
-        <X className="size-4" aria-hidden />
-        {t('common.cancel')}
-      </Button>
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <Button type="button" disabled={nextDisabled} onClick={onNext}>
         {t('reservations.reviewGoToFile')}
         <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
+      </Button>
+      <Button type="button" variant="ghost" onClick={onCancel}>
+        <X className="size-4" aria-hidden />
+        {t('common.cancel')}
       </Button>
     </div>
   )

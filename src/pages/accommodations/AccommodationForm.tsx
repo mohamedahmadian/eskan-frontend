@@ -42,7 +42,7 @@ import { OsmMapPicker } from '../../components/ui/OsmMapPicker'
 import { PersianDateField } from '../../components/ui/PersianDateField'
 import { SearchSelect } from '../../components/ui/SearchSelect'
 import { api, getApiErrorMessage } from '../../lib/api'
-import { currentPersianYear, formatNumber, toLatinDigits } from '../../lib/datetime'
+import { formatNumber, toLatinDigits } from '../../lib/datetime'
 import {
   defaultAccommodationTypeId,
   isSchoolAccommodationType,
@@ -71,9 +71,8 @@ import {
   type SchoolDistrict,
 } from '../../types/app'
 import { AccommodationImagesField } from './AccommodationImagesField'
-import { AccommodationActivityYearFields, AccommodationManagersCard } from './AccommodationManagersCard'
+import { AccommodationManagersCard } from './AccommodationManagersCard'
 import { AccommodationTabNav, type AccommodationTab } from './AccommodationTabs'
-import { AccommodationYearAlert } from './AccommodationYearAlert'
 import {
   AccommodationContactsPanel,
   firstIncompleteContactRole,
@@ -142,7 +141,6 @@ export type AccommodationPayload = {
   primaryManagerUserId?: string | null
   isPrimary?: boolean
   contacts?: ReturnType<typeof toAccommodationContactPayloads>
-  yearContactMode?: 'manager' | 'fromAccommodation' | 'manual'
 } & AccommodationTypeDetails
 
 function emptyToNull(value: string) {
@@ -203,8 +201,6 @@ export function AccommodationForm({
   onSubmit,
   onCancel,
   headerAction,
-  activityYear,
-  lockActivityYear = false,
   createSubtitle,
   contactsOptional = false,
   autoFocus = false,
@@ -221,8 +217,6 @@ export function AccommodationForm({
   onSubmit: (payload: AccommodationPayload) => Promise<void>
   onCancel?: () => void
   headerAction?: ReactNode
-  activityYear?: number
-  lockActivityYear?: boolean
   createSubtitle?: string
   /** Contacts may be left empty; incomplete drafts are not sent. */
   contactsOptional?: boolean
@@ -275,14 +269,10 @@ export function AccommodationForm({
     toiletCount: initial?.toiletCount != null ? String(initial.toiletCount) : '',
     classroomCount: initial?.classroomCount != null ? String(initial.classroomCount) : '',
     schoolDistrictId: initial?.schoolDistrictId ?? '',
-    activityYear: String(activityYear ?? currentPersianYear()),
     managerUserId: '',
     isPrimary: initial?.managers
       ? initial.managers.some(
-          (item) =>
-            item.year === currentPersianYear() &&
-            item.isPrimary &&
-            item.userId === currentUserId,
+          (item) => item.isPrimary && item.userId === currentUserId,
         )
       : true,
   })
@@ -293,9 +283,6 @@ export function AccommodationForm({
   const [activeContactRole, setActiveContactRole] = useState<AccommodationContactRole>(
     () => firstIncompleteContactRole(drafts),
   )
-  const [yearContactMode, setYearContactMode] = useState<
-    'manager' | 'fromAccommodation' | 'manual'
-  >('manager')
   const [imageIds, setImageIds] = useState<string[]>(initial?.imageIds ?? [])
   const [typeDetails, setTypeDetails] = useState(() => typeDetailFormValuesFrom(initial))
   const typeOptions = useQuery({
@@ -477,10 +464,8 @@ export function AccommodationForm({
         schoolDistrictId: isSchool ? emptyToNull(values.schoolDistrictId) : null,
         ...typeDetailsPayloadFromForm(detailKind, typeDetails),
         contacts: toAccommodationContactPayloads(drafts),
-        ...(!isAdmin && !initial?.id ? { yearContactMode } : {}),
         ...(isAdmin && !initial?.id
           ? {
-              year: toNumber(toLatinDigits(values.activityYear), currentPersianYear()),
               managerUserIds: values.managerUserId ? [values.managerUserId] : [],
               primaryManagerUserId: emptyToNull(values.managerUserId),
             }
@@ -499,7 +484,6 @@ export function AccommodationForm({
 
   return (
     <div className="space-y-4">
-      {initial ? <AccommodationYearAlert accommodation={initial} /> : null}
       <FormCard
         icon={Building2}
         title={initial ? initial.name || t('accommodations.edit') : t('accommodations.create')}
@@ -1069,7 +1053,7 @@ export function AccommodationForm({
       <div data-tab="contacts" className={panelClass('contacts')}>
         {contactsOptional ? (
           <p className="rounded-2xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm leading-6 text-ink-700">
-            {t('accommodationYearManagement.contactsOptionalHint')}
+            {t('accommodations.contactsOptionalHint')}
           </p>
         ) : null}
         <AccommodationContactsPanel
@@ -1081,25 +1065,6 @@ export function AccommodationForm({
           }
           fieldsRequired={!contactsOptional}
         />
-        {!isAdmin && !initial?.id ? (
-          <FormField icon={Users} label={t('accommodations.yearContactMode')} htmlFor="yearContactMode">
-            <SearchSelect
-              id="yearContactMode"
-              value={yearContactMode}
-              onChange={(next) =>
-                setYearContactMode(next as 'manager' | 'fromAccommodation' | 'manual')
-              }
-              options={[
-                { value: 'manager', label: t('accommodations.yearContactsFromManager') },
-                {
-                  value: 'fromAccommodation',
-                  label: t('accommodations.yearContactsFromAccommodation'),
-                },
-                { value: 'manual', label: t('accommodations.yearContactsManual') },
-              ]}
-            />
-          </FormField>
-        ) : null}
       </div>
 
       {isAdmin ? (
@@ -1184,26 +1149,21 @@ export function AccommodationForm({
 
       {isAdmin && !initial?.id ? (
         <div data-tab="managers" className={panelClass('managers')}>
-          <p className="text-sm leading-6 text-ink-600">{t('accommodations.activityYearsHint')}</p>
-          <div className="space-y-4">
-            <AccommodationActivityYearFields
-              year={values.activityYear}
-              yearDisabled={lockActivityYear}
-              onYearChange={(next) => set('activityYear', next)}
-              userId={values.managerUserId}
-              onUserIdChange={(next) => set('managerUserId', next)}
-              users={users}
-              maleCapacity={values.maleCapacity}
-              onMaleCapacityChange={(next) => set('maleCapacity', next)}
-              femaleCapacity={values.femaleCapacity}
-              onFemaleCapacityChange={(next) => set('femaleCapacity', next)}
-              genderType={values.genderType}
-              yearInputId="create-activity-year"
-              managerInputId="create-activity-manager"
-              maleInputId="create-activity-male"
-              femaleInputId="create-activity-female"
+          <FormField icon={UserRound} label={t('accommodations.selectManager')} htmlFor="create-activity-manager">
+            <SearchSelect
+              id="create-activity-manager"
+              value={values.managerUserId}
+              placeholder={t('accommodations.withoutManager')}
+              onChange={(next) => set('managerUserId', next)}
+              options={[
+                { value: '', label: t('accommodations.withoutManager') },
+                ...users.map((user) => ({
+                  value: user.id,
+                  label: `${user.fullName} — ${user.username}`,
+                })),
+              ]}
             />
-          </div>
+          </FormField>
         </div>
       ) : null}
 

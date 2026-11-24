@@ -82,13 +82,14 @@ export const PilgrimCard = forwardRef<
   })
   const visit = currentVisit !== undefined ? currentVisit : profile.data?.currentVisit ?? null
   const hasFile = Boolean(visit?.file)
-  const showPocketIdentity = model === 'pocket' && hasFile
+  const pocketManager = variant === 'manager' && model === 'pocket'
+  const showPocketIdRow = model === 'pocket'
   const originName = visit?.travel?.originCity ? geoName(visit.travel.originCity) : null
-  const showTrip = hasTripFacts(visit, model, originName)
-  const pocketTrip = model === 'pocket' && hasFile && showTrip
+  const showTrip = hasTripFacts(visit, model, originName, variant)
+  const pocketTrip = model === 'pocket' && (hasFile || pocketManager) && showTrip
   const showCaravanFacts = Boolean(
     visit?.caravan &&
-      (model === 'classic' || visit.file) &&
+      (model === 'classic' || visit.file || pocketManager) &&
       (visit.file?.type === 'CARAVAN' || !visit.file),
   )
   const stayMapUrl = visit?.stay?.mapUrl || null
@@ -121,10 +122,8 @@ export const PilgrimCard = forwardRef<
         <div className="pilgrim-id-card__main">
           <div
             className={`pilgrim-id-card__identity${
-              showPocketIdentity ? ' pilgrim-id-card__identity--stacked' : ''
-            }${pocketTrip ? ' pilgrim-id-card__identity--compact' : ''}${
-              photoUrl ? '' : ' pilgrim-id-card__identity--no-photo'
-            }`}
+              pocketTrip ? ' pilgrim-id-card__identity--compact' : ''
+            }${photoUrl ? '' : ' pilgrim-id-card__identity--no-photo'}`}
           >
             {photoUrl ? (
               <div className="pilgrim-id-card__photo-wrap">
@@ -144,51 +143,63 @@ export const PilgrimCard = forwardRef<
                   {genderLabel}
                 </p>
               ) : null}
-              {showPocketIdentity && pilgrim.nationalId ? (
-                <p className="pilgrim-id-card__meta">
-                  <span className="pilgrim-id-card__meta-label">{t('users.nationalId')}</span>
-                  <span className="pilgrim-id-card__meta-value">
-                    <CopyableDigits value={pilgrim.nationalId} />
-                  </span>
-                </p>
-              ) : null}
-              {showPocketIdentity && pilgrim.phone ? (
-                <p className="pilgrim-id-card__meta">
-                  <span className="pilgrim-id-card__meta-label">{t('users.phone')}</span>
-                  <span className="pilgrim-id-card__meta-value">
-                    <CopyableDigits value={pilgrim.phone} />
-                  </span>
-                </p>
-              ) : null}
             </div>
           </div>
           <div className={`pilgrim-id-card__facts${pocketTrip ? ' pilgrim-id-card__facts--trip' : ''}`}>
-            {showPocketIdentity ? null : (
-              <CardFact
-                icon={IdCard}
-                label={t('users.nationalId')}
-                value={<CopyableDigits value={pilgrim.nationalId} />}
+            {showPocketIdRow ? (
+              <FactRow
+                items={[
+                  pilgrim.nationalId ? (
+                    <CardMeta label={t('users.nationalId')}>
+                      <CopyableDigits value={pilgrim.nationalId} />
+                    </CardMeta>
+                  ) : null,
+                  pilgrim.phone ? (
+                    <CardMeta label={t('users.phone')}>
+                      <CopyableDigits value={pilgrim.phone} />
+                    </CardMeta>
+                  ) : null,
+                  pilgrim.birthDate ? (
+                    <CardMeta label={t('pilgrims.birthDate')} dir="ltr">
+                      {formatDate(pilgrim.birthDate, locale)}
+                    </CardMeta>
+                  ) : null,
+                ]}
               />
-            )}
-            {pocketTrip || !pilgrim.birthDate ? null : (
-              <CardFact
-                icon={CalendarDays}
-                label={t('pilgrims.birthDate')}
-                value={formatDate(pilgrim.birthDate, locale)}
-                dir="ltr"
-              />
-            )}
-            {showPocketIdentity || !pilgrim.phone ? null : (
-              <CardFact
-                icon={Phone}
-                label={t('users.phone')}
-                value={<CopyableDigits value={pilgrim.phone} />}
-              />
+            ) : (
+              <>
+                <CardFact
+                  icon={IdCard}
+                  label={t('users.nationalId')}
+                  value={<CopyableDigits value={pilgrim.nationalId} />}
+                />
+                {pilgrim.birthDate ? (
+                  <CardFact
+                    icon={CalendarDays}
+                    label={t('pilgrims.birthDate')}
+                    value={formatDate(pilgrim.birthDate, locale)}
+                    dir="ltr"
+                  />
+                ) : null}
+                {pilgrim.phone ? (
+                  <CardFact
+                    icon={Phone}
+                    label={t('users.phone')}
+                    value={<CopyableDigits value={pilgrim.phone} />}
+                  />
+                ) : null}
+              </>
             )}
             {pocketTrip || !place ? null : (
               <CardFact icon={MapPin} label={t('geo.city')} value={place} wide />
             )}
-            <TripFacts visit={visit} model={model} originName={originName} locale={locale} />
+            <TripFacts
+              visit={visit}
+              model={model}
+              originName={originName}
+              locale={locale}
+              variant={variant}
+            />
           </div>
           {caravanLine ? <p className="pilgrim-id-card__visit">{caravanLine}</p> : null}
         </div>
@@ -269,8 +280,10 @@ function hasTripFacts(
   visit: PublicProfileCurrentVisit | null,
   model: PilgrimCardModel,
   originName: string | null,
+  variant: 'pilgrim' | 'manager' = 'pilgrim',
 ) {
   if (!visit) return false
+  if (variant === 'manager' && visit.caravan) return true
   const type = visit.file?.type
   const showDetails = model === 'classic' || Boolean(visit.file)
   if (!showDetails) return false
@@ -289,65 +302,77 @@ function TripFacts({
   model,
   originName,
   locale,
+  variant = 'pilgrim',
 }: {
   visit: PublicProfileCurrentVisit | null
   model: PilgrimCardModel
   originName: string | null
   locale: string
+  variant?: 'pilgrim' | 'manager'
 }) {
   const { t } = useTranslation()
-  if (!visit || !hasTripFacts(visit, model, originName)) return null
+  if (!visit || !hasTripFacts(visit, model, originName, variant)) return null
   const type = visit.file?.type
   const isCaravanFile = type === 'CARAVAN'
   const isPartyFile = type === 'INDIVIDUAL' || type === 'GROUP'
-  const showCaravan = Boolean(visit.caravan && (isCaravanFile || !visit.file))
+  const isManagerCard = variant === 'manager'
+  const showCaravan = Boolean(visit.caravan && (isCaravanFile || !visit.file || isManagerCard))
   const showStay = Boolean(visit.stay && (isCaravanFile || isPartyFile || model === 'classic'))
+  const fileFact = (inline = false) =>
+    visit.file ? (
+      <CardFact
+        icon={ScrollText}
+        label={t('pilgrims.cardFileCode')}
+        value={localizeDigits(visit.file.code, locale)}
+        dir="ltr"
+        tone="file"
+        inline={inline}
+      />
+    ) : null
 
   return (
     <>
-      <FactRow
-        right={
-          visit.file ? (
-            <CardFact
-              icon={ScrollText}
-              label={t('pilgrims.cardFileCode')}
-              value={localizeDigits(visit.file.code, locale)}
-              dir="ltr"
-              tone="file"
-              inline
-            />
-          ) : null
-        }
-        left={
-          isPartyFile && originName ? (
-            <CardFact icon={Flag} label={t('pilgrims.cardOrigin')} value={originName} />
-          ) : null
-        }
-      />
-      {showCaravan && visit.caravan ? (
+      {showCaravan && visit.caravan && isManagerCard ? (
         <FactRow
-          right={<CardFact icon={Tent} label={t('caravans.name')} value={visit.caravan.name} />}
-          left={
+          items={[
+            <CardFact key="caravan" icon={Tent} label={t('caravans.name')} value={visit.caravan.name} />,
+            fileFact(),
+            originName ? (
+              <CardFact key="origin" icon={Flag} label={t('pilgrims.cardOrigin')} value={originName} />
+            ) : null,
+          ]}
+        />
+      ) : (
+        <FactRow
+          items={[
+            fileFact(true),
+            isPartyFile && originName ? (
+              <CardFact icon={Flag} label={t('pilgrims.cardOrigin')} value={originName} />
+            ) : null,
+          ]}
+        />
+      )}
+      {showCaravan && visit.caravan && !isManagerCard ? (
+        <FactRow
+          items={[
+            <CardFact key="caravan" icon={Tent} label={t('caravans.name')} value={visit.caravan.name} />,
             visit.caravan.managerName ? (
               <CardFact
+                key="manager"
                 icon={UserRound}
                 label={t('caravans.manager')}
                 value={visit.caravan.managerName}
               />
-            ) : null
-          }
-        />
-      ) : null}
-      {showCaravan && visit.caravan?.managerPhone ? (
-        <FactRow
-          single={
-            <CardFact
-              icon={Phone}
-              label={t('pilgrims.cardManagerPhone')}
-              value={<CopyableDigits value={visit.caravan.managerPhone} />}
-              wide
-            />
-          }
+            ) : null,
+            visit.caravan.managerPhone ? (
+              <CardFact
+                key="manager-phone"
+                icon={Phone}
+                label={t('pilgrims.cardManagerPhone')}
+                value={<CopyableDigits value={visit.caravan.managerPhone} />}
+              />
+            ) : null,
+          ]}
         />
       ) : null}
       {isPartyFile ? (
@@ -430,18 +455,50 @@ function FactRow({
   right,
   left,
   single,
+  items,
 }: {
   right?: ReactNode
   left?: ReactNode
   single?: ReactNode
+  items?: ReactNode[]
 }) {
-  if (single) return <div className="pilgrim-id-card__row pilgrim-id-card__row--single">{single}</div>
-  if (!right && !left) return null
+  const cells = (items ?? (single ? [single] : [right, left])).filter(
+    (cell) => cell !== null && cell !== undefined && cell !== false,
+  )
+  if (!cells.length) return null
+  const extra =
+    cells.length === 1
+      ? ' pilgrim-id-card__row--single'
+      : cells.length >= 3
+        ? ' pilgrim-id-card__row--trio'
+        : ''
   return (
-    <div className="pilgrim-id-card__row">
-      <div className="pilgrim-id-card__row-cell">{right}</div>
-      <div className="pilgrim-id-card__row-cell">{left}</div>
+    <div className={`pilgrim-id-card__row${extra}`}>
+      {cells.map((cell, index) => (
+        <div key={index} className="pilgrim-id-card__row-cell">
+          {cell}
+        </div>
+      ))}
     </div>
+  )
+}
+
+function CardMeta({
+  label,
+  children,
+  dir,
+}: {
+  label: string
+  children: ReactNode
+  dir?: 'ltr' | 'rtl'
+}) {
+  return (
+    <p className="pilgrim-id-card__meta">
+      <span className="pilgrim-id-card__meta-label">{label}</span>
+      <span className="pilgrim-id-card__meta-value">
+        {dir ? <span dir={dir}>{children}</span> : children}
+      </span>
+    </p>
   )
 }
 
@@ -505,8 +562,8 @@ function CardFact({
       </span>
       <div className={`pilgrim-id-card__fact-text${inline ? ' pilgrim-id-card__fact-text--inline' : ''}`}>
         <p className="pilgrim-id-card__fact-label">{label}</p>
-        <p className="pilgrim-id-card__fact-value" dir={dir}>
-          {value}
+        <p className="pilgrim-id-card__fact-value">
+          {dir ? <span dir={dir}>{value}</span> : value}
         </p>
       </div>
     </div>

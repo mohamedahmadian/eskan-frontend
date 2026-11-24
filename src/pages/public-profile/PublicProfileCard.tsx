@@ -7,14 +7,7 @@ import { getImageUrl } from '../../lib/api'
 import { collaborationYears, formatNumber } from '../../lib/datetime'
 import { useGeoName } from '../../lib/geo'
 import { useBrandDisplay } from '../../hooks/useHeadquartersSummary'
-import type { PublicProfile, RoleOption } from '../../types/app'
-
-function displayRoles(roles: RoleOption[]) {
-  const hidePilgrim = roles.some(
-    (role) => role.code === 'CARAVAN_MANAGER' || role.code === 'ACCOMMODATION_MANAGER',
-  )
-  return roles.filter((role) => !(hidePilgrim && role.code === 'PILGRIM'))
-}
+import type { PublicProfile } from '../../types/app'
 
 export const PublicProfileCard = forwardRef<
   HTMLDivElement,
@@ -30,7 +23,7 @@ export const PublicProfileCard = forwardRef<
     .map((item) => geoName(item!))
     .join(' · ')
   const years = collaborationYears(profile.activityStartYear)
-  const roles = displayRoles(profile.roles)
+  const roles = profile.roles
 
   return (
     <div ref={ref} className="member-card" dir={languageDir(locale)}>
